@@ -1,3 +1,8 @@
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="public/brand/little-hint/logos/little-hint-horizontal-dark.svg">
+  <img src="public/brand/little-hint/logos/little-hint-horizontal-color.svg" alt="Little Hint" width="320">
+</picture>
+
 # Little Hint
 
 **Gift ideas, shared thoughtfully.**

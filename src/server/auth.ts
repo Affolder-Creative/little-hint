@@ -72,11 +72,7 @@ export function makeAuth() {
           if (!known.rowCount && !signupAllowed(await readState(), email))
             return;
           if (type !== "sign-in") return;
-          await sendEmail(
-            email,
-            "Your Little Hint sign-in code",
-            `Your Little Hint sign-in code is ${otp}. It expires in 10 minutes. If you did not request it, ignore this email.`,
-          );
+          await sendEmail(email, { kind: "sign-in", code: otp });
         },
       }),
       passkey({

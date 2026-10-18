@@ -14,8 +14,10 @@ import { config, spend } from "./settings";
 import { pool, readState, transact } from "./db";
 import { noticeAllowed, preferences, stamp, fail } from "./domain";
 import type { Actor } from "../shared/model";
+import { renderEmail, type EmailMessage } from "./email";
 const origin = () => process.env.APP_URL ?? "http://localhost:5173";
-export async function sendEmail(to: string, subject: string, text: string) {
+export async function sendEmail(to: string, message: EmailMessage) {
+  const { subject, text, html } = renderEmail(message, origin());
   const c = await config();
   if (!c.SMTP_HOST) {
     if (process.env.NODE_ENV === "production")
@@ -23,7 +25,7 @@ export async function sendEmail(to: string, subject: string, text: string) {
     await mkdir(".local/mail", { recursive: true });
     await writeFile(
       `.local/mail/${Date.now()}-${randomUUID()}.json`,
-      JSON.stringify({ to, subject, text }),
+      JSON.stringify({ to, subject, text, html }),
       { mode: 0o600 },
     );
     return;
@@ -46,19 +48,12 @@ export async function sendEmail(to: string, subject: string, text: string) {
       "brand/little-hint/logos/png/little-hint-horizontal-color.png",
     ),
   );
-  const escaped = text.replace(
-    /[&<>"']/g,
-    (c) =>
-      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
-        c
-      ]!,
-  );
   await transport.sendMail({
     from: c.SMTP_FROM,
     to,
     subject,
     text,
-    html: `<div style="background:#FFF8F0;color:#2B201D;padding:32px;font:16px/1.6 system-ui,sans-serif"><img src="cid:little-hint-logo" width="200" alt="Little Hint" style="max-width:100%;height:auto"><p style="white-space:pre-line">${escaped}</p></div>`,
+    html,
     attachments: [
       { filename: "little-hint.png", content: logo, cid: "little-hint-logo" },
     ],
@@ -149,13 +144,14 @@ export async function deliverNotice(id: string) {
     });
     return;
   }
-  const link = inv
-    ? `${origin()}/invite/${inv.id}`
+  const actionPath = inv
+    ? `/invite/${inv.id}`
     : n.exchangeId
-      ? `${origin()}/exchanges`
+      ? "/exchanges"
       : n.itemId
-        ? `${origin()}/gift/${n.itemId}`
-        : `${origin()}/settings`;
+        ? `/gift/${n.itemId}`
+        : "/settings";
+  const link = new URL(actionPath, origin()).href;
   const message = inv
     ? `You've been invited to Little Hint. Sign in with this email address and accept your invitation: ${link}`
     : `You have an update in Little Hint. Sign in to view it: ${link}`;
@@ -174,11 +170,13 @@ export async function deliverNotice(id: string) {
       )
         continue;
       if (channel === "email")
-        await sendEmail(
-          user.email,
-          inv ? "Your Little Hint invitation" : "An update in Little Hint",
-          message,
-        );
+        await sendEmail(user.email, {
+          kind: inv ? "invitation" : "update",
+          text: inv
+            ? "You've been invited to Little Hint. Sign in with this email address and accept your invitation."
+            : "You have an update in Little Hint. Sign in to view it.",
+          actionPath,
+        });
       if (channel === "telegram" && current.chatId)
         await telegramCall("sendMessage", {
           chat_id: current.chatId,

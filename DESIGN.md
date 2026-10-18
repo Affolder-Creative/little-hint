@@ -25,7 +25,7 @@ colors:
 typography:
   headline:
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
-    fontSize: 'clamp(28px, 3vw, 42px)'
+    fontSize: 'clamp(28px, 3vw, 36px)'
     fontWeight: 500
     lineHeight: 1.15
     letterSpacing: '-0.035em'
@@ -149,7 +149,7 @@ The approved logo has outlined Fraunces artwork. It does not require loading a w
 
 Page headings use a responsive size with restrained weight and tight tracking. Section headings step down to 22px; ordinary component titles use 17px, and gift titles use 16px. Paragraphs use a 1.6 line height. Common form labels use 13px and medium weight. No separate mono family is established.
 
-At 900px and below, page headings are 33px; at 650px and below, they are 30px. Gift titles become 15px and then 14px at the same breakpoints. Supporting description widths are capped at 65ch on desktop and 40ch on narrow screens. Login-specific display sizes are local composition choices, not a general type role.
+At 900px and below, page headings are 32px; at 650px and below, they are 30px. Gift titles become 15px and then 14px at the same breakpoints. Supporting description widths are capped at 65ch on desktop and 40ch on narrow screens. Login-specific display sizes are local composition choices, not a general type role.
 
 **The artwork rule.** Use the supplied logo and symbol assets. Do not recreate their lettering with live text.
 
@@ -219,3 +219,13 @@ Privacy badges combine a lock or eye SVG with the words Surprise or Transparent.
 - Don't add shadows to ordinary gift cards or list rows.
 - Don't use invented product photography or present demonstration fixtures as real gifts.
 - Don't rely on color alone to explain availability or list privacy.
+
+## Sign-in and spacing refinement
+
+Page titles sit 8px above their descriptions. Headers leave 24px before content on desktop and 20px on mobile; filters leave 20px before gift grids. Section breaks use 32px on desktop and 24px on mobile. Security and administration subheadings have explicit space above them, and gift quantity controls leave 16px before the reservation action. Mobile gift recipients use 12px text; tags, status labels, and navigation labels use at least 11px.
+
+The landing page keeps the approved artwork at 240px wide on desktop and 190px on phones. Its headline is capped at 56px on desktop and 34px on phones. Code entry is a distinct step with a prominent numeric field, expiry guidance, and separate resend and change-email actions. Controls remain at least 44px high.
+
+Transactional emails use a 560px maximum-width, table-based layout with inline styles, the embedded 180px horizontal logo, a 26px heading, and a warm paper panel. Sign-in codes are selectable 32px text. Invitations and updates use a single action; previews remain generic to preserve surprises. Plain-text alternatives carry the same information.
+
+Browser favicons use the approved micro tag without a surrounding tile. The tag is sienna `#AA4D37` in light mode and blush `#F1BEAD` in dark mode; the heart is a transparent cutout. SVG and ICO links follow the app appearance setting, with a system-adaptive SVG before the app loads. Installed and Apple touch icons retain their platform-safe tiles. Regenerate favicon exports with `node scripts/build-favicons.mjs`.
