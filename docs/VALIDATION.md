@@ -58,3 +58,11 @@ No physical-device, real SMTP/SMS/Telegram, live retailer success, or off-host r
 - Production npm audit found zero vulnerabilities. Application and brand npm notice inventories and the two pinned Python brand-tool notice checks passed. Compose overlay checks, actionlint 1.7.12, shell syntax checks, and release guard tests passed.
 - The actual ARM64 image produced 45 required corresponding-source identifiers. Publication correctly failed with the empty source manifest. This verifies the blocker, not compliance clearance. Complete the work in [LICENSING.md](LICENSING.md) before publishing images.
 - No GitHub Release or GHCR package was published during local validation. The GitHub-hosted workflows and registry publication path require their own successful runs; local checks alone do not prove publishing permissions or registry availability.
+
+## Corresponding-source review, 2026-10-18
+
+- Both actual runtime inventories pass source coverage: 45 exact identifiers per architecture, 47 distinct identifiers in total. This supersedes the earlier empty-manifest blocker.
+- Three bundles contain 641 pinned downloads, including 590 Rust crate inputs, the seven Alpine origin recipes, native sources, patches and build instructions. Alpine source/patch SHA-512 checks, Cargo.lock checksums, native patch application and offline Cargo metadata checks passed. Sharp's offline workspace update added/upgraded no crates.
+- Complete bundle bytes match between macOS/Python 3.14 and Linux/Python 3.12 with network disabled. The reviewed hashes are in `compliance/source-bundles.lock.json`. Both architecture gates accept those hashes.
+- Tests reject missing version coverage, path traversal, duplicate input paths, insecure source URLs, changed download bytes and corrupt caches. Archive contents and deterministic packaging are exercised. PR CI now assembles and verifies sources against each newly built image.
+- This validates source/build-input coverage and packaging. It does not claim bit-identical upstream binary rebuilds or publication of a GitHub Release/GHCR image during this review.

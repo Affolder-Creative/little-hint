@@ -45,3 +45,4 @@ backups/
 /coolify-deployment-token.key
 
 /release-assets/
+__pycache__/

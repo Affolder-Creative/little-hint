@@ -36,6 +36,7 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run test:tooling
+      - run: python3 scripts/test_bundle_sources.py
       - run: npm run licenses:check
       - name: Audit brand tooling without regenerating artwork
         run: |
@@ -144,6 +145,11 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.ref }}
           persist-credentials: false
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .local/source-cache
+          key: sources-${{ hashFiles('compliance/source-materials.json') }}
+          restore-keys: sources-
       - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
         with:
           platforms: arm64
@@ -168,6 +174,13 @@ jobs:
           severity: HIGH,CRITICAL
           ignore-unfixed: true
           exit-code: "1"
+      - name: Verify corresponding-source bundles against the actual image
+        run: |
+          mkdir -p .local/ci-compliance
+          container=$(docker create little-hint:ci)
+          trap 'docker rm "$container" >/dev/null' EXIT
+          docker cp "$container:/app/compliance-report/." .local/ci-compliance/
+          node scripts/release-sources.mjs .local/ci-compliance
   gate:
     name: CI gate
     if: always()

@@ -133,18 +133,42 @@ test("source gate includes native dependencies and OS source revisions", () => {
   const artifact = {
     file: "sources.tar.gz",
     covers: required,
-    url: "https://example.test/source",
-    sha256: "a".repeat(64),
+    inputs: [
+      {
+        file: "source.tar.xz",
+        url: "https://example.test/source",
+        sha256: "a".repeat(64),
+        size: 42,
+      },
+    ],
+    localFiles: [{ file: "README.md", path: "compliance/sources/native.md" }],
     review: "Exact sources, patches and build inputs reviewed.",
   };
   assert.deepEqual(missingSources(required, [artifact]), []);
   assert.deepEqual(
-    missingSources(required, [{ ...artifact, sha256: "" }]),
+    missingSources(required, [
+      { ...artifact, inputs: [{ ...artifact.inputs[0], sha256: "" }] },
+    ]),
     required,
   );
   assert.deepEqual(
     missingSources(required, [{ ...artifact, file: "../sources.tar.gz" }]),
     required,
+  );
+  for (const inputs of [
+    [],
+    [{ ...artifact.inputs[0], file: "../../escape" }],
+    [artifact.inputs[0], artifact.inputs[0]],
+    [{ ...artifact.inputs[0], url: "http://example.test/source" }],
+  ]) {
+    assert.deepEqual(
+      missingSources(required, [{ ...artifact, inputs }]),
+      required,
+    );
+  }
+  assert.deepEqual(
+    missingSources([...required, "native:vips@9.0.0"], [artifact]),
+    ["native:vips@9.0.0"],
   );
 });
 test("retrying an older release cannot roll aliases backward", () => {

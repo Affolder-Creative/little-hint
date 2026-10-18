@@ -42,6 +42,13 @@ case "${1:-}" in
     docker image rm "$IMAGE:$VERSION" >/dev/null
     gzip -dc ".local/release/little-hint-$VERSION-linux-$ARCH.tar.gz" | docker load
     test "$(docker image inspect "$IMAGE:$VERSION" --format '{{.Id}}')" = "$expected"
+    # Shared source bundles are published once. Each platform keeps their
+    # hashes and coverage in compliance/sources/BUNDLES.json.
+    if [[ "$ARCH" == amd64 ]]; then
+      mv .local/release/compliance/sources/*.tar.gz .local/release/
+    else
+      rm .local/release/compliance/sources/*.tar.gz
+    fi
     tar -czf ".local/release/little-hint-$VERSION-compliance-$ARCH.tar.gz" -C .local/release compliance
     mv .local/image.oci.tar .local/release/image.oci.tar
     ;;

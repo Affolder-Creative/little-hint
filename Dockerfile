@@ -10,7 +10,7 @@ COPY public ./public
 RUN npm run build
 
 FROM node:24-alpine@sha256:44fce696f38ba8c987c4db89954051000bbd05ffd8d8659ba15ed4a8602e937f AS runtime-files
-RUN apk add --no-cache ca-certificates
+RUN apk add --no-cache ca-certificates=20260909-r0
 WORKDIR /app
 ENV NODE_ENV=production PORT=3000 UPLOAD_DIR=/data/uploads
 COPY package.json package-lock.json ./

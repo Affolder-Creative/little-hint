@@ -111,11 +111,10 @@ changelog PR; merging it starts a draft release and verified AMD64/ARM64 image
 publication to `ghcr.io/kaffolder7/little-hint`. See [releasing](docs/RELEASING.md)
 for setup, downloads, upgrades, and failed-release recovery.
 
-**The initial container source-material audit is not yet cleared.** Publishing
-stops before uploading images until the corresponding-source requirements in
-[licensing](docs/LICENSING.md) are satisfied. This does not prevent local builds
-or running CI. No released image is promised until a completed GitHub Release
-exists.
+Releases include reviewed corresponding-source bundles for Alpine, Sharp's
+native libraries, and Lightning CSS. CI verifies their coverage against both
+actual image architectures and checks all input and bundle hashes. See
+[licensing](docs/LICENSING.md) for review evidence and dependency-update steps.
 
 Little Hint is source-available under [PolyForm Perimeter 1.0.0](LICENSE).
 Copyright 2026 Affolder Creative. The license restricts competing products,

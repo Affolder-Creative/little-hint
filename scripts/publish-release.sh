@@ -6,6 +6,17 @@ test "$(gh release view "$RELEASE_TAG" --json isDraft --jq .isDraft)" = true
 mkdir -p .local/release-assets .local/deployment
 node scripts/registry-tags.mjs > .local/registry-tags.json
 exists() { node -e 'process.exit(JSON.parse(require("fs").readFileSync(".local/registry-tags.json")).includes(process.argv[1])?0:1)' "$1"; }
+node --input-type=module -e '
+  import fs from "node:fs"; import crypto from "node:crypto"; import assert from "node:assert/strict";
+  const expected=JSON.parse(fs.readFileSync("compliance/source-bundles.lock.json"));
+  for(const item of expected) {
+    const source=`.local/artifacts/release-amd64/${item.file}`;
+    const bytes=fs.readFileSync(source);
+    assert.equal(bytes.length,item.size);
+    assert.equal(crypto.createHash("sha256").update(bytes).digest("hex"),item.sha256);
+    fs.copyFileSync(source,`.local/release-assets/${item.file}`);
+  }
+'
 refs=()
 for arch in amd64 arm64; do
   dir=".local/artifacts/release-$arch"
@@ -30,6 +41,7 @@ for arch in amd64 arm64; do
     refs+=("$ref")
   fi
 done
+
 if ! exists "$VERSION"; then
   docker buildx imagetools create --tag "$IMAGE:$VERSION" "${refs[@]}"
 fi

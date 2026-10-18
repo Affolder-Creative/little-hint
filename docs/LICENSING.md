@@ -31,8 +31,8 @@ redistribution clearance.
 | Component                              | Finding                                                                                       | Handling                                                                                                                                                                                                                                                                                 |
 | -------------------------------------- | --------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Most npm packages                      | MIT, ISC, Apache-2.0, BSD, or other permissive terms                                          | Preserve full notices, including bundled third-party notices.                                                                                                                                                                                                                            |
-| Sharp/libvips                          | The `@img/sharp-libvips-*` 1.3.4 binary includes LGPL libraries and other native dependencies | Preserve GPL/LGPL texts and upstream notices; source coverage remains a release blocker below.                                                                                                                                                                                           |
-| Lightning CSS                          | MPL-2.0; present in the current production installation through the dependency graph          | Include its notices and corresponding source materials before distributing the image.                                                                                                                                                                                                    |
+| Sharp/libvips                          | The `@img/sharp-libvips-*` 1.3.4 binary includes LGPL libraries and other native dependencies | Preserve GPL/LGPL texts and upstream notices; publish the reviewed native source bundle below.                                                                                                                                                                                           |
+| Lightning CSS                          | MPL-2.0; present in the current production installation through the dependency graph          | Include its notices and the reviewed Lightning CSS source bundle.                                                                                                                                                                                                                        |
 | axe / Playwright accessibility tooling | MPL-2.0; development/test tooling                                                             | Retain notices in the audit; do not treat use during testing as relicensing the app.                                                                                                                                                                                                     |
 | Fraunces font                          | SIL Open Font License 1.1, already included with the original font                            | Keep the font and OFL notice together. The exported logo outlines are artwork, not a replacement font distribution.                                                                                                                                                                      |
 | Python brand tools                     | fonttools 4.67.0 under MIT, with external notices; uharfbuzz 0.56.3 under Apache 2.0          | Preserve the tool inventory and bundled notices. They are not installed in the app image.                                                                                                                                                                                                |
@@ -59,44 +59,71 @@ is absent from the Alpine runtime. Redistributing that tool's binary requires
 resolving its notices first. The exception fails if it becomes a production
 dependency or its version changes.
 
-## Outstanding source-material requirements
+## Reviewed corresponding-source bundles
 
-**The first container release is intentionally blocked.** The repository does
-not yet contain a reviewed, checksum-pinned set of corresponding-source archives
-for the runtime's copyleft components and bundled native libraries.
+The current AMD64 and ARM64 image inventories are covered. Together they require
+47 exact package/version/source-revision identifiers, 45 per architecture. The
+three bundles are assembled from 641 downloaded inputs and checked-in build
+instructions. Every downloaded byte is SHA-256 pinned; the final archive hashes
+are recorded in `compliance/source-bundles.lock.json`.
 
-The libvips package identifies its component versions and upstream build recipe,
-but that is not a complete source bundle. Its recipe also patches components and
-updates librsvg's Cargo workspace during the build. Simply attaching a libvips
-source tarball or linking to a moving upstream branch would not establish that
-all sources match the distributed binary. The source audit must cover those
-inputs, patches, and any bundled Rust dependencies too. Alpine sources need
-matching APKBUILD recipes and patches for the installed package revisions.
+| Bundle                               | Reviewed materials                                                                                                                                                                                                                |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `alpine-3.24.2-sources.tar.gz`       | Seven exact aports recipe revisions and their external inputs. All source downloads and local patches/configurations match the APKBUILD SHA-512 values. Includes both architectures' configuration and subpackage rules.          |
+| `sharp-libvips-1.3.4-sources.tar.gz` | The release recipe, all 28 reported native library versions, five external patches, GLib's pinned GVDB source, and the complete original librsvg Cargo.lock crate set. Both musl platform recipes and inline edits are preserved. |
+| `lightningcss-1.33.0-sources.tar.gz` | The exact npm gitHead source tree, JavaScript wrappers, Rust toolchain/build workflows, Cargo.lock and all locked registry crates. The Git tag changed the toolchain after the npm revision, so the npm revision is used.         |
 
-The release job extracts `npm-inventory.json`, `apk-installed.txt` and bundled
-native version data from each actual platform image. It produces
-`required-sources.json`, then stops before registry publication if any required
-component lacks source coverage. Failure artifacts contain that inventory for
-review. CI can still validate and merge changes while this work is outstanding.
+The Rust downloads comprise 590 crate inputs across the two workspaces, each
+verified against its upstream Cargo.lock checksum. Applying Sharp's feature
+edits and `cargo update --workspace` with network disabled removed four unused
+crates and added/upgraded none. Both workspaces' Cargo metadata resolved offline.
+The included helper prepares Cargo's vendored directory source without network
+access. All five external native patches were checked against their sources,
+including sequential application of the multi-commit libultrahdr patch.
 
-To complete this requirement:
+These are complete reviewed source/build-input bundles for these packaged
+components. This review does not claim bit-identical rebuilds of upstream
+binaries or preservation of an entire historical compiler toolchain.
+General-purpose compilers/build tools are installed separately. The source
+archives retain their original licenses; Little Hint's product license does
+not replace them. Node's bundled notices include ICU build-script exceptions;
+those build scripts do not add an unhandled runtime source requirement here.
 
-1. Assemble source archives for the exact distributed components, including
-   required build recipes, patches, license notices, and bundled dependency
-   sources. Review the relationship between those materials and the binaries.
-2. Host the archives at stable HTTPS URLs. Add entries to
-   `compliance/source-materials.json`, each with a unique `file` ending in
-   `.tar.gz` or `.tar.xz`, `url`, SHA-256 `sha256`, a concrete `review` describing
-   what was verified, and a `covers` array of exact identifiers emitted by
-   `required-sources.json`.
-3. Merge that evidence through a PR and create a new release PR. Source mappings
-   are read from the tagged commit, so adding them to main does not silently
-   change an earlier draft's audit. An unpublishable initial draft should remain
-   unpublished; do not move its tag to another commit.
-4. The workflow downloads, verifies, and includes the archives in each platform's
-   compliance download before publishing. A changed dependency version or OS
-   revision requires updated coverage. Do not replace this check with a blanket
-   copyleft allowlist or an empty successful report.
+Each source bundle has a README with build and library-replacement guidance,
+original source archives, patches, build recipes and its input manifest. Shared
+source bundles are attached once to each GitHub Release, alongside both image
+archives. Each platform's compliance download records their hashes and coverage
+in `sources/BUNDLES.json`. Container users can also inspect
+`/app/compliance/sources` and `/app/compliance/source-materials.json`.
+
+CI and release jobs inspect the actual built image, fetch or reuse sources,
+rehash cached inputs, assemble the bundles, and compare their complete bytes
+with the reviewed archive hashes. A missing input, hash mismatch, corrupt cache,
+changed runtime component, empty inventory, or changed bundle fails the job
+before publication. The base image digest and added ca-certificates version are
+pinned to avoid silently changing the reviewed Alpine sources.
+
+To review a dependency or base-image update:
+
+1. Extract the new image's `/app/compliance-report` and run
+   `node scripts/release-sources.mjs PATH`. Review every new identifier and the
+   upstream sources, patches, lockfiles and build instructions that produced it.
+2. Update `compliance/source-materials.json` with exact coverage, source URLs,
+   byte sizes and SHA-256 values. Preserve upstream licenses and all needed
+   build inputs. Update the bundle README in `compliance/sources/`.
+3. After reviewing the inputs, run
+   `node scripts/release-sources.mjs PATH --record-bundles` to record the newly
+   reviewed archive hashes. This maintainer-only review command is never used
+   by CI or publishing. Verify both architectures and cross-environment output.
+4. Commit the manifest, instructions and archive lock together through a PR.
+   CI downloads and builds the actual source bundles. New releases attach them;
+   do not alter an existing release tag or silently substitute source bytes.
+
+Large archives are not stored in Git. They are reproducibly assembled from
+pinned inputs; normal publication verifies them against the reviewed bundle
+hashes. The uncompressed gzip stream avoids recompressing hundreds of already
+compressed upstream archives and allows byte-for-byte comparison across the
+validated macOS and Linux Python environments.
 
 This is an engineering inventory and a record of unresolved obligations, not a
 legal opinion. Obtain license advice for commercial contracts, ownership

@@ -26,11 +26,11 @@ The initial release is `v0.1.0`. npm publishing is disabled by `private: true`.
    its commit matches the successful CI run and its version matches package.json.
 4. Each platform gets an OCI build with BuildKit provenance and SBOM attestations,
    an app/worker smoke test, a vulnerability scan, an SPDX image SBOM, and a
-   corresponding-source coverage check. **The initial source audit is not yet
-   cleared. See [licensing](LICENSING.md) before expecting publication to pass.**
+   corresponding-source coverage check. The reviewed source bundles are checked
+   against each actual image and their recorded archive hashes; see [licensing](LICENSING.md).
 5. Once both platforms pass, publish the versioned multi-platform GHCR image and
-   upload Docker-loadable archives, deployment files, notices, source materials,
-   SBOMs, image digests and `SHA256SUMS`. Publish the GitHub Release last.
+   upload Docker-loadable archives, deployment files, notices, the three shared
+   corresponding-source bundles, SBOMs, image digests and `SHA256SUMS`. Publish the GitHub Release last.
 
 Registry location: `ghcr.io/kaffolder7/little-hint`. Tags are `0.1.0`-style full
 versions, `0.1`-style minor aliases, `latest`, and internal
@@ -121,7 +121,7 @@ already exists, update its ID instead of creating duplicates.
 
 Making the repository public is a separate decision. GHCR packages initially
 remain private and must also be made public explicitly for anonymous pulls.
-Before launch, finish the source-material audit, license the separately maintained
+Before launch, license the separately maintained
 backup sidecar, enable private vulnerability reporting, and complete the manual
 production checks in [VALIDATION.md](VALIDATION.md). Do not label this project as
 OSI open source under PolyForm Perimeter.

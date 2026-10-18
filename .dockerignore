@@ -19,3 +19,4 @@ backups
 docs
 tests
 release-assets
+**/__pycache__
