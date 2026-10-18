@@ -64,6 +64,8 @@ import {
 } from "./forms";
 import { Install, UpdateNotice, useOnline } from "./pwa";
 import { Login } from "./Login";
+import { RevealPolicy, GiftSummaryPanel } from "./ListFeatures";
+import { scrapingProviders } from "../shared/scraping-providers";
 const nav = [
   { to: "/", label: "Home", icon: Heart },
   { to: "/people", label: "People", icon: Users },
@@ -716,7 +718,12 @@ function PersonPage() {
 function Lists() {
   const { id } = useParams();
   const { world, open, mutate } = useApp();
-  const mine = world.lists.filter((l) => l.canEdit);
+  const [showArchived, setShowArchived] = useState(false);
+  const [showSummary, setShowSummary] = useState(false);
+  useEffect(() => setShowSummary(false), [id]);
+  const mine = world.lists.filter(
+    (l) => l.canEdit && l.archived === showArchived,
+  );
   const list = world.lists.find((l) => l.id === id);
   const pending = world.lists.filter((l) =>
     l.pendingOwnerIds.some((id) =>
@@ -750,6 +757,18 @@ function Lists() {
               >
                 List settings
               </button>
+              <Action
+                secondary
+                onClick={() =>
+                  mutate("lists/update", {
+                    ...list,
+                    archived: !list.archived,
+                    ...(list.archived ? { archiveAfter: null } : {}),
+                  })
+                }
+              >
+                {list.archived ? "Restore list" : "Archive list"}
+              </Action>
               {!list.archived && (
                 <button
                   className="button"
@@ -769,14 +788,28 @@ function Lists() {
             This list is archived. Existing purchase history is preserved.
           </p>
         )}
-        {list.mode === "surprise" && list.canEdit && (
-          <p className="privacy-note">
-            <LockKeyhole size={17} />
-            Your people can coordinate gifts privately. You’ll keep the
-            surprise.
-          </p>
+        <RevealPolicy list={list} />
+        {list.canEdit && list.revealAvailable && (
+          <div className="tabs" role="group" aria-label="List view">
+            <button
+              aria-pressed={!showSummary}
+              onClick={() => setShowSummary(false)}
+            >
+              Wishes
+            </button>
+            <button
+              aria-pressed={showSummary}
+              onClick={() => setShowSummary(true)}
+            >
+              Gift summary
+            </button>
+          </div>
         )}
-        <Browser items={world.items.filter((i) => i.listId === list.id)} />
+        {showSummary && list.canEdit && list.revealAvailable ? (
+          <GiftSummaryPanel listId={list.id} />
+        ) : (
+          <Browser items={world.items.filter((i) => i.listId === list.id)} />
+        )}
       </>
     );
   return (
@@ -793,14 +826,30 @@ function Lists() {
           Create a list
         </button>
       </Header>
-      {pending.map((l) => (
-        <div className="invitation" key={l.id}>
-          <p>You’re invited to co-own “{l.name}”.</p>
-          <Action onClick={() => mutate("lists/accept", { id: l.id })}>
-            Accept co-ownership
-          </Action>
-        </div>
-      ))}
+      <div className="tabs" role="group" aria-label="List status">
+        <button
+          aria-pressed={!showArchived}
+          onClick={() => setShowArchived(false)}
+        >
+          Active
+        </button>
+        <button
+          aria-pressed={showArchived}
+          onClick={() => setShowArchived(true)}
+        >
+          Archived
+        </button>
+      </div>
+      {pending
+        .filter((l) => l.archived === showArchived)
+        .map((l) => (
+          <div className="invitation" key={l.id}>
+            <p>You’re invited to co-own “{l.name}”.</p>
+            <Action onClick={() => mutate("lists/accept", { id: l.id })}>
+              Accept co-ownership
+            </Action>
+          </div>
+        ))}
       {mine.length ? (
         <div className="list-index">
           {mine.map((l) => (
@@ -829,6 +878,10 @@ function Lists() {
             </Link>
           ))}
         </div>
+      ) : showArchived ? (
+        <Empty title="No archived lists">
+          Finished occasions can go here. Restore a list whenever you need it.
+        </Empty>
       ) : (
         <Empty
           title="Leave your first little hint"
@@ -935,6 +988,11 @@ function GiftDetail() {
           ) : (
             <div className="reserve-panel">
               <h2>{gift.available ? "Make their day" : "Taken care of"}</h2>
+              {gift.listId && world.lists.find((l) => l.id === gift.listId) && (
+                <RevealPolicy
+                  list={world.lists.find((l) => l.id === gift.listId)!}
+                />
+              )}
               <p>
                 {gift.available
                   ? `${gift.available} available to reserve. Let your people know you have this one covered.`
@@ -1155,7 +1213,7 @@ function Buying() {
                         : "Reserved"}
                   </span>
                   {r.exchangeId && (
-                    <p className="muted">Secret Gift Exchange</p>
+                    <p className="muted">Secret gift exchange</p>
                   )}
                 </div>
                 <div className="actions">
@@ -1387,7 +1445,7 @@ function Exchanges() {
         <button
           className="button"
           disabled={!world.groups.length}
-          onClick={() => open("Secret Gift Exchange", <ExchangeForm />)}
+          onClick={() => open("Secret gift exchange", <ExchangeForm />)}
         >
           <Plus size={17} />
           Create exchange
@@ -2062,6 +2120,53 @@ function SmsForm() {
     </Form>
   );
 }
+function PasskeyLabelForm({
+  passkey,
+  onSaved,
+}: {
+  passkey?: { id: string; name?: string | null };
+  onSaved: () => Promise<void>;
+}) {
+  return (
+    <Form
+      submit={passkey ? "Save label" : "Create passkey"}
+      onSubmit={async (form) => {
+        const name = value(form, "name").trim();
+        if (!name || name.length > 80)
+          throw new Error("Use a label between 1 and 80 characters.");
+        const result = passkey
+          ? await authClient.passkey.updatePasskey({ id: passkey.id, name })
+          : await authClient.passkey.addPasskey({ name });
+        if (result?.error)
+          throw new Error(
+            result.error.message ??
+              "Passkey setup was not completed. Try again.",
+          );
+        if (!result?.data)
+          throw new Error("Passkey setup was not completed. Try again.");
+        await onSaved();
+      }}
+    >
+      <Field
+        label="Passkey label"
+        hint="A name to recognize it in Little Hint, such as 1Password or Work laptop."
+      >
+        <input
+          name="name"
+          required
+          maxLength={80}
+          defaultValue={passkey?.name || "Little Hint"}
+          autoComplete="off"
+          autoFocus
+        />
+      </Field>
+      <p className="muted">
+        This label helps you recognize the passkey in Little Hint. Your password
+        manager chooses its own item title, which you can rename there.
+      </p>
+    </Form>
+  );
+}
 function Security() {
   const { open, close, toast } = useApp();
   const client = useQueryClient();
@@ -2088,23 +2193,45 @@ function Security() {
         Email codes are always available. Add a passkey for a quicker sign-in on
         trusted devices.
       </p>
-      <Action
-        secondary
-        onClick={async () => {
-          const r = await authClient.passkey.addPasskey({
-            name: "Little Hint device",
-          });
-          if (r?.error) throw new Error(r.error.message);
-          await client.invalidateQueries({ queryKey: ["passkeys"] });
-          toast("Passkey added.");
-        }}
+      <button
+        className="button secondary"
+        onClick={() =>
+          open(
+            "Add a passkey",
+            <PasskeyLabelForm
+              onSaved={async () => {
+                await client.invalidateQueries({ queryKey: ["passkeys"] });
+                close();
+                toast("Passkey added.");
+              }}
+            />,
+          )
+        }
       >
-        <KeyRound size={17} />
-        Add a passkey
-      </Action>
+        <KeyRound size={17} /> Add a passkey
+      </button>
       {keys.data?.map((k) => (
         <div className="setting-row" key={k.id}>
-          <span>{k.name || "Passkey"}</span>
+          <span className="passkey-label">{k.name || "Passkey"}</span>
+          <button
+            className="button secondary"
+            aria-label={`Rename ${k.name || "passkey"}`}
+            onClick={() =>
+              open(
+                "Rename passkey",
+                <PasskeyLabelForm
+                  passkey={k}
+                  onSaved={async () => {
+                    await client.invalidateQueries({ queryKey: ["passkeys"] });
+                    close();
+                    toast("Passkey renamed.");
+                  }}
+                />,
+              )
+            }
+          >
+            Rename
+          </button>
           <Action
             secondary
             onClick={async () => {
@@ -2161,6 +2288,8 @@ function Admin() {
           configured: boolean;
           source: string;
           default: string | null;
+          value?: string;
+          effectiveProvider?: string | null;
         }>
       >("admin/settings"),
   });
@@ -2190,7 +2319,13 @@ function Admin() {
         {settings.data?.map((s) => (
           <details key={s.key}>
             <summary>
-              <span>{s.key.replaceAll("_", " ").toLowerCase()}</span>
+              <span>
+                {s.key === "SCRAPING_PROVIDER"
+                  ? "Product import provider"
+                  : scrapingProviders.find((p) => p.key === s.key)?.name
+                    ? `${scrapingProviders.find((p) => p.key === s.key)!.name} API key`
+                    : s.key.replaceAll("_", " ").toLowerCase()}
+              </span>
               <small>
                 {s.configured ? "Configured" : "Not configured"} · {s.source}
               </small>
@@ -2209,22 +2344,52 @@ function Admin() {
                 toast("Setting saved.");
               }}
             >
-              <Field
-                label="New value"
-                hint={s.default ? `Default: ${s.default}` : undefined}
-              >
-                <input
-                  name="value"
-                  type={/KEY|TOKEN|PASS/.test(s.key) ? "password" : "text"}
-                  autoComplete="off"
-                  disabled={s.source === "environment"}
-                  placeholder={
-                    s.source === "environment"
-                      ? "Managed through deployment environment"
-                      : "Enter a replacement value"
-                  }
-                />
-              </Field>
+              {s.key === "SCRAPING_PROVIDER" ? (
+                <>
+                  <Field
+                    label="Paid import provider"
+                    hint="Try a free direct import first, then at most one paid provider. Automatic selection prefers Scraping Fish."
+                  >
+                    <select
+                      name="value"
+                      defaultValue={s.value || "auto"}
+                      disabled={s.source === "environment"}
+                    >
+                      <option value="auto">Automatic selection</option>
+                      <option value="none">Direct import only</option>
+                      {scrapingProviders.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                  <p className="muted">
+                    Current paid provider:{" "}
+                    {scrapingProviders.find((p) => p.id === s.effectiveProvider)
+                      ?.name ?? "None configured"}
+                    . Requests count toward the integration daily limit. Failed
+                    imports never switch to another paid provider.
+                  </p>
+                </>
+              ) : (
+                <Field
+                  label="New value"
+                  hint={s.default ? `Default: ${s.default}` : undefined}
+                >
+                  <input
+                    name="value"
+                    type={/KEY|TOKEN|PASS/.test(s.key) ? "password" : "text"}
+                    autoComplete="off"
+                    disabled={s.source === "environment"}
+                    placeholder={
+                      s.source === "environment"
+                        ? "Managed through deployment environment"
+                        : "Enter a replacement value"
+                    }
+                  />
+                </Field>
+              )}
             </Form>
           </details>
         ))}

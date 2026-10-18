@@ -1,7 +1,13 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { Pool } from "pg";
 import { emptyState } from "../src/shared/model";
-import { stamp, idempotent, command } from "../src/server/domain";
+import {
+  stamp,
+  idempotent,
+  command,
+  archiveDueLists,
+  world,
+} from "../src/server/domain";
 const url = process.env.TEST_DATABASE_URL;
 describe.skipIf(!url)("PostgreSQL transaction integrity", () => {
   let storage: typeof import("../src/server/db");
@@ -179,6 +185,44 @@ describe.skipIf(!url)("PostgreSQL transaction integrity", () => {
         (r) => r.itemId === gift.id,
       ),
     ).toHaveLength(1);
+  });
+  it("enforces an elapsed archive while the worker races a reservation, then restores it", async () => {
+    const created = await storage.transact((s) => {
+      const list = command(s, a, "lists.create", {
+        name: "Scheduled archive",
+        ownerIds: [s.people.find((p) => p.userId === a.id)!.id],
+        groupIds: [groupId],
+        mode: "surprise",
+        timeZone: "UTC",
+      }) as any;
+      const gift = command(s, a, "items.create", {
+        title: "Archive race",
+        listId: list.id,
+      }) as any;
+      command(s, a, "lists.update", { ...list, archiveAfter: "2000-01-01" });
+      return { listId: list.id, itemId: gift.id };
+    });
+    const results = await Promise.allSettled([
+      storage.transact((s) => archiveDueLists(s)),
+      storage.transact((s) =>
+        command(s, b, "reservations.create", {
+          itemId: created.itemId,
+          quantity: 1,
+        }),
+      ),
+    ]);
+    expect(results[0].status).toBe("fulfilled");
+    expect(results[1].status).toBe("rejected");
+    await storage.transact((s) => {
+      const list = s.lists.find((l) => l.id === created.listId)!;
+      expect(list.archived).toBe(true);
+      command(s, a, "lists.update", { ...list, archived: false });
+    });
+    const restored = world(await storage.readState(), a).lists.find(
+      (l) => l.id === created.listId,
+    )!;
+    expect(restored.archived).toBe(false);
+    expect(restored.archiveAfter).toBeNull();
   });
   it("persists a failed job across worker restart and completes its retry", async () => {
     const { PgBoss } = await import("pg-boss");

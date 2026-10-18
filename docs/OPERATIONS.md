@@ -38,7 +38,7 @@ The app can run at `https://littlehint.example.com` while sending from `littlehi
 
 The initial SMTP settings must be available before email-code login. Later an administrator can manage integrations in Settings. Nonempty environment values override values entered in the UI; remove an environment override to use the UI value. UI secrets are encrypted using `SETTINGS_ENCRYPTION_KEY` and are never returned to the browser. Keep that key through restores.
 
-Telegram requires a bot token and name. Account linking uses an expiring single-use code and explicit user action. Twilio requires account credentials, a sending number, and a Verify service. Configure signed status/inbound callbacks according to the routes in `src/server/app.ts`; verify a US number before enabling SMS preferences. OpenAI and ScrapingBee are optional. Paid integrations remain inactive without credentials. `PAID_DAILY_LIMIT` caps provider requests per UTC day, not dollars. Set provider-side budgets too.
+Telegram requires a bot token and name. Account linking uses an expiring single-use code and explicit user action. Twilio requires account credentials, a sending number, and a Verify service. Configure signed status/inbound callbacks according to the routes in `src/server/app.ts`; verify a US number before enabling SMS preferences. OpenAI and paid product imports are optional. Paid integrations remain inactive without credentials. `PAID_DAILY_LIMIT` caps provider requests per UTC day, not dollars. Set provider-side budgets too.
 
 ## Existing backup sidecar
 
@@ -82,3 +82,25 @@ Before accepting production backups, execute `backup-sidecar doctor`, `backup-si
 Back up before migrations or dependency upgrades. Deploy app and worker from the same commit. Avoid changing `APP_URL` without also reviewing passkey relying-party IDs and allowed origins. Never delete Compose volumes as part of a redeploy. Keep the settings encryption key and restic password in an independent secure store. Treat restored data as private.
 
 Logs deliberately omit gift content, buyer discussions, assignments, and secrets. Use operational job IDs and status codes to investigate failures. Rate limiting currently sees the proxy address; review limits before substantially increasing the number of simultaneous users. This app enforces privacy through server permissions, not end-to-end encryption from its operator.
+
+## Product import providers
+
+Direct HTML import runs first. If the title or image is missing, Little Hint makes at most one paid provider request. Configure API keys in Administration or through `SCRAPINGFISH_API_KEY`, `SCRAPINGBEE_API_KEY`, `SCRAPEDO_API_KEY`, and `SCRAPINGDOG_API_KEY`. API keys saved in Administration remain encrypted and are never returned to the browser.
+
+`SCRAPING_PROVIDER` accepts `auto`, `none`, `scrapingfish`, `scrapingbee`, `scrapedo`, or `scrapingdog`. Leave the environment variable empty to use the Administration selector. Automatic selection chooses the first configured provider in this order: Scraping Fish, ScrapingBee, Scrape.do, Scrapingdog. It does not try a second provider when the selected provider fails. An explicit selection without its key uses direct import only. `none` disables paid scraping.
+
+The generic integrations request HTML without enabling extra JavaScript rendering or premium proxy options. ScrapingBee retains its dedicated US Amazon product endpoint. Each paid attempt counts against the existing per-provider `PAID_DAILY_LIMIT`, even when it fails locally. The limit counts requests, not currency or provider credits. Provider-specific credit consumption and request-pack expiry are managed in the provider account.
+
+References: [Scraping Fish](https://scrapingfish.com/docs/quickstart), [Scrape.do](https://scrape.do/documentation/), [Scrapingdog](https://www.scrapingdog.com/documentation/).
+
+## List dates and gift summaries
+
+Lists have independent optional archive and reveal dates. Both take effect after the selected calendar day ends in the saved timezone, including daylight-saving changes. Archiving hides a list from active browsing and prevents new reservations and contributions. Existing purchase and contribution records remain available for reconciliation. The worker persists overdue archives; API reads and eligibility checks also enforce the schedule when the worker is offline. Restoring a list clears its archive schedule.
+
+Set reveal dates and the optional exchange-giver reveal policy before first sharing. After sharing, the timezone and exchange policy are fixed, and an upcoming reveal date can only move later. Shared lists without a reveal date remain without a gift summary, including lists created before this feature. Removing all sharing groups or restoring an archive does not unlock these rules. After the reveal date passes it cannot change.
+
+Owners and their existing profile guardians can open Gift summary after the reveal date, including on archived lists. It shows purchased gifts, buyers, and sent or received contributions. Sent contributions are marked as awaiting confirmation. Amounts, pool totals, discussions, outstanding pledges, and unpurchased reservations are excluded. Purchased exchange gifts appear only if the list's policy permits it. Ordinary surprise views stay unchanged, and Transparent lists retain their existing purchase visibility.
+
+## Passkey labels
+
+Add a passkey in Settings and choose a label such as `1Password` or `Work laptop`. Use Rename to change an existing label without registering another credential. Labels identify credentials inside Little Hint; they do not rename the password manager's vault item. Little Hint already supplies its service name and page title. Some password managers derive their item title from the site's parent domain instead, so rename that item in the password manager when needed. Existing passkeys and their domain binding are unchanged.

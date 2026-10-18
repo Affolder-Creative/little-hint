@@ -1,5 +1,11 @@
 import { randomUUID, createHash } from "node:crypto";
 import { z } from "zod";
+import {
+  dateHasElapsed,
+  listIsArchived,
+  validCalendarDate,
+  validTimeZone,
+} from "../shared/list-dates";
 import type {
   Actor,
   Base,
@@ -14,6 +20,7 @@ import type {
   World,
   Notice,
   Exchange,
+  GiftSummary,
 } from "../shared/model";
 import { matchExchange as solveExchange } from "./exchange";
 function matchExchange(...args: Parameters<typeof solveExchange>) {
@@ -56,6 +63,24 @@ const ids = z
     "Duplicate selections are not allowed.",
   );
 const revision = z.number().int().positive();
+const listDates = {
+  archiveAfter: z
+    .string()
+    .refine(validCalendarDate, "Choose a valid archive date.")
+    .nullable()
+    .optional(),
+  revealAfter: z
+    .string()
+    .refine(validCalendarDate, "Choose a valid reveal date.")
+    .nullable()
+    .optional(),
+  timeZone: z
+    .string()
+    .max(100)
+    .refine(validTimeZone, "Choose a valid timezone.")
+    .optional(),
+  revealExchangeGivers: z.boolean().optional(),
+};
 export const controllers = (p: Person) =>
   [p.userId, ...p.guardians].filter((v): v is string => !!v);
 export const controls = (s: State, a: Actor, id: string) =>
@@ -112,11 +137,64 @@ const getItem = (s: State, a: Actor, id: string) =>
   s.items.find((i) => i.id === id && itemVisible(s, a, i)) ??
   fail(404, "Gift not found.");
 const archived = (s: State, i: Item) =>
-  i.archived || !!s.lists.find((l) => l.id === i.listId && l.archived);
+  i.archived || !!s.lists.find((l) => l.id === i.listId && listIsArchived(l));
 const name = (s: State, userId: string) =>
   s.people.find((p) => p.userId === userId)?.name ?? "Former member";
 const mode = (s: State, i: Item) =>
   s.lists.find((l) => l.id === i.listId)?.mode ?? "surprise";
+export function archiveDueLists(s: State) {
+  for (const list of s.lists) {
+    if (!list.archived && listIsArchived(list)) {
+      list.archived = true;
+      touch(list);
+    }
+  }
+}
+
+export function giftSummary(s: State, a: Actor, listId: string): GiftSummary {
+  const list =
+    s.lists.find(
+      (l) => l.id === listId && l.ownerIds.some((p) => controls(s, a, p)),
+    ) ?? fail(404, "List not found.");
+  if (!dateHasElapsed(list.revealAfter, list.timeZone))
+    fail(409, "Gift details are not available before this list's reveal date.");
+  return {
+    listId,
+    gifts: s.reservations.flatMap((r) => {
+      const item = s.items.find(
+        (i) => i.id === r.itemId && i.listId === listId,
+      );
+      if (
+        !item ||
+        r.purchased < 1 ||
+        (r.exchangeId && !list.revealExchangeGivers)
+      )
+        return [];
+      return [
+        {
+          id: r.id,
+          itemId: item.id,
+          title: item.title,
+          purchased: r.purchased,
+          buyerName: r.former
+            ? "Former member"
+            : r.exchangeId && r.giverId
+              ? (s.people.find((p) => p.id === r.giverId)?.name ??
+                "Former member")
+              : name(s, r.buyerId),
+          exchange: !!r.exchangeId,
+          contributors: s.contributions.flatMap((c) =>
+            !r.exchangeId &&
+            c.reservationId === r.id &&
+            (c.status === "sent" || c.status === "received")
+              ? [{ id: c.id, name: name(s, c.userId), status: c.status }]
+              : [],
+          ),
+        },
+      ];
+    }),
+  };
+}
 export function giftView(s: State, a: Actor, i: Item): GiftView {
   const { creatorId, ...fields } = i;
   const own = recipient(s, a, i);
@@ -300,7 +378,12 @@ export function world(s: State, a: Actor): World {
           listVisible(s, a, l) ||
           l.pendingOwnerIds.some((id) => ps.includes(id)),
       )
-      .map((l) => ({ ...l, canEdit: l.ownerIds.some((p) => ps.includes(p)) })),
+      .map((l) => ({
+        ...l,
+        archived: listIsArchived(l),
+        canEdit: l.ownerIds.some((p) => ps.includes(p)),
+        revealAvailable: dateHasElapsed(l.revealAfter, l.timeZone),
+      })),
     items: s.items
       .filter((i) => itemVisible(s, a, i))
       .map((i) => giftView(s, a, i)),
@@ -645,6 +728,7 @@ export function command(
     case "lists.create": {
       const p = z
         .object({
+          ...listDates,
           name: text,
           ownerIds: ids.min(1),
           groupIds: ids,
@@ -657,6 +741,8 @@ export function command(
       const mine = p.ownerIds.filter((id) => controls(s, a, id));
       if (!mine.length) fail(403, "Create a list for a profile you manage.");
       const pending = p.ownerIds.filter((id) => !mine.includes(id));
+      if (p.revealExchangeGivers && !p.revealAfter)
+        fail(400, "Choose a reveal date to reveal exchange givers.");
       if (pending.length && p.groupIds.length)
         fail(400, "Create the joint list privately until everyone accepts.");
       const l: List = {
@@ -666,6 +752,8 @@ export function command(
         pendingOwnerIds: pending,
         modeLocked: p.groupIds.length > 0,
         archived: false,
+        timeZone: p.timeZone ?? "UTC",
+        revealExchangeGivers: p.revealExchangeGivers ?? false,
       };
       s.lists.push(l);
       return l;
@@ -690,6 +778,7 @@ export function command(
     case "lists.update": {
       const p = z
         .object({
+          ...listDates,
           id,
           revision,
           name: text,
@@ -709,6 +798,30 @@ export function command(
         fail(409, "Privacy mode is locked after sharing.");
       if (l.pendingOwnerIds.length && p.groupIds.length)
         fail(409, "Wait for joint owners to accept before sharing.");
+      const next = { ...l, ...p };
+      if (l.modeLocked) {
+        if (p.timeZone !== undefined && p.timeZone !== (l.timeZone ?? "UTC"))
+          fail(409, "The timezone is locked after sharing.");
+        if (
+          p.revealExchangeGivers !== undefined &&
+          p.revealExchangeGivers !== !!l.revealExchangeGivers
+        )
+          fail(409, "Exchange gift privacy is locked after sharing.");
+        if (
+          (next.revealAfter ?? null) !== (l.revealAfter ?? null) &&
+          (!l.revealAfter ||
+            !next.revealAfter ||
+            next.revealAfter < l.revealAfter ||
+            dateHasElapsed(l.revealAfter, l.timeZone))
+        )
+          fail(
+            409,
+            "After sharing, an upcoming reveal date can only move later. Lists shared without a date keep gift details hidden.",
+          );
+      }
+      if (next.revealExchangeGivers && !next.revealAfter)
+        fail(400, "Choose a reveal date to reveal exchange givers.");
+      if (listIsArchived(l) && !p.archived) p.archiveAfter = null;
       Object.assign(l, p, {
         modeLocked: l.modeLocked || p.groupIds.length > 0,
       });
@@ -736,7 +849,7 @@ export function command(
           s.lists.find(
             (l) =>
               l.id === p.listId &&
-              !l.archived &&
+              !listIsArchived(l) &&
               l.ownerIds.some((id) => controls(s, a, id)),
           ) ?? fail(404, "List not found.");
         recipients = l.ownerIds;

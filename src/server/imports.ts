@@ -9,6 +9,11 @@ import { load } from "cheerio";
 import sharp from "sharp";
 import { z } from "zod";
 import { config, spend } from "./settings";
+import {
+  scrapingProviders,
+  selectedScrapingProvider,
+} from "../shared/scraping-providers";
+import { scrapingRequest } from "./scraping";
 import { stamp, fail } from "./domain";
 import { transact } from "./db";
 import type { Item } from "../shared/model";
@@ -395,49 +400,7 @@ export async function importProduct(
     const page = await safeFetch(url);
     result = parseProduct(page.buffer.toString("utf8"), page.url);
   } catch {}
-  if ((!result.title || !result.remoteImage) && cfg.SCRAPINGBEE_API_KEY) {
-    try {
-      await spend("scrapingbee");
-      const productUrl = new URL(url);
-      const asin = /(^|\.)amazon\.com$/.test(productUrl.hostname)
-        ? productUrl.pathname.match(
-            /\/(?:dp|gp\/product)\/([A-Z0-9]{10})(?:[/?]|$)/i,
-          )?.[1]
-        : undefined;
-      const u = new URL(
-        asin
-          ? "https://app.scrapingbee.com/api/v1/amazon/product"
-          : "https://app.scrapingbee.com/api/v1/",
-      );
-      if (asin) {
-        u.searchParams.set("query", asin);
-        u.searchParams.set("country", "us");
-        u.searchParams.set("currency", "USD");
-      } else {
-        u.searchParams.set("url", url);
-        u.searchParams.set("render_js", "false");
-      }
-      const r = await fetch(u, {
-        headers: { Authorization: `Bearer ${cfg.SCRAPINGBEE_API_KEY}` },
-        signal: AbortSignal.timeout(35000),
-      });
-      if (r.ok) {
-        const body = await boundedBody(r);
-        const imported = asin
-          ? parseAmazonResponse(JSON.parse(body.toString("utf8")), url)
-          : parseProduct(body.toString("utf8"), url);
-        // Preserve direct metadata when the fallback leaves a field incomplete.
-        result = {
-          ...result,
-          ...Object.fromEntries(
-            Object.entries(imported).filter(
-              ([, v]) => v !== undefined && v !== null && v !== "",
-            ),
-          ),
-        };
-      } else await r.body?.cancel();
-    } catch {}
-  }
+  result = await paidProductPreview(url, result, cfg);
   if (!result.title)
     throw new Error(
       "This shop blocked the preview. You can still add the gift manually.",
@@ -460,4 +423,43 @@ export async function importProduct(
     } catch {}
   }
   return result;
+}
+
+/** One paid attempt, preserving usable direct metadata when a provider fails. */
+export async function paidProductPreview(
+  url: string,
+  result: Partial<Item> & { remoteImage?: string },
+  cfg: Record<string, string>,
+): Promise<Partial<Item> & { remoteImage?: string }> {
+  const provider = selectedScrapingProvider(cfg);
+  if ((result.title && result.remoteImage) || !provider) return result;
+  try {
+    await validateUrl(url);
+    await spend(provider);
+    const key = cfg[scrapingProviders.find((p) => p.id === provider)!.key];
+    const request = scrapingRequest(provider, key, url);
+    const response = await fetch(request.url, {
+      headers: request.headers,
+      redirect: "error",
+      signal: AbortSignal.timeout(35000),
+    });
+    if (!response.ok) {
+      await response.body?.cancel();
+      return result;
+    }
+    const body = await boundedBody(response);
+    const imported = request.amazon
+      ? parseAmazonResponse(JSON.parse(body.toString("utf8")), url)
+      : parseProduct(body.toString("utf8"), url);
+    return {
+      ...result,
+      ...Object.fromEntries(
+        Object.entries(imported).filter(
+          ([, v]) => v !== undefined && v !== null && v !== "",
+        ),
+      ),
+    };
+  } catch {
+    return result;
+  }
 }
