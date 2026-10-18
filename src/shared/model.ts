@@ -1,0 +1,257 @@
+export type Mode = "surprise" | "transparent";
+export type Visibility = "private" | "hidden" | "visible";
+export interface Base {
+  id: string;
+  revision: number;
+  createdAt: string;
+}
+export interface Person extends Base {
+  name: string;
+  userId?: string;
+  guardians: string[];
+  household: string;
+  admin?: boolean;
+}
+export interface Group extends Base {
+  name: string;
+  ownerId: string;
+  memberIds: string[];
+}
+export interface Invitation extends Base {
+  email: string;
+  groupId?: string;
+  bootstrap?: boolean;
+  expiresAt: string;
+  acceptedBy?: string;
+  revoked?: boolean;
+}
+export interface List extends Base {
+  name: string;
+  ownerIds: string[];
+  pendingOwnerIds: string[];
+  groupIds: string[];
+  mode: Mode;
+  modeLocked: boolean;
+  archived: boolean;
+  description: string;
+}
+export interface Item extends Base {
+  title: string;
+  description: string;
+  url: string;
+  image: string;
+  priceCents: number | null;
+  currency: "USD";
+  tags: string[];
+  quantity: number;
+  listId?: string;
+  recipientIds: string[];
+  creatorId: string;
+  visibility: Visibility;
+  groupIds: string[];
+  archived: boolean;
+  importedAt?: string;
+  source?: string;
+}
+export interface Reservation extends Base {
+  itemId: string;
+  buyerId: string;
+  quantity: number;
+  purchased: number;
+  former: boolean;
+  exchangeId?: string;
+  giverId?: string;
+  poolTargetCents?: number;
+  titleSnapshot: string;
+  purchasedAt?: string;
+}
+export interface Contribution extends Base {
+  reservationId: string;
+  userId: string;
+  amountCents: number;
+  status: "pledged" | "sent" | "received" | "cancelled";
+}
+export interface Comment extends Base {
+  giverId?: string;
+  itemId: string;
+  authorId: string;
+  body: string;
+}
+export interface Exchange extends Base {
+  name: string;
+  groupId: string;
+  organizerId: string;
+  participantIds: string[];
+  count: 1 | 2 | 3;
+  excludeHousehold: boolean;
+  exclusions: [string, string][];
+  previousId?: string;
+  status: "draft" | "drawn" | "cancelled";
+  assignments: [string, string][];
+  drawnAt?: string;
+}
+export interface Notice extends Base {
+  userId: string;
+  event:
+    | "invitation"
+    | "reservation"
+    | "purchase"
+    | "discussion"
+    | "contribution"
+    | "exchange"
+    | "access";
+  itemId?: string;
+  exchangeId?: string;
+  invitationId?: string;
+  status: "pending" | "sent" | "failed";
+  attempts: number;
+  delivered: string[];
+  error?: string;
+}
+export interface Preferences extends Base {
+  recipientUpdates: boolean;
+  userId: string;
+  email: boolean;
+  telegram: boolean;
+  sms: boolean;
+  events: string[];
+  phone?: string;
+  phoneVerified?: boolean;
+  chatId?: string;
+  smsOptOut?: boolean;
+}
+export interface ImportJob extends Base {
+  userId: string;
+  url: string;
+  status: "pending" | "running" | "complete" | "failed";
+  result?: Partial<Item>;
+  error?: string;
+}
+export interface Setting extends Base {
+  key: string;
+  encrypted: string;
+}
+export interface Link extends Base {
+  requestedBy?: string;
+  userId: string;
+  kind: "telegram" | "profile" | "ownership";
+  targetId?: string;
+  email?: string;
+  tokenHash?: string;
+  expiresAt: string;
+  consumed: boolean;
+}
+export interface Replay extends Base {
+  userId: string;
+  key: string;
+  fingerprint: string;
+  result: unknown;
+}
+export interface Usage extends Base {
+  key: string;
+  count: number;
+}
+export interface Media extends Base {
+  userId: string;
+  file: string;
+}
+export interface Records {
+  media: Media;
+  people: Person;
+  groups: Group;
+  invitations: Invitation;
+  lists: List;
+  items: Item;
+  reservations: Reservation;
+  contributions: Contribution;
+  comments: Comment;
+  exchanges: Exchange;
+  notices: Notice;
+  preferences: Preferences;
+  imports: ImportJob;
+  settings: Setting;
+  links: Link;
+  replays: Replay;
+  usage: Usage;
+}
+export type Kind = keyof Records;
+export type State = { [K in Kind]: Records[K][] };
+export const kinds: Kind[] = [
+  "media",
+  "people",
+  "groups",
+  "invitations",
+  "lists",
+  "items",
+  "reservations",
+  "contributions",
+  "comments",
+  "exchanges",
+  "notices",
+  "preferences",
+  "imports",
+  "settings",
+  "links",
+  "replays",
+  "usage",
+];
+export function emptyState(): State {
+  return Object.fromEntries(kinds.map((k) => [k, []])) as unknown as State;
+}
+export interface Actor {
+  id: string;
+  email: string;
+  name: string;
+}
+export interface GiftView extends Omit<Item, "creatorId"> {
+  recipientNames: string[];
+  creatorName?: string;
+  canEdit: boolean;
+  isRecipient: boolean;
+  mode: Mode;
+  available?: number;
+  reserved?: number;
+  purchased?: number;
+  reservations?: Array<{
+    id: string;
+    buyerName: string;
+    mine: boolean;
+    quantity: number;
+    purchased?: number;
+    reservedAt?: string;
+    purchasedAt?: string;
+    exchange: boolean;
+    poolTargetCents?: number;
+    contributions?: Contribution[];
+  }>;
+  comments?: Array<{
+    id: string;
+    author: string;
+    body: string;
+    createdAt: string;
+  }>;
+}
+export interface World {
+  me: Actor & { admin: boolean };
+  contributionHistory: Array<{
+    contribution: Contribution;
+    title: string;
+    purchaser: boolean;
+  }>;
+  people: Person[];
+  groups: Group[];
+  invitations: Invitation[];
+  lists: Array<List & { canEdit: boolean }>;
+  items: GiftView[];
+  buying: Array<Reservation & { item?: GiftView }>;
+  exchanges: Array<
+    Omit<Exchange, "assignments"> & {
+      canManage: boolean;
+      myAssignments: [string, string][];
+      delivery: { sent: number; pending: number; failed: number };
+    }
+  >;
+  preferences: Preferences;
+  imports: ImportJob[];
+  links: Link[];
+}

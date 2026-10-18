@@ -1,0 +1,104 @@
+{
+  "checked": "2026-10-18",
+  "browser": "155.0.8059.82",
+  "previewImagesLoaded": true,
+  "actualIconDimensions": [
+    {
+      "declared": "16",
+      "actual": 16
+    },
+    {
+      "declared": "32",
+      "actual": 32
+    },
+    {
+      "declared": "48",
+      "actual": 48
+    },
+    {
+      "declared": "64",
+      "actual": 64
+    },
+    {
+      "declared": "128",
+      "actual": 128
+    },
+    {
+      "declared": "16",
+      "actual": 16
+    },
+    {
+      "declared": "32",
+      "actual": 32
+    },
+    {
+      "declared": "48",
+      "actual": 48
+    },
+    {
+      "declared": "64",
+      "actual": 64
+    },
+    {
+      "declared": "128",
+      "actual": 128
+    }
+  ],
+  "narrowLayout": {
+    "viewport": 375,
+    "content": 375
+  },
+  "adaptiveSVG": [
+    {
+      "file": "logos/little-hint-horizontal-adaptive.svg",
+      "theme": "light",
+      "mark": "rgb(170, 77, 55)"
+    },
+    {
+      "file": "logos/little-hint-tagline-adaptive.svg",
+      "theme": "light",
+      "mark": "rgb(170, 77, 55)"
+    },
+    {
+      "file": "favicons/favicon.svg",
+      "theme": "light",
+      "mark": "rgb(255, 248, 240)"
+    },
+    {
+      "file": "logos/little-hint-horizontal-adaptive.svg",
+      "theme": "dark",
+      "mark": "rgb(241, 190, 173)"
+    },
+    {
+      "file": "logos/little-hint-tagline-adaptive.svg",
+      "theme": "dark",
+      "mark": "rgb(241, 190, 173)"
+    },
+    {
+      "file": "favicons/favicon.svg",
+      "theme": "dark",
+      "mark": "rgb(241, 190, 173)"
+    }
+  ],
+  "embeddedAdaptiveFavicon": [
+    {
+      "theme": "light",
+      "pixel": [
+        170,
+        77,
+        55,
+        255
+      ]
+    },
+    {
+      "theme": "dark",
+      "pixel": [
+        43,
+        32,
+        29,
+        255
+      ]
+    }
+  ],
+  "limits": "Local rendering and file checks. Installed PWA behavior has not been tested on physical devices."
+}

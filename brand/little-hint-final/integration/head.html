@@ -1,0 +1,17 @@
+<!-- Copy logos/, symbols/, icons/, favicons/, and manifest.webmanifest to public/brand/little-hint/. -->
+<!-- These example URLs assume Little Hint is served at the origin root. -->
+<link rel="icon" href="/brand/little-hint/favicons/favicon.ico" sizes="16x16 32x32 48x48">
+<link rel="icon" href="/brand/little-hint/favicons/favicon.svg" type="image/svg+xml" sizes="any">
+<link rel="apple-touch-icon" href="/brand/little-hint/icons/apple-touch-icon-color-180.png" sizes="180x180">
+<link rel="mask-icon" href="/brand/little-hint/favicons/safari-pinned-tab.svg" color="#AA4D37">
+<link rel="manifest" href="/brand/little-hint/manifest.webmanifest">
+<meta name="theme-color" content="#AA4D37" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#2B201D" media="(prefers-color-scheme: dark)">
+
+<!-- Automatic logo follows the OS preference. Transparent backgrounds remain transparent. -->
+<img src="/brand/little-hint/logos/little-hint-horizontal-adaptive.svg" alt="Little Hint" style="width:208px;height:auto">
+
+<!-- If your app has a manual theme setting, select color.svg or dark.svg in app code instead.
+     The adaptive SVG cannot read your page's theme class. Installed PWA icons use the
+     stable color set in the manifest; the dark PNGs are optional alternatives, not an
+     automatic OS switch. Installing a PWA also requires your normal app setup. -->

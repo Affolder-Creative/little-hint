@@ -1,0 +1,12 @@
+{
+  "artworkCount": 92,
+  "counts": {
+    ".png": 48,
+    ".ico": 3,
+    ".svg": 41
+  },
+  "pngChecks": 48,
+  "outlineChecks": 41,
+  "transparentLogoBorders": true,
+  "manifestIconPathsExist": true
+}

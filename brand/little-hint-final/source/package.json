@@ -1,0 +1,9 @@
+{
+  "name": "little-hint-brand-export-tools",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Rebuild PNG and ICO exports from Little Hint SVG masters.",
+  "dependencies": {"sharp": "0.35.5"},
+  "devDependencies": {"playwright": "1.62.1"},
+  "scripts": {"export": "node build_exports.cjs", "preview-check": "node verify_preview.cjs"}
+}
