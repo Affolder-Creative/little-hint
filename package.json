@@ -18,7 +18,12 @@
     "test:e2e": "playwright test",
     "typecheck": "tsc --noEmit",
     "demo": "tsx src/server/cli.ts demo",
-    "test:compose": "node scripts/check-compose.mjs"
+    "test:compose": "node scripts/check-compose.mjs",
+    "marketing:preview": "node scripts/preview-marketing.mjs",
+    "marketing:check": "node scripts/check-marketing.mjs",
+    "marketing:test": "node scripts/test-marketing.mjs",
+    "marketing:capture": "tsx scripts/capture-marketing.ts",
+    "marketing:social": "node scripts/capture-marketing-social.mjs"
   },
   "dependencies": {
     "@better-auth/passkey": "^1.7.10",

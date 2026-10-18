@@ -95,6 +95,8 @@ E2E_BUILT=1 E2E_BASE_URL=http://localhost:4173 npx playwright test tests/pwa.spe
 
 ## Project layout
 
+The standalone marketing website lives in `marketing/`. See the [GitHub Pages setup and screenshot guide](docs/MARKETING.md) for preview, validation, and publishing instructions.
+
 - `src/client`: responsive application, forms, install guidance, drafts.
 - `src/server/domain.ts`: permissions, projections, transactional commands.
 - `src/server`: auth, persistence, exchange solver, imports, channels, jobs.

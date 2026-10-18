@@ -1,0 +1,14 @@
+{
+  "source": "Unmodified React app rendered by Playwright",
+  "data": "Isolated example.test fixtures using domain commands and world projection; no database",
+  "command": "npm run marketing:capture",
+  "screenshots": [
+    "home-desktop.webp",
+    "home-mobile.webp",
+    "buying.webp",
+    "exchange.webp",
+    "buying-mobile.webp",
+    "buying-detail.webp",
+    "exchange-mobile.webp"
+  ]
+}
