@@ -4,6 +4,20 @@
 
 Create a Little Hint project in your Coolify team and select its production environment. Connect your fork of `YOUR-ACCOUNT/little-hint` and the Compose build pack, with `/compose.yaml`. Set the app service domain to `https://littlehint.example.com:3000` in Coolify's Compose domain mapping. Port 3000 is internal; do not publish the database or worker. Coolify supplies HTTPS through its proxy. `APP_URL` must be `https://littlehint.example.com`, without the port.
 
+### Separate image compilation from runtime configuration
+
+Keep Docker Compose Location set to `/compose.yaml`. Set Coolify's **Custom Build Command** to:
+
+```sh
+docker compose --env-file /dev/null -f compose.build.yaml build
+```
+
+Leave Custom Start Command empty so Coolify starts its generated runtime Compose file with the correct domains, labels, networking, and environment. The build file only produces `little-hint:local`; both runtime services use that image with `pull_policy: never`. Build and run on the same Docker host. A separate build server or registry-based deployment needs an explicit image push/pull workflow.
+
+Set application configuration variables to **Buildtime off, Runtime on**, in production and any preview configuration. This includes database/authentication/encryption secrets, SMTP, notification/import providers, and backups. Coolify-generated URL variables can stay managed by Coolify. The build file has no build arguments, env files, runtime services, or deployment secret references. `/dev/null` prevents Compose from loading a local `.env` while building.
+
+Do not use the runtime file for the build command: Compose evaluates `${VARIABLE:?message}` even during `build`, but Coolify's build environment excludes runtime-only variables. Keep the required-variable checks in `compose.yaml`; they must still reject missing secrets when the stack starts. To verify this separation locally, run `npm run test:compose`. To force a clean image rebuild, add `--no-cache` after `build` in the custom command for that deployment, then restore the normal command.
+
 Set runtime environment variables from `.env.production.example`. Generate a random database password and authentication secret, and a 32-byte base64 `SETTINGS_ENCRYPTION_KEY`. Keep these in Coolify's secret environment configuration and an independent password manager. Do not expose them as build arguments. App and worker use the same image. PostgreSQL 18 persists under `/var/lib/postgresql`; do not mount a PostgreSQL 17 data directory there. Major upgrades require dump/restore or a planned PostgreSQL upgrade.
 
 The app applies versioned migrations before it starts. The worker waits for app health, then starts the durable pg-boss queues. `/api/health` checks database connectivity. App and worker health checks run inside their containers. For local Compose access only, add `-f compose.local.yaml` after `-f compose.yaml` to bind localhost port 3000 or `APP_PORT`.

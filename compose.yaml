@@ -1,7 +1,8 @@
 name: little-hint
 x-app: &app
   image: little-hint:local
-  build: .
+  # Build once with compose.build.yaml; app and worker use that same image.
+  pull_policy: never
   restart: unless-stopped
   environment:
     NODE_ENV: production

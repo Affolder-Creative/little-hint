@@ -5,7 +5,9 @@ This repository contains reusable deployment instructions. Keep each installatio
 ## Installation settings
 
 - Create a Little Hint project in your chosen Coolify team and select its production environment. Add descriptions that identify the app's purpose.
-- Connect your repository and select the branch you intend to deploy. Use the Compose build pack with `/compose.yaml`.
+- Connect your repository and select `main` or your intended release branch. Use the Compose build pack with `/compose.yaml`.
+- Set Custom Build Command to `docker compose --env-file /dev/null -f compose.build.yaml build`. Leave Custom Start Command empty. Build and run on the same Docker host.
+- Keep application variables Runtime-only in production and preview settings; the image build requires no deployment secrets.
 - Set `APP_URL` to your public HTTPS origin and route the app service's internal port 3000 through Coolify. Keep the database and worker private.
 - Choose the first administrator's email. Bootstrap that account only after verifying SMTP delivery.
 - Use a dedicated sender alias on an existing verified SMTP domain if available. The email domain and app hostname can differ.

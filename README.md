@@ -45,10 +45,13 @@ For illustrative fixtures on an **empty development database**, run `npm run dem
 ```sh
 cp .env.production.example .env.production
 # Fill database/auth/encryption secrets, exact APP_URL, and SMTP credentials.
-docker compose --env-file .env.production up -d --build
+docker compose --env-file /dev/null -f compose.build.yaml build
+docker compose --env-file .env.production -f compose.yaml up -d --no-build
 docker compose --env-file .env.production exec app \
   node dist/server/cli.js bootstrap you@example.com
 ```
+
+`compose.build.yaml` builds the shared image without loading deployment settings. `compose.yaml` starts that image and validates the required runtime secrets. Keep these commands separate; do not combine the two files with multiple `-f` arguments.
 
 `app` migrates before starting. `worker` waits for app health. Both use the same non-root image. The production environment enables the existing Housewatch Digital backup sidecar, which has its own image, credentials, health check, and Coolify schedules. PostgreSQL and uploads persist in separate volumes. Configure Coolify's domain/proxy for app port 3000, with HTTPS and your public origin as `APP_URL`, for example `https://littlehint.example.com`. See the operations guide for Coolify environment configuration, provider setup, and backups.
 
@@ -60,6 +63,7 @@ Configure the SMTP sender independently from the app URL. An alias on an existin
 npm run typecheck
 npm test
 npm run build
+npm run test:compose # Requires the Docker Compose CLI; no running daemon or database.
 ```
 
 Integration tests require a separate database literally named `little_hint_test`; they refuse other names and clear its application records:
