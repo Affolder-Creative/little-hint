@@ -70,7 +70,7 @@ jobs:
           POSTGRES_DB: little_hint_test
         ports: ["5432:5432"]
         options: >-
-          --health-cmd 'pg_isready -U little_hint -d little_hint_test'
+          --health-cmd "pg_isready -U little_hint -d little_hint_test"
           --health-interval 5s --health-timeout 5s --health-retries 15
     env:
       TEST_DATABASE_URL: postgres://little_hint:ci-only@localhost:5432/little_hint_test
@@ -101,7 +101,7 @@ jobs:
           POSTGRES_DB: little_hint_e2e
         ports: ["5432:5432"]
         options: >-
-          --health-cmd 'pg_isready -U little_hint -d little_hint_e2e'
+          --health-cmd "pg_isready -U little_hint -d little_hint_e2e"
           --health-interval 5s --health-timeout 5s --health-retries 15
     env:
       DATABASE_URL: postgres://little_hint:ci-only@localhost:5432/little_hint_e2e

@@ -55,6 +55,31 @@ test("a permissive SPDX label does not substitute for license text", () => {
     assert.deepEqual(inventory(root, policy).errors, [
       "Missing license text: fixture@1.0.0",
     ]);
+    const devPolicy = {
+      ...policy,
+      developmentNoticeGaps: { "fixture@1.0.0": "Documented build-tool gap" },
+    };
+    assert.deepEqual(inventory(root, devPolicy).errors, [
+      "Missing license text: fixture@1.0.0",
+    ]);
+    writeFileSync(
+      path.join(root, "package-lock.json"),
+      JSON.stringify({
+        packages: { "node_modules/fixture": { ...pkg, dev: true } },
+      }),
+    );
+    assert.deepEqual(inventory(root, devPolicy).errors, []);
+    assert.equal(
+      inventory(root, devPolicy).packages[0].noticeGap,
+      "Documented build-tool gap",
+    );
+    assert.deepEqual(
+      inventory(root, {
+        ...devPolicy,
+        developmentNoticeGaps: { "fixture@2.0.0": "Different version" },
+      }).errors,
+      ["Missing license text: fixture@1.0.0"],
+    );
     writeFileSync(
       path.join(root, "node_modules/fixture/LICENSE"),
       "A preserved upstream notice",

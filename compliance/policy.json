@@ -19,6 +19,9 @@
     "@img/sharp-wasm32@0.35.5": "Apache-2.0 AND LGPL-3.0-or-later AND MIT",
     "@img/sharp-win32-*@0.35.5": "Apache-2.0 AND LGPL-3.0-or-later"
   },
+  "developmentNoticeGaps": {
+    "@napi-rs/lzma-linux-x64-gnu@1.5.1": "Rollup's optional Linux/glibc build tool declares MIT but its npm archives and source release omit license text. This exception permits development use only while the lockfile marks it dev; it is absent from the Alpine runtime and is not a client import. Do not redistribute this tool's binary without resolving its notices. Source declaration: https://github.com/Brooooooklyn/lzma/blob/f164df92d83e095f195d628b1a68a141ae2eb638/package.json"
+  },
   "noticeFallbacks": {
     "@better-auth/utils@0.5.0": ["compliance/licenses/better-auth-utils.txt"],
     "abstract-logging@2.0.1": ["compliance/licenses/abstract-logging.txt"],

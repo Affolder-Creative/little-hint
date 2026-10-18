@@ -50,6 +50,15 @@ packages use the matching parent package's notices. Rolldown's third-party
 license file and Lucide's Feather attribution are included, not just their
 package-level SPDX labels.
 
+One Linux/glibc-only development dependency, `@napi-rs/lzma-linux-x64-gnu`
+1.5.1, declares MIT but omits license text in both published packages and the
+matching source release. Its exact-version development-only exception records
+the gap in the generated inventory; it does not fabricate a copyright grant.
+Rollup uses it as an optional build tool. It is not imported by the client and
+is absent from the Alpine runtime. Redistributing that tool's binary requires
+resolving its notices first. The exception fails if it becomes a production
+dependency or its version changes.
+
 ## Outstanding source-material requirements
 
 **The first container release is intentionally blocked.** The repository does

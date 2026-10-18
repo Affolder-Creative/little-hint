@@ -89,6 +89,11 @@ export function inventory(root, policy, noticeRoot = root) {
           ),
         );
     }
+    const noticeGap =
+      !texts.length &&
+      record.dev &&
+      policy.developmentNoticeGaps?.[`${pkg.name}@${pkg.version}`];
+    if (noticeGap) texts = [`Unresolved development-tool notice: ${noticeGap}`];
     if (!texts.length)
       errors.push(`Missing license text: ${pkg.name}@${pkg.version}`);
     const bundledVersions = path.join(directory, "versions.json");
@@ -98,6 +103,7 @@ export function inventory(root, policy, noticeRoot = root) {
       license: pkg.license,
       location,
       development: Boolean(record.dev),
+      ...(noticeGap ? { noticeGap } : {}),
       repository: pkg.repository ?? null,
       ...(pkg.name.startsWith("@img/sharp-libvips-") &&
       existsSync(bundledVersions)
