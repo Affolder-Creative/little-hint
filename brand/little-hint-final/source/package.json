@@ -4,6 +4,6 @@
   "private": true,
   "description": "Rebuild PNG and ICO exports from Little Hint SVG masters.",
   "dependencies": {"sharp": "0.35.5"},
-  "devDependencies": {"playwright": "1.62.1"},
+  "devDependencies": {"playwright": "1.64.1"},
   "scripts": {"export": "node build_exports.cjs", "preview-check": "node verify_preview.cjs"}
 }
