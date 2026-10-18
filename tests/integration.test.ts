@@ -224,6 +224,86 @@ describe.skipIf(!url)("PostgreSQL transaction integrity", () => {
     expect(restored.archived).toBe(false);
     expect(restored.archiveAfter).toBeNull();
   });
+  it("persists event lists atomically, deduplicates retries, and rejects simultaneous stale edits", async () => {
+    const setup = await storage.transact((s) => {
+      const group = command(s, a, "groups.create", {
+        name: "Event test family",
+      }) as any;
+      group.memberIds.push(b.id, c.id);
+      return {
+        groupId: group.id,
+        participantIds: s.people
+          .filter((p) => [a.id, b.id].includes(p.userId!))
+          .map((p) => p.id),
+      };
+    });
+    const payload = { ...setup, name: "Christmas", mode: "surprise" };
+    const create = () =>
+      storage.transact((s) =>
+        idempotent(
+          s,
+          a,
+          "create_event_retry_01",
+          "group-events.create",
+          payload,
+        ),
+      );
+    await Promise.all([create(), create()]);
+    let state = await storage.readState();
+    const event = state.groupEvents.find(
+      (event) => event.groupId === setup.groupId,
+    )!;
+    expect(event).toBeDefined();
+    const listIds = state.lists
+      .filter((list) => list.groupEventId === event.id)
+      .map((list) => list.id);
+    expect(listIds).toHaveLength(2);
+    const updates = await Promise.allSettled(
+      ["First edit", "Second edit"].map((name) =>
+        storage.transact((s) =>
+          command(s, a, "group-events.update", { ...event, name }),
+        ),
+      ),
+    );
+    expect(
+      updates.filter((result) => result.status === "fulfilled"),
+    ).toHaveLength(1);
+    state = await storage.readState();
+    expect(
+      state.lists
+        .filter((list) => list.groupEventId === event.id)
+        .every(
+          (list) =>
+            list.name ===
+            state.groupEvents.find((e) => e.id === event.id)!.name,
+        ),
+    ).toBe(true);
+    await expect(
+      storage.transact((s) => {
+        const current = s.groupEvents.find((e) => e.id === event.id)!;
+        command(s, a, "group-events.update", {
+          ...current,
+          participantIds: [],
+        });
+        throw new Error("Abort event edit");
+      }),
+    ).rejects.toThrow("Abort event edit");
+    state = await storage.readState();
+    expect(
+      state.lists
+        .filter((list) => listIds.includes(list.id))
+        .every((list) => !list.archived),
+    ).toBe(true);
+    await storage.transact((s) => {
+      const current = s.groupEvents.find((e) => e.id === event.id)!;
+      command(s, a, "group-events.update", { ...current, archived: true });
+    });
+    expect(
+      (await storage.readState()).lists
+        .filter((list) => listIds.includes(list.id))
+        .every((list) => list.archived),
+    ).toBe(true);
+  });
   it("persists a failed job across worker restart and completes its retry", async () => {
     const { PgBoss } = await import("pg-boss");
     const name = `retry-proof-${Date.now()}`;

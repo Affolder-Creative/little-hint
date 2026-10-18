@@ -6,7 +6,16 @@ import { createServer } from "node:net";
 import { createServer as createHttpServer, request } from "node:http";
 
 const suite = process.argv[2];
-if (!["e2e", "sign-in", "list-features", "polish", "pwa"].includes(suite))
+if (
+  ![
+    "e2e",
+    "sign-in",
+    "list-features",
+    "group-events",
+    "polish",
+    "pwa",
+  ].includes(suite)
+)
   throw new Error("Supply one known browser suite.");
 if (new URL(process.env.DATABASE_URL).pathname !== "/little_hint_e2e")
   throw new Error("Browser CI requires an isolated little_hint_e2e database.");

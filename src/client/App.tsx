@@ -7,6 +7,7 @@ import {
   Route,
   Routes,
   useNavigate,
+  useLocation,
   useParams,
 } from "react-router-dom";
 import {
@@ -65,6 +66,12 @@ import {
 import { Install, UpdateNotice, useOnline } from "./pwa";
 import { Login } from "./Login";
 import { RevealPolicy, GiftSummaryPanel } from "./ListFeatures";
+import {
+  EventPage,
+  GroupEventsSection,
+  GroupEventSettings,
+  ManagedEventNotice,
+} from "./GroupEvents";
 import { scrapingProviders } from "../shared/scraping-providers";
 const nav = [
   { to: "/", label: "Home", icon: Heart },
@@ -74,6 +81,7 @@ const nav = [
   { to: "/exchanges", label: "Exchanges", icon: Shuffle },
 ];
 export function App() {
+  const location = useLocation();
   const client = useQueryClient();
   const online = useOnline();
   const [theme, setTheme] = useState(
@@ -208,7 +216,17 @@ export function App() {
           </Link>
           <nav aria-label="Main navigation">
             {nav.map(({ to, label, icon: Icon }) => (
-              <NavLink key={to} to={to} end={to === "/"}>
+              <NavLink
+                key={to}
+                to={to}
+                end={to === "/"}
+                className={({ isActive }) =>
+                  isActive ||
+                  (to === "/lists" && location.pathname.startsWith("/events/"))
+                    ? "active"
+                    : undefined
+                }
+              >
                 <Icon size={21} />
                 <span>{label}</span>
               </NavLink>
@@ -299,6 +317,7 @@ export function App() {
               <Route path="/people/:id" element={<PersonPage />} />
               <Route path="/lists" element={<Lists />} />
               <Route path="/lists/:id" element={<Lists />} />
+              <Route path="/events/:id" element={<EventPage />} />
               <Route path="/gift/:id" element={<GiftDetail />} />
               <Route path="/buying" element={<Buying />} />
               <Route path="/exchanges" element={<Exchanges />} />
@@ -331,7 +350,17 @@ export function App() {
         </div>
         <nav className="mobile-nav" aria-label="Mobile navigation">
           {nav.map(({ to, label, icon: Icon }) => (
-            <NavLink key={to} to={to} end={to === "/"}>
+            <NavLink
+              key={to}
+              to={to}
+              end={to === "/"}
+              className={({ isActive }) =>
+                isActive ||
+                (to === "/lists" && location.pathname.startsWith("/events/"))
+                  ? "active"
+                  : undefined
+              }
+            >
               <Icon size={21} />
               <span>{label}</span>
             </NavLink>
@@ -749,7 +778,7 @@ function Lists() {
         </Link>
         <Header title={list.name} description={list.description}>
           <Privacy mode={list.mode} />
-          {list.canEdit && (
+          {list.canManageSettings && (
             <>
               <button
                 className="button secondary"
@@ -769,6 +798,10 @@ function Lists() {
               >
                 {list.archived ? "Restore list" : "Archive list"}
               </Action>
+            </>
+          )}
+          {list.canEdit && (
+            <>
               {!list.archived && (
                 <button
                   className="button"
@@ -788,6 +821,7 @@ function Lists() {
             This list is archived. Existing purchase history is preserved.
           </p>
         )}
+        {list.groupEventId && <ManagedEventNotice list={list} />}
         <RevealPolicy list={list} />
         {list.canEdit && list.revealAvailable && (
           <div className="tabs" role="group" aria-label="List view">
@@ -840,6 +874,8 @@ function Lists() {
           Archived
         </button>
       </div>
+      <GroupEventsSection archived={showArchived} />
+      {!!world.groups.length && <h2>Your lists</h2>}
       {pending
         .filter((l) => l.archived === showArchived)
         .map((l) => (
@@ -859,6 +895,18 @@ function Lists() {
               </span>
               <div>
                 <h2>{l.name}</h2>
+                {l.groupEventId && (
+                  <p>
+                    For{" "}
+                    {l.ownerIds
+                      .map(
+                        (id) =>
+                          world.people.find((p) => p.id === id)?.name ??
+                          "Recipient",
+                      )
+                      .join(", ")}
+                  </p>
+                )}
                 <p>
                   {l.archived
                     ? "Archived"
@@ -1699,6 +1747,7 @@ function SettingsPage({
                   ? "You own this group."
                   : "You’re a member of this group."}
               </p>
+              <GroupEventSettings group={g} />
               <div className="member-list">
                 {g.memberIds.map((uid) => {
                   const person = world.people.find((p) => p.userId === uid);
@@ -1707,7 +1756,11 @@ function SettingsPage({
                       <Avatar name={person?.name ?? "Member"} small />
                       <span>
                         {person?.name ?? "Member"}
-                        {uid === g.ownerId ? " · Owner" : ""}
+                        {uid === g.ownerId
+                          ? " · Owner"
+                          : g.eventLeaderIds?.includes(uid)
+                            ? " · Event leader"
+                            : ""}
                       </span>
                       {g.ownerId === world.me.id && uid !== world.me.id && (
                         <>

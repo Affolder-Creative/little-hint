@@ -23,3 +23,11 @@ Track DNS/TLS verification, SMTP delivery, administrator bootstrap, backup activ
 ## Activation
 
 Follow [operations](OPERATIONS.md) for migrations, administrator bootstrap, providers, schedules, and recovery. Complete the applicable [release checks](VALIDATION.md). Healthy containers alone do not confirm working public HTTPS, email delivery, off-host backups, or device installation.
+
+## Upgrading to group events
+
+Take a database backup and stop both app and worker before replacing their images with this release. Start both from the same new build before creating any group events. There is no SQL migration; existing groups default to no appointed event leaders and existing lists keep their behavior.
+
+Do not run a pre-event app or worker against a database containing group events. Its transaction writer does not recognize the new record kind and can delete event records. A rollback to a pre-event build requires restoring the pre-upgrade database backup as well; it loses changes made since that backup. Do not perform that rollback automatically.
+
+After upgrading, confirm that a group owner can appoint an event leader, create an event with two selected people, and that each person can add a wish while an unselected group member can shop from those lists. Confirm the worker is healthy and Surprise recipients cannot see purchase activity.

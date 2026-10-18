@@ -7,7 +7,7 @@
 
 **Gift ideas, shared thoughtfully.**
 
-A self-hosted, invite-only gift coordination PWA for families and friends. React/Vite frontend, Fastify API, PostgreSQL/Drizzle, Better Auth, and a pg-boss worker. Includes wishes, private ideas, quantities, contributions, secret gift exchanges, URL imports, and optional SMTP/Telegram/US SMS integrations.
+A self-hosted, invite-only gift coordination PWA for families and friends. React/Vite frontend, Fastify API, PostgreSQL/Drizzle, Better Auth, and a pg-boss worker. Includes leader-managed group events with individual wish lists, wishes, private ideas, quantities, contributions, secret gift exchanges, URL imports, and optional SMTP/Telegram/US SMS integrations.
 
 The [master plan](MASTER_PLAN.md) is the approved product contract. Read [architecture](docs/ARCHITECTURE.md), [operations](docs/OPERATIONS.md), and [validation/release checks](docs/VALIDATION.md) before deployment. Production activation and physical-device acceptance still require the checks recorded there.
 

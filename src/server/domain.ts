@@ -12,6 +12,7 @@ import type {
   State,
   Person,
   Group,
+  GroupEvent,
   List,
   Item,
   Reservation,
@@ -22,6 +23,7 @@ import type {
   Exchange,
   GiftSummary,
 } from "../shared/model";
+import { canManageGroupEvents, peopleForGroup } from "../shared/group-events";
 import { matchExchange as solveExchange } from "./exchange";
 function matchExchange(...args: Parameters<typeof solveExchange>) {
   try {
@@ -81,6 +83,126 @@ const listDates = {
     .optional(),
   revealExchangeGivers: z.boolean().optional(),
 };
+const eventInput = z.object({
+  ...listDates,
+  name: text,
+  description: z.string().max(2000).default(""),
+  participantIds: ids,
+  mode: z.enum(["surprise", "transparent"]),
+});
+
+type ListPolicy = Pick<
+  List,
+  "mode" | "timeZone" | "revealAfter" | "revealExchangeGivers"
+>;
+function checkSharedListPolicy(
+  current: ListPolicy & { modeLocked: boolean },
+  next: ListPolicy,
+) {
+  if (current.modeLocked) {
+    if (next.mode !== current.mode)
+      fail(409, "Privacy mode is locked after sharing.");
+    if ((next.timeZone ?? "UTC") !== (current.timeZone ?? "UTC"))
+      fail(409, "The timezone is locked after sharing.");
+    if (!!next.revealExchangeGivers !== !!current.revealExchangeGivers)
+      fail(409, "Exchange gift privacy is locked after sharing.");
+    if (
+      (next.revealAfter ?? null) !== (current.revealAfter ?? null) &&
+      (!current.revealAfter ||
+        !next.revealAfter ||
+        next.revealAfter < current.revealAfter ||
+        dateHasElapsed(current.revealAfter, current.timeZone))
+    )
+      fail(
+        409,
+        "After sharing, an upcoming reveal date can only move later. Lists shared without a date keep gift details hidden.",
+      );
+  }
+  if (next.revealExchangeGivers && !next.revealAfter)
+    fail(400, "Choose a reveal date to reveal exchange givers.");
+}
+
+function managedEventGroup(s: State, a: Actor, groupId: string): Group {
+  return (
+    s.groups.find((g) => g.id === groupId && canManageGroupEvents(g, a.id)) ??
+    fail(404, "Event management is not available for this group.")
+  );
+}
+function checkEventParticipants(
+  s: State,
+  group: Group,
+  participantIds: string[],
+) {
+  const eligible = new Set(peopleForGroup(s.people, group).map((p) => p.id));
+  if (participantIds.some((personId) => !eligible.has(personId)))
+    fail(
+      400,
+      "Choose people who belong to this group. Refresh to see current members.",
+    );
+}
+function syncEventLists(s: State, event: GroupEvent) {
+  for (const personId of event.participantIds) {
+    if (
+      !s.lists.some(
+        (list) =>
+          list.groupEventId === event.id && list.ownerIds.includes(personId),
+      )
+    ) {
+      s.lists.push({
+        ...stamp(),
+        groupEventId: event.id,
+        ownerIds: [personId],
+        pendingOwnerIds: [],
+        groupIds: [event.groupId],
+        name: event.name,
+        description: event.description,
+        mode: event.mode,
+        modeLocked: true,
+        archived: event.archived,
+        archiveAfter: event.archiveAfter,
+        revealAfter: event.revealAfter,
+        timeZone: event.timeZone,
+        revealExchangeGivers: event.revealExchangeGivers,
+      });
+    }
+  }
+  for (const list of s.lists.filter((list) => list.groupEventId === event.id)) {
+    const next = {
+      name: event.name,
+      description: event.description,
+      archived:
+        event.archived || !event.participantIds.includes(list.ownerIds[0]),
+      archiveAfter: event.archiveAfter,
+      revealAfter: event.revealAfter,
+      timeZone: event.timeZone,
+      mode: event.mode,
+      revealExchangeGivers: event.revealExchangeGivers,
+    };
+    if (
+      Object.entries(next).some(
+        ([key, value]) => list[key as keyof List] !== value,
+      )
+    ) {
+      Object.assign(list, next);
+      touch(list);
+    }
+  }
+}
+function reconcileEventParticipants(s: State) {
+  for (const event of s.groupEvents) {
+    const group = s.groups.find((g) => g.id === event.groupId)!;
+    const eligible = new Set(peopleForGroup(s.people, group).map((p) => p.id));
+    const participantIds = event.participantIds.filter((id) =>
+      eligible.has(id),
+    );
+    if (participantIds.length !== event.participantIds.length) {
+      event.participantIds = participantIds;
+      touch(event);
+      syncEventLists(s, event);
+    }
+  }
+}
+
 export const controllers = (p: Person) =>
   [p.userId, ...p.guardians].filter((v): v is string => !!v);
 export const controls = (s: State, a: Actor, id: string) =>
@@ -143,6 +265,13 @@ const name = (s: State, userId: string) =>
 const mode = (s: State, i: Item) =>
   s.lists.find((l) => l.id === i.listId)?.mode ?? "surprise";
 export function archiveDueLists(s: State) {
+  for (const event of s.groupEvents) {
+    if (!event.archived && listIsArchived(event)) {
+      event.archived = true;
+      touch(event);
+      syncEventLists(s, event);
+    }
+  }
   for (const list of s.lists) {
     if (!list.archived && listIsArchived(list)) {
       list.archived = true;
@@ -364,6 +493,16 @@ export function world(s: State, a: Actor): World {
     },
     people,
     groups: s.groups.filter((g) => member(g, a)),
+    groupEvents: s.groupEvents
+      .filter((event) => groupAccess(s, a, event.groupId))
+      .map((event) => ({
+        ...event,
+        archived: listIsArchived(event),
+        canManage: canManageGroupEvents(
+          s.groups.find((g) => g.id === event.groupId)!,
+          a.id,
+        ),
+      })),
     invitations: s.invitations.filter(
       (i) =>
         !i.revoked &&
@@ -382,6 +521,8 @@ export function world(s: State, a: Actor): World {
         ...l,
         archived: listIsArchived(l),
         canEdit: l.ownerIds.some((p) => ps.includes(p)),
+        canManageSettings:
+          !l.groupEventId && l.ownerIds.some((p) => ps.includes(p)),
         revealAvailable: dateHasElapsed(l.revealAfter, l.timeZone),
       })),
     items: s.items
@@ -564,6 +705,64 @@ export function command(
       s.groups.push(g);
       return g;
     }
+    case "groups.event-leaders": {
+      const p = z
+        .object({
+          groupId: id,
+          revision,
+          userIds: z.array(z.string().min(1)).max(100),
+        })
+        .parse(b);
+      const group = ownedGroup(s, a, p.groupId);
+      checkRevision(group, p.revision);
+      if (
+        new Set(p.userIds).size !== p.userIds.length ||
+        p.userIds.some(
+          (userId) =>
+            !group.memberIds.includes(userId) || userId === group.ownerId,
+        )
+      )
+        fail(400, "Choose current members other than the group owner.");
+      group.eventLeaderIds = p.userIds;
+      touch(group);
+      return { ok: true };
+    }
+    case "group-events.create": {
+      const p = eventInput
+        .extend({ groupId: id, participantIds: ids.min(1) })
+        .parse(b);
+      const group = managedEventGroup(s, a, p.groupId);
+      checkEventParticipants(s, group, p.participantIds);
+      if (p.revealExchangeGivers && !p.revealAfter)
+        fail(400, "Choose a reveal date to reveal exchange givers.");
+      const event: GroupEvent = {
+        ...stamp(),
+        ...p,
+        archived: false,
+        timeZone: p.timeZone ?? "UTC",
+        revealExchangeGivers: p.revealExchangeGivers ?? false,
+      };
+      s.groupEvents.push(event);
+      syncEventLists(s, event);
+      return { id: event.id };
+    }
+    case "group-events.update": {
+      const p = eventInput
+        .extend({ id, revision, archived: z.boolean() })
+        .parse(b);
+      const event =
+        s.groupEvents.find((event) => event.id === p.id) ??
+        fail(404, "Event not found.");
+      const group = managedEventGroup(s, a, event.groupId);
+      checkRevision(event, p.revision);
+      checkEventParticipants(s, group, p.participantIds);
+      checkSharedListPolicy({ ...event, modeLocked: true }, { ...event, ...p });
+      if (listIsArchived(event) && !p.archived) p.archiveAfter = null;
+      Object.assign(event, p);
+      touch(event);
+      syncEventLists(s, event);
+      return { id: event.id };
+    }
     case "groups.invite": {
       const p = z.object({ groupId: id, email: z.email() }).parse(b);
       ownedGroup(s, a, p.groupId);
@@ -625,6 +824,8 @@ export function command(
       if (g.ownerId === p.userId)
         fail(409, "Transfer ownership before leaving.");
       g.memberIds = g.memberIds.filter((u) => u !== p.userId);
+      g.eventLeaderIds = (g.eventLeaderIds ?? []).filter((u) => u !== p.userId);
+      reconcileEventParticipants(s);
       touch(g);
       reconcileAccess(s);
       return { ok: true };
@@ -685,6 +886,7 @@ export function command(
       } else fail(400, "Use Telegram to link this account.");
       l.consumed = true;
       touch(l);
+      reconcileEventParticipants(s);
       return { ok: true };
     }
     case "people.create": {
@@ -792,35 +994,13 @@ export function command(
         s.lists.find(
           (l) => l.id === p.id && l.ownerIds.some((id) => controls(s, a, id)),
         ) ?? fail(404, "List not found.");
+      if (l.groupEventId)
+        fail(403, "This list is managed through its group event.");
       checkRevision(l, p.revision);
       checkGroups(s, a, p.groupIds);
-      if (l.modeLocked && p.mode !== l.mode)
-        fail(409, "Privacy mode is locked after sharing.");
+      checkSharedListPolicy(l, { ...l, ...p });
       if (l.pendingOwnerIds.length && p.groupIds.length)
         fail(409, "Wait for joint owners to accept before sharing.");
-      const next = { ...l, ...p };
-      if (l.modeLocked) {
-        if (p.timeZone !== undefined && p.timeZone !== (l.timeZone ?? "UTC"))
-          fail(409, "The timezone is locked after sharing.");
-        if (
-          p.revealExchangeGivers !== undefined &&
-          p.revealExchangeGivers !== !!l.revealExchangeGivers
-        )
-          fail(409, "Exchange gift privacy is locked after sharing.");
-        if (
-          (next.revealAfter ?? null) !== (l.revealAfter ?? null) &&
-          (!l.revealAfter ||
-            !next.revealAfter ||
-            next.revealAfter < l.revealAfter ||
-            dateHasElapsed(l.revealAfter, l.timeZone))
-        )
-          fail(
-            409,
-            "After sharing, an upcoming reveal date can only move later. Lists shared without a date keep gift details hidden.",
-          );
-      }
-      if (next.revealExchangeGivers && !next.revealAfter)
-        fail(400, "Choose a reveal date to reveal exchange givers.");
       if (listIsArchived(l) && !p.archived) p.archiveAfter = null;
       Object.assign(l, p, {
         modeLocked: l.modeLocked || p.groupIds.length > 0,
