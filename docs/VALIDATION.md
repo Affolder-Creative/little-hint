@@ -14,6 +14,16 @@ Status on 2026-10-18: implementation and local validation are complete except th
 - The backup drill used an encrypted local test repository. Real off-host credentials and recovery remain pending.
 - Impeccable's visual review finished with disposition `ship` after responsive filter, avatar sizing and contrast fixes. Design decisions are recorded in `DESIGN.md` and `.impeccable/design.json`. Durable review screenshots are local ignored artifacts under `.local/review/`.
 
+## Sign-in and visual refinement checks, 2026-10-18
+
+- 65 unit tests passed, including pending sign-in storage, expiry validation, email escaping, action origins, and notification privacy. The six opt-in database integration tests were not rerun for this change.
+- Eleven browser tests passed against an isolated development database. They include the six existing workflows plus sign-in recovery across refresh intervals, tab switching, same-tab reload, offline/reconnect, resend failures, expired codes, and blocked session storage.
+- Both built-PWA tests passed, including offline drafts, sign-out cleanup, and installation reminders.
+- Production build and type checking passed. Main views were reviewed at 1280px and 390px in light and dark themes, with 320px landing and email checks. Automated accessibility checks passed on the tested pages; this does not replace physical-device or screen-reader review.
+- Sign-in, invitation, and update emails were rendered in browser previews with the actual embedded-logo bytes. Real Gmail, Apple Mail, and Outlook delivery/layout remain provider acceptance checks.
+- Favicon PNGs at 16, 32, and 48px have transparent surrounding pixels and heart cutouts, with exact #AA4D37 / #F1BEAD opaque tag colors. SVG and ICO selection follows system and explicit app appearance. Installed app icons are unchanged.
+- Impeccable's detector returned 94 advisory token deviations, mainly existing typography and palette variants. These were reviewed alongside the rendered pages rather than treated as 94 visual defects. Review screenshots are ignored artifacts under `test-results/polish/`.
+
 ## Commands
 
 ```sh

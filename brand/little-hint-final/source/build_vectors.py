@@ -120,9 +120,9 @@ for variant in VARIANTS:
     save(f'symbols/little-hint-tag-micro-{variant}.svg',svg(256,256,tag(micro=True),css,'Little Hint small gift tag'))
 
 for variant in ['color','dark','adaptive']:
-    css=style(variant,tile=True)
     for kind,scale,rx,micro in [('app',.85,0,False),('maskable',.68,0,False),('favicon',.98,56,True)]:
-        body=f'<rect class="tile" width="256" height="256" rx="{rx}"/>'+tag(scale=scale,micro=micro)
+        css=style(variant,tile=kind!='favicon')
+        body=('' if kind=='favicon' else f'<rect class="tile" width="256" height="256" rx="{rx}"/>')+tag(scale=scale,micro=micro)
         folder='favicons' if kind=='favicon' else 'icons'
         save(f'{folder}/little-hint-{kind}-{variant}.svg',svg(256,256,body,css,'Little Hint'))
 

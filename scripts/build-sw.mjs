@@ -11,6 +11,10 @@ const brand = [
   "symbols/little-hint-tag-dark.svg",
   "icons/little-hint-app-color-64.png",
   "favicons/favicon.svg",
+  "favicons/little-hint-favicon-color.svg",
+  "favicons/little-hint-favicon-dark.svg",
+  "favicons/favicon-color.ico",
+  "favicons/favicon-dark.ico",
   "manifest.webmanifest",
 ].map((p) => `/brand/little-hint/${p}`);
 const files = ["/", ...assets, ...brand];

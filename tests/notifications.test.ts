@@ -125,6 +125,9 @@ describe("notification privacy and recovery", () => {
     expect(f.notice.delivered).toEqual(["email", "telegram"]);
     const mail = mock.sendMail.mock.calls[1][0];
     expect(mail.text).not.toContain("Private gift");
+    expect(mail.html).not.toContain("Private gift");
+    expect(mail.html).toContain("Open Little Hint");
+    expect(mail.html).toContain(`/gift/${f.notice.itemId}`);
     expect(mail.subject).toBe("An update in Little Hint");
     expect(mail.attachments[0].cid).toBe("little-hint-logo");
     await deliverNotice(f.notice.id);

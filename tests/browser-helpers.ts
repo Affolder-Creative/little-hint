@@ -1,13 +1,39 @@
-import { expect, type Page, type BrowserContext } from "@playwright/test";
+import { test, expect, type Page, type BrowserContext } from "@playwright/test";
 import { readdir, readFile } from "node:fs/promises";
 const loginCookies = new Map<
   string,
   Awaited<ReturnType<BrowserContext["cookies"]>>
 >();
+async function submitAuth(page: Page, button: string, path: string) {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const [response] = await Promise.all([
+      page.waitForResponse((r) => new URL(r.url()).pathname === path),
+      page.getByRole("button", { name: button, exact: true }).click(),
+    ]);
+    if (response.status() !== 429 || attempt === 1) {
+      expect(response.ok(), await response.text()).toBe(true);
+      return;
+    }
+    // Real auth limits remain enabled. Respect the server's cooldown between
+    // fixture sign-ins instead of turning protection off for the test suite.
+    const seconds = Number(response.headers()["retry-after"]);
+    const delay =
+      (Number.isFinite(seconds) && seconds > 0 ? seconds : 60) * 1000 + 1000;
+    test.setTimeout(test.info().timeout + delay);
+    await new Promise((resolve) => setTimeout(resolve, delay));
+  }
+}
 export async function login(page: Page, email: string) {
   if (loginCookies.has(email))
     await page.context().addCookies(loginCookies.get(email)!);
   await page.goto("/");
+  // Wait for the session check before deciding which sign-in path to take.
+  // isVisible() alone can race the initial loading screen with cached cookies.
+  await expect(
+    page
+      .getByRole("heading", { name: /A little thought,/ })
+      .or(page.getByLabel("Email address", { exact: true })),
+  ).toBeVisible();
   if (
     await page
       .getByRole("heading", { name: /A little thought,/ })
@@ -17,9 +43,11 @@ export async function login(page: Page, email: string) {
     return;
   const before = new Set(await readdir(".local/mail").catch(() => []));
   await page.getByLabel("Email address", { exact: true }).fill(email);
-  await page
-    .getByRole("button", { name: "Send me a code", exact: true })
-    .click();
+  await submitAuth(
+    page,
+    "Send me a code",
+    "/api/auth/email-otp/send-verification-otp",
+  );
   await expect(page.getByLabel("Six-digit code")).toBeVisible();
   let code = "";
   await expect
@@ -39,10 +67,15 @@ export async function login(page: Page, email: string) {
     )
     .toHaveLength(6);
   await page.getByLabel("Six-digit code").fill(code);
-  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await submitAuth(page, "Sign in", "/api/auth/sign-in/email-otp");
   await expect(
     page.getByRole("heading", { name: /A little thought,/ }),
   ).toBeVisible();
+  expect(
+    await page.evaluate(() =>
+      sessionStorage.getItem("little-hint:pending-sign-in"),
+    ),
+  ).toBeNull();
   loginCookies.set(email, await page.context().cookies());
 }
 export const post = async (page: Page, path: string, body: unknown) => {

@@ -67,7 +67,9 @@ Rounded and circular crops in the guide are previews only.
 Use the sienna/ivory icon as the stable installed identity. The manifest uses
 this set. Dark PNGs are optional alternatives, not an automatic OS switch.
 
-favicon.svg is the automatic light/dark micro mark.
+favicon.svg is the automatic light/dark micro mark, without a surrounding tile.
+The tag is #AA4D37 in light mode and #F1BEAD in dark mode.
+The heart and the space around the tag are transparent.
 favicon.ico is the color fallback with exact 16, 32, 48 px PNG entries.
 Explicit color/dark PNGs, SVGs, and ICOs are also included.
 The micro mark uses a larger heart and omits the punched hole at all sizes.

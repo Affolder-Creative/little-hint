@@ -63,6 +63,7 @@ import {
   draftKey,
 } from "./forms";
 import { Install, UpdateNotice, useOnline } from "./pwa";
+import { Login } from "./Login";
 const nav = [
   { to: "/", label: "Home", icon: Heart },
   { to: "/people", label: "People", icon: Users },
@@ -86,13 +87,22 @@ export function App() {
     [message, setMessage] = useState("");
   const query = useQuery({
     queryKey: ["world"],
-    queryFn: () => api<World>("world"),
+    queryFn: async (): Promise<World | null> => {
+      try {
+        return await api<World>("world");
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 401) return null;
+        throw error;
+      }
+    },
     refetchInterval: (q) =>
       q.state.data?.imports.some((j) =>
         ["pending", "running"].includes(j.status),
       )
         ? 2000
-        : 20000,
+        : q.state.data
+          ? 20000
+          : false,
   });
   useEffect(() => {
     const mq = matchMedia("(prefers-color-scheme: dark)");
@@ -105,6 +115,19 @@ export function App() {
     document
       .querySelector('meta[name="theme-color"]')
       ?.setAttribute("content", dark ? "#2B201D" : "#AA4D37");
+    // Match explicit app appearance as well as the system preference.
+    document
+      .getElementById("app-favicon")
+      ?.setAttribute(
+        "href",
+        `/brand/little-hint/favicons/little-hint-favicon-${dark ? "dark" : "color"}.svg`,
+      );
+    document
+      .getElementById("app-favicon-fallback")
+      ?.setAttribute(
+        "href",
+        `/brand/little-hint/favicons/favicon-${dark ? "dark" : "color"}.ico`,
+      );
     localStorage.setItem("little-hint:theme", theme);
   }, [theme, dark]);
   useEffect(() => {
@@ -125,7 +148,7 @@ export function App() {
     await client.invalidateQueries({ queryKey: ["world"] });
     return result;
   };
-  if (!online && !query.data)
+  if (!online && query.data === undefined)
     return (
       <>
         <OfflineDrafts dark={dark} />
@@ -139,12 +162,13 @@ export function App() {
         <LoaderCircle className="spin" aria-label="Loading Little Hint" />
       </div>
     );
-  if (query.error instanceof ApiError && query.error.status === 401)
+  if (query.data === null)
     return (
       <>
         <Login
           dark={dark}
-          onSuccess={() => client.invalidateQueries({ queryKey: ["world"] })}
+          online={online}
+          onSuccess={() => client.resetQueries({ queryKey: ["world"] })}
         />
         <UpdateNotice />
       </>
@@ -327,148 +351,6 @@ export function App() {
     </AppContext.Provider>
   );
 }
-function Login({
-  dark,
-  onSuccess,
-}: {
-  dark: boolean;
-  onSuccess: () => unknown;
-}) {
-  const [email, setEmail] = useState(""),
-    [sent, setSent] = useState(false),
-    [error, setError] = useState("");
-  return (
-    <div className="login-page">
-      <div className="login-brand">
-        <Logo tagline dark={dark} />
-      </div>
-      <main className="login-layout">
-        <section className="login-story">
-          <h1>
-            The best gifts
-            <br />
-            start with
-            <br />
-            <em>a little hint.</em>
-          </h1>
-          <p>
-            A place for the things you’d love, the people you love, and the
-            thoughtful surprises in between.
-          </p>
-          <div className="story-notes">
-            <div>
-              <Heart size={22} />
-              <span>Save what catches your eye.</span>
-            </div>
-            <div>
-              <Users size={22} />
-              <span>Share with your own circle.</span>
-            </div>
-            <div>
-              <LockKeyhole size={22} />
-              <span>Keep the surprise a surprise.</span>
-            </div>
-          </div>
-        </section>
-        <section className="login-form-panel">
-          <h2>{sent ? "Check your inbox" : "Come on in."}</h2>
-          <p>
-            {sent
-              ? `Enter the code sent to ${email}.`
-              : "Sign in with the email address on your invitation."}
-          </p>
-          <Form
-            submit={sent ? "Sign in" : "Send me a code"}
-            onSubmit={async (f) => {
-              setError("");
-              if (sent) {
-                const r = await authClient.signIn.emailOtp({
-                  email,
-                  otp: value(f, "code"),
-                  name: email.split("@")[0],
-                });
-                if (r.error)
-                  throw new Error(
-                    r.error.message ?? "That code wasn’t accepted.",
-                  );
-                await onSuccess();
-              } else {
-                const e = value(f, "email").trim().toLowerCase();
-                const r = await authClient.emailOtp.sendVerificationOtp({
-                  email: e,
-                  type: "sign-in",
-                });
-                if (r.error)
-                  throw new Error(r.error.message ?? "Could not send a code.");
-                setEmail(e);
-                setSent(true);
-              }
-            }}
-          >
-            {sent ? (
-              <Field label="Six-digit code">
-                <input
-                  name="code"
-                  inputMode="numeric"
-                  pattern="[0-9]{6}"
-                  maxLength={6}
-                  autoComplete="one-time-code"
-                  required
-                  autoFocus
-                />
-              </Field>
-            ) : (
-              <Field label="Email address">
-                <input
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  placeholder="you@example.com"
-                  defaultValue={email}
-                />
-              </Field>
-            )}
-          </Form>
-          {sent && (
-            <button className="text-button" onClick={() => setSent(false)}>
-              Use a different email or request a new code
-            </button>
-          )}
-          <div className="or">
-            <span>or</span>
-          </div>
-          <button
-            className="button secondary wide"
-            onClick={async () => {
-              const r = await authClient.signIn.passkey();
-              if (r.error)
-                setError(
-                  r.error.message ?? "Passkey sign-in wasn’t completed.",
-                );
-              else await onSuccess();
-            }}
-          >
-            <KeyRound size={18} />
-            Sign in with a passkey
-          </button>
-          {error && (
-            <p className="error" role="alert">
-              {error}
-            </p>
-          )}
-          <p className="login-footnote">
-            Your circle stays private. An invitation is needed to create an
-            account.
-          </p>
-        </section>
-      </main>
-      <footer className="login-footer">
-        For birthdays, just-because days, and everything in between.
-      </footer>
-    </div>
-  );
-}
 function OfflineDrafts({ dark }: { dark: boolean }) {
   const account = localStorage.getItem("little-hint:last-account");
   const enabled =
@@ -605,6 +487,7 @@ function Browser({ items }: { items: GiftView[] }) {
   const [search, setSearch] = useState(""),
     [tag, setTag] = useState(""),
     [available, setAvailable] = useState(false);
+  const showAvailability = items.some((item) => item.available !== undefined);
   const tags = [...new Set(items.flatMap((i) => i.tags))].sort();
   const filtered = items.filter(
     (i) =>
@@ -612,7 +495,9 @@ function Browser({ items }: { items: GiftView[] }) {
         .toLowerCase()
         .includes(search.toLowerCase()) &&
       (!tag || i.tags.includes(tag)) &&
-      (!available || (i.available !== undefined && i.available > 0)),
+      (!showAvailability ||
+        !available ||
+        (i.available !== undefined && i.available > 0)),
   );
   return (
     <>
@@ -636,14 +521,16 @@ function Browser({ items }: { items: GiftView[] }) {
             <option key={t}>{t}</option>
           ))}
         </select>
-        <label className="check filter-check">
-          <input
-            type="checkbox"
-            checked={available}
-            onChange={(e) => setAvailable(e.target.checked)}
-          />
-          Available to give
-        </label>
+        {showAvailability && (
+          <label className="check filter-check">
+            <input
+              type="checkbox"
+              checked={available}
+              onChange={(e) => setAvailable(e.target.checked)}
+            />
+            Available to give
+          </label>
+        )}
       </div>
       {filtered.length ? (
         <div className="gift-grid">
@@ -805,7 +692,7 @@ function PersonPage() {
           aria-selected={tab === "wishes"}
           onClick={() => setTab("wishes")}
         >
-          Their wishes
+          {person.userId === world.me.id ? "My wishes" : "Their wishes"}
         </button>
         <button
           role="tab"
