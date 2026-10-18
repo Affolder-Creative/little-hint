@@ -1,0 +1,473 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-18T19:09:37.162836+00:00",
+  "title": "Design System: Little Hint",
+  "extensions": {
+    "colorMeta": {
+      "bg": {
+        "role": "neutral",
+        "displayName": "Bg",
+        "tonalRamp": [
+          "oklch(15.00% 0.01299 71.33)",
+          "oklch(26.43% 0.01299 71.33)",
+          "oklch(37.86% 0.01299 71.33)",
+          "oklch(49.29% 0.01299 71.33)",
+          "oklch(60.71% 0.01299 71.33)",
+          "oklch(72.14% 0.01299 71.33)",
+          "oklch(83.57% 0.01299 71.33)",
+          "oklch(95.00% 0.01299 71.33)"
+        ]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Paper",
+        "tonalRamp": [
+          "oklch(15.00% 0.00569 84.57)",
+          "oklch(26.43% 0.00569 84.57)",
+          "oklch(37.86% 0.00569 84.57)",
+          "oklch(49.29% 0.00569 84.57)",
+          "oklch(60.71% 0.00569 84.57)",
+          "oklch(72.14% 0.00569 84.57)",
+          "oklch(83.57% 0.00569 84.57)",
+          "oklch(95.00% 0.00569 84.57)"
+        ]
+      },
+      "text": {
+        "role": "neutral",
+        "displayName": "Text",
+        "tonalRamp": [
+          "oklch(15.00% 0.01805 35.75)",
+          "oklch(26.43% 0.01805 35.75)",
+          "oklch(37.86% 0.01805 35.75)",
+          "oklch(49.29% 0.01805 35.75)",
+          "oklch(60.71% 0.01805 35.75)",
+          "oklch(72.14% 0.01805 35.75)",
+          "oklch(83.57% 0.01805 35.75)",
+          "oklch(95.00% 0.01805 35.75)"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Muted",
+        "tonalRamp": [
+          "oklch(15.00% 0.02962 45.60)",
+          "oklch(26.43% 0.02962 45.60)",
+          "oklch(37.86% 0.02962 45.60)",
+          "oklch(49.29% 0.02962 45.60)",
+          "oklch(60.71% 0.02962 45.60)",
+          "oklch(72.14% 0.02962 45.60)",
+          "oklch(83.57% 0.02962 45.60)",
+          "oklch(95.00% 0.02962 45.60)"
+        ]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Border",
+        "tonalRamp": [
+          "oklch(15.00% 0.01977 60.15)",
+          "oklch(26.43% 0.01977 60.15)",
+          "oklch(37.86% 0.01977 60.15)",
+          "oklch(49.29% 0.01977 60.15)",
+          "oklch(60.71% 0.01977 60.15)",
+          "oklch(72.14% 0.01977 60.15)",
+          "oklch(83.57% 0.01977 60.15)",
+          "oklch(95.00% 0.01977 60.15)"
+        ]
+      },
+      "accent": {
+        "role": "primary",
+        "displayName": "Accent",
+        "tonalRamp": [
+          "oklch(15.00% 0.12763 34.60)",
+          "oklch(26.43% 0.12763 34.60)",
+          "oklch(37.86% 0.12763 34.60)",
+          "oklch(49.29% 0.12763 34.60)",
+          "oklch(60.71% 0.12763 34.60)",
+          "oklch(72.14% 0.12763 34.60)",
+          "oklch(83.57% 0.12763 34.60)",
+          "oklch(95.00% 0.12763 34.60)"
+        ]
+      },
+      "on-accent": {
+        "role": "primary",
+        "displayName": "On Accent",
+        "tonalRamp": [
+          "oklch(15.00% 0.01299 71.33)",
+          "oklch(26.43% 0.01299 71.33)",
+          "oklch(37.86% 0.01299 71.33)",
+          "oklch(49.29% 0.01299 71.33)",
+          "oklch(60.71% 0.01299 71.33)",
+          "oklch(72.14% 0.01299 71.33)",
+          "oklch(83.57% 0.01299 71.33)",
+          "oklch(95.00% 0.01299 71.33)"
+        ]
+      },
+      "soft": {
+        "role": "secondary",
+        "displayName": "Soft",
+        "tonalRamp": [
+          "oklch(15.00% 0.02213 54.33)",
+          "oklch(26.43% 0.02213 54.33)",
+          "oklch(37.86% 0.02213 54.33)",
+          "oklch(49.29% 0.02213 54.33)",
+          "oklch(60.71% 0.02213 54.33)",
+          "oklch(72.14% 0.02213 54.33)",
+          "oklch(83.57% 0.02213 54.33)",
+          "oklch(95.00% 0.02213 54.33)"
+        ]
+      },
+      "green": {
+        "role": "secondary",
+        "displayName": "Green",
+        "tonalRamp": [
+          "oklch(15.00% 0.05364 144.66)",
+          "oklch(26.43% 0.05364 144.66)",
+          "oklch(37.86% 0.05364 144.66)",
+          "oklch(49.29% 0.05364 144.66)",
+          "oklch(60.71% 0.05364 144.66)",
+          "oklch(72.14% 0.05364 144.66)",
+          "oklch(83.57% 0.05364 144.66)",
+          "oklch(95.00% 0.05364 144.66)"
+        ]
+      },
+      "error": {
+        "role": "secondary",
+        "displayName": "Error",
+        "tonalRamp": [
+          "oklch(15.00% 0.14532 29.70)",
+          "oklch(26.43% 0.14532 29.70)",
+          "oklch(37.86% 0.14532 29.70)",
+          "oklch(49.29% 0.14532 29.70)",
+          "oklch(60.71% 0.14532 29.70)",
+          "oklch(72.14% 0.14532 29.70)",
+          "oklch(83.57% 0.14532 29.70)",
+          "oklch(95.00% 0.14532 29.70)"
+        ]
+      },
+      "dark-bg": {
+        "role": "neutral",
+        "displayName": "Dark Bg",
+        "tonalRamp": [
+          "oklch(15.00% 0.01805 35.75)",
+          "oklch(26.43% 0.01805 35.75)",
+          "oklch(37.86% 0.01805 35.75)",
+          "oklch(49.29% 0.01805 35.75)",
+          "oklch(60.71% 0.01805 35.75)",
+          "oklch(72.14% 0.01805 35.75)",
+          "oklch(83.57% 0.01805 35.75)",
+          "oklch(95.00% 0.01805 35.75)"
+        ]
+      },
+      "dark-paper": {
+        "role": "neutral",
+        "displayName": "Dark Paper",
+        "tonalRamp": [
+          "oklch(15.00% 0.02167 42.05)",
+          "oklch(26.43% 0.02167 42.05)",
+          "oklch(37.86% 0.02167 42.05)",
+          "oklch(49.29% 0.02167 42.05)",
+          "oklch(60.71% 0.02167 42.05)",
+          "oklch(72.14% 0.02167 42.05)",
+          "oklch(83.57% 0.02167 42.05)",
+          "oklch(95.00% 0.02167 42.05)"
+        ]
+      },
+      "dark-text": {
+        "role": "neutral",
+        "displayName": "Dark Text",
+        "tonalRamp": [
+          "oklch(15.00% 0.01299 71.33)",
+          "oklch(26.43% 0.01299 71.33)",
+          "oklch(37.86% 0.01299 71.33)",
+          "oklch(49.29% 0.01299 71.33)",
+          "oklch(60.71% 0.01299 71.33)",
+          "oklch(72.14% 0.01299 71.33)",
+          "oklch(83.57% 0.01299 71.33)",
+          "oklch(95.00% 0.01299 71.33)"
+        ]
+      },
+      "dark-muted": {
+        "role": "neutral",
+        "displayName": "Dark Muted",
+        "tonalRamp": [
+          "oklch(15.00% 0.02943 51.75)",
+          "oklch(26.43% 0.02943 51.75)",
+          "oklch(37.86% 0.02943 51.75)",
+          "oklch(49.29% 0.02943 51.75)",
+          "oklch(60.71% 0.02943 51.75)",
+          "oklch(72.14% 0.02943 51.75)",
+          "oklch(83.57% 0.02943 51.75)",
+          "oklch(95.00% 0.02943 51.75)"
+        ]
+      },
+      "dark-border": {
+        "role": "neutral",
+        "displayName": "Dark Border",
+        "tonalRamp": [
+          "oklch(15.00% 0.03214 47.91)",
+          "oklch(26.43% 0.03214 47.91)",
+          "oklch(37.86% 0.03214 47.91)",
+          "oklch(49.29% 0.03214 47.91)",
+          "oklch(60.71% 0.03214 47.91)",
+          "oklch(72.14% 0.03214 47.91)",
+          "oklch(83.57% 0.03214 47.91)",
+          "oklch(95.00% 0.03214 47.91)"
+        ]
+      },
+      "dark-accent": {
+        "role": "primary",
+        "displayName": "Dark Accent",
+        "tonalRamp": [
+          "oklch(15.00% 0.06359 39.24)",
+          "oklch(26.43% 0.06359 39.24)",
+          "oklch(37.86% 0.06359 39.24)",
+          "oklch(49.29% 0.06359 39.24)",
+          "oklch(60.71% 0.06359 39.24)",
+          "oklch(72.14% 0.06359 39.24)",
+          "oklch(83.57% 0.06359 39.24)",
+          "oklch(95.00% 0.06359 39.24)"
+        ]
+      },
+      "dark-on-accent": {
+        "role": "primary",
+        "displayName": "Dark On Accent",
+        "tonalRamp": [
+          "oklch(15.00% 0.01805 35.75)",
+          "oklch(26.43% 0.01805 35.75)",
+          "oklch(37.86% 0.01805 35.75)",
+          "oklch(49.29% 0.01805 35.75)",
+          "oklch(60.71% 0.01805 35.75)",
+          "oklch(72.14% 0.01805 35.75)",
+          "oklch(83.57% 0.01805 35.75)",
+          "oklch(95.00% 0.01805 35.75)"
+        ]
+      },
+      "dark-soft": {
+        "role": "secondary",
+        "displayName": "Dark Soft",
+        "tonalRamp": [
+          "oklch(15.00% 0.03496 40.84)",
+          "oklch(26.43% 0.03496 40.84)",
+          "oklch(37.86% 0.03496 40.84)",
+          "oklch(49.29% 0.03496 40.84)",
+          "oklch(60.71% 0.03496 40.84)",
+          "oklch(72.14% 0.03496 40.84)",
+          "oklch(83.57% 0.03496 40.84)",
+          "oklch(95.00% 0.03496 40.84)"
+        ]
+      },
+      "dark-green": {
+        "role": "secondary",
+        "displayName": "Dark Green",
+        "tonalRamp": [
+          "oklch(15.00% 0.05557 129.23)",
+          "oklch(26.43% 0.05557 129.23)",
+          "oklch(37.86% 0.05557 129.23)",
+          "oklch(49.29% 0.05557 129.23)",
+          "oklch(60.71% 0.05557 129.23)",
+          "oklch(72.14% 0.05557 129.23)",
+          "oklch(83.57% 0.05557 129.23)",
+          "oklch(95.00% 0.05557 129.23)"
+        ]
+      },
+      "dark-error": {
+        "role": "secondary",
+        "displayName": "Dark Error",
+        "tonalRamp": [
+          "oklch(15.00% 0.09448 31.24)",
+          "oklch(26.43% 0.09448 31.24)",
+          "oklch(37.86% 0.09448 31.24)",
+          "oklch(49.29% 0.09448 31.24)",
+          "oklch(60.71% 0.09448 31.24)",
+          "oklch(72.14% 0.09448 31.24)",
+          "oklch(83.57% 0.09448 31.24)",
+          "oklch(95.00% 0.09448 31.24)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "headline": {
+        "displayName": "Page heading",
+        "purpose": "Main screen heading."
+      },
+      "gift-title": {
+        "displayName": "Gift title",
+        "purpose": "Primary gift-card label."
+      }
+    },
+    "shadows": [
+      {
+        "name": "dialog",
+        "value": "0 20px 70px rgba(34, 20, 13, 0.25)",
+        "purpose": "Native modal dialog."
+      },
+      {
+        "name": "toast",
+        "value": "0 8px 30px rgba(0, 0, 0, 0.16)",
+        "purpose": "Transient confirmation."
+      }
+    ],
+    "motion": [
+      {
+        "name": "loading-spin",
+        "value": "spin 1s linear infinite",
+        "purpose": "Loading progress; disabled with reduced motion."
+      },
+      {
+        "name": "toast-arrival",
+        "value": "arrive 0.2s ease-out",
+        "purpose": "Opacity .6 to 1 and bottom 17px to 25px; disabled on mobile and with reduced motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "wide",
+        "value": "1500px"
+      },
+      {
+        "name": "compact-desktop",
+        "value": "1200px"
+      },
+      {
+        "name": "mobile-navigation",
+        "value": "900px"
+      },
+      {
+        "name": "phone",
+        "value": "650px"
+      },
+      {
+        "name": "compact-logo",
+        "value": "460px"
+      }
+    ],
+    "backdrop": {
+      "dialog": "rgba(35, 25, 20, 0.45)"
+    },
+    "focus": {
+      "value": "3px solid var(--accent)",
+      "offset": "3px"
+    },
+    "sourceFiles": [
+      "src/client/style.css",
+      "src/client/components.tsx",
+      "src/client/App.tsx",
+      "src/client/pwa.tsx"
+    ],
+    "tonalRampNote": "Synthesized OKLCH previews at constant hue/chroma; these ramps are panel metadata, not additional application tokens."
+  },
+  "components": [
+    {
+      "name": "Primary button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Save or confirm an action.",
+      "html": "<button class=\"ds-button-primary\">Save gift</button>",
+      "css": ".ds-button-primary{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 18px;border:1px solid transparent;border-radius:8px;font-size:14px;font-weight:600;line-height:1.25;min-height:44px;cursor:pointer;font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;background:var(--accent, #aa4d37);color:var(--on-accent, #fff8f0);}.ds-button-primary:hover{filter:brightness(.94)}.ds-button-primary:focus-visible{outline:3px solid var(--accent, #aa4d37);outline-offset:3px;}.ds-button-primary:disabled{opacity:.55;cursor:not-allowed}"
+    },
+    {
+      "name": "Secondary button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "A supporting action.",
+      "html": "<button class=\"ds-button-secondary\">Save gift</button>",
+      "css": ".ds-button-secondary{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 18px;border:1px solid transparent;border-radius:8px;font-size:14px;font-weight:600;line-height:1.25;min-height:44px;cursor:pointer;font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;background:var(--paper, #fffdf9);color:var(--text, #2b201d);border-color:var(--border, #e6d9cf);}.ds-button-secondary:hover{filter:brightness(.94)}.ds-button-secondary:focus-visible{outline:3px solid var(--accent, #aa4d37);outline-offset:3px;}.ds-button-secondary:disabled{opacity:.55;cursor:not-allowed}"
+    },
+    {
+      "name": "Text button",
+      "kind": "button",
+      "refersTo": "button-text",
+      "description": "A quieter action.",
+      "html": "<button class=\"ds-text-button\">View people</button>",
+      "css": ".ds-text-button{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;display:inline-flex;align-items:center;gap:7px;background:transparent;border:0;padding:8px 0;min-height:40px;font-size:13px;font-weight:550;color:var(--accent, #aa4d37);cursor:pointer}.ds-text-button:hover{text-decoration:underline}.ds-text-button:focus-visible{outline:3px solid var(--accent, #aa4d37);outline-offset:3px;}"
+    },
+    {
+      "name": "Icon button",
+      "kind": "button",
+      "refersTo": "button-icon",
+      "description": "A named compact action.",
+      "html": "<button class=\"ds-icon-button\" aria-label=\"Add gift\"><svg aria-hidden=\"true\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M12 5v14M5 12h14\"/></svg></button>",
+      "css": ".ds-icon-button{display:inline-flex;align-items:center;justify-content:center;padding:10px;min-width:44px;min-height:44px;border:0;border-radius:8px;background:none;color:var(--text, #2b201d);cursor:pointer}.ds-icon-button:hover{background:var(--soft, #f4e4da)}.ds-icon-button:focus-visible{outline:3px solid var(--accent, #aa4d37);outline-offset:3px;}"
+    },
+    {
+      "name": "Labeled field",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "Visible label and text input.",
+      "html": "<label class=\"ds-field\">Gift title<input placeholder=\"What would they love?\"></label>",
+      "css": ".ds-field{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;display:grid;gap:8px;font-size:13px;font-weight:550;color:var(--text, #2b201d)}.ds-field input{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;width:100%;border:1px solid var(--border, #e6d9cf);border-radius:8px;background:var(--paper, #fffdf9);color:var(--text, #2b201d);padding:11px 12px;min-height:44px;font-weight:400}.ds-field input::placeholder{color:var(--muted, #746057);opacity:1}.ds-field input:focus-visible{outline:3px solid var(--accent, #aa4d37);outline-offset:3px;}"
+    },
+    {
+      "name": "Desktop navigation",
+      "kind": "nav",
+      "refersTo": "nav-active",
+      "description": "Active and inactive destinations.",
+      "html": "<nav class=\"ds-nav\" aria-label=\"Sample navigation\"><a href=\"#home\" aria-current=\"page\">Home</a><a href=\"#people\">People</a></nav>",
+      "css": ".ds-nav{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;display:grid;gap:7px;max-width:220px}.ds-nav a{display:flex;align-items:center;gap:13px;padding:13px 15px;border-radius:8px;font-size:14px;font-weight:500;color:var(--muted, #746057);text-decoration:none}.ds-nav a:hover{background:var(--bg, #fff8f0);color:var(--text, #2b201d)}.ds-nav a[aria-current]{background:var(--soft, #f4e4da);color:var(--text, #2b201d)}.ds-nav a:focus-visible{outline:3px solid var(--accent, #aa4d37);outline-offset:3px;}"
+    },
+    {
+      "name": "Gift status",
+      "kind": "chip",
+      "refersTo": "status",
+      "description": "Text carries availability meaning.",
+      "html": "<span class=\"ds-status\">Taken care of</span>",
+      "css": ".ds-status{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;display:inline-block;font-size:11px;line-height:1.4;border-radius:4px;padding:4px 6px;background:var(--soft, #f4e4da);color:var(--muted, #746057)}"
+    },
+    {
+      "name": "Gift card",
+      "kind": "card",
+      "refersTo": "gift-card",
+      "description": "Unboxed content with an honest missing-image state.",
+      "html": "<a class=\"ds-gift-card\" href=\"#gift\"><div class=\"ds-photo\"><svg aria-hidden=\"true\" width=\"72\" height=\"72\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.1\"><path d=\"M3 8h18v4H3zM5 12v9h14v-9M12 8v13M12 8H7.5A2.5 2.5 0 1 1 10 5.5L12 8Zm0 0h4.5A2.5 2.5 0 1 0 14 5.5L12 8Z\"/></svg><span>No photo yet</span></div><div class=\"ds-card-copy\"><div class=\"ds-recipient\">For Alex</div><h3>Gift title</h3><div class=\"ds-meta\"><span>$25.00</span><span class=\"ds-available\">Available</span></div></div></a>",
+      "css": ".ds-gift-card{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;display:block;max-width:300px;text-decoration:none;color:var(--text, #2b201d)}.ds-photo{aspect-ratio:1.13;border-radius:var(--radius,14px);background:#efe7dc;color:#8b7164;display:flex;position:relative;align-items:center;justify-content:center;overflow:hidden}.ds-photo span{position:absolute;bottom:17px;font-size:11px;color:#746057}.ds-card-copy{padding:16px 2px 0}.ds-recipient{font-size:11px;color:var(--muted, #746057);margin-bottom:11px}.ds-gift-card h3{font-size:16px;line-height:1.4;font-weight:550;margin:0 0 9px}.ds-gift-card:hover h3{text-decoration:underline;text-underline-offset:4px}.ds-meta{display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:14px}.ds-available{font-size:11px;line-height:1.4;border-radius:4px;padding:4px 6px;background:#e9eddf;color:#486348}.ds-gift-card:focus-visible{outline:3px solid var(--accent, #aa4d37);outline-offset:3px;}"
+    },
+    {
+      "name": "Privacy badge",
+      "kind": "chip",
+      "refersTo": "privacy",
+      "description": "Icon and wording identify privacy.",
+      "html": "<span class=\"ds-privacy\"><svg aria-hidden=\"true\" width=\"13\" height=\"13\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><rect x=\"3\" y=\"11\" width=\"18\" height=\"11\" rx=\"2\"/><path d=\"M7 11V7a5 5 0 0 1 10 0v4\"/></svg>Surprise</span>",
+      "css": ".ds-privacy{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;display:inline-flex;align-items:center;gap:5px;padding:6px 8px;border:1px solid var(--border, #e6d9cf);border-radius:5px;font-size:11px;white-space:nowrap;color:var(--muted, #746057)}"
+    }
+  ],
+  "narrative": {
+    "northStar": "A little thought. A lovely surprise.",
+    "overview": "Little Hint is a calm place to coordinate gifts for people you know. Recipient names, gift details, prices, and availability lead. Warm paper backgrounds, quiet dividers, and open rows give those details room.\n\nThe approved heart-tag artwork carries the brand. Its outlined Fraunces lettering remains an image asset; the interface uses the established system sans stack. Light and dark themes share the same hierarchy and shapes.",
+    "keyCharacteristics": [
+      "Approved heart-tag artwork and outlined lettering.",
+      "Ivory and umber neutrals with sienna actions and blush selection fills.",
+      "Flat gift cards with recipient details directly below the image.",
+      "Desktop sidebar and mobile bottom navigation."
+    ],
+    "rules": [
+      {
+        "name": "The semantic color rule",
+        "body": "Use the theme variables for interface text, controls, and backgrounds so light and dark modes preserve their roles.",
+        "section": "colors"
+      },
+      {
+        "name": "The artwork rule",
+        "body": "Use the supplied logo and symbol assets. Do not recreate their lettering with live text.",
+        "section": "typography"
+      },
+      {
+        "name": "The flat content rule",
+        "body": "Gift cards and ordinary list rows have no shadow. Reserve elevation for dialogs and transient messages.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do use the approved horizontal or tagline artwork and its dark variant where the component supports it.",
+      "Do keep recipient, gift title, price, and visible availability together.",
+      "Do contain product images and show the labeled placeholder when an image is missing or fails.",
+      "Do keep the availability checkbox visible when filters wrap on small screens.",
+      "Do retain visible keyboard focus, named icon controls, reduced-motion behavior, and mobile safe-area padding."
+    ],
+    "donts": [
+      "Don't reconstruct the logo lettering or substitute a display font for the approved artwork.",
+      "Don't add shadows to ordinary gift cards or list rows.",
+      "Don't use invented product photography or present demonstration fixtures as real gifts.",
+      "Don't rely on color alone to explain availability or list privacy."
+    ]
+  }
+}

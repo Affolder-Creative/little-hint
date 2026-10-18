@@ -1,0 +1,213 @@
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { Pool } from "pg";
+import { emptyState } from "../src/shared/model";
+import { stamp, idempotent, command } from "../src/server/domain";
+const url = process.env.TEST_DATABASE_URL;
+describe.skipIf(!url)("PostgreSQL transaction integrity", () => {
+  let storage: typeof import("../src/server/db");
+  let groupId: string, itemId: string;
+  const a = {
+      id: "integration-recipient",
+      email: "recipient@example.test",
+      name: "Recipient",
+    },
+    b = {
+      id: "integration-buyer1",
+      email: "buyer1@example.test",
+      name: "Buyer One",
+    },
+    c = {
+      id: "integration-buyer2",
+      email: "buyer2@example.test",
+      name: "Buyer Two",
+    };
+  beforeAll(async () => {
+    if (!/little_hint_test(?:\?|$)/.test(url!))
+      throw new Error(
+        "Integration tests require a separate little_hint_test database.",
+      );
+    process.env.DATABASE_URL = url;
+    storage = await import("../src/server/db");
+    await storage.migrate();
+    await storage.pool.query("DELETE FROM app_record");
+    await storage.transact((s) => {
+      const people = [a, b, c].map((a) => ({
+        ...stamp(),
+        name: a.name,
+        userId: a.id,
+        guardians: [],
+        household: "",
+      }));
+      s.people.push(...people);
+      const g = {
+        ...stamp(),
+        name: "Test family",
+        ownerId: a.id,
+        memberIds: [a.id, b.id, c.id],
+      };
+      s.groups.push(g);
+      groupId = g.id;
+      const l = command(s, a, "lists.create", {
+        name: "Test list",
+        ownerIds: [people[0].id],
+        groupIds: [g.id],
+        mode: "surprise",
+      }) as any;
+      const i = command(s, a, "items.create", {
+        title: "One gift",
+        listId: l.id,
+        quantity: 1,
+      }) as any;
+      itemId = i.id;
+    });
+  });
+  afterAll(async () => {
+    await storage?.pool.end();
+  });
+  it("allows exactly one simultaneous reservation for the final unit", async () => {
+    const results = await Promise.allSettled([
+      storage.transact((s) =>
+        idempotent(s, b, "parallel_buyer_0001", "reservations.create", {
+          itemId,
+          quantity: 1,
+        }),
+      ),
+      storage.transact((s) =>
+        idempotent(s, c, "parallel_buyer_0002", "reservations.create", {
+          itemId,
+          quantity: 1,
+        }),
+      ),
+    ]);
+    expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+    const s = await storage.readState();
+    expect(s.reservations.reduce((n, r) => n + r.quantity, 0)).toBe(1);
+  });
+  it("rolls back partial domain changes when a transaction fails", async () => {
+    const count = (await storage.readState()).groups.length;
+    await expect(
+      storage.transact((s) => {
+        s.groups.push({
+          ...stamp(),
+          name: "Must roll back",
+          ownerId: a.id,
+          memberIds: [a.id],
+        });
+        throw new Error("failure");
+      }),
+    ).rejects.toThrow();
+    expect((await storage.readState()).groups).toHaveLength(count);
+  });
+  it("allows only one concurrent exchange draw", async () => {
+    const exchange = await storage.transact((s) => {
+      for (const actor of [b, c])
+        command(s, actor, "lists.create", {
+          name: "Exchange wishes",
+          ownerIds: [s.people.find((p) => p.userId === actor.id)!.id],
+          groupIds: [groupId],
+          mode: "surprise",
+        });
+      const created = command(s, a, "exchanges.create", {
+        name: "Annual exchange",
+        groupId,
+        participantIds: s.people.map((p) => p.id),
+        count: 1,
+        excludeHousehold: false,
+      }) as any;
+      return s.exchanges.find((e) => e.id === created.id)!;
+    });
+    const results = await Promise.allSettled(
+      ["draw_concurrent_01", "draw_concurrent_02"].map((key) =>
+        storage.transact((s) =>
+          idempotent(s, a, key, "exchanges.draw", {
+            id: exchange.id,
+            revision: exchange.revision,
+          }),
+        ),
+      ),
+    );
+    expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+    expect(
+      (await storage.readState()).exchanges.find((e) => e.id === exchange.id)!
+        .assignments,
+    ).toHaveLength(3);
+  });
+  it("reconciles a reservation racing with removal of its last access path", async () => {
+    const gift = (await storage.transact((s) =>
+      command(s, a, "items.create", {
+        title: "Membership race",
+        listId: s.lists.find((l) =>
+          l.ownerIds.includes(s.people.find((p) => p.userId === a.id)!.id),
+        )!.id,
+      }),
+    )) as any;
+    await Promise.allSettled([
+      storage.transact((s) =>
+        command(s, c, "reservations.create", { itemId: gift.id, quantity: 1 }),
+      ),
+      storage.transact((s) =>
+        command(s, a, "groups.remove", { groupId, userId: c.id }),
+      ),
+    ]);
+    expect(
+      (await storage.readState()).reservations
+        .filter((r) => r.itemId === gift.id)
+        .reduce((n, r) => n + r.quantity, 0),
+    ).toBe(0);
+  });
+  it("commits a retried mutation only once across concurrent requests", async () => {
+    const gift = (await storage.transact((s) =>
+      command(s, a, "items.create", {
+        title: "Retry race",
+        listId: s.lists[0].id,
+        quantity: 2,
+      }),
+    )) as any;
+    const results = await Promise.all(
+      [1, 2].map(() =>
+        storage.transact((s) =>
+          idempotent(s, b, "same_request_00001", "reservations.create", {
+            itemId: gift.id,
+            quantity: 1,
+          }),
+        ),
+      ),
+    );
+    expect(results).toContainEqual({ ok: true, replayed: true });
+    expect(
+      (await storage.readState()).reservations.filter(
+        (r) => r.itemId === gift.id,
+      ),
+    ).toHaveLength(1);
+  });
+  it("persists a failed job across worker restart and completes its retry", async () => {
+    const { PgBoss } = await import("pg-boss");
+    const name = `retry-proof-${Date.now()}`;
+    const first = new PgBoss(url!);
+    const second = new PgBoss(url!);
+    try {
+      await first.start();
+      await first.createQueue(name, { retryLimit: 2, retryDelay: 0 });
+      const id = await first.send(name, { noticeId: "durable-notice" });
+      const [attempt] = await first.fetch(name, { includeMetadata: true });
+      expect(attempt.id).toBe(id);
+      await first.fail(name, attempt, { message: "Temporary provider outage" });
+      await first.stop();
+      await second.start();
+      const [retry] = await second.fetch<{ noticeId: string }>(name, {
+        includeMetadata: true,
+      });
+      expect(retry.id).toBe(id);
+      expect(retry.retryCount).toBe(1);
+      expect(retry.data.noticeId).toBe("durable-notice");
+      await second.complete(name, retry);
+      expect((await second.findJobs(name, { id: id! }))[0].state).toBe(
+        "completed",
+      );
+    } finally {
+      await first.stop();
+      await second.deleteQueue(name).catch(() => {});
+      await second.stop();
+    }
+  }, 20000);
+});

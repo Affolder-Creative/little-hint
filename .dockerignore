@@ -1,0 +1,17 @@
+node_modules
+.git
+.env
+.env.*
+.local
+output
+brand
+logo-concepts
+test-results
+playwright-report
+coverage
+dist
+backups
+*.log
+.DS_Store
+
+*.key

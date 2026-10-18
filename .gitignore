@@ -38,3 +38,8 @@ Thumbs.db
 
 # Other
 output/
+
+.local/
+backups/
+
+/coolify-deployment-token.key

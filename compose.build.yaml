@@ -1,0 +1,9 @@
+# Image compilation has no dependency on runtime settings or secrets.
+# Do not merge this file with compose.yaml; run the build separately.
+name: little-hint-build
+services:
+  app:
+    image: little-hint:local
+    build:
+      context: .
+      dockerfile: Dockerfile

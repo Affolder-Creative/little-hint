@@ -1,0 +1,17 @@
+{
+  "id": "/",
+  "name": "Little Hint",
+  "short_name": "Little Hint",
+  "description": "Gift ideas, shared thoughtfully.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#FFF8F0",
+  "theme_color": "#AA4D37",
+  "icons": [
+    {"src":"icons/little-hint-app-color-192.png","sizes":"192x192","type":"image/png","purpose":"any"},
+    {"src":"icons/little-hint-app-color-512.png","sizes":"512x512","type":"image/png","purpose":"any"},
+    {"src":"icons/little-hint-maskable-color-192.png","sizes":"192x192","type":"image/png","purpose":"maskable"},
+    {"src":"icons/little-hint-maskable-color-512.png","sizes":"512x512","type":"image/png","purpose":"maskable"}
+  ]
+}
