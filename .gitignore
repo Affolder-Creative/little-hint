@@ -43,3 +43,5 @@ output/
 backups/
 
 /coolify-deployment-token.key
+
+/release-assets/

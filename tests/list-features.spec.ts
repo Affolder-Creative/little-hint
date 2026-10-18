@@ -11,7 +11,7 @@ test.beforeEach(async ({ request }) => {
     response.status() === 429 ||
     Number(response.headers()["x-ratelimit-remaining"]) < 120
   ) {
-    test.setTimeout(120000);
+    test.setTimeout(Math.max(test.info().timeout, 120000));
     const seconds = Math.min(
       60,
       Number(response.headers()["x-ratelimit-reset"]) || 60,

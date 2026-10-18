@@ -18,7 +18,10 @@
     "test:e2e": "playwright test",
     "typecheck": "tsc --noEmit",
     "demo": "tsx src/server/cli.ts demo",
-    "test:compose": "node scripts/check-compose.mjs"
+    "test:compose": "node scripts/check-compose.mjs",
+    "test:tooling": "node --test scripts/tooling.test.mjs",
+    "licenses:check": "node scripts/licenses.mjs",
+    "test:browser:ci": "node scripts/ci-browser.mjs"
   },
   "dependencies": {
     "@better-auth/passkey": "^1.7.10",
@@ -60,5 +63,6 @@
     "typescript": "^7.0.2",
     "vite": "^8.3.4",
     "vitest": "^5.0.5"
-  }
+  },
+  "license": "PolyForm-Perimeter-1.0.0"
 }

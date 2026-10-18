@@ -1,0 +1,31 @@
+{
+  "better-auth-utils": {
+    "url": "https://github.com/better-auth/utils/blob/c0ad05a303467b465c351d42c6465463be38ef78/LICENSE"
+  },
+  "boolbase": {
+    "url": "https://github.com/fb55/boolbase/blob/54811f01c797a6bb1c263183ae90b7dd627e0638/LICENSE"
+  },
+  "drizzle-orm": {
+    "url": "https://github.com/drizzle-team/drizzle-orm/blob/eab8bedbb65d5429c54e612ddbd88aa23091d398/LICENSE"
+  },
+  "sharp-libvips-notices": {
+    "url": "https://github.com/lovell/sharp-libvips/blob/ebb95f8add54eee8bed840e3fb587e4cbec857d7/THIRD-PARTY-NOTICES.md"
+  },
+  "abstract-logging": {
+    "url": "http://jsumners.mit-license.org/",
+    "evidence": "abstract-logging 2.0.1 Readme.md links the standard MIT license; copyright identity from remy/mit-license users/jsumners.json. The checked-in text reproduces that grant with the named holder.",
+    "copyright_source": "https://github.com/remy/mit-license/blob/master/users/jsumners.json"
+  },
+  "LGPL-3.0": {
+    "url": "https://www.gnu.org/licenses/lgpl-3.0.txt"
+  },
+  "GPL-3.0": {
+    "url": "https://www.gnu.org/licenses/gpl-3.0.txt"
+  },
+  "node-v24.22.0": {
+    "url": "https://github.com/nodejs/node/blob/v24.22.0/LICENSE"
+  },
+  "docker-node": {
+    "url": "https://github.com/nodejs/docker-node/blob/02641286c1f5041d9025d3cf6d38a64b84cd72e5/LICENSE"
+  }
+}

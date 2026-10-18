@@ -5,6 +5,7 @@ const npm = process.platform === "win32" ? "npm.cmd" : "npm";
 for (const args of [
   ["exec", "--", "tsc", "--noEmit"],
   ["exec", "--", "vite", "build"],
+  ["exec", "--", "node", "scripts/licenses.mjs", "dist/client"],
   ["exec", "--", "node", "scripts/build-sw.mjs"],
   [
     "exec",

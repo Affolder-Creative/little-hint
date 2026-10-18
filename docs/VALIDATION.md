@@ -49,3 +49,12 @@ Use a separate database named `little_hint_test`; integration tests clear its ap
 - Verify production DNS/TLS, migrations on an empty database, persistent volumes across redeploys, worker health, job retries, and an authorized backup restore with access changes reconciled.
 
 No physical-device, real SMTP/SMS/Telegram, live retailer success, or off-host restore claim is made until those checks are recorded.
+
+## CI and release automation checks, 2026-10-18
+
+- Type checking and the production build passed. All 97 unit tests, seven PostgreSQL 18 integration tests, and five release-tooling tests passed.
+- All 16 browser tests passed against the built app: six core workflows, four sign-in workflows, three list-feature workflows, one responsive/email-layout test, and two PWA tests. Each suite used a fresh isolated database, managed Chromium, and a pacing proxy that preserved the real server rate limit.
+- AMD64 and ARM64 images built and passed app/worker health, non-root operation, public notices, native Sharp image processing, and repeatable migrations. Trivy 0.76.0 reported zero fixable high/critical findings for both final images. Unused npm/Corepack/Yarn tools were removed from distributed runtime layers after the initial scan found three high-severity npm-tooling findings.
+- Production npm audit found zero vulnerabilities. Application and brand npm notice inventories and the two pinned Python brand-tool notice checks passed. Compose overlay checks, actionlint 1.7.12, shell syntax checks, and release guard tests passed.
+- The actual ARM64 image produced 45 required corresponding-source identifiers. Publication correctly failed with the empty source manifest. This verifies the blocker, not compliance clearance. Complete the work in [LICENSING.md](LICENSING.md) before publishing images.
+- No GitHub Release or GHCR package was published during local validation. The GitHub-hosted workflows and registry publication path require their own successful runs; local checks alone do not prove publishing permissions or registry availability.

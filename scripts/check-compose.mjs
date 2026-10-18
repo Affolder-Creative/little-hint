@@ -23,8 +23,7 @@ function config(file, variables = {}) {
       "compose",
       "--env-file",
       emptyFile,
-      "-f",
-      file,
+      ...[file].flat().flatMap((name) => ["-f", name]),
       "config",
       "--format",
       "json",
@@ -114,6 +113,29 @@ assert.equal(
   runtime.services.db.environment.POSTGRES_PASSWORD,
   required.POSTGRES_PASSWORD,
 );
+const registryFiles = ["compose.yaml", "compose.ghcr.yaml"];
+assert.notEqual(
+  config(registryFiles, required).status,
+  0,
+  "Registry deployment must require an explicit image.",
+);
+const registryImage = "ghcr.io/kaffolder7/little-hint@sha256:" + "a".repeat(64);
+const registryResult = config(registryFiles, {
+  ...required,
+  LITTLE_HINT_IMAGE: registryImage,
+});
+assert.equal(registryResult.status, 0, registryResult.stderr);
+const registry = JSON.parse(registryResult.stdout);
+for (const name of ["app", "worker"]) {
+  assert.equal(registry.services[name].image, registryImage);
+  assert.equal(registry.services[name].pull_policy, "missing");
+  assert.equal(registry.services[name].build, undefined);
+  assert.equal(registry.services[name].user, runtime.services[name].user);
+  assert.deepEqual(
+    registry.services[name].volumes,
+    runtime.services[name].volumes,
+  );
+}
 console.log(
-  "Compose checks passed: secret-free build, required runtime secrets, and shared app/worker image.",
+  "Compose checks passed: secret-free build, required runtime secrets, and shared local/registry app-worker images.",
 );
