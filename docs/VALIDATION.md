@@ -1,6 +1,6 @@
 # Validation and release checks
 
-Status on 2026-10-18: implementation and local validation are complete except the checks explicitly pending below. The initial Coolify deployment is being verified. Do not treat automated local checks as physical-device or live-provider certification.
+Status on 2026-10-18: implementation and local validation are complete except the checks explicitly pending below. Coolify completed the initial deployment and reports it healthy; public DNS and provider activation remain pending. Do not treat automated local checks as physical-device or live-provider certification.
 
 ## Evidence
 
