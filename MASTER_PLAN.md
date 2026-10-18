@@ -7,8 +7,8 @@ Status: implementation and local validation. This is the durable product contrac
 Little Hint is an invite-only PWA for families and friends to share wishes, suggest gifts, coordinate purchases, and run Secret Gift Exchanges year-round. Tagline: **Gift ideas, shared thoughtfully.**
 
 - Display name: Little Hint. Application and cache namespace: `little-hint`.
-- Default address: `https://littlehint.example.com`.
-- Default sender: `Little Hint <littlehint@example.com>`.
+- Deployment address: configure `APP_URL`, for example `https://littlehint.example.com`.
+- Email sender: configure `SMTP_FROM`, for example `Little Hint <littlehint@example.com>`. An alias on an existing verified SMTP domain is sufficient; a separate email subdomain is not required.
 - English, USD. Payments happen outside the application.
 - React, TypeScript, Vite, React Router, TanStack Query; Fastify, PostgreSQL, Drizzle; Better Auth email codes and optional passkeys; pg-boss durable jobs.
 - One app, one worker, PostgreSQL 18 through Docker Compose/Coolify, plus the existing Housewatch Digital backup sidecar in production. App and worker use the same image. Address, sender, integrations, and persistent upload path are configurable.

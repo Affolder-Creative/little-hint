@@ -21,7 +21,7 @@ Invite-only. Surprise and Transparent lists. Scoped suggestions, quantities, con
 Little Hint. Gift ideas, shared thoughtfully. Use approved brand/little-hint-final artwork without reconstructing its lettering. Warm palette and accessible light/dark interface.
 
 ## Operating context
-Mobile and desktop browsers and installed PWAs. Default littlehint.example.com; configurable. English and USD initially.
+Mobile and desktop browsers and installed PWAs. Operators configure the public address and SMTP sender independently. English and USD initially.
 
 ## Product principles
 - Authorize on the server and exclude hidden fields entirely.

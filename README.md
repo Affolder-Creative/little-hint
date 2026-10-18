@@ -50,7 +50,9 @@ docker compose --env-file .env.production exec app \
   node dist/server/cli.js bootstrap you@example.com
 ```
 
-`app` migrates before starting. `worker` waits for app health. Both use the same non-root image. The production environment enables the existing Housewatch Digital backup sidecar, which has its own image, credentials, health check, and Coolify schedules. PostgreSQL and uploads persist in separate volumes. Configure Coolify's domain/proxy for app port 3000, with HTTPS and `APP_URL=https://littlehint.example.com`. See the operations guide for Coolify environment configuration, provider setup, and backups.
+`app` migrates before starting. `worker` waits for app health. Both use the same non-root image. The production environment enables the existing Housewatch Digital backup sidecar, which has its own image, credentials, health check, and Coolify schedules. PostgreSQL and uploads persist in separate volumes. Configure Coolify's domain/proxy for app port 3000, with HTTPS and your public origin as `APP_URL`, for example `https://littlehint.example.com`. See the operations guide for Coolify environment configuration, provider setup, and backups.
+
+Configure the SMTP sender independently from the app URL. An alias on an existing verified email domain is sufficient, for example `Little Hint <littlehint@example.com>`. All `example.com` addresses in this repository are placeholders. Keep real domains, administrator emails, resource IDs, credentials, and deployment records in ignored `.env.production` or `.local/deployment/` files, or your deployment platform's settings. Use the [deployment checklist](docs/DEPLOYMENT.md) for each installation.
 
 ## Development checks
 

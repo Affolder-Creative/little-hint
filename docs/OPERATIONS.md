@@ -18,7 +18,9 @@ This creates a 24-hour invitation; it does not email a code until the administra
 
 ## Email and optional providers
 
-Forward Email SMTP settings belong to this deployment. Use `smtp.forwardemail.net`, port 465, an authorized SMTP username/password, and `Little Hint <littlehint@example.com>` as the sender. Configure and verify the sender's domain/alias in Forward Email, including its required DNS records. DNS for the web app does not by itself configure email delivery. Keep provider credentials out of Git, chat, screenshots, and logs.
+Any compatible SMTP provider can send application email. For Forward Email, use `smtp.forwardemail.net`, port 465 with TLS, and an alias on a domain with verified, approved outbound SMTP. For example, use `littlehint@example.com` as `SMTP_USER`, its generated alias password as `SMTP_PASS`, and `Little Hint <littlehint@example.com>` as `SMTP_FROM`. Replace these example addresses before deployment.
+
+The app can run at `https://littlehint.example.com` while sending from `littlehint@example.com`. An existing verified sending domain can host the alias; adding the app's subdomain as a separate Forward Email domain is unnecessary. Optionally forward incoming mail for that alias to an inbox you monitor so replies reach you. DNS for the web app does not by itself configure email delivery. Keep provider credentials out of Git, chat, screenshots, and logs.
 
 The initial SMTP settings must be available before email-code login. Later an administrator can manage integrations in Settings. Nonempty environment values override values entered in the UI; remove an environment override to use the UI value. UI secrets are encrypted using `SETTINGS_ENCRYPTION_KEY` and are never returned to the browser. Keep that key through restores.
 
