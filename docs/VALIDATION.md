@@ -1,13 +1,13 @@
 # Validation and release checks
 
-Status on 2026-10-18: implementation and local validation are complete except the checks explicitly pending below. Deployment configuration is in progress. Do not treat automated local checks as physical-device or live-provider certification.
+Status on 2026-10-18: implementation and local validation are complete except the checks explicitly pending below. The initial Coolify deployment is being verified. Do not treat automated local checks as physical-device or live-provider certification.
 
 ## Evidence
 
 - 53 unit tests passed. They cover recipient/buyer/guardian privacy, joint owners, overlapping groups, access removal, archive behavior, quantity reductions, partial purchases, financial reconciliation, duplicates, idempotency, exchange feasibility/exclusions/balancing/anonymity, and notification permission checks.
 - Six PostgreSQL 18 integration tests passed. They cover simultaneous final-unit reservations, rollback, concurrent exchange draws, access removal racing with allocation, repeated mutation keys, and persisted job retries after a worker restart. PostgreSQL 18 is the production target.
 - Six Playwright browser workflows passed: real email-code sign-in and gift/buyer/privacy flow; authentication/CSRF rejection; responsive light/dark screens with axe WCAG A/AA checks; invitations, explicit profile linking, joint ownership and transfers; virtual platform-passkey registration/login; and worker rejection of private-network imports with manual entry available.
-- Built-PWA tests cover static-only caches, offline personal draft isolation/review/sign-out cleanup, installation reminders, dismissal persistence, and standalone suppression. See final test output for completion status.
+- Two built-PWA browser tests passed. They cover static-only caches, offline personal draft isolation/review/sign-out cleanup, installation reminders, dismissal persistence, and standalone suppression.
 - Retailer extraction fixtures cover Amazon, Walmart, Target, Best Buy, and Etsy, with generic metadata/manual fallback, Amazon structured-provider/DOM fallback, CAPTCHA detection, unsafe URLs and response limits. These are controlled fixtures, not a promise that every live retailer page permits extraction.
 - SMTP/Telegram/SMS tests use controlled providers and failure responses. They verify generic previews and authorization checks between delivery attempts. Core workflows and deterministic tags work without an OpenAI key.
 - The production Docker Compose stack was started with app, worker, PostgreSQL 18, and the unchanged upstream backup-sidecar release. The sidecar completed doctor, encrypted backup, repository check, restore and verification. A separate restored database contained the expected four illustrative accounts and four gifts; a private uploaded file round-tripped exactly. Restore-time session/invitation invalidation passed.
