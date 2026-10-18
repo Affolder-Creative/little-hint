@@ -12,7 +12,7 @@ Keep Docker Compose Location set to `/compose.yaml`. Set Coolify's **Custom Buil
 docker compose --env-file /dev/null -f compose.build.yaml build
 ```
 
-Leave Custom Start Command empty so Coolify starts its generated runtime Compose file with the correct domains, labels, networking, and environment. The build file only produces `little-hint:local`; both runtime services use that image with `pull_policy: never`. Build and run on the same Docker host. A separate build server or registry-based deployment needs an explicit image push/pull workflow.
+Leave Custom Start Command empty so Coolify starts its generated runtime Compose file with the correct domains, labels, networking, and environment. The build file only produces `little-hint:local`; both runtime services use that image with `pull_policy: never`. Build and run on the same Docker host. For registry deployment, use the GHCR overlay and digest-pinned release bundle described in [releasing](RELEASING.md). The local-build commands in this guide remain supported.
 
 Set application configuration variables to **Buildtime off, Runtime on**, in production and any preview configuration. This includes database/authentication/encryption secrets, SMTP, notification/import providers, and backups. Coolify-generated URL variables can stay managed by Coolify. The build file has no build arguments, env files, runtime services, or deployment secret references. `/dev/null` prevents Compose from loading a local `.env` while building.
 

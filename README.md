@@ -78,7 +78,7 @@ docker exec little-hint-dev-db createdb -U little_hint little_hint_test
 TEST_DATABASE_URL=postgres://little_hint:little_hint_dev@localhost:54329/little_hint_test npm run test:integration
 ```
 
-Browser tests use the running development app/worker and illustrative accounts. They add test gifts. Set `CHROME_PATH` to your Chromium/Chrome executable when the default macOS Chrome path is unavailable.
+Browser tests use the running development app/worker and illustrative accounts. They add test gifts. Install the matching browser with `npx playwright install chromium`. Set `CHROME_PATH` only to override Playwright's managed Chromium.
 
 ```sh
 npm run test:e2e
@@ -104,3 +104,22 @@ The standalone marketing website lives in `marketing/`. See the [GitHub Pages se
 - `public/brand/little-hint`: approved runtime branding; `brand/` preserves sources/license.
 - `tests`: domain/import/security, PostgreSQL, and browser tests.
 - `docs`: deployment, recovery, and validation evidence.
+
+## CI, releases, and licensing
+
+PRs into `main` run unit, PostgreSQL, browser, container, dependency, and license
+checks. Dependabot opens maintenance PRs. Release Please prepares a version and
+changelog PR; merging it starts a draft release and verified AMD64/ARM64 image
+publication to `ghcr.io/kaffolder7/little-hint`. See [releasing](docs/RELEASING.md)
+for setup, downloads, upgrades, and failed-release recovery.
+
+Releases include reviewed corresponding-source bundles for Alpine, Sharp's
+native libraries, and Lightning CSS. CI verifies their coverage against both
+actual image architectures and checks all input and bundle hashes. See
+[licensing](docs/LICENSING.md) for review evidence and dependency-update steps.
+
+Little Hint is source-available under [PolyForm Perimeter 1.0.0](LICENSE).
+Copyright 2026 Affolder Creative. The license restricts competing products,
+including free competitors; it is not an OSI-approved open-source license.
+Third-party components retain their original licenses. Commercial permission
+and [outside contribution policy](CONTRIBUTING.md) are documented separately.

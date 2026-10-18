@@ -8,7 +8,7 @@ import type { World } from "../src/shared/model";
 test("main views and email templates retain readable responsive layouts", async ({
   page,
 }) => {
-  test.setTimeout(120000);
+  test.setTimeout(process.env.CI ? 300000 : 120000);
   page.setDefaultTimeout(10000);
   await mkdir("test-results/polish", { recursive: true });
   const errors: string[] = [];

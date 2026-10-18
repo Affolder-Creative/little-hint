@@ -1,0 +1,60 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      {
+        interval: weekly,
+        day: monday,
+        time: "09:00",
+        timezone: America/Indiana/Indianapolis,
+      }
+    open-pull-requests-limit: 5
+    commit-message: { prefix: deps }
+    groups:
+      runtime:
+        dependency-type: production
+        update-types: [minor, patch]
+      development:
+        dependency-type: development
+        update-types: [minor, patch]
+  - package-ecosystem: npm
+    directory: /brand/little-hint-final/source
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 2
+    commit-message: { prefix: deps }
+    groups:
+      brand-tools:
+        update-types: [minor, patch]
+  - package-ecosystem: pip
+    directory: /brand/little-hint-final/source
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 2
+    commit-message: { prefix: deps }
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 3
+    commit-message: { prefix: ci }
+    groups:
+      actions:
+        update-types: [minor, patch]
+  - package-ecosystem: docker
+    directory: /
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 2
+    commit-message: { prefix: build }
+    ignore:
+      - dependency-name: node
+        update-types: [version-update:semver-major]
+  - package-ecosystem: docker-compose
+    directory: /
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 2
+    commit-message: { prefix: build }
+    ignore:
+      - dependency-name: postgres
+        update-types: [version-update:semver-major]
+      # This separately maintained variant must continue to match PostgreSQL 18.
+      - dependency-name: ghcr.io/housewatch-digital/backup-sidecar
+      - dependency-name: little-hint

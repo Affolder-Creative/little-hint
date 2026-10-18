@@ -1,0 +1,195 @@
+name: CI
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review, edited]
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      ref:
+        type: string
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.event.pull_request.number || inputs.ref || github.ref }}-${{ github.workflow }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+jobs:
+  quality:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+          cache: npm
+      - name: Validate PR title
+        if: github.event_name == 'pull_request'
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: node scripts/check-pr-title.mjs
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run test:tooling
+      - run: python3 scripts/test_bundle_sources.py
+      - run: npm run licenses:check
+      - name: Audit brand tooling without regenerating artwork
+        run: |
+          npm ci --prefix brand/little-hint-final/source --ignore-scripts
+          node scripts/licenses.mjs .local/brand-compliance brand/little-hint-final/source
+          python3 -m venv .local/brand-audit
+          .local/brand-audit/bin/python -m pip install -r brand/little-hint-final/source/requirements.txt
+          .local/brand-audit/bin/python scripts/audit-brand.py
+      - run: npm audit --omit=dev --audit-level=high
+      - run: npm run build
+      - run: npm run test:compose
+      - name: Validate workflows
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p .local/actionlint
+          gh release download v1.7.12 --repo rhysd/actionlint --pattern 'actionlint_1.7.12_linux_amd64.tar.gz' --pattern 'actionlint_1.7.12_checksums.txt' --dir .local/actionlint
+          cd .local/actionlint
+          grep ' actionlint_1.7.12_linux_amd64.tar.gz$' actionlint_1.7.12_checksums.txt | sha256sum --check --strict
+          tar -xzf actionlint_1.7.12_linux_amd64.tar.gz actionlint
+          cd ../..
+          .local/actionlint/actionlint -shellcheck=''
+  integration:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: little_hint
+          POSTGRES_PASSWORD: ci-only
+          POSTGRES_DB: little_hint_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U little_hint -d little_hint_test"
+          --health-interval 5s --health-timeout 5s --health-retries 15
+    env:
+      TEST_DATABASE_URL: postgres://little_hint:ci-only@localhost:5432/little_hint_test
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      - run: npm run test:integration
+  browser:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [e2e, sign-in, list-features, polish, pwa]
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: little_hint
+          POSTGRES_PASSWORD: ci-only
+          POSTGRES_DB: little_hint_e2e
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U little_hint -d little_hint_e2e"
+          --health-interval 5s --health-timeout 5s --health-retries 15
+    env:
+      DATABASE_URL: postgres://little_hint:ci-only@localhost:5432/little_hint_e2e
+      BETTER_AUTH_SECRET: ci-browser-only-secret-at-least-32-characters
+      SETTINGS_ENCRYPTION_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+      UPLOAD_DIR: .local/uploads
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      - run: npx --no-install playwright install --with-deps chromium
+      - run: npm run build
+      - name: Browser suite with isolated fixtures
+        env:
+          SUITE: ${{ matrix.suite }}
+        run: npm run test:browser:ci -- "$SUITE"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: failure()
+        with:
+          name: browser-${{ matrix.suite }}
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+  containers:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [amd64, arm64]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+          persist-credentials: false
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .local/source-cache
+          key: sources-${{ hashFiles('compliance/source-materials.json') }}
+          restore-keys: sources-
+      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+        with:
+          platforms: arm64
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          platforms: linux/${{ matrix.arch }}
+          load: true
+          push: false
+          tags: little-hint:ci
+          cache-from: type=gha,scope=ci-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=ci-${{ matrix.arch }}
+      - name: Container smoke test
+        env:
+          LITTLE_HINT_IMAGE: little-hint:ci
+        run: bash scripts/smoke-image.sh
+      - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: little-hint:ci
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+      - name: Verify corresponding-source bundles against the actual image
+        run: |
+          mkdir -p .local/ci-compliance
+          container=$(docker create little-hint:ci)
+          trap 'docker rm "$container" >/dev/null' EXIT
+          docker cp "$container:/app/compliance-report/." .local/ci-compliance/
+          node scripts/release-sources.mjs .local/ci-compliance
+  gate:
+    name: CI gate
+    if: always()
+    needs: [quality, integration, browser, containers]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - name: Require every check to pass
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          node -e 'const jobs=JSON.parse(process.env.RESULTS); if(Object.values(jobs).some(j=>j.result!=="success")) process.exit(1)'

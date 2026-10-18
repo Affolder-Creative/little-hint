@@ -15,3 +15,8 @@ backups
 .DS_Store
 
 *.key
+.github
+docs
+tests
+release-assets
+**/__pycache__

@@ -1,0 +1,9 @@
+# Combine with compose.yaml. Use a full version or, preferably, a digest.
+x-release: &release
+  image: ${LITTLE_HINT_IMAGE:?Set LITTLE_HINT_IMAGE to a release tag or digest}
+  pull_policy: missing
+services:
+  app:
+    <<: *release
+  worker:
+    <<: *release
