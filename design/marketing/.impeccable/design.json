@@ -1,0 +1,250 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-18T22:33:10.776226+00:00",
+  "title": "Design System: Little Hint marketing",
+  "extensions": {
+    "colorMeta": {
+      "bg": {
+        "role": "neutral",
+        "displayName": "Ivory",
+        "tonalRamp": [
+          "oklch(0.150 0.0130 71.33)",
+          "oklch(0.264 0.0130 71.33)",
+          "oklch(0.379 0.0130 71.33)",
+          "oklch(0.493 0.0130 71.33)",
+          "oklch(0.607 0.0130 71.33)",
+          "oklch(0.721 0.0130 71.33)",
+          "oklch(0.836 0.0130 71.33)",
+          "oklch(0.950 0.0130 71.33)"
+        ]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Paper",
+        "tonalRamp": [
+          "oklch(0.150 0.0057 84.57)",
+          "oklch(0.264 0.0057 84.57)",
+          "oklch(0.379 0.0057 84.57)",
+          "oklch(0.493 0.0057 84.57)",
+          "oklch(0.607 0.0057 84.57)",
+          "oklch(0.721 0.0057 84.57)",
+          "oklch(0.836 0.0057 84.57)",
+          "oklch(0.950 0.0057 84.57)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Warm brown",
+        "tonalRamp": [
+          "oklch(0.150 0.0181 35.75)",
+          "oklch(0.264 0.0181 35.75)",
+          "oklch(0.379 0.0181 35.75)",
+          "oklch(0.493 0.0181 35.75)",
+          "oklch(0.607 0.0181 35.75)",
+          "oklch(0.721 0.0181 35.75)",
+          "oklch(0.836 0.0181 35.75)",
+          "oklch(0.950 0.0181 35.75)"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Muted brown",
+        "tonalRamp": [
+          "oklch(0.150 0.0296 45.60)",
+          "oklch(0.264 0.0296 45.60)",
+          "oklch(0.379 0.0296 45.60)",
+          "oklch(0.493 0.0296 45.60)",
+          "oklch(0.607 0.0296 45.60)",
+          "oklch(0.721 0.0296 45.60)",
+          "oklch(0.836 0.0296 45.60)",
+          "oklch(0.950 0.0296 45.60)"
+        ]
+      },
+      "accent": {
+        "role": "primary",
+        "displayName": "Sienna",
+        "tonalRamp": [
+          "oklch(0.150 0.1276 34.60)",
+          "oklch(0.264 0.1276 34.60)",
+          "oklch(0.379 0.1276 34.60)",
+          "oklch(0.493 0.1276 34.60)",
+          "oklch(0.607 0.1276 34.60)",
+          "oklch(0.721 0.1276 34.60)",
+          "oklch(0.836 0.1276 34.60)",
+          "oklch(0.950 0.1276 34.60)"
+        ]
+      },
+      "accent-hover": {
+        "role": "primary",
+        "displayName": "Deep sienna",
+        "tonalRamp": [
+          "oklch(0.150 0.1168 33.74)",
+          "oklch(0.264 0.1168 33.74)",
+          "oklch(0.379 0.1168 33.74)",
+          "oklch(0.493 0.1168 33.74)",
+          "oklch(0.607 0.1168 33.74)",
+          "oklch(0.721 0.1168 33.74)",
+          "oklch(0.836 0.1168 33.74)",
+          "oklch(0.950 0.1168 33.74)"
+        ]
+      },
+      "blush": {
+        "role": "secondary",
+        "displayName": "Blush",
+        "tonalRamp": [
+          "oklch(0.150 0.0221 54.33)",
+          "oklch(0.264 0.0221 54.33)",
+          "oklch(0.379 0.0221 54.33)",
+          "oklch(0.493 0.0221 54.33)",
+          "oklch(0.607 0.0221 54.33)",
+          "oklch(0.721 0.0221 54.33)",
+          "oklch(0.836 0.0221 54.33)",
+          "oklch(0.950 0.0221 54.33)"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Warm divider",
+        "tonalRamp": [
+          "oklch(0.150 0.0198 60.15)",
+          "oklch(0.264 0.0198 60.15)",
+          "oklch(0.379 0.0198 60.15)",
+          "oklch(0.493 0.0198 60.15)",
+          "oklch(0.607 0.0198 60.15)",
+          "oklch(0.721 0.0198 60.15)",
+          "oklch(0.836 0.0198 60.15)",
+          "oklch(0.950 0.0198 60.15)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Hero display",
+        "purpose": "Centered hero heading, with phone-specific size adjustment."
+      },
+      "headline": {
+        "displayName": "Section headline",
+        "purpose": "Section headings."
+      },
+      "title": {
+        "displayName": "Feature title",
+        "purpose": "Compact feature titles."
+      }
+    },
+    "shadows": [
+      {
+        "name": "screenshot",
+        "value": "0 18px 45px -20px rgb(43 32 29 / 35%)",
+        "purpose": "Shared ambient shadow on desktop and phone frames."
+      }
+    ],
+    "motion": [
+      {
+        "name": "button-background",
+        "value": "background-color 160ms ease-out",
+        "purpose": "Button hover transition; disabled for reduced motion."
+      },
+      {
+        "name": "anchor-scroll",
+        "value": "smooth",
+        "purpose": "In-page navigation; auto for reduced motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "tablet",
+        "value": "900px"
+      },
+      {
+        "name": "phone",
+        "value": "600px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Marketing action link with a visible keyboard focus outline.",
+      "html": "<a class=\"ds-button-primary\" href=\"#self-host\">Self-host Little Hint</a>",
+      "css": ".ds-button-primary{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:50px;padding:13px 22px;border:1px solid transparent;border-radius:8px;font-size:15px;font-weight:600;line-height:1.4;text-decoration:none;transition:background-color 160ms ease-out;font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;background:var(--accent,#aa4d37);color:var(--paper,#fffdf9);}.ds-button-primary:hover{background:var(--accent-hover,#913e2c)}.ds-button-primary:focus-visible{outline:3px solid var(--accent,#aa4d37);outline-offset:5px;border-radius:3px}@media(prefers-reduced-motion:reduce){.ds-button-primary{transition:none}}"
+    },
+    {
+      "name": "Secondary button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Marketing action link with a visible keyboard focus outline.",
+      "html": "<a class=\"ds-button-secondary\" href=\"#self-host\">View on GitHub</a>",
+      "css": ".ds-button-secondary{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:50px;padding:13px 22px;border:1px solid transparent;border-radius:8px;font-size:15px;font-weight:600;line-height:1.4;text-decoration:none;transition:background-color 160ms ease-out;font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;color:var(--accent,#aa4d37);background:transparent;border-color:var(--accent,#aa4d37);}.ds-button-secondary:hover{background:var(--blush,#f4e4da)}.ds-button-secondary:focus-visible{outline:3px solid var(--accent,#aa4d37);outline-offset:5px;border-radius:3px}@media(prefers-reduced-motion:reduce){.ds-button-secondary{transition:none}}"
+    },
+    {
+      "name": "Text link",
+      "kind": "button",
+      "description": "Underlined supporting action.",
+      "html": "<a class=\"ds-text-link\" href=\"#repository\">Explore the repository</a>",
+      "css": ".ds-text-link{display:inline-flex;gap:10px;align-items:center;min-height:44px;padding:8px;color:var(--accent,#aa4d37);font-size:14px;font-weight:600;text-underline-offset:5px;font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;}.ds-text-link:focus-visible{outline:3px solid var(--accent,#aa4d37);outline-offset:5px;border-radius:3px}"
+    },
+    {
+      "name": "Header navigation",
+      "kind": "nav",
+      "description": "Plain links with generous keyboard and pointer targets.",
+      "html": "<nav class=\"ds-nav\" aria-label=\"Main navigation\"><a href=\"#features\">Features</a><a href=\"#self-host\">Self-host</a></nav>",
+      "css": ".ds-nav{display:flex;gap:32px;align-items:center;font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;}.ds-nav a{display:inline-flex;align-items:center;min-height:44px;font-size:14px;text-decoration:none;color:var(--ink,#2b201d);text-underline-offset:5px}.ds-nav a:hover{color:var(--accent,#aa4d37);text-decoration:underline}.ds-nav a:focus-visible{outline:3px solid var(--accent,#aa4d37);outline-offset:5px;border-radius:3px}@media(max-width:600px){.ds-nav{justify-content:center;width:100%;gap:30px}.ds-nav a{font-size:13px}}"
+    },
+    {
+      "name": "Capability label",
+      "kind": "custom",
+      "description": "Inline SVG and label from the unboxed capability row.",
+      "html": "<span class=\"ds-capability\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M9 5h11M9 12h11M9 19h11M3 5h.01M3 12h.01M3 19h.01\"/></svg>Shared wish lists</span>",
+      "css": ".ds-capability{display:flex;align-items:center;justify-content:center;gap:11px;font-size:14px;color:var(--ink,#2b201d);font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;}.ds-capability svg{width:21px;height:21px;fill:none;stroke:var(--accent,#aa4d37);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}@media(max-width:600px){.ds-capability{font-size:12px;gap:8px;justify-content:flex-start}.ds-capability svg{width:19px;height:19px}}"
+    },
+    {
+      "name": "Screenshot detail container",
+      "kind": "card",
+      "refersTo": "screen-detail",
+      "description": "Flat frame for actual app captures; preview intentionally contains no invented UI.",
+      "html": "<div class=\"ds-screen-detail\" aria-label=\"Screenshot detail container\"></div>",
+      "css": ".ds-screen-detail{display:flex;align-items:center;min-height:170px;padding:12px;background:var(--bg,#fff8f0);border-radius:12px;overflow:hidden}@media(max-width:900px){.ds-screen-detail{padding:15px;min-height:160px}}@media(max-width:600px){.ds-screen-detail{padding:13px;min-height:135px}}"
+    }
+  ],
+  "narrative": {
+    "northStar": "See it together",
+    "overview": "This record covers the finished static marketing page in `marketing/index.html` and `marketing/style.css`. It follows the user's selected concept B in `design/marketing-concepts/b-see-it-together.png`. The application has its own root `DESIGN.md`; this document does not change that system.\n\nIvory backgrounds, sienna actions, blush sections, and Fraunces headings surround actual app captures. The approved SVG logo supplies the lettering. The marketing page stays light regardless of system theme. Product screenshots explain gift coordination, while compact feature descriptions keep the page short.",
+    "keyCharacteristics": [
+      "Approved logo artwork, with Fraunces for page headings.",
+      "Warm, fixed light colors and restrained borders.",
+      "Real app screenshots with disclosed illustrative fixtures.",
+      "Compact feature rows and responsive device presentation."
+    ],
+    "rules": [
+      {
+        "name": "The Fixed Light Rule",
+        "body": "Marketing retains its light palette; the application's dark theme does not propagate into this page.",
+        "section": "colors"
+      },
+      {
+        "name": "The Artwork Rule",
+        "body": "Use the approved logo SVG intact; Fraunces headings do not replace its lettering.",
+        "section": "typography"
+      },
+      {
+        "name": "The Screenshot Depth Rule",
+        "body": "Reserve the shared ambient shadow for framed product captures; ordinary page content stays flat.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do preserve approved logo artwork and the selected concept's warm palette.",
+      "Do use actual app screenshots and disclose illustrative demo data.",
+      "Do keep feature copy compact and screenshot details readable at phone widths.",
+      "Do preserve keyboard focus, the skip link, and reduced-motion behavior."
+    ],
+    "donts": [
+      "Don't inherit the application's dark theme into this fixed light marketing page.",
+      "Don't recreate the approved logo lettering with a font.",
+      "Don't replace product captures with invented app interfaces.",
+      "Don't apply device bezels or screenshot shadows to ordinary text sections."
+    ]
+  }
+}

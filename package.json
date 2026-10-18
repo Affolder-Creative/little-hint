@@ -21,7 +21,12 @@
     "test:compose": "node scripts/check-compose.mjs",
     "test:tooling": "node --test scripts/tooling.test.mjs",
     "licenses:check": "node scripts/licenses.mjs",
-    "test:browser:ci": "node scripts/ci-browser.mjs"
+    "test:browser:ci": "node scripts/ci-browser.mjs",
+    "marketing:preview": "node scripts/preview-marketing.mjs",
+    "marketing:check": "node scripts/check-marketing.mjs",
+    "marketing:test": "node scripts/test-marketing.mjs",
+    "marketing:capture": "tsx scripts/capture-marketing.ts",
+    "marketing:social": "node scripts/capture-marketing-social.mjs"
   },
   "dependencies": {
     "@better-auth/passkey": "^1.7.10",
