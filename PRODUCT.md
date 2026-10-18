@@ -15,7 +15,7 @@ Friends and families coordinating gifts year-round, including joint recipients a
 Create wishes, suggest gifts for others, coordinate purchases without duplicates, and preserve surprises.
 
 ## Capabilities and constraints
-Invite-only. Surprise and Transparent lists. Scoped suggestions, quantities, contributions without money transfer, private discussions, imports, SMTP/Telegram/US SMS, and balanced Secret Gift Exchanges. Optional AI. No guest registries. Local personal drafts only while offline.
+Invite-only. Surprise and Transparent lists. Scoped suggestions, quantities, contributions without money transfer, private discussions, imports, SMTP/Telegram/US SMS, and balanced secret gift exchanges. Manual and scheduled list archiving. Optional dated gift summaries with a reveal policy locked at first sharing; amounts and private discussions stay hidden. Optional AI. No guest registries. Local personal drafts only while offline.
 
 ## Brand commitments
 Little Hint. Gift ideas, shared thoughtfully. Use approved brand/little-hint-final artwork without reconstructing its lettering. Warm palette and accessible light/dark interface.

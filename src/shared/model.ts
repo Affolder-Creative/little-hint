@@ -34,6 +34,26 @@ export interface List extends Base {
   modeLocked: boolean;
   archived: boolean;
   description: string;
+  archiveAfter?: string | null;
+  revealAfter?: string | null;
+  timeZone?: string;
+  revealExchangeGivers?: boolean;
+}
+export interface GiftSummary {
+  listId: string;
+  gifts: Array<{
+    id: string;
+    itemId: string;
+    title: string;
+    purchased: number;
+    buyerName: string;
+    exchange: boolean;
+    contributors: Array<{
+      id: string;
+      name: string;
+      status: "sent" | "received";
+    }>;
+  }>;
 }
 export interface Item extends Base {
   title: string;
@@ -241,7 +261,7 @@ export interface World {
   people: Person[];
   groups: Group[];
   invitations: Invitation[];
-  lists: Array<List & { canEdit: boolean }>;
+  lists: Array<List & { canEdit: boolean; revealAvailable: boolean }>;
   items: GiftView[];
   buying: Array<Reservation & { item?: GiftView }>;
   exchanges: Array<

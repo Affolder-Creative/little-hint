@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { writeFile } from "node:fs/promises";
-import { stamp } from "./domain";
+import { stamp, archiveDueLists } from "./domain";
 import { PgBoss } from "pg-boss";
 import { readState, transact, pool } from "./db";
 import { importProduct } from "./imports";
@@ -66,6 +66,7 @@ async function dispatch() {
   try {
     await writeFile("/tmp/little-hint-worker-heartbeat", String(Date.now()));
     await transact((s) => {
+      archiveDueLists(s);
       let row = s.usage.find((u) => u.key === "worker-heartbeat");
       if (!row) {
         row = { ...stamp(), key: "worker-heartbeat", count: 0 };

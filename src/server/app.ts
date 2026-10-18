@@ -16,6 +16,7 @@ import {
   DomainError,
   fail,
   itemVisible,
+  giftSummary,
 } from "./domain";
 import { config, settingsSummary, saveSetting } from "./settings";
 import { mediaDir, saveImage } from "./imports";
@@ -111,6 +112,18 @@ export async function makeApp() {
     method: ["GET", "POST"],
     url: "/api/auth/*",
     handler: async (req, reply) => {
+      const authPath = new URL(req.url, appUrl).pathname;
+      if (
+        req.method === "POST" &&
+        [
+          "/api/auth/passkey/verify-registration",
+          "/api/auth/passkey/update-passkey",
+        ].includes(authPath)
+      ) {
+        const body = req.body as Record<string, unknown> | undefined;
+        if (body?.name !== undefined)
+          body.name = z.string().trim().min(1).max(80).parse(body.name);
+      }
       const request = new Request(new URL(req.url, appUrl), {
         method: req.method,
         headers: fromNodeHeaders(req.headers),
@@ -142,6 +155,13 @@ export async function makeApp() {
     const a = await actor(req);
     return world(await readState(), a);
   });
+  app.get<{ Params: { id: string } }>(
+    "/api/v1/lists/:id/gift-summary",
+    async (req) => {
+      const a = await actor(req);
+      return giftSummary(await readState(), a, req.params.id);
+    },
+  );
   const routes: Record<string, string> = {
     groups: "groups.create",
     "groups/invite": "groups.invite",

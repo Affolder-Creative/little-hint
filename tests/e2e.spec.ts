@@ -247,7 +247,9 @@ test("invitation verification, explicit profile linking, joint ownership, and ow
 test("passkey registration and sign-in through a virtual platform authenticator", async ({
   page,
   context,
+  browser,
 }) => {
+  const label = `1Password personal ${Date.now()}`;
   await login(page, "sam@example.test");
   const cdp = await context.newCDPSession(page);
   await cdp.send("WebAuthn.enable");
@@ -265,9 +267,73 @@ test("passkey registration and sign-in through a virtual platform authenticator"
   await page
     .getByRole("button", { name: "Add a passkey", exact: true })
     .click();
+  await expect(page.getByLabel("Passkey label", { exact: true })).toHaveValue(
+    "Little Hint",
+  );
+  await page.getByLabel("Passkey label", { exact: true }).fill("1Password");
+  await mkdir("test-results/visual", { recursive: true });
+  for (const [name, width, height] of [
+    ["desktop", 1440, 1000],
+    ["mobile", 390, 844],
+  ] as const) {
+    await page.setViewportSize({ width, height });
+    await page.getByRole("dialog").screenshot({
+      path: `test-results/visual/passkey-label-${name}.png`,
+    });
+    expect(
+      (await new AxeBuilder({ page }).include("dialog").analyze()).violations,
+    ).toEqual([]);
+  }
+  const registration = page.waitForResponse(
+    (r) =>
+      new URL(r.url()).pathname ===
+      "/api/auth/passkey/generate-register-options",
+  );
+
+  await page
+    .getByRole("button", { name: "Create passkey", exact: true })
+    .click();
+  expect((await (await registration).json()).rp.name).toBe("Little Hint");
   await expect(
     page.getByRole("status").filter({ hasText: "Passkey added." }),
   ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Rename 1Password", exact: true })
+    .click();
+  await page.getByLabel("Passkey label", { exact: true }).fill(label);
+  await page.getByRole("button", { name: "Save label", exact: true }).click();
+  await expect(
+    page.getByRole("button", {
+      name: `Rename ${label}`,
+      exact: true,
+    }),
+  ).toBeVisible();
+  const saved = (
+    await (
+      await page.request.get("/api/auth/passkey/list-user-passkeys")
+    ).json()
+  ).find((key: any) => key.name === label);
+  expect(saved).toBeTruthy();
+  const stranger = await browser.newContext();
+  try {
+    const outsider = await stranger.newPage();
+    await login(outsider, "alex@example.test");
+    const denied = await outsider.request.post(
+      "/api/auth/passkey/update-passkey",
+      {
+        headers: { Origin: new URL(page.url()).origin },
+        data: { id: saved.id, name: "Not yours" },
+      },
+    );
+    expect([401, 403, 404]).toContain(denied.status());
+  } finally {
+    await stranger.close();
+  }
+  const invalid = await page.request.post("/api/auth/passkey/update-passkey", {
+    headers: { Origin: new URL(page.url()).origin },
+    data: { id: saved.id, name: "x".repeat(81) },
+  });
+  expect(invalid.status()).toBe(400);
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
   await page
     .getByRole("button", { name: "Sign in with a passkey", exact: true })
@@ -278,6 +344,28 @@ test("passkey registration and sign-in through a virtual platform authenticator"
   expect(
     (await (await page.request.get("/api/v1/world")).json()).me.email,
   ).toBe("sam@example.test");
+  await page.goto("/settings");
+  await page.evaluate(() => {
+    navigator.credentials.create = async () => {
+      throw new DOMException("Cancelled", "NotAllowedError");
+    };
+  });
+  await page
+    .getByRole("button", { name: "Add a passkey", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Create passkey", exact: true })
+    .click();
+  await expect(page.getByRole("dialog").getByRole("alert")).toBeVisible();
+  await page.getByRole("button", { name: "Close dialog", exact: true }).click();
+  await page
+    .locator(".setting-row")
+    .filter({ hasText: label })
+    .getByRole("button", { name: "Remove", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: `Rename ${label}`, exact: true }),
+  ).toHaveCount(0);
 });
 
 test("the worker safely fails a private-network import without blocking manual entry", async ({

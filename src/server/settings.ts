@@ -1,6 +1,10 @@
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
 import { readState, transact } from "./db";
 import { stamp, fail } from "./domain";
+import {
+  scrapingSelections,
+  selectedScrapingProvider,
+} from "../shared/scraping-providers";
 export const settingKeys = [
   "SMTP_HOST",
   "SMTP_PORT",
@@ -16,6 +20,10 @@ export const settingKeys = [
   "OPENAI_API_KEY",
   "OPENAI_MODEL",
   "SCRAPINGBEE_API_KEY",
+  "SCRAPINGFISH_API_KEY",
+  "SCRAPEDO_API_KEY",
+  "SCRAPINGDOG_API_KEY",
+  "SCRAPING_PROVIDER",
   "PAID_DAILY_LIMIT",
 ] as const;
 export type SettingKey = (typeof settingKeys)[number];
@@ -24,6 +32,7 @@ const defaults: Partial<Record<SettingKey, string>> = {
   SMTP_FROM: "Little Hint <littlehint@example.com>",
   OPENAI_MODEL: "gpt-6-luna",
   PAID_DAILY_LIMIT: "50",
+  SCRAPING_PROVIDER: "auto",
 };
 const key = () => {
   const b = Buffer.from(process.env.SETTINGS_ENCRYPTION_KEY ?? "", "base64");
@@ -62,6 +71,7 @@ export async function config(): Promise<Record<SettingKey, string>> {
 }
 export async function settingsSummary() {
   const s = await readState();
+  const cfg = await config();
   return settingKeys.map((k) => ({
     key: k,
     configured: !!process.env[k] || s.settings.some((v) => v.key === k),
@@ -71,12 +81,20 @@ export async function settingsSummary() {
         ? "settings"
         : "default",
     default: defaults[k] ?? null,
+    ...(k === "SCRAPING_PROVIDER"
+      ? {
+          value: cfg[k],
+          effectiveProvider: selectedScrapingProvider(cfg) ?? null,
+        }
+      : {}),
   }));
 }
 export async function saveSetting(k: string, value: string) {
   if (!settingKeys.includes(k as SettingKey)) fail(400, "Unknown setting.");
   if (process.env[k])
     fail(409, "This setting is controlled by an environment variable.");
+  if (k === "SCRAPING_PROVIDER" && value && !scrapingSelections.includes(value))
+    fail(400, "Choose an available scraping provider.");
   if (k === "PAID_DAILY_LIMIT" && !/^\d{1,6}$/.test(value))
     fail(400, "Use a daily request limit from 0 to 999999.");
   if (k === "SMTP_PORT" && !/^\d{1,5}$/.test(value))

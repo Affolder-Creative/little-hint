@@ -12,6 +12,7 @@ import type { GiftView, List } from "../shared/model";
 import { Form, Field, Privacy } from "./components";
 import { useApp } from "./context";
 import { api } from "./api";
+import { dateHasElapsed } from "../shared/list-dates";
 export const value = (f: FormData, k: string) => String(f.get(k) ?? "");
 const selected = (f: FormData, k: string) => f.getAll(k).map(String);
 export function GroupForm() {
@@ -78,6 +79,18 @@ export function ListForm({ list }: { list?: List }) {
     (p) => p.userId === world.me.id || p.guardians.includes(world.me.id),
   );
   const [mode, setMode] = useState(list?.mode ?? "surprise");
+  const [revealAfter, setRevealAfter] = useState(list?.revealAfter ?? "");
+  const [revealExchangeGivers, setRevealExchangeGivers] = useState(
+    !!list?.revealExchangeGivers,
+  );
+  const timeZone =
+    list?.timeZone ??
+    (list?.modeLocked
+      ? "UTC"
+      : Intl.DateTimeFormat().resolvedOptions().timeZone);
+  const revealLocked =
+    !!list?.modeLocked &&
+    (!list.revealAfter || dateHasElapsed(list.revealAfter, timeZone));
   return (
     <Form
       submit={list ? "Save list" : "Create list"}
@@ -94,6 +107,10 @@ export function ListForm({ list }: { list?: List }) {
           description: value(f, "description"),
           groupIds: selected(f, "groupIds"),
           mode,
+          archiveAfter: value(f, "archiveAfter") || null,
+          revealAfter: revealAfter || null,
+          timeZone: value(f, "timeZone") || timeZone,
+          revealExchangeGivers: !!revealAfter && revealExchangeGivers,
         });
         close();
       }}
@@ -192,6 +209,75 @@ export function ListForm({ list }: { list?: List }) {
           <p>Create a group in Settings to share this list.</p>
         )}
         <small>Leaving every group unchecked keeps the list private.</small>
+      </fieldset>
+      <fieldset className="choice-group">
+        <legend>After the occasion</legend>
+        <Field
+          label="Archive after"
+          hint="Optional. Hide this list from active browsing after this day. You can restore it later."
+        >
+          <input
+            type="date"
+            name="archiveAfter"
+            defaultValue={list?.archiveAfter ?? ""}
+          />
+        </Field>
+        <Field
+          label="Reveal gifts after"
+          hint={
+            list?.modeLocked
+              ? !list.revealAfter
+                ? "This list was shared without a reveal date. Gift summaries stay hidden."
+                : revealLocked
+                  ? "Gifts are already eligible to be revealed. This date is fixed."
+                  : "This list is shared. You can only move its reveal date later."
+              : "Optional. After this day, view purchased gifts and contributors. The date locks when first shared and can then only move later."
+          }
+        >
+          <input
+            type="date"
+            name="revealAfter"
+            value={revealAfter}
+            disabled={revealLocked}
+            min={list?.modeLocked ? (list.revealAfter ?? undefined) : undefined}
+            onChange={(e) => setRevealAfter(e.target.value)}
+          />
+        </Field>
+        <Field
+          label="List timezone"
+          hint="Dates take effect after the selected day ends in this timezone. The timezone locks when first shared."
+        >
+          <select
+            name="timeZone"
+            defaultValue={timeZone}
+            disabled={list?.modeLocked}
+          >
+            {[
+              ...new Set([
+                timeZone,
+                "UTC",
+                ...Intl.supportedValuesOf("timeZone"),
+              ]),
+            ].map((zone) => (
+              <option key={zone}>{zone}</option>
+            ))}
+          </select>
+        </Field>
+        <label className="check">
+          <input
+            type="checkbox"
+            name="revealExchangeGivers"
+            checked={!!revealAfter && revealExchangeGivers}
+            disabled={list?.modeLocked || !revealAfter}
+            onChange={(e) => setRevealExchangeGivers(e.target.checked)}
+          />
+          Reveal purchased exchange gifts after this date
+        </label>
+        <small>
+          Otherwise, secret gift exchange identities stay hidden. This choice
+          locks when first shared. Contribution amounts and private discussions
+          are never revealed.
+        </small>
       </fieldset>
       {list && (
         <label className="check">

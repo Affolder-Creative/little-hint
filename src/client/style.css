@@ -651,9 +651,28 @@ main {
   font-size: 14px;
   color: var(--muted);
 }
-.tabs button[aria-selected="true"] {
+.tabs button[aria-selected="true"],
+.tabs button[aria-pressed="true"] {
   border-color: var(--accent);
   color: var(--accent);
+}
+.gift-summary > p {
+  max-width: 65ch;
+  color: var(--muted);
+}
+.summary-gift {
+  padding: 24px 0;
+  border-bottom: 1px solid var(--border);
+}
+.summary-gift h3 {
+  margin: 0 0 8px;
+}
+.summary-gift p {
+  margin: 0;
+}
+.summary-gift ul {
+  margin: 12px 0 0;
+  padding-left: 20px;
 }
 .list-row {
   display: flex;
@@ -2000,4 +2019,9 @@ main {
 
 .install .text-button {
   color: var(--text);
+}
+
+.passkey-label {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
