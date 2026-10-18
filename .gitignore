@@ -1,0 +1,37 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+*.key
+secrets/
+
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Builds, caches, and test output
+dist/
+build/
+coverage/
+.vite/
+.turbo/
+.cache/
+*.tsbuildinfo
+playwright-report/
+test-results/
+
+# Runtime files and local data
+*.log
+logs/
+*.pid
+*.sqlite
+*.sqlite3
+*.db
+*.db-wal
+*.db-shm
+
+# Operating system files
+.DS_Store
+Thumbs.db
