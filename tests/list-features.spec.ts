@@ -311,6 +311,102 @@ test.describe("touch reveal settings", () => {
     viewport: { width: 393, height: 852 },
   });
 
+  test("native date clearing stays cleared and saves without a gift summary", async ({
+    page,
+  }) => {
+    await login(page, "alex@example.test");
+    await page.goto("/lists");
+    for (const button of ["Create a list", "Create event"]) {
+      await page.getByRole("button", { name: button, exact: true }).tap();
+      const dialog = page.getByRole("dialog");
+      const date = dialog.locator('input[name="revealAfter"]');
+      const exchange = page.getByLabel(
+        "Include secret exchange gifts and giver names",
+        { exact: true },
+      );
+      await page
+        .getByLabel("Archive after", { exact: true })
+        .fill("2099-12-31");
+      for (const mode of ["See the plans", "Keep it a surprise"]) {
+        await page.getByRole("radio", { name: new RegExp(mode) }).check();
+        await date.fill("2099-12-25");
+        await exchange.check();
+        // Native picker updates may reach the input before a change event.
+        // Use the element setter to also exercise React's tracked-value path.
+        await date.evaluate((input: HTMLInputElement) => {
+          input.value = "";
+          input.dispatchEvent(new Event("input", { bubbles: true }));
+        });
+        await expect(date).toHaveValue("");
+        await expect(exchange).toBeDisabled();
+        await expect(exchange).not.toBeChecked();
+
+        await date.fill("2099-12-25");
+        await exchange.check();
+        await date.focus();
+        await expect(date).toBeFocused();
+        // Also recover the dependent state when a picker commits on dismissal.
+        await date.evaluate((input: HTMLInputElement) => {
+          input.value = "";
+        });
+        await page
+          .getByLabel(button === "Create event" ? "Event name" : "List name", {
+            exact: true,
+          })
+          .focus();
+        await expect(date).not.toBeFocused();
+        await expect(exchange).toBeDisabled();
+        await expect(exchange).not.toBeChecked();
+      }
+      // A later render must not put the cleared date back.
+      await page.getByRole("radio", { name: /See the plans/ }).check();
+      await expect(date).toHaveValue("");
+      await expect(
+        page.getByLabel("Archive after", { exact: true }),
+      ).toHaveValue("2099-12-31");
+      expect(
+        await date.evaluate((input) => {
+          const data = new FormData(input.closest("form")!);
+          return [data.get("revealAfter"), data.get("revealExchangeGivers")];
+        }),
+      ).toEqual(["", null]);
+      const name = `Reset date ${button} ${Date.now()}`;
+      await page
+        .getByLabel(button === "Create event" ? "Event name" : "List name", {
+          exact: true,
+        })
+        .fill(name);
+      expect(
+        await dialog
+          .locator("input:invalid, select:invalid, textarea:invalid")
+          .evaluateAll((inputs) =>
+            inputs.map((input) => ({
+              name: input.getAttribute("name"),
+              message: (input as HTMLInputElement).validationMessage,
+            })),
+          ),
+      ).toEqual([]);
+      await dialog
+        .getByRole("button", {
+          name:
+            button === "Create event"
+              ? /^Create \d+ wish lists?$/
+              : "Create list",
+          exact: true,
+        })
+        .tap();
+      await expect(dialog).not.toBeVisible();
+      const world = await (await page.request.get("/api/v1/world")).json();
+      const saved = (
+        button === "Create event" ? world.groupEvents : world.lists
+      ).find((entry: { name: string }) => entry.name === name);
+      expect(saved.revealAfter).toBeNull();
+      expect(saved.revealExchangeGivers).toBe(false);
+      expect(saved.archiveAfter).toBe("2099-12-31");
+      await page.goto("/lists");
+    }
+  });
+
   test("a reveal date enables exchange inclusion and clearing it disables inclusion", async ({
     page,
   }) => {

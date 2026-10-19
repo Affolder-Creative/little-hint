@@ -76,6 +76,29 @@ test("leaders manage an occasion while recipients add wishes and unselected memb
         ),
       ).toBe(true);
       await expectDialogFieldsToFit(leader);
+      const participantSpacing = await leader
+        .locator(".event-participants")
+        .evaluate((section) => {
+          const actions = section
+            .querySelector(".event-selection-actions")!
+            .getBoundingClientRect();
+          const rows = [
+            ...section.querySelectorAll(".event-person-choice"),
+          ].map((row) => row.getBoundingClientRect());
+          const help = section
+            .querySelector(":scope > small")!
+            .getBoundingClientRect();
+          return {
+            beforePeople: rows[0].top - actions.bottom,
+            afterPeople: help.top - rows.at(-1)!.bottom,
+            rowHeights: rows.map((row) => row.height),
+          };
+        });
+      expect(participantSpacing.beforePeople).toBeLessThanOrEqual(8);
+      expect(participantSpacing.afterPeople).toBeLessThanOrEqual(8);
+      expect(
+        participantSpacing.rowHeights.every((height) => height >= 44),
+      ).toBe(true);
       expect(
         (await new AxeBuilder({ page: leader }).include("dialog").analyze())
           .violations,
