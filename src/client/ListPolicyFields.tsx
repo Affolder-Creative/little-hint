@@ -21,7 +21,9 @@ export function listPolicyValues(form: FormData, list?: Policy) {
     ? (list?.revealAfter ?? null)
     : String(form.get("revealAfter") ?? "") || null;
   return {
-    mode: list?.modeLocked ? list.mode : String(form.get("mode") ?? "surprise"),
+    mode: list?.modeLocked
+      ? list.mode
+      : String(form.get("mode") ?? "transparent"),
     archiveAfter: String(form.get("archiveAfter") ?? "") || null,
     revealAfter,
     timeZone: list?.modeLocked
@@ -43,7 +45,7 @@ export function ListPolicyFields({
   event?: boolean;
 }) {
   const exchangeHintId = useId();
-  const [mode, setMode] = useState(list?.mode ?? "surprise");
+  const [mode, setMode] = useState(list?.mode ?? "transparent");
   const [revealAfter, setRevealAfter] = useState(list?.revealAfter ?? "");
   const [revealExchangeGivers, setRevealExchangeGivers] = useState(
     !!list?.revealExchangeGivers,
@@ -60,24 +62,6 @@ export function ListPolicyFields({
     <>
       <fieldset className="choice-group" disabled={list?.modeLocked}>
         <legend>How should gifting work?</legend>
-        <label className={`mode-choice ${mode === "surprise" ? "chosen" : ""}`}>
-          <input
-            type="radio"
-            name="mode"
-            value="surprise"
-            checked={mode === "surprise"}
-            onChange={() => setMode("surprise")}
-          />
-          <LockKeyhole size={20} />
-          <span>
-            <strong>Keep it a surprise</strong>
-            <small>
-              {event
-                ? "Each person adds wishes. The group coordinates gifts privately."
-                : "You add wishes. Your people coordinate gifts privately."}
-            </small>
-          </span>
-        </label>
         <label
           className={`mode-choice ${mode === "transparent" ? "chosen" : ""}`}
         >
@@ -95,6 +79,24 @@ export function ListPolicyFields({
               {event
                 ? "Each recipient can see who reserves or purchases their gifts."
                 : "See who reserves or purchases a gift for you."}
+            </small>
+          </span>
+        </label>
+        <label className={`mode-choice ${mode === "surprise" ? "chosen" : ""}`}>
+          <input
+            type="radio"
+            name="mode"
+            value="surprise"
+            checked={mode === "surprise"}
+            onChange={() => setMode("surprise")}
+          />
+          <LockKeyhole size={20} />
+          <span>
+            <strong>Keep it a surprise</strong>
+            <small>
+              {event
+                ? "Each person adds wishes. The group coordinates gifts privately."
+                : "You add wishes. Your people coordinate gifts privately."}
             </small>
           </span>
         </label>
@@ -121,14 +123,22 @@ export function ListPolicyFields({
           />
         </Field>
         <Field
-          label="Reveal gifts after"
+          label={
+            mode === "transparent"
+              ? "Gift summary available after"
+              : "Reveal gifts after"
+          }
           hint={
             list?.modeLocked && !list.revealAfter
               ? "Shared without a reveal date. Gift summaries stay hidden."
               : [
-                  event
-                    ? "Optional. After this day, each recipient can view their purchased gifts, buyers, and contributors, even with Keep it a surprise."
-                    : "Optional. After this day, list owners can view purchased gifts, buyers, and contributors, even with Keep it a surprise.",
+                  mode === "transparent"
+                    ? event
+                      ? "Optional. Purchase activity is already visible with See the plans. After this day, each recipient can open a gift summary with purchased gifts, buyers, and contributor names."
+                      : "Optional. Purchase activity is already visible with See the plans. After this day, list owners can open a gift summary with purchased gifts, buyers, and contributor names."
+                    : event
+                      ? "Optional. After this day, each recipient can view their purchased gifts, buyers, and contributors, even with Keep it a surprise."
+                      : "Optional. After this day, list owners can view purchased gifts, buyers, and contributors, even with Keep it a surprise.",
                   list?.modeLocked
                     ? revealLocked
                       ? "Gifts are already eligible to be revealed. This date is fixed."
@@ -183,10 +193,16 @@ export function ListPolicyFields({
           Include secret exchange gifts and giver names
         </label>
         <small id={exchangeHintId}>
+          {list?.modeLocked
+            ? "This choice is locked after first sharing. "
+            : !revealAfter
+              ? mode === "transparent"
+                ? "Choose a gift summary date above to enable this option. "
+                : "Choose a reveal date above to enable this option. "
+              : "This choice locks when first shared. "}
           Also include purchases made through a secret gift exchange in the
           dated summary. Leave unchecked to keep those gifts and giver names
-          hidden. Other purchased gifts are included either way. Choose a reveal
-          date to enable this option; the choice locks when first shared.
+          hidden. Other purchased gifts are included either way.
         </small>
       </fieldset>
     </>
