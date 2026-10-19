@@ -183,10 +183,14 @@ export function ListPolicyFields({
           Include secret exchange gifts and giver names
         </label>
         <small id={exchangeHintId}>
+          {list?.modeLocked
+            ? "This choice is locked after first sharing. "
+            : !revealAfter
+              ? "Choose a reveal date above to enable this option. "
+              : "This choice locks when first shared. "}
           Also include purchases made through a secret gift exchange in the
           dated summary. Leave unchecked to keep those gifts and giver names
-          hidden. Other purchased gifts are included either way. Choose a reveal
-          date to enable this option; the choice locks when first shared.
+          hidden. Other purchased gifts are included either way.
         </small>
       </fieldset>
     </>

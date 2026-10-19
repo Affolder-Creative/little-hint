@@ -243,6 +243,7 @@ test("list dates lock at sharing, archives restore, and controls fit desktop and
   await page.getByRole("link", { name: new RegExp(title) }).click();
   const world = await (await page.request.get("/api/v1/world")).json();
   const list = world.lists.find((l: any) => l.name === title);
+  expect(list.revealExchangeGivers).toBe(true);
   expect(
     (await page.request.get(`/api/v1/lists/${list.id}/gift-summary`)).status(),
   ).toBe(409);
@@ -283,6 +284,64 @@ test("list dates lock at sharing, archives restore, and controls fit desktop and
   ).lists.find((l: any) => l.id === list.id);
   expect(restored.archiveAfter).toBeNull();
   expect(restored.revealAfter).toBe("2099-10-18");
+});
+
+test.describe("touch reveal settings", () => {
+  test.use({
+    hasTouch: true,
+    isMobile: true,
+    viewport: { width: 393, height: 852 },
+  });
+
+  test("a reveal date enables exchange inclusion and clearing it disables inclusion", async ({
+    page,
+  }) => {
+    await login(page, "alex@example.test");
+    await page.goto("/lists");
+    for (const button of ["Create a list", "Create event"]) {
+      await page.getByRole("button", { name: button, exact: true }).tap();
+      const date = page.getByLabel("Reveal gifts after", { exact: true });
+      const checkbox = page.getByLabel(
+        "Include secret exchange gifts and giver names",
+        { exact: true },
+      );
+      const label = page.locator("label.check").filter({ has: checkbox });
+      await expect(checkbox).toBeDisabled();
+      await expect(checkbox).toHaveAccessibleDescription(
+        /Choose a reveal date above/,
+      );
+      const disabledColor = await label.evaluate(
+        (el) => getComputedStyle(el).color,
+      );
+      await expectDialogFieldsToFit(page);
+
+      await date.fill("2099-12-25");
+      await expect(checkbox).toBeEnabled();
+      expect(await label.evaluate((el) => getComputedStyle(el).color)).not.toBe(
+        disabledColor,
+      );
+      await label.tap();
+      await expect(checkbox).toBeChecked();
+      expect(
+        await checkbox.evaluate((el) =>
+          new FormData(el.closest("form")!).get("revealExchangeGivers"),
+        ),
+      ).toBe("on");
+      await label.tap();
+      await expect(checkbox).not.toBeChecked();
+      await label.tap();
+      await date.fill("");
+      await expect(checkbox).toBeDisabled();
+      await expect(checkbox).not.toBeChecked();
+      expect(
+        await checkbox.evaluate((el) =>
+          new FormData(el.closest("form")!).get("revealExchangeGivers"),
+        ),
+      ).toBeNull();
+      await expectDialogFieldsToFit(page);
+      await page.getByRole("button", { name: "Close dialog" }).tap();
+    }
+  });
 });
 
 test("gift summaries are owner-only, omit financial data, and remain available in archives", async ({
