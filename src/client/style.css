@@ -991,9 +991,6 @@ main {
 .policy-exchange > small {
   color: var(--muted);
 }
-.list-form .event-participants > small {
-  margin-top: 0;
-}
 .mode-choice {
   display: flex;
   align-items: center;
@@ -2154,7 +2151,6 @@ main {
   align-items: center;
   flex-wrap: wrap;
   gap: 16px;
-  margin-bottom: 8px;
 }
 .event-selection-actions > span {
   margin-right: auto;
@@ -2170,9 +2166,8 @@ main {
   display: block;
   color: var(--muted);
 }
-.event-participants > small {
-  display: block;
-  margin-top: 12px;
+.list-form .event-participants {
+  gap: 8px;
 }
 .event-participant-row > div {
   flex: 1;

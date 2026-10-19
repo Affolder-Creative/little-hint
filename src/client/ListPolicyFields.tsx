@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useId, useState, type SyntheticEvent } from "react";
 import { Eye, LockKeyhole } from "lucide-react";
 import type { List } from "../shared/model";
 import { dateHasElapsed } from "../shared/list-dates";
@@ -59,6 +59,9 @@ export function ListPolicyFields({
   const revealLocked =
     !!list?.modeLocked &&
     (!list.revealAfter || dateHasElapsed(list.revealAfter, timeZone));
+  const syncRevealDate = (event: SyntheticEvent<HTMLInputElement>) => {
+    setRevealAfter(event.currentTarget.value);
+  };
   return (
     <>
       <fieldset
@@ -178,7 +181,10 @@ export function ListPolicyFields({
               min={
                 list?.modeLocked ? (list.revealAfter ?? undefined) : undefined
               }
-              onChange={(e) => setRevealAfter(e.target.value)}
+              // Picker resets can bypass React's change-event value tracking.
+              onInput={syncRevealDate}
+              onChange={syncRevealDate}
+              onBlur={syncRevealDate}
             />
           </Field>
           <div className="policy-exchange">
