@@ -149,11 +149,13 @@ export function Form({
   children,
   submit = "Save",
   disabled = false,
+  className = "",
 }: {
   onSubmit: (data: FormData) => Promise<unknown>;
   children: ReactNode;
   submit?: string;
   disabled?: boolean;
+  className?: string;
 }) {
   const [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
@@ -174,7 +176,7 @@ export function Form({
   }
   return (
     <form
-      className="form"
+      className={`form ${className}`.trim()}
       onSubmit={send}
       onChange={() => setDirty(true)}
       data-dirty={dirty}
@@ -199,7 +201,7 @@ export function Field({
 }: {
   label: string;
   children: ReactNode;
-  hint?: string;
+  hint?: ReactNode;
 }) {
   const id = useId();
   return (
