@@ -78,6 +78,7 @@ export function ListForm({ list }: { list?: List }) {
   );
   return (
     <Form
+      className="list-form"
       submit={list ? "Save list" : "Create list"}
       onSubmit={async (f) => {
         await mutate(list ? "lists/update" : "lists", {
@@ -114,7 +115,7 @@ export function ListForm({ list }: { list?: List }) {
         />
       </Field>
       {!list && (
-        <fieldset className="choice-group">
+        <fieldset className="choice-group form-section">
           <legend>Who is this list for?</legend>
           {world.people.map((p) => (
             <label className="check" key={p.id}>
@@ -134,7 +135,7 @@ export function ListForm({ list }: { list?: List }) {
           </small>
         </fieldset>
       )}
-      <fieldset className="choice-group">
+      <fieldset className="choice-group form-section">
         <legend>Share with</legend>
         {world.groups.length ? (
           world.groups.map((g) => (

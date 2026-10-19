@@ -45,6 +45,7 @@ export function ListPolicyFields({
   event?: boolean;
 }) {
   const exchangeHintId = useId();
+  const privacyHintId = useId();
   const [mode, setMode] = useState(list?.mode ?? "transparent");
   const [revealAfter, setRevealAfter] = useState(list?.revealAfter ?? "");
   const [revealExchangeGivers, setRevealExchangeGivers] = useState(
@@ -60,7 +61,11 @@ export function ListPolicyFields({
     (!list.revealAfter || dateHasElapsed(list.revealAfter, timeZone));
   return (
     <>
-      <fieldset className="choice-group" disabled={list?.modeLocked}>
+      <fieldset
+        className="choice-group form-section"
+        disabled={list?.modeLocked}
+        aria-describedby={privacyHintId}
+      >
         <legend>How should gifting work?</legend>
         <label
           className={`mode-choice ${mode === "transparent" ? "chosen" : ""}`}
@@ -100,20 +105,20 @@ export function ListPolicyFields({
             </small>
           </span>
         </label>
+        <small id={privacyHintId}>
+          {list?.modeLocked
+            ? "Privacy mode is locked after sharing."
+            : "Privacy mode locks when first shared."}
+        </small>
       </fieldset>
-      <p className="muted">
-        {list?.modeLocked
-          ? "Privacy mode is locked after sharing."
-          : "Privacy mode locks when first shared."}
-      </p>
-      <fieldset className="choice-group">
+      <fieldset className="choice-group form-section">
         <legend>After the occasion</legend>
         <Field
           label="Archive after"
           hint={
             event
-              ? "Optional. Archive all event lists after this day. An event leader can restore them later."
-              : "Optional. Hide this list from active browsing after this day. You can restore it later."
+              ? "Optional. Archive all event lists after this day. An event leader can restore them."
+              : "Optional. Hide this list from active browsing after this day. Restore it anytime."
           }
         >
           <input
@@ -122,48 +127,93 @@ export function ListPolicyFields({
             defaultValue={list?.archiveAfter ?? ""}
           />
         </Field>
-        <Field
-          label={
-            mode === "transparent"
-              ? "Gift summary available after"
-              : "Reveal gifts after"
-          }
-          hint={
-            list?.modeLocked && !list.revealAfter
-              ? "Shared without a reveal date. Gift summaries stay hidden."
-              : [
-                  mode === "transparent"
-                    ? event
-                      ? "Optional. Purchase activity is already visible with See the plans. After this day, each recipient can open a gift summary with purchased gifts, buyers, and contributor names."
-                      : "Optional. Purchase activity is already visible with See the plans. After this day, list owners can open a gift summary with purchased gifts, buyers, and contributor names."
-                    : event
-                      ? "Optional. After this day, each recipient can view their purchased gifts, buyers, and contributors, even with Keep it a surprise."
-                      : "Optional. After this day, list owners can view purchased gifts, buyers, and contributors, even with Keep it a surprise.",
-                  list?.modeLocked
-                    ? revealLocked
-                      ? "Gifts are already eligible to be revealed. This date is fixed."
-                      : "After sharing, you can only move the reveal date later."
-                    : event
-                      ? "Choose before creating the event. After creation, an upcoming reveal date can only move later."
-                      : "Choose before first sharing. After sharing, an upcoming reveal date can only move later.",
-                ].join(" ")
-          }
-        >
-          <input
-            type="date"
-            name="revealAfter"
-            value={revealAfter}
-            disabled={revealLocked}
-            min={list?.modeLocked ? (list.revealAfter ?? undefined) : undefined}
-            onChange={(e) => setRevealAfter(e.target.value)}
-          />
-        </Field>
-        <small>
-          Contribution amounts and private discussions always stay private.
-        </small>
+        <div className="policy-summary">
+          <Field
+            label={
+              mode === "transparent"
+                ? "Gift summary available after"
+                : "Reveal gifts after"
+            }
+            hint={
+              <span className="policy-guidance">
+                {list?.modeLocked && !list.revealAfter ? (
+                  <span>
+                    Shared without a reveal date. Gift summaries stay hidden.
+                  </span>
+                ) : (
+                  <>
+                    <span>
+                      Optional. After this day,{" "}
+                      {event ? "each recipient" : "list owners"} can view
+                      purchased gifts, buyers, and contributor names
+                      {mode === "surprise"
+                        ? ", even with Keep it a surprise."
+                        : "."}
+                      {mode === "transparent" &&
+                        " Purchase activity is already visible with See the plans."}
+                    </span>
+                    <span>
+                      {list?.modeLocked
+                        ? revealLocked
+                          ? "Gift summaries are now available. This date is fixed."
+                          : "After sharing, this date can only move later."
+                        : event
+                          ? "Choose before creating the event. After creation, this date can only move later."
+                          : "Choose before first sharing. After sharing, this date can only move later."}
+                    </span>
+                  </>
+                )}
+                <span>
+                  Contribution amounts and private discussions always stay
+                  private.
+                </span>
+              </span>
+            }
+          >
+            <input
+              type="date"
+              name="revealAfter"
+              value={revealAfter}
+              disabled={revealLocked}
+              min={
+                list?.modeLocked ? (list.revealAfter ?? undefined) : undefined
+              }
+              onChange={(e) => setRevealAfter(e.target.value)}
+            />
+          </Field>
+          <div className="policy-exchange">
+            <label className="check">
+              <input
+                type="checkbox"
+                name="revealExchangeGivers"
+                aria-describedby={exchangeHintId}
+                checked={!!revealAfter && revealExchangeGivers}
+                disabled={list?.modeLocked || !revealAfter}
+                onChange={(e) => setRevealExchangeGivers(e.target.checked)}
+              />
+              Include secret exchange gifts and giver names
+            </label>
+            <small id={exchangeHintId} className="policy-guidance">
+              <span>
+                {list?.modeLocked
+                  ? "This choice is locked after first sharing."
+                  : !revealAfter
+                    ? mode === "transparent"
+                      ? "Choose a gift summary date above to enable this option."
+                      : "Choose a reveal date above to enable this option."
+                    : "This choice locks when first shared."}
+              </span>
+              <span>
+                Leave unchecked to keep secret exchange gifts and giver names
+                out of the summary. Other purchased gifts are included either
+                way.
+              </span>
+            </small>
+          </div>
+        </div>
         <Field
           label={event ? "Event timezone" : "List timezone"}
-          hint="Dates take effect after the selected day ends in this timezone. The timezone locks when first shared."
+          hint="Dates take effect after the selected day ends. This timezone locks when first shared."
         >
           <select
             name="timeZone"
@@ -181,29 +231,6 @@ export function ListPolicyFields({
             ))}
           </select>
         </Field>
-        <label className="check">
-          <input
-            type="checkbox"
-            name="revealExchangeGivers"
-            aria-describedby={exchangeHintId}
-            checked={!!revealAfter && revealExchangeGivers}
-            disabled={list?.modeLocked || !revealAfter}
-            onChange={(e) => setRevealExchangeGivers(e.target.checked)}
-          />
-          Include secret exchange gifts and giver names
-        </label>
-        <small id={exchangeHintId}>
-          {list?.modeLocked
-            ? "This choice is locked after first sharing. "
-            : !revealAfter
-              ? mode === "transparent"
-                ? "Choose a gift summary date above to enable this option. "
-                : "Choose a reveal date above to enable this option. "
-              : "This choice locks when first shared. "}
-          Also include purchases made through a secret gift exchange in the
-          dated summary. Leave unchecked to keep those gifts and giver names
-          hidden. Other purchased gifts are included either way.
-        </small>
       </fieldset>
     </>
   );

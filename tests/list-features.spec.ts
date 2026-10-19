@@ -175,6 +175,20 @@ test("mobile shell clears safe areas, resizing, and date dialogs", async ({
           await page.getByRole("dialog").evaluate((el) => el.scrollTop),
         ).toBeGreaterThan(0);
       }
+      if (width === 320) {
+        const submit = page.locator("dialog .form > button[type=submit]");
+        await submit.evaluate((el) => {
+          el.style.fontSize = `${parseFloat(getComputedStyle(el).fontSize) * 2}px`;
+        });
+        await expectDialogFieldsToFit(page);
+        const fits = await submit.evaluate((el) => {
+          const button = el.getBoundingClientRect();
+          const form = el.closest("form")!.getBoundingClientRect();
+          return button.left >= form.left && button.right <= form.right;
+        });
+        expect(fits, "enlarged submit label stays inside the form").toBe(true);
+        await submit.evaluate((el) => el.style.removeProperty("font-size"));
+      }
     }
     await page.screenshot({
       path: `test-results/visual/${button === "Create event" ? "event" : "list"}-dates-narrow.png`,

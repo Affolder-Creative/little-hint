@@ -959,6 +959,41 @@ main {
 .choice-group > small {
   color: var(--muted);
 }
+.list-form > fieldset {
+  gap: 16px;
+}
+.list-form > .button[type="submit"] {
+  max-width: 100%;
+  white-space: normal;
+}
+.list-form .form-section {
+  margin-top: 8px;
+  gap: 16px;
+}
+.list-form .form-section > legend {
+  padding: 0;
+  margin-bottom: 12px;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+.policy-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+.policy-guidance,
+.policy-exchange {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+.policy-exchange > small {
+  color: var(--muted);
+}
+.list-form .event-participants > small {
+  margin-top: 0;
+}
 .mode-choice {
   display: flex;
   align-items: center;

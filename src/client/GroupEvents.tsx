@@ -39,6 +39,7 @@ export function EventForm({
     );
   return (
     <Form
+      className="list-form"
       submit={
         event
           ? "Save event"
@@ -113,7 +114,7 @@ export function EventForm({
           placeholder="Dates, gift ideas, or anything everyone should know."
         />
       </Field>
-      <fieldset className="choice-group event-participants">
+      <fieldset className="choice-group form-section event-participants">
         <legend>Who needs a wish list?</legend>
         <p className="muted">
           Each selected person gets a wish list. Everyone in this group can shop
