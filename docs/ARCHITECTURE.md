@@ -24,6 +24,18 @@ Buyer projections share coordination across the item's selected groups. Exchange
 
 Access loss releases unpurchased units, retains purchased quantities, anonymizes shared former-buyer identity, cancels unfulfilled pledges on the lost buyer's reservation, and preserves sent/received financial records. Archives retain records and allow existing purchase correction/release. Lists lock mode after sharing, even if unshared later.
 
+## Group events
+
+`groupEvents` is an application-record kind. A group may have `eventLeaderIds`; missing values mean no appointed leaders. Lists may have `groupEventId`; its absence preserves personal/joint-list behavior. No SQL migration or backfill is required.
+
+POST `/api/v1/groups/event-leaders` accepts a group ID, revision, and selected account IDs. Only the current owner can appoint current members. POST `/api/v1/group-events` creates an event and one list per selected profile in the same domain transaction. POST `/api/v1/group-events/update` edits settings/participants or archives/restores an event with optimistic revision checks. All endpoints use the existing authenticated, origin-checked, idempotent command path.
+
+An event owns the shared name, description, privacy, dates, and lifecycle of its linked lists. Synchronization preserves one list per event/profile, including removed participants. Membership removal and profile claims reconcile eligibility against the profile's remaining controllers; adding members/profiles does not enroll them. Date checks work before the worker runs, and `archiveDueLists` persists due events and lists together.
+
+The world projection includes member-visible events with `canManage`. List `canEdit` remains recipient/guardian authority over gifts and summaries; `canManageSettings` permits settings only for ordinary lists. Event lists reject `lists.update`, including calls by a leader. Event leaders must use the event command. Existing item projections and purchase privacy rules apply unchanged.
+
+Deploy the app and worker together. Older writers do not recognize `groupEvents` and can delete that record kind when saving state. See the deployment guide before upgrading or rolling back.
+
 ## Authentication and session safety
 
 Better Auth handles email OTP and passkeys. Registration hooks require an active email-bound invitation. First administrator bootstrap creates a 24-hour grant and refuses a second bootstrap. OTPs expire after ten minutes and are stored hashed with attempt limits. Known accounts can continue signing in after leaving a group, but lose the group's access.

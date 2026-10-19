@@ -92,7 +92,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suite: [e2e, sign-in, list-features, polish, pwa]
+        suite: [e2e, sign-in, list-features, group-events, polish, pwa]
     services:
       postgres:
         image: postgres:18-alpine

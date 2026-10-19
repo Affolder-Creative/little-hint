@@ -24,6 +24,15 @@ Status on 2026-10-18: implementation and local validation are complete except th
 - Favicon PNGs at 16, 32, and 48px have transparent surrounding pixels and heart cutouts, with exact #AA4D37 / #F1BEAD opaque tag colors. SVG and ICO selection follows system and explicit app appearance. Installed app icons are unchanged.
 - Impeccable's detector returned 94 advisory token deviations, mainly existing typography and palette variants. These were reviewed alongside the rendered pages rather than treated as 94 visual defects. Review screenshots are ignored artifacts under `test-results/polish/`.
 
+## Group events checks, 2026-10-18
+
+- Based on `main` at `ae8ed89`, including PR #3’s release automation and licensing checks. The `group-events` browser suite is registered in both its CI matrix and isolated browser runner.
+- All 111 unit tests and eight PostgreSQL 18 integration tests passed. Event coverage includes leader permissions, managed profiles, purchase privacy, membership changes, selection reconciliation, archive/restore, scheduled archiving, revision conflicts, idempotent retries, concurrent creation, and transaction rollback.
+- Type checking, production build, five release-tooling tests, two source-bundle tests, license policy (291 installed packages), and Compose validation passed. No runtime dependencies were added.
+- The three existing list-feature browser workflows passed after extracting the shared privacy/date form controls.
+- The new multi-account group-events browser workflow passed PR #3’s isolated, paced CI runner (app and worker enabled), including owner-appointed leadership, managed profiles, unselected shoppers, Surprise privacy, settings bypass rejection, participant removal/restoration, event archive/restoration, and leader revocation.
+- Desktop/mobile, light/dark, overflow, and axe accessibility checks passed. Impeccable finished with disposition `ship`; its single screenshot-shell finding was resolved with clean captures at settled viewports. The existing design system is preserved, with event-specific guidance in `.impeccable/surfaces/src-client-groupevents-tsx.md`.
+
 ## Commands
 
 ```sh

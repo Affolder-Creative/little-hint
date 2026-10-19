@@ -46,6 +46,15 @@ Navigation: **Home, People, My lists, Buying, Exchanges**. Settings contains gro
 - Linking a managed profile requires the guardian's request and confirmation by the verified target account. No automatic merge by name or email.
 - A controller of any joint recipient receives recipient privacy. Guardians do not gain buyer privileges on gifts for a profile they manage.
 
+### Group events
+
+- Group owners appoint current members as event leaders. Owners and leaders manage all events in their group; only owners manage membership and leadership. Application administrator status grants no event authority.
+- An event creates a distinct list for every selected recipient profile, including guardian-managed profiles. Lists are immediately shared with the whole group, including unselected shoppers. Joining the group does not enroll someone automatically.
+- Participants and guardians edit their own gifts. Event name, description, sharing, privacy, and lifecycle settings are managed through the event. Event leadership never exposes a recipient's hidden purchase details or grants gift-editing rights.
+- Removing a participant archives their list without deleting gifts or purchase history. Re-adding restores the same list. Event restoration restores only current participants. Membership loss archives profiles with no remaining group controller.
+- Events reuse existing Surprise/Transparent and dated reveal policies. Mode, timezone, and exchange-reveal policy lock immediately at creation. An upcoming reveal date can only move later.
+- My lists includes Group events, and Settings includes event shortcuts and leadership controls. Event detail pages link to each recipient's list.
+
 ## Wishes, ideas, and privacy
 
 A person can own multiple named lists shared with selected groups. Sharing never copies an item: all groups see the same reservation identity.

@@ -2025,3 +2025,95 @@ main {
   min-width: 0;
   overflow-wrap: anywhere;
 }
+
+/* Event management follows the existing list and settings hierarchy. */
+.group-events-section {
+  margin-bottom: 32px;
+}
+.group-events-section .section-heading h2,
+.group-event-settings .section-heading h4 {
+  margin-bottom: 0;
+}
+.group-event-settings {
+  margin-block: 24px;
+}
+.group-event-settings h4 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-top: 0;
+}
+.event-links {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 12px;
+}
+.event-links a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 44px;
+  padding-block: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.event-links a:hover,
+.managed-event-notice a:hover {
+  text-decoration: underline;
+}
+.event-selection-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+.event-selection-actions > span {
+  margin-right: auto;
+  color: var(--muted);
+}
+.event-selection-actions .text-button {
+  min-height: 44px;
+}
+.event-person-choice {
+  min-height: 44px;
+}
+.event-person-choice small {
+  display: block;
+  color: var(--muted);
+}
+.event-participants > small {
+  display: block;
+  margin-top: 12px;
+}
+.event-participant-row > div {
+  flex: 1;
+}
+.event-removed {
+  margin-top: 32px;
+}
+.managed-event-notice {
+  margin-bottom: 24px;
+  padding-block: 16px;
+  border-block: 1px solid var(--border);
+}
+.managed-event-notice p {
+  margin-bottom: 8px;
+}
+.managed-event-notice .text-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+}
+.group-events-section .list-row h3,
+.event-participant-row h3 {
+  margin-bottom: 4px;
+}
+@media (max-width: 650px) {
+  .group-events-section {
+    margin-bottom: 24px;
+  }
+  .event-removed {
+    margin-top: 24px;
+  }
+}
