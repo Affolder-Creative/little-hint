@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   useId,
@@ -25,6 +26,34 @@ import {
 import { Link } from "react-router-dom";
 import type { GiftView } from "../shared/model";
 import { dollars, initials } from "./api";
+
+export function MobileNavigation({ children }: { children: ReactNode }) {
+  const ref = useRef<HTMLElement>(null);
+  useLayoutEffect(() => {
+    const nav = ref.current!;
+    const root = document.documentElement;
+    const measure = () => {
+      root.style.setProperty(
+        "--mobile-nav-height",
+        `${Math.ceil(nav.getBoundingClientRect().height)}px`,
+      );
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    // Include borders and safe-area padding, even when the links don't resize.
+    observer.observe(nav, { box: "border-box" });
+    return () => {
+      observer.disconnect();
+      root.style.removeProperty("--mobile-nav-height");
+    };
+  }, []);
+  return (
+    <nav ref={ref} className="mobile-nav" aria-label="Mobile navigation">
+      {children}
+    </nav>
+  );
+}
+
 export function Logo({
   tagline = false,
   dark = false,

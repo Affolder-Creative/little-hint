@@ -1,7 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { test, expect } from "@playwright/test";
 import { mkdir } from "node:fs/promises";
-import { login, post } from "./browser-helpers";
+import { login, post, expectDialogFieldsToFit } from "./browser-helpers";
 
 // Browser contexts fetch the app assets independently. Respect the real server
 // limiter rather than disabling it for this suite.
@@ -18,6 +18,174 @@ test.beforeEach(async ({ request }) => {
     );
     await new Promise((resolve) => setTimeout(resolve, seconds * 1000));
   }
+});
+
+test("mobile shell clears safe areas, resizing, and date dialogs", async ({
+  page,
+}) => {
+  test.setTimeout(process.env.CI ? 300000 : 120000);
+  await login(page, "alex@example.test");
+  await mkdir("test-results/visual", { recursive: true });
+  for (const colorScheme of ["light", "dark"] as const) {
+    await page.emulateMedia({ colorScheme });
+    await page.goto("/");
+    await expect(page.locator(".topbar")).toBeVisible();
+    for (const [width, height, top, bottom] of [
+      [393, 852, 59, 34],
+      [320, 740, 0, 0],
+      [852, 393, 0, 21],
+    ]) {
+      await page.setViewportSize({ width, height });
+      // Desktop automation has no hardware safe areas. Exercise the same CSS
+      // variables with iPhone-sized insets, including padding-only nav changes.
+      await page.evaluate(
+        ({ top, bottom }) => {
+          document.documentElement.style.setProperty(
+            "--safe-area-top",
+            `${top}px`,
+          );
+          document.documentElement.style.setProperty(
+            "--safe-area-bottom",
+            `${bottom}px`,
+          );
+        },
+        { top, bottom },
+      );
+      const expectFooterClear = async () => {
+        await expect
+          .poll(async () =>
+            page.evaluate(() => {
+              window.scrollTo(0, document.documentElement.scrollHeight);
+              const nav = document
+                .querySelector(".mobile-nav")!
+                .getBoundingClientRect();
+              const footer = document
+                .querySelector(".app-footer")!
+                .getBoundingClientRect();
+              return nav.top - footer.bottom;
+            }),
+          )
+          .toBeGreaterThanOrEqual(15);
+      };
+      await expectFooterClear();
+      if (width === 393) {
+        await page.evaluate(() => window.scrollTo(0, 0));
+        await page.screenshot({
+          path: `test-results/visual/mobile-home-${colorScheme}.png`,
+        });
+      }
+      await page
+        .locator("main")
+        .evaluate((el) => (el.style.minHeight = "1600px"));
+      await expectFooterClear();
+      await expect(page.locator(".topbar")).toHaveCSS("position", "sticky");
+      const headerControls = await page
+        .locator(".topbar .logo, .topbar .actions > *")
+        .evaluateAll((elements) =>
+          elements.map((el) => {
+            const rect = el.getBoundingClientRect();
+            return { top: rect.top, left: rect.left, right: rect.right };
+          }),
+        );
+      for (const rect of headerControls) {
+        expect(rect.top).toBeGreaterThanOrEqual(top);
+        expect(rect.left).toBeGreaterThanOrEqual(0);
+        expect(rect.right).toBeLessThanOrEqual(width);
+      }
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+      ).toBe(true);
+      if (width === 393) {
+        await page.screenshot({
+          path: `test-results/visual/mobile-footer-${colorScheme}.png`,
+        });
+      }
+      // The observer must also respond to text growth, not just viewport width.
+      await page
+        .locator(".mobile-nav")
+        .evaluate((el) => (el.style.paddingBottom = "70px"));
+      await expectFooterClear();
+      await page
+        .locator(".mobile-nav")
+        .evaluate((el) => el.style.removeProperty("padding-bottom"));
+      await page
+        .locator(".mobile-nav a")
+        .evaluateAll((links) =>
+          links.forEach(
+            (link) => ((link as HTMLElement).style.fontSize = "16px"),
+          ),
+        );
+      await expectFooterClear();
+      const labels = await page
+        .locator(".mobile-nav a span")
+        .evaluateAll((elements) =>
+          elements.map((el) => {
+            const rect = el.getBoundingClientRect();
+            return { left: rect.left, right: rect.right };
+          }),
+        );
+      for (let i = 0; i < labels.length; i++) {
+        expect(labels[i].left).toBeGreaterThanOrEqual(0);
+        expect(labels[i].right).toBeLessThanOrEqual(width);
+        if (i)
+          expect(labels[i].left).toBeGreaterThanOrEqual(labels[i - 1].right);
+      }
+      await page
+        .locator(".mobile-nav a")
+        .evaluateAll((links) =>
+          links.forEach((link) =>
+            (link as HTMLElement).style.removeProperty("font-size"),
+          ),
+        );
+      await page
+        .locator("main")
+        .evaluate((el) => el.style.removeProperty("min-height"));
+    }
+  }
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await expect(page.locator(".main-wrap")).toHaveCSS("padding-bottom", "0px");
+  await expect
+    .poll(async () =>
+      page.evaluate(() =>
+        document.documentElement.style.getPropertyValue("--mobile-nav-height"),
+      ),
+    )
+    .toBe("0px");
+
+  await page.goto("/lists");
+  for (const button of ["Create a list", "Create event"]) {
+    await page.getByRole("button", { name: button, exact: true }).click();
+    for (const width of [1440, 393, 320]) {
+      await page.setViewportSize({
+        width,
+        height: width === 1440 ? 1000 : 852,
+      });
+      await expectDialogFieldsToFit(page);
+      for (const name of ["Archive after", "Reveal gifts after"]) {
+        await page.getByLabel(name, { exact: true }).fill("2099-12-25");
+      }
+      await expectDialogFieldsToFit(page);
+      await page
+        .getByLabel("Reveal gifts after", { exact: true })
+        .scrollIntoViewIfNeeded();
+      if (width !== 1440) {
+        expect(
+          await page.getByRole("dialog").evaluate((el) => el.scrollTop),
+        ).toBeGreaterThan(0);
+      }
+    }
+    await page.screenshot({
+      path: `test-results/visual/${button === "Create event" ? "event" : "list"}-dates-narrow.png`,
+    });
+    await page.getByRole("button", { name: "Close dialog" }).click();
+  }
+  await page.goto("/exchanges");
+  await page
+    .getByRole("button", { name: "Create exchange", exact: true })
+    .click();
+  await expectDialogFieldsToFit(page);
 });
 
 test("list dates lock at sharing, archives restore, and controls fit desktop and mobile", async ({
@@ -40,14 +208,15 @@ test("list dates lock at sharing, archives restore, and controls fit desktop and
     .getByLabel("List timezone", { exact: true })
     .selectOption("America/New_York");
   await page
-    .getByLabel("Reveal purchased exchange gifts after this date", {
+    .getByLabel("Include secret exchange gifts and giver names", {
       exact: true,
     })
     .check();
   await page.getByLabel("The Morgan circle", { exact: true }).check();
   for (const [name, width, height] of [
     ["desktop", 1440, 1000],
-    ["mobile", 390, 844],
+    ["mobile", 393, 852],
+    ["narrow", 320, 740],
   ] as const) {
     await page.setViewportSize({ width, height });
     await page
@@ -62,6 +231,7 @@ test("list dates lock at sharing, archives restore, and controls fit desktop and
         () => document.documentElement.scrollWidth <= innerWidth,
       ),
     ).toBe(true);
+    await expectDialogFieldsToFit(page);
     const result = await new AxeBuilder({ page }).include("dialog").analyze();
     expect(result.violations).toEqual([]);
   }
@@ -83,13 +253,14 @@ test("list dates lock at sharing, archives restore, and controls fit desktop and
     page.getByLabel("List timezone", { exact: true }),
   ).toBeDisabled();
   await expect(
-    page.getByLabel("Reveal purchased exchange gifts after this date", {
+    page.getByLabel("Include secret exchange gifts and giver names", {
       exact: true,
     }),
   ).toBeDisabled();
   await expect(
     page.getByLabel("Reveal gifts after", { exact: true }),
   ).toHaveAttribute("min", "2099-10-18");
+  await expectDialogFieldsToFit(page);
   await page.getByRole("button", { name: "Close dialog", exact: true }).click();
   await page.getByRole("button", { name: "Archive list", exact: true }).click();
   await expect(

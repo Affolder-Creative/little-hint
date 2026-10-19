@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Eye, LockKeyhole } from "lucide-react";
 import type { List } from "../shared/model";
 import { dateHasElapsed } from "../shared/list-dates";
@@ -42,6 +42,7 @@ export function ListPolicyFields({
   list?: Policy;
   event?: boolean;
 }) {
+  const exchangeHintId = useId();
   const [mode, setMode] = useState(list?.mode ?? "surprise");
   const [revealAfter, setRevealAfter] = useState(list?.revealAfter ?? "");
   const [revealExchangeGivers, setRevealExchangeGivers] = useState(
@@ -122,13 +123,20 @@ export function ListPolicyFields({
         <Field
           label="Reveal gifts after"
           hint={
-            list?.modeLocked
-              ? !list.revealAfter
-                ? "Shared without a reveal date. Gift summaries stay hidden."
-                : revealLocked
-                  ? "Gifts are already eligible to be revealed. This date is fixed."
-                  : "After sharing, you can only move the reveal date later."
-              : "Optional. After this day, view purchased gifts and contributors. The date locks when first shared and can then only move later."
+            list?.modeLocked && !list.revealAfter
+              ? "Shared without a reveal date. Gift summaries stay hidden."
+              : [
+                  event
+                    ? "Optional. After this day, each recipient can view their purchased gifts, buyers, and contributors, even with Keep it a surprise."
+                    : "Optional. After this day, list owners can view purchased gifts, buyers, and contributors, even with Keep it a surprise.",
+                  list?.modeLocked
+                    ? revealLocked
+                      ? "Gifts are already eligible to be revealed. This date is fixed."
+                      : "After sharing, you can only move the reveal date later."
+                    : event
+                      ? "Choose before creating the event. After creation, an upcoming reveal date can only move later."
+                      : "Choose before first sharing. After sharing, an upcoming reveal date can only move later.",
+                ].join(" ")
           }
         >
           <input
@@ -140,6 +148,9 @@ export function ListPolicyFields({
             onChange={(e) => setRevealAfter(e.target.value)}
           />
         </Field>
+        <small>
+          Contribution amounts and private discussions always stay private.
+        </small>
         <Field
           label={event ? "Event timezone" : "List timezone"}
           hint="Dates take effect after the selected day ends in this timezone. The timezone locks when first shared."
@@ -164,16 +175,18 @@ export function ListPolicyFields({
           <input
             type="checkbox"
             name="revealExchangeGivers"
+            aria-describedby={exchangeHintId}
             checked={!!revealAfter && revealExchangeGivers}
             disabled={list?.modeLocked || !revealAfter}
             onChange={(e) => setRevealExchangeGivers(e.target.checked)}
           />
-          Reveal purchased exchange gifts after this date
+          Include secret exchange gifts and giver names
         </label>
-        <small>
-          Otherwise, secret gift exchange identities stay hidden. This choice
-          locks when first shared. Contribution amounts and private discussions
-          are never revealed.
+        <small id={exchangeHintId}>
+          Also include purchases made through a secret gift exchange in the
+          dated summary. Leave unchecked to keep those gifts and giver names
+          hidden. Other purchased gifts are included either way. Choose a reveal
+          date to enable this option; the choice locks when first shared.
         </small>
       </fieldset>
     </>

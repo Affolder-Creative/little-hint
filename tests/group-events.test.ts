@@ -294,6 +294,62 @@ describe("event lists and permissions", () => {
       "reveal date",
     );
   });
+  it("reveals ordinary event purchases to recipients and guardians without exchange opt-in", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2030-10-18T12:00:00Z"));
+    const f = fixture();
+    const event = f.create({
+      revealAfter: "2030-10-18",
+      timeZone: "America/New_York",
+      revealExchangeGivers: false,
+    });
+    f.leaders([f.actors[1].id]);
+    for (const list of f.lists(event)) {
+      const gift = command(f.state, f.actors[2], "items.create", {
+        listId: list.id,
+        title: "A birthday book",
+      }) as Item;
+      const reservation = command(f.state, f.actors[3], "reservations.create", {
+        itemId: gift.id,
+        quantity: 1,
+      }) as { id: string };
+      command(f.state, f.actors[3], "reservations.update", {
+        ...f.state.reservations.find((r) => r.id === reservation.id)!,
+        purchased: 1,
+        poolTargetCents: 2500,
+      });
+      f.state.contributions.push({
+        ...stamp(),
+        reservationId: reservation.id,
+        userId: f.actors[1].id,
+        amountCents: 1000,
+        status: "sent",
+      });
+      vi.setSystemTime(new Date("2030-10-19T03:59:59Z"));
+      expect(() => giftSummary(f.state, f.actors[2], list.id)).toThrow(
+        "before this list's reveal date",
+      );
+      vi.setSystemTime(new Date("2030-10-19T04:00:00Z"));
+      const summary = giftSummary(f.state, f.actors[2], list.id);
+      expect(summary.gifts).toHaveLength(1);
+      expect(summary.gifts[0]).toMatchObject({
+        buyerName: "Shopper",
+        exchange: false,
+        contributors: [{ name: "Leader", status: "sent" }],
+      });
+      expect(JSON.stringify(summary)).not.toMatch(
+        /amountCents|poolTargetCents/,
+      );
+      for (const actor of [f.actors[0], f.actors[1], f.actors[3]])
+        expect(() => giftSummary(f.state, actor, list.id)).toThrow(
+          "List not found",
+        );
+      const stored = f.state.items.find((item) => item.id === gift.id)!;
+      expect(
+        giftView(f.state, f.actors[2], stored).reservations,
+      ).toBeUndefined();
+    }
+  });
   it("rejects stale event and leadership edits and creates no duplicate lists on retry", () => {
     const f = fixture();
     const payload = {

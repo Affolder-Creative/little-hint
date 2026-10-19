@@ -8,7 +8,7 @@ export function RevealPolicy({ list }: { list: List }) {
   return (
     <p className="privacy-note">
       {list.revealAfter
-        ? `Purchased gifts and contributors can be viewed by the list owners after ${list.revealAfter} (${list.timeZone ?? "UTC"}). ${list.revealExchangeGivers ? "Purchased exchange gifts and giver names are included." : "Secret gift exchange identities stay hidden."}`
+        ? `List owners can view purchased gifts, buyers, and contributors after ${list.revealAfter} ends (${list.timeZone ?? "UTC"}), even with Keep it a surprise. ${list.revealExchangeGivers ? "Secret exchange purchases and giver names are also included." : "Secret exchange purchases and giver names stay hidden; other purchased gifts are included."}`
         : "No gift summary is scheduled. Secret gift exchange identities stay hidden."}{" "}
       Contribution amounts and private discussions stay private.
     </p>
@@ -26,7 +26,7 @@ export function GiftSummaryPanel({ listId }: { listId: string }) {
     <section className="gift-summary" aria-label="Gift summary">
       <h2>People to thank</h2>
       <p>
-        Purchased gifts and contributors, without amounts or private
+        Purchased gifts, buyers, and contributors, without amounts or private
         discussions.
       </p>
       {query.isPending && <p role="status">Loading gift summary…</p>}

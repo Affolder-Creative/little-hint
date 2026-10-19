@@ -1,7 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { test, expect, type Page } from "@playwright/test";
 import { mkdir } from "node:fs/promises";
-import { login, post } from "./browser-helpers";
+import { login, post, expectDialogFieldsToFit } from "./browser-helpers";
 import type { World } from "../src/shared/model";
 
 const readWorld = async (page: Page): Promise<World> =>
@@ -54,7 +54,8 @@ test("leaders manage an occasion while recipients add wishes and unselected memb
       .check();
     for (const [name, width, height] of [
       ["desktop", 1440, 1000],
-      ["mobile", 390, 844],
+      ["mobile", 393, 852],
+      ["narrow", 320, 740],
     ] as const) {
       await leader.setViewportSize({ width, height });
       await leader.getByRole("dialog").evaluate((dialog) => {
@@ -69,6 +70,7 @@ test("leaders manage an occasion while recipients add wishes and unselected memb
           () => document.documentElement.scrollWidth <= innerWidth,
         ),
       ).toBe(true);
+      await expectDialogFieldsToFit(leader);
       expect(
         (await new AxeBuilder({ page: leader }).include("dialog").analyze())
           .violations,
@@ -191,6 +193,8 @@ test("leaders manage an occasion while recipients add wishes and unselected memb
     await leader
       .getByRole("button", { name: "Edit event", exact: true })
       .click();
+    await leader.setViewportSize({ width: 320, height: 852 });
+    await expectDialogFieldsToFit(leader);
     await leader
       .locator(`input[name="participantIds"][value="${child.id}"]`)
       .uncheck();

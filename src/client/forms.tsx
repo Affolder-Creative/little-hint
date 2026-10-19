@@ -595,11 +595,14 @@ export function ExchangeForm() {
           ))}
         </select>
       </Field>
-      <Field label="Recipients per giver">
+      <Field
+        label="People each participant gives to"
+        hint="Choose 2 and each participant gives to 2 people and receives from 2 people."
+      >
         <select name="count">
-          <option value="1">1 recipient</option>
-          <option value="2">2 recipients</option>
-          <option value="3">3 recipients</option>
+          <option value="1">1 person</option>
+          <option value="2">2 people</option>
+          <option value="3">3 people</option>
         </select>
       </Field>
       <fieldset className="choice-group" key={groupId}>
