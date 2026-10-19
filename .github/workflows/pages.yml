@@ -27,9 +27,12 @@ jobs:
           node-version: "24"
       - name: Validate static site
         run: node scripts/check-marketing.mjs
+      - name: Explain disabled deployment
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && vars.PAGES_ENABLED != 'true'
+        run: echo 'Site validation passed. Deployment is disabled. Configure GitHub Pages and set the PAGES_ENABLED repository variable to true to publish.' >> "$GITHUB_STEP_SUMMARY"
 
   deploy:
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && vars.PAGES_ENABLED == 'true'
     needs: check
     runs-on: ubuntu-latest
     concurrency:

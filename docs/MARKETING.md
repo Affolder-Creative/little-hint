@@ -30,9 +30,11 @@ The checked-in WebP images include the Home screen on desktop and mobile, and re
 
 Repository visibility remains private. GitHub Pages for a private repository requires a plan that supports it; otherwise make the repository public separately or change the plan. Do not change visibility merely to run this workflow. A public Pages site does not grant visitors access to a private repository. The landing page currently explains that source and setup links require access; remove that note when the repository becomes public.
 
+The workflow always validates the site. Deployment stays disabled until the `PAGES_ENABLED` repository variable is `true`, so merges do not fail while Pages is unavailable or the site is not ready to publish. Runs on `main` explain the skipped deployment in their summary.
+
 1. In the repository's **Settings → Pages → Build and deployment**, choose **GitHub Actions** as the source when ready to publish.
 2. Ensure the `github-pages` environment permits deployments from `main`.
-3. Merge `marketing/github-pages` into `main`.
+3. In **Settings → Secrets and variables → Actions → Variables**, set the repository variable `PAGES_ENABLED` to `true`. Only enable it after completing the Pages setup.
 4. Run **Marketing site** from the Actions tab on `main`, or push a marketing change to `main`. Pull requests validate assets and links but never deploy.
 5. Confirm the deployment succeeds and visit `https://kaffolder7.github.io/little-hint/`. In the repository's About settings, use that URL for **Website**.
 
