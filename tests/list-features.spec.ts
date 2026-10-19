@@ -163,12 +163,12 @@ test("mobile shell clears safe areas, resizing, and date dialogs", async ({
         height: width === 1440 ? 1000 : 852,
       });
       await expectDialogFieldsToFit(page);
-      for (const name of ["Archive after", "Reveal gifts after"]) {
+      for (const name of ["Archive after", "Gift summary available after"]) {
         await page.getByLabel(name, { exact: true }).fill("2099-12-25");
       }
       await expectDialogFieldsToFit(page);
       await page
-        .getByLabel("Reveal gifts after", { exact: true })
+        .getByLabel("Gift summary available after", { exact: true })
         .scrollIntoViewIfNeeded();
       if (width !== 1440) {
         expect(
@@ -201,7 +201,7 @@ test("list dates lock at sharing, archives restore, and controls fit desktop and
   const title = `Birthday planning ${Date.now()}`;
   await page.getByLabel("List name", { exact: true }).fill(title);
   await page
-    .getByLabel("Reveal gifts after", { exact: true })
+    .getByLabel("Gift summary available after", { exact: true })
     .fill("2099-10-18");
   await page.getByLabel("Archive after", { exact: true }).fill("2099-10-20");
   await page
@@ -220,7 +220,7 @@ test("list dates lock at sharing, archives restore, and controls fit desktop and
   ] as const) {
     await page.setViewportSize({ width, height });
     await page
-      .getByLabel("Reveal gifts after", { exact: true })
+      .getByLabel("Gift summary available after", { exact: true })
       .scrollIntoViewIfNeeded();
     await page.screenshot({
       path: `test-results/visual/list-dates-${name}.png`,
@@ -243,6 +243,7 @@ test("list dates lock at sharing, archives restore, and controls fit desktop and
   await page.getByRole("link", { name: new RegExp(title) }).click();
   const world = await (await page.request.get("/api/v1/world")).json();
   const list = world.lists.find((l: any) => l.name === title);
+  expect(list.mode).toBe("transparent");
   expect(list.revealExchangeGivers).toBe(true);
   expect(
     (await page.request.get(`/api/v1/lists/${list.id}/gift-summary`)).status(),
@@ -250,6 +251,9 @@ test("list dates lock at sharing, archives restore, and controls fit desktop and
   await page
     .getByRole("button", { name: "List settings", exact: true })
     .click();
+  await expect(
+    page.getByRole("radio", { name: /See the plans/ }),
+  ).toBeChecked();
   await expect(
     page.getByLabel("List timezone", { exact: true }),
   ).toBeDisabled();
@@ -259,7 +263,7 @@ test("list dates lock at sharing, archives restore, and controls fit desktop and
     }),
   ).toBeDisabled();
   await expect(
-    page.getByLabel("Reveal gifts after", { exact: true }),
+    page.getByLabel("Gift summary available after", { exact: true }),
   ).toHaveAttribute("min", "2099-10-18");
   await expectDialogFieldsToFit(page);
   await page.getByRole("button", { name: "Close dialog", exact: true }).click();
@@ -300,7 +304,26 @@ test.describe("touch reveal settings", () => {
     await page.goto("/lists");
     for (const button of ["Create a list", "Create event"]) {
       await page.getByRole("button", { name: button, exact: true }).tap();
-      const date = page.getByLabel("Reveal gifts after", { exact: true });
+      await expect(page.locator('input[name="mode"]').first()).toHaveValue(
+        "transparent",
+      );
+      await expect(
+        page.getByRole("radio", { name: /See the plans/ }),
+      ).toBeChecked();
+      await page.getByRole("radio", { name: /Keep it a surprise/ }).check();
+      await expect(
+        page.getByRole("radio", { name: /Keep it a surprise/ }),
+      ).toBeChecked();
+      await expect(
+        page.getByLabel("Reveal gifts after", { exact: true }),
+      ).toHaveAccessibleDescription(/even with Keep it a surprise/);
+      await page.getByRole("radio", { name: /See the plans/ }).check();
+      const date = page.getByLabel("Gift summary available after", {
+        exact: true,
+      });
+      await expect(date).toHaveAccessibleDescription(
+        /Purchase activity is already visible with See the plans/,
+      );
       const checkbox = page.getByLabel(
         "Include secret exchange gifts and giver names",
         { exact: true },
@@ -308,7 +331,7 @@ test.describe("touch reveal settings", () => {
       const label = page.locator("label.check").filter({ has: checkbox });
       await expect(checkbox).toBeDisabled();
       await expect(checkbox).toHaveAccessibleDescription(
-        /Choose a reveal date above/,
+        /Choose a gift summary date above/,
       );
       const disabledColor = await label.evaluate(
         (el) => getComputedStyle(el).color,
@@ -322,6 +345,12 @@ test.describe("touch reveal settings", () => {
       );
       await label.tap();
       await expect(checkbox).toBeChecked();
+      await page.getByRole("radio", { name: /Keep it a surprise/ }).check();
+      await expect(
+        page.getByLabel("Reveal gifts after", { exact: true }),
+      ).toHaveValue("2099-12-25");
+      await expect(checkbox).toBeChecked();
+      await page.getByRole("radio", { name: /See the plans/ }).check();
       expect(
         await checkbox.evaluate((el) =>
           new FormData(el.closest("form")!).get("revealExchangeGivers"),
@@ -339,7 +368,28 @@ test.describe("touch reveal settings", () => {
         ),
       ).toBeNull();
       await expectDialogFieldsToFit(page);
-      await page.getByRole("button", { name: "Close dialog" }).tap();
+      if (button === "Create event") {
+        const name = `Visible plans ${Date.now()}`;
+        await page.getByLabel("Event name", { exact: true }).fill(name);
+        await page
+          .getByRole("button", { name: /^Create \d+ wish lists?$/ })
+          .tap();
+        await expect(page.getByRole("dialog")).not.toBeVisible();
+        const world = await (await page.request.get("/api/v1/world")).json();
+        const event = world.groupEvents.find(
+          (event: any) => event.name === name,
+        );
+        expect(event.mode).toBe("transparent");
+        const lists = world.lists.filter(
+          (list: any) => list.groupEventId === event.id,
+        );
+        expect(lists.length).toBeGreaterThan(0);
+        expect(lists.every((list: any) => list.mode === "transparent")).toBe(
+          true,
+        );
+      } else {
+        await page.getByRole("button", { name: "Close dialog" }).tap();
+      }
     }
   });
 });

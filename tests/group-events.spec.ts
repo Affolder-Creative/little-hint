@@ -34,6 +34,11 @@ test("leaders manage an occasion while recipients add wishes and unselected memb
     await leader
       .getByRole("button", { name: "Create event", exact: true })
       .click();
+    await expect(
+      leader.getByRole("radio", { name: /See the plans/ }),
+    ).toBeChecked();
+    // This workflow exercises surprise privacy; it is now an explicit choice.
+    await leader.getByRole("radio", { name: /Keep it a surprise/ }).check();
     await leader
       .getByLabel("Event name", { exact: true })
       .fill("Christmas 2026");
@@ -194,6 +199,12 @@ test("leaders manage an occasion while recipients add wishes and unselected memb
       .getByRole("button", { name: "Edit event", exact: true })
       .click();
     await leader.setViewportSize({ width: 320, height: 852 });
+    await expect(
+      leader.getByRole("radio", { name: /Keep it a surprise/ }),
+    ).toBeChecked();
+    await expect(
+      leader.getByRole("radio", { name: /Keep it a surprise/ }),
+    ).toBeDisabled();
     await expectDialogFieldsToFit(leader);
     await leader
       .locator(`input[name="participantIds"][value="${child.id}"]`)

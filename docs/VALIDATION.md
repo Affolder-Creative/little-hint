@@ -48,6 +48,7 @@ Status on 2026-10-19: implementation and local validation are complete except th
 - The native iOS calendar still opened, accepted a changed date, and updated the React-controlled field. Tapping the exchange-checkbox label selected it. Blank dates disabled the checkbox; populated dates enabled it. Disabled checkboxes now use muted labels and faded controls, with the date prerequisite first in the accessible help text.
 - Type checking, production build, and all 112 unit tests passed. All five Chromium list-feature workflows passed, including a new touch regression for personal-list and group-event forms that verifies checkbox toggling and omission from submitted form data after clearing the date. Eight opt-in database integration tests were not rerun.
 - WebKit passed the touch regression and the saved-list date-locking/archive workflow, including confirmation that exchange inclusion persists after saving. Desktop and mobile screenshots were reviewed.
+- New personal lists and group events default to See the plans, displayed before Keep it a surprise. The transparent-mode date field says Gift summary available after and explains that purchase activity is already visible. Surprise-mode reveal wording is retained. The group-event browser workflow passed, including confirmation that an existing surprise event remains selected and locked when edited.
 - The simulator is iOS 27.0, not the reported physical iPhone running 27.0.1. The native-engine reproduction adds evidence beyond desktop WebKit but does not certify physical-device behavior.
 
 ## Commands
