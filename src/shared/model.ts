@@ -16,6 +16,7 @@ export interface Group extends Base {
   name: string;
   ownerId: string;
   memberIds: string[];
+  eventLeaderIds?: string[];
 }
 export interface Invitation extends Base {
   email: string;
@@ -26,6 +27,7 @@ export interface Invitation extends Base {
   revoked?: boolean;
 }
 export interface List extends Base {
+  groupEventId?: string;
   name: string;
   ownerIds: string[];
   pendingOwnerIds: string[];
@@ -38,6 +40,18 @@ export interface List extends Base {
   revealAfter?: string | null;
   timeZone?: string;
   revealExchangeGivers?: boolean;
+}
+export interface GroupEvent extends Base {
+  groupId: string;
+  participantIds: string[];
+  name: string;
+  description: string;
+  mode: Mode;
+  archived: boolean;
+  archiveAfter?: string | null;
+  revealAfter?: string | null;
+  timeZone: string;
+  revealExchangeGivers: boolean;
 }
 export interface GiftSummary {
   listId: string;
@@ -179,6 +193,7 @@ export interface Records {
   media: Media;
   people: Person;
   groups: Group;
+  groupEvents: GroupEvent;
   invitations: Invitation;
   lists: List;
   items: Item;
@@ -200,6 +215,7 @@ export const kinds: Kind[] = [
   "media",
   "people",
   "groups",
+  "groupEvents",
   "invitations",
   "lists",
   "items",
@@ -260,8 +276,15 @@ export interface World {
   }>;
   people: Person[];
   groups: Group[];
+  groupEvents: Array<GroupEvent & { canManage: boolean }>;
   invitations: Invitation[];
-  lists: Array<List & { canEdit: boolean; revealAvailable: boolean }>;
+  lists: Array<
+    List & {
+      canEdit: boolean;
+      canManageSettings: boolean;
+      revealAvailable: boolean;
+    }
+  >;
   items: GiftView[];
   buying: Array<Reservation & { item?: GiftView }>;
   exchanges: Array<

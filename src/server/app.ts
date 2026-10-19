@@ -164,6 +164,9 @@ export async function makeApp() {
   );
   const routes: Record<string, string> = {
     groups: "groups.create",
+    "groups/event-leaders": "groups.event-leaders",
+    "group-events": "group-events.create",
+    "group-events/update": "group-events.update",
     "groups/invite": "groups.invite",
     "groups/remove": "groups.remove",
     "groups/transfer": "groups.transfer",
