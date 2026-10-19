@@ -67,7 +67,7 @@ export function matchExchange(
     }
     if (!Number.isFinite(dist[T]))
       throw new Error(
-        "These exclusions cannot produce a balanced draw. Add participants, reduce recipients per giver, or relax exclusions.",
+        "These exclusions cannot produce a balanced draw. Add participants, choose fewer people for each participant to give to, or relax exclusions.",
       );
     for (let v = T; v !== S;) {
       const [a, j] = prev[v],

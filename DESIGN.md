@@ -96,6 +96,9 @@ components:
     textColor: '{colors.text}'
     rounded: '{rounded.control}'
     padding: '13px 15px'
+  nav-mobile:
+    backgroundColor: '{colors.paper}'
+    textColor: '{colors.muted}'
   status:
     backgroundColor: '{colors.soft}'
     textColor: '{colors.muted}'
@@ -155,13 +158,17 @@ At 900px and below, page headings are 32px; at 650px and below, they are 30px. G
 
 ## Layout
 
-The desktop shell has a fixed 242px sidebar and matching main offset. Content is centered within a 1400px maximum width, with 44px horizontal padding. At 1200px and below, the sidebar narrows to 210px and content padding to 28px. At 900px and below, the sidebar gives way to a top logo bar and fixed bottom navigation, with safe-area padding. Content padding becomes 24px, then 20px at 650px and below.
+The desktop shell has a fixed 242px sidebar and matching main offset. Content is centered within a 1400px maximum width, with 44px horizontal padding. At 1200px and below, the sidebar narrows to 210px and content padding to 28px. At 900px and below, the sidebar gives way to an opaque sticky top logo bar and fixed bottom navigation. The header adds the top safe-area inset to its 78px content height, or 76px at phone widths, and respects landscape side insets. The navigation includes bottom and side safe-area padding. Content padding becomes 24px, then 20px at 650px and below.
+
+The shell reserves the measured navigation height plus 16px below the footer. A border-box ResizeObserver keeps this clearance accurate when safe areas, viewport width, or text size change. Toasts sit 16px above navigation; update notices sit directly above it. Document scroll padding keeps focused content clear of the sticky header and bottom navigation. Desktop navigation needs no bottom reservation.
 
 Home, People, My lists, Buying, and Exchanges are the persistent navigation destinations. Settings and private groups remain together. The first home view pairs the logo and clear navigation with welcome copy and gift browsing controls.
 
 Gift browsing uses three equal columns, then two at 650px and below. Desktop gaps are 28px vertically and 22px horizontally; narrow-screen gaps are 28px and 15px. People use two columns before becoming a single list. Gift details use two columns before stacking on narrow screens. Recurring gaps and padding use the spacing steps in frontmatter, alongside local layout measurements.
 
 Search, tag filtering, and the availability checkbox can wrap. At 1200px and below, availability occupies a full row and remains visible on phones. Profile avatars keep their fixed size while adjacent settings copy can grow.
+
+Page titles sit 8px above their descriptions. Headers leave 24px before content on desktop and 20px on mobile; filters leave 20px before gift grids. Section breaks use 32px on desktop and 24px on mobile. Security and administration subheadings have explicit space above them, and gift quantity controls leave 16px before the reservation action. Mobile gift recipients use 12px text; tags, status labels, and navigation labels use at least 11px.
 
 ## Elevation & Depth
 
@@ -193,15 +200,27 @@ Gift cards are unboxed links. A contained image or labeled fallback leads, follo
 
 ### Inputs / Fields
 
-Fields have a paper background, text color, thin border, 8px corners, and a 44px minimum height. Visible labels and optional hints stay with their inputs. Search adds a leading icon and transparent fill. Forms show errors in text; busy submission disables the fieldset and changes the action label. The global focus outline applies to inputs, selects, and textareas.
+Fields have a paper background, text color, thin border, 8px corners, and a 44px minimum height. Visible labels and optional hints stay with their inputs. Search adds a leading icon and transparent fill. Forms show errors in text; busy submission disables the fieldset and changes the action label. The global focus outline applies to inputs, selects, and textareas. Single-column form grids use shrinkable tracks; two-column rows use equal shrinkable tracks. Fields and native date inputs can shrink to their container width. Dialogs scroll vertically, with horizontal containment after controls have been sized to fit. Keep the native date picker and 16px phone input text.
 
 ### Navigation
 
-Desktop navigation combines outlined SVG icons with labels. Muted inactive links gain stronger text and a subtle background on hover; active links use soft fill. Mobile navigation keeps icons and labels together and marks the active destination with accent text. Theme and settings actions remain in the top bar on mobile. A keyboard skip link reaches the main content.
+Desktop navigation combines outlined SVG icons with labels. Muted inactive links gain stronger text and a subtle background on hover; active links use soft fill. Mobile navigation uses five equal-width touch targets, keeps icons and labels together, and marks the active destination with accent text. Enlarged labels wrap within their links instead of overlapping adjacent destinations. Theme and settings actions remain in the opaque sticky top bar on mobile. Header actions stay on one row while the logo can shrink on narrow screens. A keyboard skip link reaches the main content.
 
 ### Privacy and feedback
 
-Privacy badges combine a lock or eye SVG with the words Surprise or Transparent. Native modal dialogs have a sticky title and close control. Empty states reuse the approved heart tag with a heading, explanation, and optional action. Installation guidance uses the approved app icon and normal action controls. Reduced-motion preference disables animations and transitions; normal motion is limited to a loading spinner and a brief toast arrival.
+Privacy badges combine a lock or eye SVG with the words Surprise or Transparent. Native modal dialogs have a sticky title and close control. Reveal-date guidance applies to all lists; the exchange checkbox clearly adds secret exchange purchases and giver names to the summary. Labels keep their help text accessible through described-by relationships. Empty states reuse the approved heart tag with a heading, explanation, and optional action. Installation guidance uses the approved app icon and normal action controls. Reduced-motion preference disables animations and transitions; normal motion is limited to a loading spinner and a brief toast arrival.
+
+### Sign-in
+
+The landing page keeps the approved artwork at 240px wide on desktop and 190px on phones. Its headline is capped at 56px on desktop and 34px on phones. Code entry is a distinct step with a prominent numeric field, expiry guidance, and separate resend and change-email actions. Controls remain at least 44px high.
+
+### Transactional email
+
+Transactional emails use a 560px maximum-width, table-based layout with inline styles, the embedded 180px horizontal logo, a 26px heading, and a warm paper panel. Sign-in codes are selectable 32px text. Invitations and updates use a single action; previews remain generic to preserve surprises. Plain-text alternatives carry the same information.
+
+### Brand assets
+
+Browser favicons use the approved micro tag without a surrounding tile. The tag is sienna `#AA4D37` in light mode and blush `#F1BEAD` in dark mode; the heart is a transparent cutout. SVG and ICO links follow the app appearance setting, with a system-adaptive SVG before the app loads. Installed and Apple touch icons retain their platform-safe tiles. Regenerate favicon exports with `node scripts/build-favicons.mjs`.
 
 ## Do's and Don'ts
 
@@ -219,13 +238,3 @@ Privacy badges combine a lock or eye SVG with the words Surprise or Transparent.
 - Don't add shadows to ordinary gift cards or list rows.
 - Don't use invented product photography or present demonstration fixtures as real gifts.
 - Don't rely on color alone to explain availability or list privacy.
-
-## Sign-in and spacing refinement
-
-Page titles sit 8px above their descriptions. Headers leave 24px before content on desktop and 20px on mobile; filters leave 20px before gift grids. Section breaks use 32px on desktop and 24px on mobile. Security and administration subheadings have explicit space above them, and gift quantity controls leave 16px before the reservation action. Mobile gift recipients use 12px text; tags, status labels, and navigation labels use at least 11px.
-
-The landing page keeps the approved artwork at 240px wide on desktop and 190px on phones. Its headline is capped at 56px on desktop and 34px on phones. Code entry is a distinct step with a prominent numeric field, expiry guidance, and separate resend and change-email actions. Controls remain at least 44px high.
-
-Transactional emails use a 560px maximum-width, table-based layout with inline styles, the embedded 180px horizontal logo, a 26px heading, and a warm paper panel. Sign-in codes are selectable 32px text. Invitations and updates use a single action; previews remain generic to preserve surprises. Plain-text alternatives carry the same information.
-
-Browser favicons use the approved micro tag without a surrounding tile. The tag is sienna `#AA4D37` in light mode and blush `#F1BEAD` in dark mode; the heart is a transparent cutout. SVG and ICO links follow the app appearance setting, with a system-adaptive SVG before the app loads. Installed and Apple touch icons retain their platform-safe tiles. Regenerate favicon exports with `node scripts/build-favicons.mjs`.

@@ -1,6 +1,6 @@
 # Validation and release checks
 
-Status on 2026-10-18: implementation and local validation are complete except the checks explicitly pending below. Deployment-specific activation status belongs in each operator's private record. Do not treat automated local checks as physical-device or live-provider certification.
+Status on 2026-10-19: implementation and local validation are complete except the checks explicitly pending below. Deployment-specific activation status belongs in each operator's private record. Do not treat automated local checks as physical-device or live-provider certification.
 
 ## Evidence
 
@@ -32,6 +32,15 @@ Status on 2026-10-18: implementation and local validation are complete except th
 - The three existing list-feature browser workflows passed after extracting the shared privacy/date form controls.
 - The new multi-account group-events browser workflow passed PR #3’s isolated, paced CI runner (app and worker enabled), including owner-appointed leadership, managed profiles, unselected shoppers, Surprise privacy, settings bypass rejection, participant removal/restoration, event archive/restoration, and leader revocation.
 - Desktop/mobile, light/dark, overflow, and axe accessibility checks passed. Impeccable finished with disposition `ship`; its single screenshot-shell finding was resolved with clean captures at settled viewports. The existing design system is preserved, with event-specific guidance in `.impeccable/surfaces/src-client-groupevents-tsx.md`.
+
+## Mobile PWA layout and gift settings checks, 2026-10-19
+
+- Type checking, production build, license policy, formatting, and diff whitespace checks passed. All 112 unit tests passed; the eight opt-in PostgreSQL integration tests were not rerun for this change.
+- Chromium passed all four list-feature workflows, the group-event workflow, responsive light/dark and email-layout checks with axe, and both built-PWA tests. Final mobile-shell checks also passed in WebKit, along with the existing list-date locking and archive workflow.
+- Mobile checks cover 320px and 393px portrait widths, landscape, simulated safe-area insets, short and long pages, navigation padding and enlarged labels, desktop reset, and blank/populated native date controls in personal-list and group-event dialogs. Footer clearance responds to the measured navigation height. Screenshots were reviewed in both themes and on desktop; final evidence is ignored under `.local/browser-evidence/`.
+- A new domain regression confirms that ordinary purchases and contributor names reveal on Surprise event lists without the secret-exchange opt-in, after the selected day ends in the list timezone. Recipient/guardian access and exclusion of contribution amounts remain enforced.
+- Impeccable documentation was refreshed in `DESIGN.md` and `.impeccable/design.json`, retaining the established identity. The detector reported the same 94 advisory token deviations; the rendered layouts and canonical metadata were checked.
+- Physical iPhone testing on the reported iOS 27.0.1 remains pending. Desktop WebKit and simulated safe areas do not reproduce the installed PWA's native status-bar compositor, so they cannot certify that the reported blur is gone.
 
 ## Commands
 

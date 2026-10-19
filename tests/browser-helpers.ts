@@ -4,6 +4,47 @@ const loginCookies = new Map<
   string,
   Awaited<ReturnType<BrowserContext["cookies"]>>
 >();
+
+export async function expectDialogFieldsToFit(page: Page) {
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toBeVisible();
+  const layout = await dialog.evaluate((el) => {
+    const body = el.querySelector<HTMLElement>(".dialog-body")!;
+    const bounds = body.getBoundingClientRect();
+    const padding = getComputedStyle(body);
+    return {
+      overflow: el.scrollWidth - el.clientWidth,
+      fields: [
+        ...el.querySelectorAll<HTMLElement>(
+          ".field input, .field select, .field textarea",
+        ),
+      ].map((input) => {
+        const rect = input.getBoundingClientRect();
+        const field = input.closest(".field")!.getBoundingClientRect();
+        return {
+          name: input.getAttribute("name"),
+          fits:
+            rect.left >=
+              Math.max(
+                field.left,
+                bounds.left + parseFloat(padding.paddingLeft),
+              ) -
+                1 &&
+            rect.right <=
+              Math.min(
+                field.right,
+                bounds.right - parseFloat(padding.paddingRight),
+              ) +
+                1,
+        };
+      }),
+    };
+  });
+  expect(layout.overflow, "dialog horizontal overflow").toBeLessThanOrEqual(1);
+  expect(layout.fields.length).toBeGreaterThan(0);
+  expect(layout.fields.filter((field) => !field.fits)).toEqual([]);
+}
+
 async function submitAuth(page: Page, button: string, path: string) {
   for (let attempt = 0; attempt < 2; attempt++) {
     const [response] = await Promise.all([

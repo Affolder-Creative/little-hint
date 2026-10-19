@@ -51,6 +51,7 @@ import {
   GiftPhoto,
   GiftCard,
   Header,
+  MobileNavigation,
 } from "./components";
 import {
   GroupForm,
@@ -348,7 +349,7 @@ export function App() {
             <span>Made for the people you know best.</span>
           </footer>
         </div>
-        <nav className="mobile-nav" aria-label="Mobile navigation">
+        <MobileNavigation>
           {nav.map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
@@ -365,7 +366,7 @@ export function App() {
               <span>{label}</span>
             </NavLink>
           ))}
-        </nav>
+        </MobileNavigation>
       </div>
       {modal && (
         <Modal title={modal.title} onClose={() => setModal(null)}>
@@ -1507,8 +1508,9 @@ function Exchanges() {
                 <div>
                   <h2>{e.name}</h2>
                   <p>
-                    {e.participantIds.length} participants · {e.count} recipient
-                    {e.count > 1 ? "s" : ""} per giver
+                    {e.participantIds.length} participants · Each person gives
+                    to {e.count} {e.count === 1 ? "person" : "people"} and
+                    receives from {e.count}
                   </p>
                 </div>
                 <span className="status">

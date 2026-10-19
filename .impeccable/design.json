@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-18T19:09:37.162836+00:00",
+  "generatedAt": "2026-10-19T03:55:22.466095+00:00",
   "title": "Design System: Little Hint",
   "extensions": {
     "colorMeta": {
@@ -16,7 +16,8 @@
           "oklch(72.14% 0.01299 71.33)",
           "oklch(83.57% 0.01299 71.33)",
           "oklch(95.00% 0.01299 71.33)"
-        ]
+        ],
+        "canonical": "#fff8f0"
       },
       "paper": {
         "role": "neutral",
@@ -30,7 +31,8 @@
           "oklch(72.14% 0.00569 84.57)",
           "oklch(83.57% 0.00569 84.57)",
           "oklch(95.00% 0.00569 84.57)"
-        ]
+        ],
+        "canonical": "#fffdf9"
       },
       "text": {
         "role": "neutral",
@@ -44,7 +46,8 @@
           "oklch(72.14% 0.01805 35.75)",
           "oklch(83.57% 0.01805 35.75)",
           "oklch(95.00% 0.01805 35.75)"
-        ]
+        ],
+        "canonical": "#2b201d"
       },
       "muted": {
         "role": "neutral",
@@ -58,7 +61,8 @@
           "oklch(72.14% 0.02962 45.60)",
           "oklch(83.57% 0.02962 45.60)",
           "oklch(95.00% 0.02962 45.60)"
-        ]
+        ],
+        "canonical": "#746057"
       },
       "border": {
         "role": "neutral",
@@ -72,7 +76,8 @@
           "oklch(72.14% 0.01977 60.15)",
           "oklch(83.57% 0.01977 60.15)",
           "oklch(95.00% 0.01977 60.15)"
-        ]
+        ],
+        "canonical": "#e6d9cf"
       },
       "accent": {
         "role": "primary",
@@ -86,7 +91,8 @@
           "oklch(72.14% 0.12763 34.60)",
           "oklch(83.57% 0.12763 34.60)",
           "oklch(95.00% 0.12763 34.60)"
-        ]
+        ],
+        "canonical": "#aa4d37"
       },
       "on-accent": {
         "role": "primary",
@@ -100,7 +106,8 @@
           "oklch(72.14% 0.01299 71.33)",
           "oklch(83.57% 0.01299 71.33)",
           "oklch(95.00% 0.01299 71.33)"
-        ]
+        ],
+        "canonical": "#fff8f0"
       },
       "soft": {
         "role": "secondary",
@@ -114,7 +121,8 @@
           "oklch(72.14% 0.02213 54.33)",
           "oklch(83.57% 0.02213 54.33)",
           "oklch(95.00% 0.02213 54.33)"
-        ]
+        ],
+        "canonical": "#f4e4da"
       },
       "green": {
         "role": "secondary",
@@ -128,7 +136,8 @@
           "oklch(72.14% 0.05364 144.66)",
           "oklch(83.57% 0.05364 144.66)",
           "oklch(95.00% 0.05364 144.66)"
-        ]
+        ],
+        "canonical": "#486348"
       },
       "error": {
         "role": "secondary",
@@ -142,7 +151,8 @@
           "oklch(72.14% 0.14532 29.70)",
           "oklch(83.57% 0.14532 29.70)",
           "oklch(95.00% 0.14532 29.70)"
-        ]
+        ],
+        "canonical": "#9f3327"
       },
       "dark-bg": {
         "role": "neutral",
@@ -156,7 +166,8 @@
           "oklch(72.14% 0.01805 35.75)",
           "oklch(83.57% 0.01805 35.75)",
           "oklch(95.00% 0.01805 35.75)"
-        ]
+        ],
+        "canonical": "#2b201d"
       },
       "dark-paper": {
         "role": "neutral",
@@ -170,7 +181,8 @@
           "oklch(72.14% 0.02167 42.05)",
           "oklch(83.57% 0.02167 42.05)",
           "oklch(95.00% 0.02167 42.05)"
-        ]
+        ],
+        "canonical": "#342722"
       },
       "dark-text": {
         "role": "neutral",
@@ -184,7 +196,8 @@
           "oklch(72.14% 0.01299 71.33)",
           "oklch(83.57% 0.01299 71.33)",
           "oklch(95.00% 0.01299 71.33)"
-        ]
+        ],
+        "canonical": "#fff8f0"
       },
       "dark-muted": {
         "role": "neutral",
@@ -198,7 +211,8 @@
           "oklch(72.14% 0.02943 51.75)",
           "oklch(83.57% 0.02943 51.75)",
           "oklch(95.00% 0.02943 51.75)"
-        ]
+        ],
+        "canonical": "#cbb6aa"
       },
       "dark-border": {
         "role": "neutral",
@@ -212,7 +226,8 @@
           "oklch(72.14% 0.03214 47.91)",
           "oklch(83.57% 0.03214 47.91)",
           "oklch(95.00% 0.03214 47.91)"
-        ]
+        ],
+        "canonical": "#59453b"
       },
       "dark-accent": {
         "role": "primary",
@@ -226,7 +241,8 @@
           "oklch(72.14% 0.06359 39.24)",
           "oklch(83.57% 0.06359 39.24)",
           "oklch(95.00% 0.06359 39.24)"
-        ]
+        ],
+        "canonical": "#f1bead"
       },
       "dark-on-accent": {
         "role": "primary",
@@ -240,7 +256,8 @@
           "oklch(72.14% 0.01805 35.75)",
           "oklch(83.57% 0.01805 35.75)",
           "oklch(95.00% 0.01805 35.75)"
-        ]
+        ],
+        "canonical": "#2b201d"
       },
       "dark-soft": {
         "role": "secondary",
@@ -254,7 +271,8 @@
           "oklch(72.14% 0.03496 40.84)",
           "oklch(83.57% 0.03496 40.84)",
           "oklch(95.00% 0.03496 40.84)"
-        ]
+        ],
+        "canonical": "#49332b"
       },
       "dark-green": {
         "role": "secondary",
@@ -268,7 +286,8 @@
           "oklch(72.14% 0.05557 129.23)",
           "oklch(83.57% 0.05557 129.23)",
           "oklch(95.00% 0.05557 129.23)"
-        ]
+        ],
+        "canonical": "#bdd0aa"
       },
       "dark-error": {
         "role": "secondary",
@@ -282,7 +301,8 @@
           "oklch(72.14% 0.09448 31.24)",
           "oklch(83.57% 0.09448 31.24)",
           "oklch(95.00% 0.09448 31.24)"
-        ]
+        ],
+        "canonical": "#ffb1a2"
       }
     },
     "typographyMeta": {
@@ -352,9 +372,18 @@
       "src/client/style.css",
       "src/client/components.tsx",
       "src/client/App.tsx",
-      "src/client/pwa.tsx"
+      "src/client/pwa.tsx",
+      "src/client/ListPolicyFields.tsx",
+      "src/client/ListFeatures.tsx",
+      "src/client/forms.tsx"
     ],
-    "tonalRampNote": "Synthesized OKLCH previews at constant hue/chroma; these ramps are panel metadata, not additional application tokens."
+    "tonalRampNote": "Synthesized OKLCH previews at constant hue/chroma; these ramps are panel metadata, not additional application tokens.",
+    "layout": {
+      "mobileHeader": "Opaque sticky header at top: 0, z-index 30. Content height 78px, 76px at 650px and below, plus --safe-area-top. Side padding respects landscape safe areas.",
+      "mobileNavigation": "Fixed bottom navigation at z-index 40. Border-box ResizeObserver publishes --mobile-nav-height, including safe-area padding, and removes it on unmount.",
+      "bottomClearance": "At 900px and below, shell padding-bottom and toast offset are measured navigation height + 16px; update banner offset equals navigation height. Desktop reserves no navigation space.",
+      "forms": "minmax(0, 1fr) grid tracks; min-width: 0 on fields and controls; width/max-width: 100% on controls. Dialog overflow-y: auto and overflow-x: hidden. Native date controls retained."
+    }
   },
   "components": [
     {
@@ -395,7 +424,7 @@
       "refersTo": "field",
       "description": "Visible label and text input.",
       "html": "<label class=\"ds-field\">Gift title<input placeholder=\"What would they love?\"></label>",
-      "css": ".ds-field{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;display:grid;gap:8px;font-size:13px;font-weight:550;color:var(--text, #2b201d)}.ds-field input{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;width:100%;border:1px solid var(--border, #e6d9cf);border-radius:8px;background:var(--paper, #fffdf9);color:var(--text, #2b201d);padding:11px 12px;min-height:44px;font-weight:400}.ds-field input::placeholder{color:var(--muted, #746057);opacity:1}.ds-field input:focus-visible{outline:3px solid var(--accent, #aa4d37);outline-offset:3px;}"
+      "css": ".ds-field{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;display:grid;grid-template-columns:minmax(0,1fr);min-width:0;gap:8px;font-size:13px;font-weight:550;color:var(--text, #2b201d)}.ds-field input{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;width:100%;min-width:0;max-width:100%;border:1px solid var(--border, #e6d9cf);border-radius:8px;background:var(--paper, #fffdf9);color:var(--text, #2b201d);padding:11px 12px;min-height:44px;font-weight:400}.ds-field input::placeholder{color:var(--muted, #746057);opacity:1}.ds-field input:focus-visible{outline:3px solid var(--accent, #aa4d37);outline-offset:3px;}"
     },
     {
       "name": "Desktop navigation",
@@ -428,6 +457,14 @@
       "description": "Icon and wording identify privacy.",
       "html": "<span class=\"ds-privacy\"><svg aria-hidden=\"true\" width=\"13\" height=\"13\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><rect x=\"3\" y=\"11\" width=\"18\" height=\"11\" rx=\"2\"/><path d=\"M7 11V7a5 5 0 0 1 10 0v4\"/></svg>Surprise</span>",
       "css": ".ds-privacy{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;display:inline-flex;align-items:center;gap:5px;padding:6px 8px;border:1px solid var(--border, #e6d9cf);border-radius:5px;font-size:11px;white-space:nowrap;color:var(--muted, #746057)}"
+    },
+    {
+      "name": "Mobile navigation",
+      "kind": "nav",
+      "refersTo": "nav-mobile",
+      "description": "Five destinations with icons and labels. Shown in isolation here; the app fixes this navigation to the bottom and measures its full height for content clearance.",
+      "html": "<nav class=\"ds-mobile-nav\" aria-label=\"Sample mobile navigation\"><a href=\"#home\" aria-current=\"page\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"21\" height=\"21\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M2 9.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5\"></path></svg><span>Home</span></a><a href=\"#people\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"21\" height=\"21\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2\"></path><path d=\"M16 3.128a4 4 0 0 1 0 7.744\"></path><path d=\"M22 21v-2a4 4 0 0 0-3-3.87\"></path><circle cx=\"9\" cy=\"7\" r=\"4\"></circle></svg><span>People</span></a><a href=\"#lists\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"21\" height=\"21\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M13 5h8\"></path><path d=\"M13 12h8\"></path><path d=\"M13 19h8\"></path><path d=\"m3 17 2 2 4-4\"></path><path d=\"m3 7 2 2 4-4\"></path></svg><span>My lists</span></a><a href=\"#buying\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"21\" height=\"21\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M16 10a4 4 0 0 1-8 0\"></path><path d=\"M3.103 6.034h17.794\"></path><path d=\"M3.4 5.467a2 2 0 0 0-.4 1.2V20a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6.667a2 2 0 0 0-.4-1.2l-2-2.667A2 2 0 0 0 17 2H7a2 2 0 0 0-1.6.8z\"></path></svg><span>Buying</span></a><a href=\"#exchanges\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"21\" height=\"21\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m18 14 4 4-4 4\"></path><path d=\"m18 2 4 4-4 4\"></path><path d=\"M2 18h1.973a4 4 0 0 0 3.3-1.7l5.454-8.6a4 4 0 0 1 3.3-1.7H22\"></path><path d=\"M2 6h1.972a4 4 0 0 1 3.6 2.2\"></path><path d=\"M22 18h-6.041a4 4 0 0 1-3.3-1.8l-.359-.45\"></path></svg><span>Exchanges</span></a></nav>",
+      "css": ".ds-mobile-nav{display:flex;justify-content:space-around;padding:9px 14px calc(9px + var(--safe-area-bottom,0px));border-top:1px solid var(--border,#e6d9cf);background:var(--paper,#fffdf9);font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif}.ds-mobile-nav a{display:flex;flex:1;align-items:center;gap:5px;flex-direction:column;color:var(--muted,#746057);font-size:11px;padding:4px 2px;min-width:0;text-align:center;text-decoration:none}.ds-mobile-nav a[aria-current]{color:var(--accent,#aa4d37)}.ds-mobile-nav a:focus-visible{outline:3px solid var(--accent,#aa4d37);outline-offset:3px}.ds-mobile-nav a span{max-width:100%;overflow-wrap:anywhere}"
     }
   ],
   "narrative": {
