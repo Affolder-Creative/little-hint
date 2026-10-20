@@ -279,6 +279,19 @@ test("list dates lock at sharing, archives restore, and controls fit desktop and
   await expect(
     page.getByLabel("Gift summary available after", { exact: true }),
   ).toHaveAttribute("min", "2099-10-18");
+  const sharedDate = page.getByLabel("Gift summary available after", {
+    exact: true,
+  });
+  await sharedDate.fill("2099-10-17");
+  expect(
+    await sharedDate.evaluate((input: HTMLInputElement) => ({
+      valid: input.checkValidity(),
+      rangeUnderflow: input.validity.rangeUnderflow,
+    })),
+  ).toEqual({ valid: false, rangeUnderflow: true });
+  await sharedDate.fill("2099-10-19");
+  await expect(sharedDate).toHaveJSProperty("defaultValue", "2099-10-18");
+  await sharedDate.fill("2099-10-18");
   await expectDialogFieldsToFit(page);
   await page.getByRole("button", { name: "Close dialog", exact: true }).click();
   await page.getByRole("button", { name: "Archive list", exact: true }).click();
@@ -311,7 +324,7 @@ test.describe("touch reveal settings", () => {
     viewport: { width: 393, height: 852 },
   });
 
-  test("native date clearing stays cleared and saves without a gift summary", async ({
+  test("summary dates keep their initial reset value and save cleared dates", async ({
     page,
   }) => {
     await login(page, "alex@example.test");
@@ -331,13 +344,17 @@ test.describe("touch reveal settings", () => {
         await page.getByRole("radio", { name: new RegExp(mode) }).check();
         await date.fill("2099-12-25");
         await exchange.check();
-        // Native picker updates may reach the input before a change event.
-        // Use the element setter to also exercise React's tracked-value path.
+        // iOS Reset falls back to the HTML default. Selecting a date must
+        // not turn that selection into the field's reset value.
+        await expect(date).toHaveJSProperty("defaultValue", "");
+        // Exercise input-only clears separately from native UIKit coverage.
+        await date.focus();
         await date.evaluate((input: HTMLInputElement) => {
           input.value = "";
           input.dispatchEvent(new Event("input", { bubbles: true }));
         });
         await expect(date).toHaveValue("");
+        await expect(date).toBeFocused();
         await expect(exchange).toBeDisabled();
         await expect(exchange).not.toBeChecked();
 
@@ -383,6 +400,8 @@ test.describe("touch reveal settings", () => {
             inputs.map((input) => ({
               name: input.getAttribute("name"),
               message: (input as HTMLInputElement).validationMessage,
+              badInput: (input as HTMLInputElement).validity.badInput,
+              value: (input as HTMLInputElement).value,
             })),
           ),
       ).toEqual([]);

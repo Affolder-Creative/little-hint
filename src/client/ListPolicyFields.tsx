@@ -60,7 +60,14 @@ export function ListPolicyFields({
     !!list?.modeLocked &&
     (!list.revealAfter || dateHasElapsed(list.revealAfter, timeZone));
   const syncRevealDate = (event: SyntheticEvent<HTMLInputElement>) => {
-    setRevealAfter(event.currentTarget.value);
+    const input = event.currentTarget;
+    // WebKit can retain a stale :invalid state after clearing its date editor,
+    // even when every validity flag is clear. Refresh the unchanged value so
+    // native form submission agrees with validity; preserve real input errors.
+    if (!input.value && input.validity.valid && input.matches(":invalid")) {
+      input.value = "";
+    }
+    setRevealAfter(input.value);
   };
   return (
     <>
@@ -176,12 +183,13 @@ export function ListPolicyFields({
             <input
               type="date"
               name="revealAfter"
-              value={revealAfter}
+              // iOS Reset falls back to the HTML default value. Keep it at
+              // the initial date instead of mirroring each picker selection.
+              defaultValue={list?.revealAfter ?? ""}
               disabled={revealLocked}
               min={
                 list?.modeLocked ? (list.revealAfter ?? undefined) : undefined
               }
-              // Picker resets can bypass React's change-event value tracking.
               onInput={syncRevealDate}
               onChange={syncRevealDate}
               onBlur={syncRevealDate}
