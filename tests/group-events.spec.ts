@@ -228,6 +228,16 @@ test("leaders manage an occasion while recipients add wishes and unselected memb
     await expect(
       leader.getByRole("radio", { name: /Keep it a surprise/ }),
     ).toBeDisabled();
+    // Events shared without a reveal date must keep the date and exchange
+    // policy locked, even though new-event dates are browser-managed.
+    await expect(
+      leader.getByLabel("Reveal gifts after", { exact: true }),
+    ).toBeDisabled();
+    await expect(
+      leader.getByLabel("Include secret exchange gifts and giver names", {
+        exact: true,
+      }),
+    ).toBeDisabled();
     await expectDialogFieldsToFit(leader);
     await leader
       .locator(`input[name="participantIds"][value="${child.id}"]`)
