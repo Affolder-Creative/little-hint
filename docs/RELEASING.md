@@ -1,13 +1,45 @@
 # CI and releases
 
-Every change goes through a PR into `main`. CI validates code, PostgreSQL 18,
-all five browser suites against the built app, license notices, workflow syntax,
-and AMD64/ARM64 containers. Each browser suite gets a fresh database and real
-local email-code authentication. External service credentials are unnecessary.
-The browser launcher paces requests through a local proxy to stay below the
-production rate limit; it does not disable that limit. It selects unused local
-ports so an already-running development app cannot satisfy its readiness check.
-The `CI gate` job fails if any required job fails, is cancelled, or is skipped.
+Every change goes through a PR into `main`. PR CI always runs the quality job:
+types, unit and tooling tests, builds, dependency audits, license notices, Compose
+validation, and workflow syntax. It selects the expensive checks from the complete
+PR diff, including deleted files and both paths of a rename:
+
+| Check                      | PR changes that select it                                                                                                          |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| PostgreSQL 18 integration  | Backend/shared code or the integration test                                                                                        |
+| All six browser suites     | App source, public assets, HTML entrypoint, browser tests/helpers, or Playwright configuration                                     |
+| AMD64 and ARM64 containers | Docker/Compose/environment examples, dependencies, build/compliance/release tooling, LICENSE, or server app/worker/CLI entrypoints |
+| Brand tooling audit        | Brand sources, audit tooling, compliance policy, or notice tooling                                                                 |
+| All checks                 | Dependencies, TypeScript/Vite/build configuration, CI tooling, any `.github/` change, or an unrecognized path                      |
+
+Docs, marketing, and design changes do not select unrelated expensive checks.
+Unit-test-only changes use the quality job. Mixed changes select the union of
+their checks. An unavailable diff runs everything. Manual and reusable CI runs,
+including every main merge and release retry, always run the full suite.
+The selection is recorded in the run summary; `scripts/ci-policy.mjs` contains
+the exact path rules, with coverage in `npm run test:tooling`.
+
+Each browser suite gets a fresh database and real local email-code authentication.
+External service credentials are unnecessary. The browser launcher paces requests
+through a local proxy to stay below the production rate limit; it does not disable
+that limit. It sets `E2E_REQUESTS_PACED=1` so list tests avoid also waiting for a
+fresh rate-limit window before every test. Unpaced local runs keep that wait.
+The launcher selects unused ports so a running development app cannot satisfy
+its readiness check. Both CI and release container jobs use native runners:
+`ubuntu-24.04` for AMD64 and `ubuntu-24.04-arm` for ARM64, without QEMU.
+
+`CI gate` requires successful selection and quality checks, validates every
+selection output, and rejects failed, cancelled, missing, or unexpectedly skipped
+jobs. The brand audit's actual step outcome is checked too. Only explicitly
+unselected checks may be skipped. Keep the CI workflow itself unfiltered so its
+gate always reports a result.
+
+The separate `PR title` check runs on PR creation, new commits, reopening, and
+metadata edits. Editing the title or description does not rerun or cancel code CI.
+Code CI runs on opening, new commits, and reopening, including draft PRs; marking
+a draft ready does not repeat checks already run for that commit. Require both
+`CI gate` and `PR title` when branch rules are available.
 
 Use Conventional Commit PR titles and squash merges. `feat:` changes the minor
 version and `fix:` changes the patch version. Before 1.0, breaking changes change
@@ -113,7 +145,7 @@ gh api --method POST repos/kaffolder7/little-hint/rulesets \
   --input .github/rulesets/main.json
 ```
 
-The rules require PRs, the GitHub Actions `CI gate` check, an up-to-date branch,
+The rules require PRs, the GitHub Actions `CI gate` and `PR title` checks, an up-to-date branch,
 resolved review threads and linear history; block force pushes/deletion; and
 require zero external approvals for the solo maintainer. No bypass actor is
 configured. Confirm the check name in a real PR before applying. If the ruleset

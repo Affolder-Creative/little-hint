@@ -38,6 +38,7 @@ const env = {
   PORT: backendPort,
   E2E_BASE_URL: `http://localhost:${port}`,
   E2E_BUILT: "1",
+  E2E_REQUESTS_PACED: "1",
   CI: "true",
   SMTP_HOST: "",
   TELEGRAM_BOT_TOKEN: "",

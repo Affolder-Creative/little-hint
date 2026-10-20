@@ -107,8 +107,10 @@ The standalone marketing website lives in `marketing/`. See the [GitHub Pages se
 
 ## CI, releases, and licensing
 
-PRs into `main` run unit, PostgreSQL, browser, container, dependency, and license
-checks. Dependabot opens maintenance PRs. Release Please prepares a version and
+PRs into `main` always run quality checks and select PostgreSQL, browser,
+container, and brand audits from the changed files. Main merges and manual CI
+runs retain full coverage. PR-title edits run only the separate title check.
+Dependabot opens maintenance PRs. Release Please prepares a version and
 changelog PR; merging it starts a draft release and verified AMD64/ARM64 image
 publication to `ghcr.io/kaffolder7/little-hint`. See [releasing](docs/RELEASING.md)
 for setup, downloads, upgrades, and failed-release recovery.
