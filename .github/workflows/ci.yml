@@ -2,7 +2,7 @@ name: CI
 on:
   pull_request:
     branches: [main]
-    types: [opened, synchronize, reopened, ready_for_review, edited]
+    types: [opened, synchronize, reopened]
   workflow_dispatch:
   workflow_call:
     inputs:
@@ -15,9 +15,34 @@ concurrency:
   group: ci-${{ github.event.pull_request.number || inputs.ref || github.ref }}-${{ github.workflow }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
+  changes:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      integration: ${{ steps.select.outputs.integration }}
+      browser: ${{ steps.select.outputs.browser }}
+      containers: ${{ steps.select.outputs.containers }}
+      brand: ${{ steps.select.outputs.brand }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+          fetch-depth: 0
+          persist-credentials: false
+      - id: select
+        name: Select checks from the complete PR diff
+        env:
+          CI_EVENT_NAME: ${{ github.event_name }}
+          CI_REF: ${{ inputs.ref }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/ci-policy.mjs select
   quality:
+    needs: changes
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    outputs:
+      brand: ${{ steps.brand.outcome }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -27,11 +52,6 @@ jobs:
         with:
           node-version: "24"
           cache: npm
-      - name: Validate PR title
-        if: github.event_name == 'pull_request'
-        env:
-          PR_TITLE: ${{ github.event.pull_request.title }}
-        run: node scripts/check-pr-title.mjs
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
@@ -39,6 +59,8 @@ jobs:
       - run: python3 scripts/test_bundle_sources.py
       - run: npm run licenses:check
       - name: Audit brand tooling without regenerating artwork
+        id: brand
+        if: needs.changes.outputs.brand == 'true'
         run: |
           npm ci --prefix brand/little-hint-final/source --ignore-scripts
           node scripts/licenses.mjs .local/brand-compliance brand/little-hint-final/source
@@ -60,6 +82,8 @@ jobs:
           cd ../..
           .local/actionlint/actionlint -shellcheck=''
   integration:
+    needs: changes
+    if: needs.changes.outputs.integration == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     services:
@@ -87,6 +111,8 @@ jobs:
       - run: npm ci
       - run: npm run test:integration
   browser:
+    needs: changes
+    if: needs.changes.outputs.browser == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     strategy:
@@ -134,12 +160,18 @@ jobs:
             test-results/
           retention-days: 7
   containers:
-    runs-on: ubuntu-24.04
+    needs: changes
+    if: needs.changes.outputs.containers == 'true'
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
-        arch: [amd64, arm64]
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -150,9 +182,6 @@ jobs:
           path: .local/source-cache
           key: sources-${{ hashFiles('compliance/source-materials.json') }}
           restore-keys: sources-
-      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
-        with:
-          platforms: arm64
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
       - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
@@ -163,6 +192,10 @@ jobs:
           tags: little-hint:ci
           cache-from: type=gha,scope=ci-${{ matrix.arch }}
           cache-to: type=gha,mode=max,scope=ci-${{ matrix.arch }}
+      - name: Verify image architecture
+        env:
+          EXPECTED_ARCH: ${{ matrix.arch }}
+        run: test "$(docker image inspect little-hint:ci --format '{{.Architecture}}')" = "$EXPECTED_ARCH"
       - name: Container smoke test
         env:
           LITTLE_HINT_IMAGE: little-hint:ci
@@ -184,12 +217,15 @@ jobs:
   gate:
     name: CI gate
     if: always()
-    needs: [quality, integration, browser, containers]
+    needs: [changes, quality, integration, browser, containers]
     runs-on: ubuntu-24.04
     timeout-minutes: 2
     steps:
-      - name: Require every check to pass
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+          persist-credentials: false
+      - name: Require every selected check to pass
         env:
           RESULTS: ${{ toJSON(needs) }}
-        run: |
-          node -e 'const jobs=JSON.parse(process.env.RESULTS); if(Object.values(jobs).some(j=>j.result!=="success")) process.exit(1)'
+        run: node scripts/ci-policy.mjs gate
