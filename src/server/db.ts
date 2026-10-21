@@ -52,8 +52,8 @@ export async function transact<T>(
     return result;
   });
 }
-export async function migrate() {
-  const client = await pool.connect();
+export async function migrate(databasePool = pool) {
+  const client = await databasePool.connect();
   try {
     await client.query("BEGIN");
     await client.query("SELECT pg_advisory_xact_lock(742903119)");

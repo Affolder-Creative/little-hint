@@ -53,6 +53,11 @@ for (const [description, files, expected] of [
   ],
   ["integration test", ["tests/integration.test.ts"], flags(["integration"])],
   [
+    "staging integration test",
+    ["tests/staging-seed.integration.test.ts"],
+    flags(["integration"]),
+  ],
+  [
     "browser helpers",
     ["tests/browser-helpers.ts", "playwright.config.ts"],
     flags(["browser"]),

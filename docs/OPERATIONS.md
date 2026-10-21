@@ -1,5 +1,7 @@
 # Operations and recovery
 
+For feature testing with synthetic data, use the [isolated staging setup](STAGING.md).
+
 ## Coolify deployment
 
 Create a Little Hint project in your Coolify team and select its production environment. Connect your fork of `YOUR-ACCOUNT/little-hint` and the Compose build pack, with `/compose.yaml`. Set the app service domain to `https://littlehint.example.com:3000` in Coolify's Compose domain mapping. Port 3000 is internal; do not publish the database or worker. Coolify supplies HTTPS through its proxy. `APP_URL` must be `https://littlehint.example.com`, without the port.

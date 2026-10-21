@@ -64,7 +64,9 @@ export function classifyPaths(paths) {
       selected.browser = true;
       continue;
     }
-    if (file === "tests/integration.test.ts") {
+    if (
+      /^tests\/(?:integration|staging-seed\.integration)\.test\.ts$/.test(file)
+    ) {
       selected.integration = true;
       continue;
     }

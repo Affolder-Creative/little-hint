@@ -1,0 +1,114 @@
+# Standalone stack. Do not merge with the production Compose definition.
+name: little-hint-staging
+x-app: &app
+  image: ${LITTLE_HINT_STAGING_IMAGE:?Set LITTLE_HINT_STAGING_IMAGE to the staging image digest}
+  pull_policy: missing
+  restart: unless-stopped
+  environment:
+    NODE_ENV: production
+    APP_ENV: staging
+    APP_URL: ${STAGING_APP_URL:?Set STAGING_APP_URL to the staging HTTPS origin}
+    DATABASE_URL: postgresql://little_hint_staging:${STAGING_POSTGRES_PASSWORD:?Set STAGING_POSTGRES_PASSWORD}@db:5432/little_hint_staging
+    BETTER_AUTH_SECRET: ${STAGING_AUTH_SECRET:?Set STAGING_AUTH_SECRET}
+    SETTINGS_ENCRYPTION_KEY: ${STAGING_ENCRYPTION_KEY:?Set STAGING_ENCRYPTION_KEY}
+    PORT: 3000
+    UPLOAD_DIR: /data/uploads
+    NODE_EXTRA_CA_CERTS: /run/mailpit-ca.crt
+  volumes:
+    - staging-uploads:/data/uploads
+    - type: bind
+      source: ${STAGING_TLS_DIR:?Set STAGING_TLS_DIR to the server certificate directory}/ca.crt
+      target: /run/mailpit-ca.crt
+      read_only: true
+  read_only: true
+  tmpfs:
+    - /tmp:size=128M,mode=1777
+  security_opt:
+    - no-new-privileges:true
+  cap_drop: [ALL]
+services:
+  db:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    mem_limit: 384m
+    environment:
+      POSTGRES_DB: little_hint_staging
+      POSTGRES_USER: little_hint_staging
+      POSTGRES_PASSWORD: ${STAGING_POSTGRES_PASSWORD:?Set STAGING_POSTGRES_PASSWORD}
+    volumes:
+      - staging-postgres18:/var/lib/postgresql
+    healthcheck:
+      test:
+        [CMD-SHELL, pg_isready -U little_hint_staging -d little_hint_staging]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+  mailpit:
+    image: axllent/mailpit:v1.31.1
+    restart: unless-stopped
+    mem_limit: 128m
+    environment:
+      MP_DATABASE: /data/mailpit.db
+      MP_MAX_MESSAGES: 1000
+      MP_UI_AUTH: ${STAGING_MAILPIT_UI_AUTH:?Set STAGING_MAILPIT_UI_AUTH to username:password}
+      MP_SMTP_TLS_CERT: /run/mailpit-tls/mailpit.crt
+      MP_SMTP_TLS_KEY: /run/mailpit-tls/mailpit.key
+      MP_SMTP_REQUIRE_STARTTLS: "true"
+      MP_DISABLE_VERSION_CHECK: "true"
+    volumes:
+      - staging-mail:/data
+      - type: bind
+        source: ${STAGING_TLS_DIR:?Set STAGING_TLS_DIR}/mailpit.crt
+        target: /run/mailpit-tls/mailpit.crt
+        read_only: true
+      - type: bind
+        source: ${STAGING_TLS_DIR:?Set STAGING_TLS_DIR}/mailpit.key
+        target: /run/mailpit-tls/mailpit.key
+        read_only: true
+    expose: ["8025", "1025"]
+    healthcheck:
+      test: [CMD, /mailpit, readyz]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+  app:
+    <<: *app
+    mem_limit: 512m
+    command:
+      [
+        sh,
+        -c,
+        "node dist/server/cli.js migrate && exec node dist/server/index.js",
+      ]
+    expose: ["3000"]
+    depends_on:
+      db:
+        condition: service_healthy
+      mailpit:
+        condition: service_healthy
+  worker:
+    <<: *app
+    mem_limit: 256m
+    command: [node, dist/server/worker.js]
+    depends_on:
+      app:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          CMD,
+          node,
+          -e,
+          "const fs=require('node:fs');try{process.exit(Date.now()-Number(fs.readFileSync('/tmp/little-hint-worker-heartbeat','utf8'))<60000?0:1)}catch{process.exit(1)}",
+        ]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+volumes:
+  staging-postgres18:
+  staging-uploads:
+  staging-mail:

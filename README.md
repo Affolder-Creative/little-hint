@@ -125,3 +125,7 @@ Copyright 2026 Affolder Creative. The license restricts competing products,
 including free competitors; it is not an OSI-approved open-source license.
 Third-party components retain their original licenses. Commercial permission
 and [outside contribution policy](CONTRIBUTING.md) are documented separately.
+
+## Staging
+
+Use the [persistent staging guide](docs/STAGING.md) to test feature branches on a separate server with synthetic data and a private Mailpit inbox. Images are built manually in GitHub Actions and deployed by digest; production data and credentials stay separate.

@@ -139,3 +139,81 @@ for (const name of ["app", "worker"]) {
 console.log(
   "Compose checks passed: secret-free build, required runtime secrets, and shared local/registry app-worker images.",
 );
+
+const stagingVars = {
+  LITTLE_HINT_STAGING_IMAGE:
+    "ghcr.io/example/little-hint-staging@sha256:" + "b".repeat(64),
+  STAGING_APP_URL: "https://staging.example.test",
+  STAGING_POSTGRES_PASSWORD: "staging-only",
+  STAGING_AUTH_SECRET: "staging-auth-only",
+  STAGING_ENCRYPTION_KEY: "staging-encryption-only",
+  STAGING_MAILPIT_UI_AUTH: "tester:staging-only",
+  STAGING_TLS_DIR: "/tmp/staging-tls",
+};
+for (const missing of Object.keys(stagingVars)) {
+  const variables = { ...stagingVars };
+  delete variables[missing];
+  assert.notEqual(
+    config("compose.staging.yaml", variables).status,
+    0,
+    `Staging must require ${missing}.`,
+  );
+}
+const stagingResult = config("compose.staging.yaml", stagingVars);
+assert.equal(stagingResult.status, 0, stagingResult.stderr);
+const staging = JSON.parse(stagingResult.stdout);
+assert.deepEqual(Object.keys(staging.services).sort(), [
+  "app",
+  "db",
+  "mailpit",
+  "worker",
+]);
+for (const [name, service] of Object.entries(staging.services)) {
+  assert.equal(
+    service.ports,
+    undefined,
+    `${name} must not publish host ports.`,
+  );
+  assert.equal(service.build, undefined, "Staging pulls a prebuilt image.");
+  assert.ok(service.mem_limit > 0, `${name} needs a memory limit.`);
+  for (const volume of service.volumes ?? [])
+    if (volume.type === "volume")
+      assert.ok(volume.source.startsWith("staging-"));
+}
+for (const name of ["app", "worker"]) {
+  const service = staging.services[name];
+  assert.equal(service.image, stagingVars.LITTLE_HINT_STAGING_IMAGE);
+  assert.equal(service.environment.NODE_ENV, "production");
+  assert.equal(service.environment.APP_ENV, "staging");
+  assert.equal(service.environment.ALLOW_SYNTHETIC_DATA, undefined);
+  assert.equal(
+    service.environment.DATABASE_URL,
+    "postgresql://little_hint_staging:staging-only@db:5432/little_hint_staging",
+  );
+  assert.equal(service.environment.NODE_EXTRA_CA_CERTS, "/run/mailpit-ca.crt");
+  assert.ok(
+    !service.volumes.some((v) => v.target.endsWith(".key")),
+    "App must not receive private SMTP keys.",
+  );
+  assert.equal(service.environment.SMTP_PASS, undefined);
+  assert.equal(service.environment.RESTIC_PASSWORD, undefined);
+}
+assert.equal(
+  staging.services.mailpit.environment.MP_SMTP_REQUIRE_STARTTLS,
+  "true",
+);
+assert.equal(
+  staging.services.mailpit.environment.MP_UI_AUTH,
+  stagingVars.STAGING_MAILPIT_UI_AUTH,
+);
+assert.equal(
+  staging.services.mailpit.environment.MP_SMTP_RELAY_CONFIG,
+  undefined,
+);
+assert.equal(
+  staging.services.mailpit.environment.MP_SMTP_FORWARD_CONFIG,
+  undefined,
+);
+console.log(
+  "Staging checks passed: dedicated data, fixed mail capture, bounded memory, no build or published ports.",
+);

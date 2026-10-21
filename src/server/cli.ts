@@ -3,11 +3,21 @@ import { randomUUID } from "node:crypto";
 import { pool, migrate, transact } from "./db";
 import { stamp, command, activateAccount } from "./domain";
 import type { Actor } from "../shared/model";
+import { assertStagingSeed, assertStagingDatabase } from "./deployment";
+import { seedStaging } from "./staging-seed";
 const cmd = process.argv[2];
 try {
+  if (process.env.APP_ENV === "staging") assertStagingDatabase();
   if (cmd === "migrate") {
     await migrate();
     console.log("Database migrations applied.");
+  } else if (cmd === "seed-staging") {
+    assertStagingSeed();
+    await migrate();
+    const emails = await seedStaging(pool);
+    console.log(
+      `Synthetic staging data created. Retrieve sign-in codes from Mailpit: ${emails.join(", ")}`,
+    );
   } else if (cmd === "bootstrap") {
     const email = process.argv[3]?.trim().toLowerCase();
     if (!email || !/^\S+@\S+\.\S+$/.test(email))
@@ -139,7 +149,7 @@ try {
     );
   } else
     throw new Error(
-      "Commands: migrate, bootstrap <email>, demo, invalidate-sessions",
+      "Commands: migrate, bootstrap <email>, demo, seed-staging, invalidate-sessions",
     );
 } finally {
   await pool.end();

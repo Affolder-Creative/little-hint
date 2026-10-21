@@ -93,3 +93,11 @@ No physical-device, real SMTP/SMS/Telegram, live retailer success, or off-host r
 - Complete bundle bytes match between macOS/Python 3.14 and Linux/Python 3.12 with network disabled. The reviewed hashes are in `compliance/source-bundles.lock.json`. Both architecture gates accept those hashes.
 - Tests reject missing version coverage, path traversal, duplicate input paths, insecure source URLs, changed download bytes and corrupt caches. Archive contents and deterministic packaging are exercised. PR CI now assembles and verifies sources against each newly built image.
 - This validates source/build-input coverage and packaging. It does not claim bit-identical upstream binary rebuilds or publication of a GitHub Release/GHCR image during this review.
+
+## Isolated staging validation, 2026-10-21
+
+- Type checking and the production build passed. All 116 unit tests, 39 tooling tests, eight existing PostgreSQL integration tests, and five staging seed transaction tests passed.
+- Standalone staging Compose checks passed, including separate volumes/database identity, required configuration, runtime limits, and no published database or SMTP ports. Workflow validation passed with the repository's pinned actionlint release.
+- The local staging stack passed real email-code login through Mailpit with verified SMTP STARTTLS, protected Mailpit UI/API access, runtime environment metadata, blocked integration edits, uploads, and session/upload persistence after app/worker recreation. Seeding correctly allowed only the worker heartbeat in an otherwise empty database and refused a second seed.
+- The production-shaped container smoke test also passed. Removing the redundant Alpine certificate-package install unblocked the build while retaining the digest-pinned base's existing CA bundle. All 44 runtime source identifiers remained covered by the reviewed source manifests; complete source archives were not rebuilt locally for this change.
+- These are local validation results. Live staging requires the workflow on `main`, its first published image, staging-server capacity checks, DNS/TLS, registry credentials, and Coolify configuration. No production deployment was changed.

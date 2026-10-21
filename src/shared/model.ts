@@ -268,6 +268,7 @@ export interface GiftView extends Omit<Item, "creatorId"> {
   }>;
 }
 export interface World {
+  environment?: "production" | "staging" | "development" | "test";
   me: Actor & { admin: boolean };
   contributionHistory: Array<{
     contribution: Contribution;
