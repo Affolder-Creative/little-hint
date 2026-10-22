@@ -16,7 +16,7 @@ const required = {
   BETTER_AUTH_SECRET: "compose-check-auth-only",
   SETTINGS_ENCRYPTION_KEY: "compose-check-encryption-only",
 };
-function config(file, variables = {}) {
+function config(file, variables = {}, interpolate = true) {
   const result = spawnSync(
     "docker",
     [
@@ -25,6 +25,7 @@ function config(file, variables = {}) {
       emptyFile,
       ...[file].flat().flatMap((name) => ["-f", name]),
       "config",
+      ...(!interpolate ? ["--no-interpolate"] : []),
       "--format",
       "json",
     ],
@@ -140,6 +141,26 @@ console.log(
   "Compose checks passed: secret-free build, required runtime secrets, and shared local/registry app-worker images.",
 );
 
+// Coolify validates bind sources before Docker interpolates environment values.
+const unexpandedStaging = config("compose.staging.yaml", {}, false);
+assert.equal(unexpandedStaging.status, 0, unexpandedStaging.stderr);
+for (const service of Object.values(
+  JSON.parse(unexpandedStaging.stdout).services,
+)) {
+  for (const volume of service.volumes ?? []) {
+    if (volume.type !== "bind") continue;
+    assert.match(
+      volume.source,
+      /^\/data\/little-hint-staging\/tls\/(ca\.crt|mailpit\.crt|mailpit\.key)$/,
+      "Coolify requires a literal staging certificate bind source.",
+    );
+    assert.equal(
+      volume.read_only,
+      true,
+      "Certificate mounts must stay read-only.",
+    );
+  }
+}
 const stagingVars = {
   LITTLE_HINT_STAGING_IMAGE:
     "ghcr.io/example/little-hint-staging@sha256:" + "b".repeat(64),
@@ -148,7 +169,6 @@ const stagingVars = {
   STAGING_AUTH_SECRET: "staging-auth-only",
   STAGING_ENCRYPTION_KEY: "staging-encryption-only",
   STAGING_MAILPIT_UI_AUTH: "tester:staging-only",
-  STAGING_TLS_DIR: "/tmp/staging-tls",
 };
 for (const missing of Object.keys(stagingVars)) {
   const variables = { ...stagingVars };
