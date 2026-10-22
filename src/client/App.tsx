@@ -2366,91 +2366,138 @@ function Admin() {
         }>;
       }>("admin/jobs"),
   });
+  const photos = settings.data?.find(
+    (s) => s.key === "AUTO_IMPORT_PRODUCT_PHOTOS",
+  );
   return (
     <section className="settings-section">
       <h2>Administration</h2>
+      <h3>Product imports</h3>
+      {photos && (
+        <Form
+          key={`${photos.source}-${photos.value}`}
+          submit="Save photo preference"
+          disabled={photos.source === "environment"}
+          onSubmit={async (f) => {
+            await api("admin/settings", {
+              key: photos.key,
+              value: String(f.has("automaticPhotos")),
+            });
+            await client.invalidateQueries({ queryKey: ["admin-settings"] });
+            toast("Photo preference saved.");
+          }}
+        >
+          <label className="check">
+            <input
+              type="checkbox"
+              name="automaticPhotos"
+              defaultChecked={photos.value === "true"}
+              disabled={photos.source === "environment"}
+              aria-describedby="automatic-photos-help"
+            />
+            Automatically import product photos
+          </label>
+          <p id="automatic-photos-help" className="muted">
+            Download and store product photos when getting details from a URL.
+            Turn off to reduce storage use. Manual uploads and existing photos
+            are unaffected. Changes apply when each import starts; running
+            imports may still finish with a photo.
+          </p>
+          <p className="muted">
+            {photos.source === "environment"
+              ? "Managed by AUTO_IMPORT_PRODUCT_PHOTOS in the deployment environment."
+              : photos.source === "default"
+                ? "Off by default. Applies to everyone on this instance."
+                : "Saved preference. Applies to everyone on this instance."}
+          </p>
+        </Form>
+      )}
+      <h3>Integrations</h3>
       <p>
         Secrets are encrypted on the server. Environment variables take
         precedence. A blank saved value removes the UI override.
       </p>
       <div className="integration-settings">
-        {settings.data?.map((s) => (
-          <details key={s.key}>
-            <summary>
-              <span>
-                {s.key === "SCRAPING_PROVIDER"
-                  ? "Product import provider"
-                  : scrapingProviders.find((p) => p.key === s.key)?.name
-                    ? `${scrapingProviders.find((p) => p.key === s.key)!.name} API key`
-                    : s.key.replaceAll("_", " ").toLowerCase()}
-              </span>
-              <small>
-                {s.configured ? "Configured" : "Not configured"} · {s.source}
-              </small>
-            </summary>
-            <Form
-              submit="Save setting"
-              disabled={s.source === "environment"}
-              onSubmit={async (f) => {
-                await api("admin/settings", {
-                  key: s.key,
-                  value: value(f, "value"),
-                });
-                await client.invalidateQueries({
-                  queryKey: ["admin-settings"],
-                });
-                toast("Setting saved.");
-              }}
-            >
-              {s.key === "SCRAPING_PROVIDER" ? (
-                <>
-                  <Field
-                    label="Paid import provider"
-                    hint="Try a free direct import first, then at most one paid provider. Automatic selection prefers Scraping Fish."
-                  >
-                    <select
-                      name="value"
-                      defaultValue={s.value || "auto"}
-                      disabled={s.source === "environment"}
+        {settings.data
+          ?.filter((s) => s.key !== "AUTO_IMPORT_PRODUCT_PHOTOS")
+          .map((s) => (
+            <details key={s.key}>
+              <summary>
+                <span>
+                  {s.key === "SCRAPING_PROVIDER"
+                    ? "Product import provider"
+                    : scrapingProviders.find((p) => p.key === s.key)?.name
+                      ? `${scrapingProviders.find((p) => p.key === s.key)!.name} API key`
+                      : s.key.replaceAll("_", " ").toLowerCase()}
+                </span>
+                <small>
+                  {s.configured ? "Configured" : "Not configured"} · {s.source}
+                </small>
+              </summary>
+              <Form
+                submit="Save setting"
+                disabled={s.source === "environment"}
+                onSubmit={async (f) => {
+                  await api("admin/settings", {
+                    key: s.key,
+                    value: value(f, "value"),
+                  });
+                  await client.invalidateQueries({
+                    queryKey: ["admin-settings"],
+                  });
+                  toast("Setting saved.");
+                }}
+              >
+                {s.key === "SCRAPING_PROVIDER" ? (
+                  <>
+                    <Field
+                      label="Paid import provider"
+                      hint="Try a free direct import first, then at most one paid provider. Automatic selection prefers Scraping Fish."
                     >
-                      <option value="auto">Automatic selection</option>
-                      <option value="none">Direct import only</option>
-                      {scrapingProviders.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.name}
-                        </option>
-                      ))}
-                    </select>
+                      <select
+                        name="value"
+                        defaultValue={s.value || "auto"}
+                        disabled={s.source === "environment"}
+                      >
+                        <option value="auto">Automatic selection</option>
+                        <option value="none">Direct import only</option>
+                        {scrapingProviders.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+                    <p className="muted">
+                      Current paid provider:{" "}
+                      {scrapingProviders.find(
+                        (p) => p.id === s.effectiveProvider,
+                      )?.name ?? "None configured"}
+                      . Requests count toward the integration daily limit.
+                      Failed imports never switch to another paid provider.
+                    </p>
+                  </>
+                ) : (
+                  <Field
+                    label="New value"
+                    hint={s.default ? `Default: ${s.default}` : undefined}
+                  >
+                    <input
+                      name="value"
+                      type={/KEY|TOKEN|PASS/.test(s.key) ? "password" : "text"}
+                      autoComplete="off"
+                      disabled={s.source === "environment"}
+                      placeholder={
+                        s.source === "environment"
+                          ? "Managed through deployment environment"
+                          : "Enter a replacement value"
+                      }
+                    />
                   </Field>
-                  <p className="muted">
-                    Current paid provider:{" "}
-                    {scrapingProviders.find((p) => p.id === s.effectiveProvider)
-                      ?.name ?? "None configured"}
-                    . Requests count toward the integration daily limit. Failed
-                    imports never switch to another paid provider.
-                  </p>
-                </>
-              ) : (
-                <Field
-                  label="New value"
-                  hint={s.default ? `Default: ${s.default}` : undefined}
-                >
-                  <input
-                    name="value"
-                    type={/KEY|TOKEN|PASS/.test(s.key) ? "password" : "text"}
-                    autoComplete="off"
-                    disabled={s.source === "environment"}
-                    placeholder={
-                      s.source === "environment"
-                        ? "Managed through deployment environment"
-                        : "Enter a replacement value"
-                    }
-                  />
-                </Field>
-              )}
-            </Form>
-          </details>
-        ))}
+                )}
+              </Form>
+            </details>
+          ))}
       </div>
       <h3>Background delivery & backups</h3>
       <p>
@@ -2490,7 +2537,7 @@ function Admin() {
           </div>
         ))}
       {settings.error && (
-        <p className="error">Could not load integration settings.</p>
+        <p className="error">Could not load administration settings.</p>
       )}
     </section>
   );

@@ -1,7 +1,7 @@
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
 import { readState, transact } from "./db";
 import { stamp, fail } from "./domain";
-import { deploymentEnvironment } from "./deployment";
+import { deploymentEnvironment, productPhotoOverride } from "./deployment";
 import {
   scrapingSelections,
   selectedScrapingProvider,
@@ -87,7 +87,38 @@ export async function config(): Promise<Record<SettingKey, string>> {
     }),
   ) as Record<SettingKey, string>;
 }
+export const productPhotoSettingKey = "AUTO_IMPORT_PRODUCT_PHOTOS";
+
+// Application preferences are editable in staging; provider settings are not.
+export async function productPhotoSetting() {
+  const override = productPhotoOverride();
+  const saved =
+    override === undefined
+      ? (await readState()).settings.find(
+          (s) => s.key === productPhotoSettingKey,
+        )
+      : undefined;
+  return {
+    key: productPhotoSettingKey,
+    configured: override !== undefined || !!saved,
+    source:
+      override !== undefined ? "environment" : saved ? "settings" : "default",
+    default: "false",
+    value: String(
+      override ?? (saved ? decrypt(saved.encrypted) === "true" : false),
+    ),
+  };
+}
+
+export async function automaticallyImportProductPhotos(): Promise<boolean> {
+  return (await productPhotoSetting()).value === "true";
+}
+
 export async function settingsSummary() {
+  return [await productPhotoSetting(), ...(await integrationSettingsSummary())];
+}
+
+async function integrationSettingsSummary() {
   if (deploymentEnvironment() === "staging") {
     const cfg = stagingSettings();
     return settingKeys.map((key) => ({
@@ -120,13 +151,17 @@ export async function settingsSummary() {
   }));
 }
 export async function saveSetting(k: string, value: string) {
-  if (deploymentEnvironment() === "staging")
+  const photoPreference = k === productPhotoSettingKey;
+  if (photoPreference && value !== "true" && value !== "false")
+    fail(400, "Choose true or false for automatic product photos.");
+  if (!photoPreference && deploymentEnvironment() === "staging")
     fail(
       409,
       "Staging integrations are fixed to the private test inbox; external providers are disabled.",
     );
-  if (!settingKeys.includes(k as SettingKey)) fail(400, "Unknown setting.");
-  if (process.env[k])
+  if (!photoPreference && !settingKeys.includes(k as SettingKey))
+    fail(400, "Unknown setting.");
+  if (photoPreference ? productPhotoOverride() !== undefined : process.env[k])
     fail(409, "This setting is controlled by an environment variable.");
   if (k === "SCRAPING_PROVIDER" && value && !scrapingSelections.includes(value))
     fail(400, "Choose an available scraping provider.");

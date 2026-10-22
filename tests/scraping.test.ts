@@ -86,6 +86,23 @@ describe("provider selection", () => {
 });
 
 describe("single paid preview attempt", () => {
+  it("does not pay solely for a missing image when photos are OFF", async () => {
+    const fetcher = vi.fn(
+      async () => new Response('<meta property="og:title" content="Book">'),
+    );
+    vi.stubGlobal("fetch", fetcher);
+    const partial = { title: "Direct title" };
+    expect(await paidProductPreview(target, partial, keys, false)).toEqual(
+      partial,
+    );
+    expect(fetcher).not.toHaveBeenCalled();
+    expect(spend).not.toHaveBeenCalled();
+    await paidProductPreview(target, {}, keys, false);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(spend).toHaveBeenCalledTimes(1);
+    await paidProductPreview(target, partial, keys, true);
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  });
   it.each(scrapingProviders)("parses HTML from $name", async (p) => {
     const fetcher = vi.fn(
       async (_url: unknown, _options: unknown) =>
@@ -137,7 +154,9 @@ describe("single paid preview attempt", () => {
       });
       vi.stubGlobal("fetch", fetcher);
       const partial = { title: "Direct title", priceCents: 1234 };
-      expect(await paidProductPreview(target, partial, keys)).toEqual(partial);
+      expect(await paidProductPreview(target, partial, keys, true)).toEqual(
+        partial,
+      );
       expect(fetcher).toHaveBeenCalledTimes(1);
       expect(spend).toHaveBeenCalledTimes(1);
     },

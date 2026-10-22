@@ -237,3 +237,23 @@ assert.equal(
 console.log(
   "Staging checks passed: dedicated data, fixed mail capture, bounded memory, no build or published ports.",
 );
+
+// Blank leaves UI control available; explicit false must reach both processes.
+for (const [file, variables] of [
+  ["compose.yaml", required],
+  ["compose.staging.yaml", stagingVars],
+]) {
+  for (const value of ["", "true", "false"]) {
+    const parsed = config(file, {
+      ...variables,
+      AUTO_IMPORT_PRODUCT_PHOTOS: value,
+    });
+    assert.equal(parsed.status, 0, parsed.stderr);
+    const services = JSON.parse(parsed.stdout).services;
+    for (const name of ["app", "worker"])
+      assert.equal(
+        services[name].environment.AUTO_IMPORT_PRODUCT_PHOTOS,
+        value,
+      );
+  }
+}

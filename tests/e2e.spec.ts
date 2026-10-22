@@ -1,3 +1,4 @@
+import sharp from "sharp";
 import AxeBuilder from "@axe-core/playwright";
 import { test, expect, type Page, type BrowserContext } from "@playwright/test";
 import { readdir, readFile, mkdir } from "node:fs/promises";
@@ -390,4 +391,90 @@ test("the worker safely fails a private-network import without blocking manual e
     listId: w.lists.find((l: any) => l.canEdit).id,
   });
   expect(gift.title).toMatch(/^Manual fallback/);
+});
+
+test("administrators control automatic photos without affecting manual uploads", async ({
+  page,
+  browser,
+}) => {
+  const key = "AUTO_IMPORT_PRODUCT_PHOTOS";
+  await login(page, "alex@example.test");
+  await page.goto("/settings");
+  const toggle = page.getByRole("checkbox", {
+    name: "Automatically import product photos",
+    exact: true,
+  });
+  await expect(toggle).not.toBeChecked();
+  await expect(toggle).toBeEnabled();
+  const png = await sharp({
+    create: { width: 2, height: 2, channels: 3, background: "red" },
+  })
+    .png()
+    .toBuffer();
+  const upload = await page.request.post("/api/v1/media", {
+    headers: {
+      Origin: new URL(page.url()).origin,
+      "Content-Type": "application/octet-stream",
+    },
+    data: png,
+  });
+  expect(upload.ok(), await upload.text()).toBe(true);
+  const image = (await upload.json()).url;
+  const world = await (await page.request.get("/api/v1/world")).json();
+  const gift = await post(page, "items", {
+    title: `Manual photo ${Date.now()}`,
+    listId: world.lists.find((l: any) => l.canEdit && !l.archived).id,
+    image,
+  });
+  try {
+    await toggle.check();
+    await page
+      .getByRole("button", { name: "Save photo preference", exact: true })
+      .click();
+    await expect(
+      page.getByRole("status").filter({ hasText: "Photo preference saved." }),
+    ).toBeVisible();
+    await page.reload();
+    await expect(toggle).toBeChecked();
+    await toggle.uncheck();
+    await page
+      .getByRole("button", { name: "Save photo preference", exact: true })
+      .click();
+    await expect(
+      page.getByRole("status").filter({ hasText: "Photo preference saved." }),
+    ).toBeVisible();
+    await page.reload();
+    await expect(toggle).not.toBeChecked();
+    expect((await page.request.get(image)).ok()).toBe(true);
+    await page.goto(`/gift/${gift.id}`);
+    await expect(
+      page.getByRole("img", { name: gift.title, exact: true }),
+    ).toBeVisible();
+    const member = await browser.newContext();
+    try {
+      const memberPage = await member.newPage();
+      await login(memberPage, "sam@example.test");
+      await memberPage.goto("/settings");
+      await expect(
+        memberPage.getByRole("checkbox", {
+          name: "Automatically import product photos",
+        }),
+      ).toHaveCount(0);
+      expect(
+        (await memberPage.request.get("/api/v1/admin/settings")).status(),
+      ).toBe(403);
+      expect(
+        (
+          await memberPage.request.post("/api/v1/admin/settings", {
+            headers: { Origin: new URL(memberPage.url()).origin },
+            data: { key, value: "true" },
+          })
+        ).status(),
+      ).toBe(403);
+    } finally {
+      await member.close();
+    }
+  } finally {
+    await post(page, "admin/settings", { key, value: "false" });
+  }
 });
