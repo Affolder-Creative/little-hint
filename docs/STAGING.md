@@ -35,7 +35,7 @@ Schedule certificate maintenance with your normal operations process. Before exp
 
 ## 3. Configure Coolify
 
-Create a `staging` environment in the existing project and a new Git-based Compose application on the staging server. Use `main` as the configuration source and `/compose.staging.yaml` as its Compose location. This is a **standalone** file; do not combine it with production Compose files. Leave custom build and start commands empty. There are no `build` services. Disable automatic deployments and preview deployments on this resource.
+Create a `staging` environment in the existing project and a new Git-based Compose application on the staging server. Use `main` as the configuration source and `/compose.staging.yaml` as its Compose location. This is a **standalone** file; do not combine it with production Compose files. Set **Custom build command** to `true` and leave the custom start command empty. Coolify otherwise runs Compose during its build phase without runtime-only variables, which fails on the required secrets. The `true` command skips that unnecessary phase; normal startup receives the runtime variables and pulls missing images. There are no `build` services. Disable automatic deployments and preview deployments on this resource.
 
 Set the variables from `.env.staging.example` as Runtime-only. Use fresh secrets:
 
