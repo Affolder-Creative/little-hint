@@ -23,7 +23,6 @@ function fixture() {
     name,
     userId: `user-${n}`,
     guardians: [],
-    household: "",
   }));
   s.people.push(...people);
   const actors = people.map((p) => ({
@@ -130,7 +129,6 @@ describe("surprise privacy", () => {
       ...stamp(),
       name: "Child",
       guardians: [f.actors[0].id],
-      household: "",
     };
     f.s.people.push(child as any);
     f.item.recipientIds = [child.id, f.people[2].id];
@@ -304,7 +302,7 @@ describe("exchanges", () => {
         status: "draft",
         assignments: [],
       } as Exchange;
-      const result = matchExchange(e, f.people);
+      const result = matchExchange(e, f.people, f.s);
       expect(result).toHaveLength(count * 4);
       expect(new Set(result.map((p) => p.join(":"))).size).toBe(result.length);
       for (const p of f.people) {
@@ -328,14 +326,14 @@ describe("exchanges", () => {
       status: "draft",
       assignments: [],
     } as Exchange;
-    const old = matchExchange(e, f.people),
-      next = matchExchange(e, f.people, old);
+    const old = matchExchange(e, f.people, f.s),
+      next = matchExchange(e, f.people, f.s, old);
     expect(
       next.some(([g, r]) => old.some(([a, b]) => g === a && r === b)),
     ).toBe(false);
     e.count = 3;
     e.exclusions = [[f.people[0].id, f.people[1].id]];
-    expect(() => matchExchange(e, f.people)).toThrow("balanced");
+    expect(() => matchExchange(e, f.people, f.s)).toThrow("balanced");
   });
   it("does not expose another giver identity or purchase progress", () => {
     const f = fixture();

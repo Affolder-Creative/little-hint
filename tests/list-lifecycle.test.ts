@@ -22,7 +22,6 @@ function fixture(options: Partial<List> = {}, shared = true) {
     name: a.name,
     userId: a.id,
     guardians: [],
-    household: "",
   }));
   const group = {
     ...stamp(),

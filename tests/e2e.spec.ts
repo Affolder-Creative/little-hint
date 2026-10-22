@@ -201,7 +201,6 @@ test("invitation verification, explicit profile linking, joint ownership, and ow
   expect(gw.groups.map((g: any) => g.id)).toContain(group.id);
   const managed = await post(op, "people", {
     name: "Managed recipient",
-    household: "Family",
   });
   await post(op, "people/link", { id: managed.id, email });
   gw = await (await gp.request.get("/api/v1/world")).json();

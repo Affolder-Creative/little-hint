@@ -125,7 +125,7 @@ function checkSharedListPolicy(
 function managedEventGroup(s: State, a: Actor, groupId: string): Group {
   return (
     s.groups.find((g) => g.id === groupId && canManageGroupEvents(g, a.id)) ??
-    fail(404, "Event management is not available for this group.")
+    fail(404, "Event management is not available for this family group.")
   );
 }
 function checkEventParticipants(
@@ -137,7 +137,7 @@ function checkEventParticipants(
   if (participantIds.some((personId) => !eligible.has(personId)))
     fail(
       400,
-      "Choose people who belong to this group. Refresh to see current members.",
+      "Choose people who belong to this family group. Refresh to see current members.",
     );
 }
 function syncEventLists(s: State, event: GroupEvent) {
@@ -203,6 +203,23 @@ function reconcileEventParticipants(s: State) {
   }
 }
 
+function reconcileHouseholds(s: State) {
+  const eligible = new Map(
+    s.groups.map((g) => [
+      g.id,
+      new Set(peopleForGroup(s.people, g).map((p) => p.id)),
+    ]),
+  );
+  const affected = new Set<string>();
+  s.householdMemberships = s.householdMemberships.filter((m) => {
+    const h = s.households.find((h) => h.id === m.householdId);
+    if (h && eligible.get(h.groupId)?.has(m.personId)) return true;
+    affected.add(m.personId);
+    return false;
+  });
+  s.people.filter((p) => affected.has(p.id)).forEach(touch);
+}
+
 export const controllers = (p: Person) =>
   [p.userId, ...p.guardians].filter((v): v is string => !!v);
 export const controls = (s: State, a: Actor, id: string) =>
@@ -216,7 +233,7 @@ export const isAdmin = (s: State, a: Actor) =>
   s.people.some((p) => p.userId === a.id && p.admin);
 const ownedGroup = (s: State, a: Actor, id: string) =>
   s.groups.find((g) => g.id === id && g.ownerId === a.id) ??
-  fail(404, "Group not found.");
+  fail(404, "Family group not found.");
 const personVisible = (s: State, a: Actor, p: Person) =>
   controllers(p).includes(a.id) ||
   s.groups.some(
@@ -232,7 +249,8 @@ const checkRecipients = (s: State, a: Actor, rs: string[]) => {
     fail(400, "Choose an available recipient.");
 };
 const checkGroups = (s: State, a: Actor, gs: string[]) => {
-  if (gs.some((g) => !groupAccess(s, a, g))) fail(404, "Group not found.");
+  if (gs.some((g) => !groupAccess(s, a, g)))
+    fail(404, "Family group not found.");
 };
 export const recipient = (s: State, a: Actor, i: Item) =>
   i.recipientIds.some((p) => controls(s, a, p));
@@ -493,6 +511,12 @@ export function world(s: State, a: Actor): World {
     },
     people,
     groups: s.groups.filter((g) => member(g, a)),
+    households: s.households.filter((h) => groupAccess(s, a, h.groupId)),
+    householdMemberships: s.householdMemberships.filter((m) =>
+      s.households.some(
+        (h) => h.id === m.householdId && groupAccess(s, a, h.groupId),
+      ),
+    ),
     groupEvents: s.groupEvents
       .filter((event) => groupAccess(s, a, event.groupId))
       .map((event) => ({
@@ -613,7 +637,6 @@ export function activateAccount(s: State, a: Actor) {
     name: a.name || a.email.split("@")[0],
     userId: a.id,
     guardians: [],
-    household: "",
     admin: !!grant.bootstrap,
   };
   s.people.push(p);
@@ -694,6 +717,85 @@ export function command(
 ): unknown {
   const b = raw as Record<string, unknown>;
   switch (action) {
+    case "households.create": {
+      const p = z.object({ groupId: id, name: text }).parse(b);
+      ownedGroup(s, a, p.groupId);
+      const household = { ...stamp(), ...p };
+      s.households.push(household);
+      return household;
+    }
+    case "households.update": {
+      const p = z.object({ id, revision, name: text }).parse(b);
+      const household =
+        s.households.find((h) => h.id === p.id) ??
+        fail(404, "Household not found.");
+      ownedGroup(s, a, household.groupId);
+      checkRevision(household, p.revision);
+      household.name = p.name;
+      touch(household);
+      return household;
+    }
+    case "households.delete": {
+      const p = z.object({ id, revision }).parse(b);
+      const household =
+        s.households.find((h) => h.id === p.id) ??
+        fail(404, "Household not found.");
+      ownedGroup(s, a, household.groupId);
+      checkRevision(household, p.revision);
+      const affected = new Set(
+        s.householdMemberships
+          .filter((m) => m.householdId === p.id)
+          .map((m) => m.personId),
+      );
+      s.householdMemberships = s.householdMemberships.filter(
+        (m) => m.householdId !== p.id,
+      );
+      s.households = s.households.filter((h) => h.id !== p.id);
+      s.people.filter((p) => affected.has(p.id)).forEach(touch);
+      return { ok: true };
+    }
+    case "households.memberships": {
+      const p = z
+        .object({ groupId: id, personId: id, revision, householdIds: ids })
+        .parse(b);
+      const group =
+        s.groups.find((g) => g.id === p.groupId && member(g, a)) ??
+        fail(404, "Family group not found.");
+      const person =
+        peopleForGroup(s.people, group).find((q) => q.id === p.personId) ??
+        fail(404, "Person not found in this family group.");
+      if (group.ownerId !== a.id && !controls(s, a, person.id))
+        fail(
+          403,
+          "Only the family-group owner or this person's controller can change their households.",
+        );
+      checkRevision(person, p.revision);
+      const householdIds = new Set(
+        s.households.filter((h) => h.groupId === group.id).map((h) => h.id),
+      );
+      if (p.householdIds.some((id) => !householdIds.has(id)))
+        fail(400, "Choose households in this family group.");
+      s.householdMemberships = s.householdMemberships.filter(
+        (m) =>
+          m.personId !== person.id ||
+          !householdIds.has(m.householdId) ||
+          p.householdIds.includes(m.householdId),
+      );
+      for (const householdId of p.householdIds) {
+        if (
+          !s.householdMemberships.some(
+            (m) => m.personId === person.id && m.householdId === householdId,
+          )
+        )
+          s.householdMemberships.push({
+            ...stamp(),
+            householdId,
+            personId: person.id,
+          });
+      }
+      touch(person);
+      return { ok: true };
+    }
     case "groups.create": {
       const p = z.object({ name: text }).parse(b);
       const g: Group = {
@@ -722,7 +824,7 @@ export function command(
             !group.memberIds.includes(userId) || userId === group.ownerId,
         )
       )
-        fail(400, "Choose current members other than the group owner.");
+        fail(400, "Choose current members other than the family-group owner.");
       group.eventLeaderIds = p.userIds;
       touch(group);
       return { ok: true };
@@ -797,7 +899,7 @@ export function command(
         ) ?? fail(404, "Invitation not found.");
       const g =
         s.groups.find((g) => g.id === inv.groupId) ??
-        fail(404, "Group not found.");
+        fail(404, "Family group not found.");
       g.memberIds = [...new Set([...g.memberIds, a.id])];
       inv.acceptedBy = a.id;
       touch(inv);
@@ -818,7 +920,7 @@ export function command(
       const p = z.object({ groupId: id, userId: z.string() }).parse(b);
       const g =
         s.groups.find((g) => g.id === p.groupId && member(g, a)) ??
-        fail(404, "Group not found.");
+        fail(404, "Family group not found.");
       if (p.userId !== a.id && g.ownerId !== a.id)
         fail(403, "Only the owner can remove another member.");
       if (g.ownerId === p.userId)
@@ -826,6 +928,7 @@ export function command(
       g.memberIds = g.memberIds.filter((u) => u !== p.userId);
       g.eventLeaderIds = (g.eventLeaderIds ?? []).filter((u) => u !== p.userId);
       reconcileEventParticipants(s);
+      reconcileHouseholds(s);
       touch(g);
       reconcileAccess(s);
       return { ok: true };
@@ -867,7 +970,7 @@ export function command(
               g.id === l.targetId &&
               g.ownerId === l.requestedBy &&
               member(g, a),
-          ) ?? fail(404, "Group not found.");
+          ) ?? fail(404, "Family group not found.");
         g.ownerId = a.id;
         touch(g);
       } else if (l.kind === "profile") {
@@ -887,26 +990,22 @@ export function command(
       l.consumed = true;
       touch(l);
       reconcileEventParticipants(s);
+      reconcileHouseholds(s);
       return { ok: true };
     }
     case "people.create": {
-      const p = z
-        .object({ name: text, household: z.string().max(100).default("") })
-        .parse(b);
+      const p = z.object({ name: text }).parse(b);
       const person: Person = { ...stamp(), ...p, guardians: [a.id] };
       s.people.push(person);
       return person;
     }
     case "people.update": {
-      const p = z
-        .object({ id, revision, name: text, household: z.string().max(100) })
-        .parse(b);
+      const p = z.object({ id, revision, name: text }).parse(b);
       const person =
         s.people.find((q) => q.id === p.id && controls(s, a, q.id)) ??
         fail(404, "Profile not found.");
       checkRevision(person, p.revision);
       person.name = p.name;
-      person.household = p.household;
       touch(person);
       return person;
     }
@@ -1039,7 +1138,7 @@ export function command(
           fail(400, "Use a wish list for your own gifts.");
         checkGroups(s, a, p.groupIds);
         if (p.visibility !== "private" && !p.groupIds.length)
-          fail(400, "Select a group to share this idea.");
+          fail(400, "Select a family group to share this idea.");
       }
       const duplicate = s.items.find(
         (i) =>
@@ -1093,7 +1192,7 @@ export function command(
       if (!i.listId) {
         checkGroups(s, a, p.groupIds);
         if (p.visibility !== "private" && !p.groupIds.length)
-          fail(400, "Select a group to share this idea.");
+          fail(400, "Select a family group to share this idea.");
       }
       Object.assign(i, p);
       touch(i);
@@ -1306,7 +1405,7 @@ export function command(
           previousId: id.optional(),
         })
         .parse(b);
-      if (!groupAccess(s, a, p.groupId)) fail(404, "Group not found.");
+      if (!groupAccess(s, a, p.groupId)) fail(404, "Family group not found.");
       const g = s.groups.find((g) => g.id === p.groupId)!;
       if (
         p.participantIds.some(
@@ -1318,7 +1417,7 @@ export function command(
             ),
         )
       )
-        fail(400, "Every participant must belong to the group.");
+        fail(400, "Every participant must belong to the family group.");
       if (
         p.previousId &&
         !s.exchanges.some(
@@ -1333,7 +1432,7 @@ export function command(
         status: "draft",
         assignments: [],
       };
-      matchExchange(e, s.people);
+      matchExchange(e, s.people, s);
       s.exchanges.push(e);
       return { id: e.id };
     }
@@ -1360,7 +1459,10 @@ export function command(
             ),
         )
       )
-        fail(409, "A participant has left the group. Create a new exchange.");
+        fail(
+          409,
+          "A participant has left the family group. Create a new exchange.",
+        );
       if (
         e.participantIds.some(
           (p) =>
@@ -1375,11 +1477,12 @@ export function command(
       )
         fail(
           400,
-          "Each participant needs a Surprise list shared with this group.",
+          "Each participant needs a Surprise list shared with this family group.",
         );
       e.assignments = matchExchange(
         e,
         s.people,
+        s,
         s.exchanges.find((p) => p.id === e.previousId)?.assignments,
       );
       e.status = "drawn";

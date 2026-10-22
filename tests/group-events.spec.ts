@@ -43,7 +43,7 @@ test("leaders manage an occasion while recipients add wishes and unselected memb
       .getByLabel("Event name", { exact: true })
       .fill("Christmas 2026");
     await leader
-      .getByLabel("A note for the group")
+      .getByLabel("A note for the family group")
       .fill(
         "A few wishes for our family Christmas. Add things you would love, and we’ll take care of the surprises.",
       );
@@ -311,5 +311,136 @@ test("leaders manage an occasion while recipients add wishes and unselected memb
   } finally {
     await leaderContext.close();
     await shopperContext.close();
+  }
+});
+
+test("family-group households support duplicate names and member-controlled selections", async ({
+  page,
+  browser,
+}) => {
+  test.setTimeout(180000);
+  const context = await browser.newContext();
+  const member = await context.newPage();
+  try {
+    await login(page, "alex@example.test");
+    await login(member, "sam@example.test");
+    const group = await post(page, "groups", {
+      name: "Household browser test",
+    });
+    await post(page, "groups", { name: "Household browser test" });
+    const invitation = await post(page, "groups/invite", {
+      groupId: group.id,
+      email: "sam@example.test",
+    });
+    await post(member, "invitations/accept", { id: invitation.id });
+    const child = await post(member, "people", { name: "Household child" });
+    await page.goto("/settings");
+    const section = page.locator(`[data-group-id="${group.id}"]`);
+    for (let i = 0; i < 2; i++) {
+      await section
+        .getByRole("button", { name: "Create household", exact: true })
+        .click();
+      await page
+        .getByLabel("Household name", { exact: true })
+        .fill("The Smiths");
+      await page
+        .getByRole("dialog")
+        .getByRole("button", { name: "Create household", exact: true })
+        .click();
+      await expect(page.getByRole("dialog")).not.toBeVisible();
+    }
+    const w = await readWorld(page);
+    const homes = w.households.filter((h) => h.groupId === group.id);
+    expect(homes).toHaveLength(2);
+    await member.goto("/settings");
+    const memberSection = member.locator(`[data-group-id="${group.id}"]`);
+    await expect(
+      memberSection.getByRole("button", {
+        name: "Create household",
+        exact: true,
+      }),
+    ).toHaveCount(0);
+    await expect(
+      memberSection.getByRole("button", {
+        name: "Choose households for Alex Morgan",
+        exact: true,
+      }),
+    ).toHaveCount(0);
+    await memberSection
+      .getByRole("button", {
+        name: "Choose households for Household child",
+        exact: true,
+      })
+      .click();
+    const dialog = member.getByRole("dialog");
+    const labels = await dialog
+      .getByRole("checkbox")
+      .evaluateAll((inputs) =>
+        inputs.map((i) => i.closest("label")!.textContent),
+      );
+    expect(new Set(labels).size).toBe(2);
+    for (const home of homes)
+      await dialog.locator(`input[value="${home.id}"]`).check();
+    await dialog.getByRole("button", { name: "Save households" }).click();
+    await expect(dialog).not.toBeVisible();
+    expect(
+      (await readWorld(member)).householdMemberships.filter(
+        (m) => m.personId === child.id,
+      ),
+    ).toHaveLength(2);
+    await page.reload();
+    await section
+      .getByRole("button", { name: /^Rename / })
+      .first()
+      .click();
+    await page
+      .getByLabel("Household name", { exact: true })
+      .fill("School-week home");
+    await page
+      .getByRole("button", { name: "Save household", exact: true })
+      .click();
+    await expect(page.getByRole("dialog")).not.toBeVisible();
+    const renamed = await readWorld(page);
+    expect(
+      renamed.householdMemberships.filter((m) => m.personId === child.id),
+    ).toHaveLength(2);
+    await mkdir("test-results/visual", { recursive: true });
+    for (const [name, width, height] of [
+      ["desktop", 1440, 1000],
+      ["mobile", 393, 852],
+    ] as const) {
+      await page.setViewportSize({ width, height });
+      await section.locator(".household-settings").scrollIntoViewIfNeeded();
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+      ).toBe(true);
+      await page.screenshot({
+        path: `test-results/visual/households-${name}.png`,
+      });
+    }
+    expect(
+      (
+        await new AxeBuilder({ page })
+          .include(`[data-group-id="${group.id}"]`)
+          .analyze()
+      ).violations,
+    ).toEqual([]);
+    await section
+      .getByRole("button", { name: /^Delete School-week home/ })
+      .click();
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: "Delete household", exact: true })
+      .click();
+    await expect(page.getByRole("dialog")).not.toBeVisible();
+    expect(
+      (await readWorld(page)).householdMemberships.filter(
+        (m) => m.personId === child.id,
+      ),
+    ).toHaveLength(1);
+  } finally {
+    await context.close();
   }
 });

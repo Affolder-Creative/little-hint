@@ -1,3 +1,6 @@
+import { Confirm } from "./Confirm";
+import { familyGroupLabel } from "../shared/households";
+import { HouseholdSettings } from "./Households";
 /* Little Hint operates as a quiet, practical gift notebook. Approved heart-tag artwork anchors the shell; product content leads. */
 import { useEffect, useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -249,7 +252,7 @@ export function App() {
             <Avatar name={world.me.name} small />
             <span>
               {world.me.name.split(" ")[0]}
-              <small>Settings & your groups</small>
+              <small>Settings & your family groups</small>
             </span>
             <Settings size={18} />
           </NavLink>
@@ -461,7 +464,7 @@ function Invitations() {
             <Mail size={22} />
             <div>
               <h3>You’re invited to a circle.</h3>
-              <p>Accept to see the lists shared with this group.</p>
+              <p>Accept to see the lists shared with this family group.</p>
             </div>
             <Action
               onClick={async () => {
@@ -621,12 +624,12 @@ function Home() {
               onClick={() => open("Create your circle", <GroupForm />)}
             >
               <Plus size={17} />
-              Create a group
+              Create a family group
             </button>
           }
         >
-          Bring your family or friends together in a private group, then share
-          your first wish list.
+          Bring your family or friends together in a private family group, then
+          share your first wish list.
         </Empty>
       ) : (
         <Browser
@@ -919,7 +922,7 @@ function Lists() {
                           .map(
                             (id) =>
                               world.groups.find((g) => g.id === id)?.name ??
-                              "Shared group",
+                              "Shared family group",
                           )
                           .join(" · ")
                       : "Only you for now"}
@@ -1603,33 +1606,11 @@ function Exchanges() {
         </div>
       ) : (
         <Empty title="A reason to surprise each other">
-          Create a group, choose participants, and let Little Hint draw the
-          names. It works any time of year.
+          Create a family group, choose participants, and let Little Hint draw
+          the names. It works any time of year.
         </Empty>
       )}
     </>
-  );
-}
-function Confirm({
-  children,
-  onConfirm,
-  label,
-}: {
-  children: ReactNode;
-  onConfirm: () => Promise<unknown>;
-  label: string;
-}) {
-  const { close } = useApp();
-  return (
-    <Form
-      submit={label}
-      onSubmit={async () => {
-        await onConfirm();
-        close();
-      }}
-    >
-      <p>{children}</p>
-    </Form>
   );
 }
 function SettingsPage({
@@ -1695,7 +1676,7 @@ function SettingsPage({
                         <p>
                           They must sign in with this email and accept. Your
                           guardian access will end when they claim the profile.
-                          Invite them to the group separately if needed.
+                          Invite them to the family group separately if needed.
                         </p>
                       </Form>,
                     )
@@ -1713,7 +1694,7 @@ function SettingsPage({
                 <p>
                   {l.kind === "profile"
                     ? "A profile claim request"
-                    : "A group ownership request"}{" "}
+                    : "A family-group ownership request"}{" "}
                   is pending.
                 </p>
                 {(l.email === world.me.email ||
@@ -1734,25 +1715,30 @@ function SettingsPage({
         </section>
         <section className="settings-section">
           <div className="section-heading">
-            <h2>Your groups</h2>
+            <h2>Your family groups</h2>
             <button
               className="text-button"
-              onClick={() => open("Create a group", <GroupForm />)}
+              onClick={() => open("Create a family group", <GroupForm />)}
             >
               <Plus size={16} />
-              Create group
+              Create family group
             </button>
           </div>
+          <p className="muted">
+            Family groups control membership, invitations, shared lists, and
+            exchanges. You can create or join more than one.
+          </p>
           <Invitations />
           {world.groups.map((g) => (
-            <div className="group-settings" key={g.id}>
-              <h3>{g.name}</h3>
+            <div className="group-settings" key={g.id} data-group-id={g.id}>
+              <h3>{familyGroupLabel(g, world)}</h3>
               <p>
                 {g.ownerId === world.me.id
-                  ? "You own this group."
-                  : "You’re a member of this group."}
+                  ? "You own this family group."
+                  : "You’re a member of this family group."}
               </p>
               <GroupEventSettings group={g} />
+              <HouseholdSettings group={g} />
               <div className="member-list">
                 {g.memberIds.map((uid) => {
                   const person = world.people.find((p) => p.userId === uid);
@@ -1773,7 +1759,7 @@ function SettingsPage({
                             className="text-button"
                             onClick={() =>
                               open(
-                                "Transfer group ownership",
+                                "Transfer family-group ownership",
                                 <Form
                                   submit="Request transfer"
                                   onSubmit={async (f) => {
@@ -1813,7 +1799,7 @@ function SettingsPage({
                                     })
                                   }
                                 >
-                                  They will lose this group’s access.
+                                  They will lose this family group’s access.
                                   Unpurchased reservations with no remaining
                                   access will be released.
                                 </Confirm>,
@@ -1834,7 +1820,7 @@ function SettingsPage({
                     className="button secondary small"
                     onClick={() =>
                       open(
-                        `Invite someone to ${g.name}`,
+                        `Invite someone to ${familyGroupLabel(g, world)}`,
                         <Form
                           submit="Send invitation"
                           onSubmit={async (f) => {
@@ -1881,9 +1867,9 @@ function SettingsPage({
                   className="text-button"
                   onClick={() =>
                     open(
-                      "Leave this group?",
+                      "Leave this family group?",
                       <Confirm
-                        label="Leave group"
+                        label="Leave family group"
                         onConfirm={() =>
                           mutate("groups/remove", {
                             groupId: g.id,
@@ -1892,12 +1878,12 @@ function SettingsPage({
                         }
                       >
                         You’ll lose access to lists shared only through this
-                        group.
+                        family group.
                       </Confirm>,
                     )
                   }
                 >
-                  Leave group
+                  Leave family group
                 </button>
               )}
             </div>

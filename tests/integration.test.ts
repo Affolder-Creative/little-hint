@@ -42,7 +42,6 @@ describe.skipIf(!url)("PostgreSQL transaction integrity", () => {
         name: a.name,
         userId: a.id,
         guardians: [],
-        household: "",
       }));
       s.people.push(...people);
       const g = {
@@ -303,6 +302,48 @@ describe.skipIf(!url)("PostgreSQL transaction integrity", () => {
         .filter((list) => listIds.includes(list.id))
         .every((list) => list.archived),
     ).toBe(true);
+  });
+  it("persists household links atomically and rejects concurrent stale membership edits", async () => {
+    const household = (await storage.transact((s) =>
+      command(s, a, "households.create", { groupId, name: "The Smiths" }),
+    )) as { id: string; revision: number };
+    const state = await storage.readState();
+    const person = state.people.find((p) => p.userId === b.id)!;
+    const input = {
+      groupId,
+      personId: person.id,
+      revision: person.revision,
+      householdIds: [household.id],
+    };
+    const results = await Promise.allSettled([
+      storage.transact((s) => command(s, b, "households.memberships", input)),
+      storage.transact((s) => command(s, b, "households.memberships", input)),
+    ]);
+    expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+    expect(
+      (await storage.readState()).householdMemberships.filter(
+        (m) => m.householdId === household.id,
+      ),
+    ).toHaveLength(1);
+    await expect(
+      storage.transact((s) => {
+        command(s, a, "households.delete", household);
+        throw new Error("Abort deletion");
+      }),
+    ).rejects.toThrow("Abort deletion");
+    expect(
+      (await storage.readState()).householdMemberships.filter(
+        (m) => m.householdId === household.id,
+      ),
+    ).toHaveLength(1);
+    await storage.transact((s) =>
+      command(s, a, "households.delete", household),
+    );
+    const after = await storage.readState();
+    expect(after.households.some((h) => h.id === household.id)).toBe(false);
+    expect(
+      after.householdMemberships.some((m) => m.householdId === household.id),
+    ).toBe(false);
   });
   it("persists a failed job across worker restart and completes its retry", async () => {
     const { PgBoss } = await import("pg-boss");

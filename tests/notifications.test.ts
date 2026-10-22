@@ -43,7 +43,6 @@ function fixture() {
     userId: a.id,
     name: a.name,
     guardians: [],
-    household: "",
   }));
   s.people.push(...people);
   const group = {

@@ -1,14 +1,26 @@
 import { randomInt } from "node:crypto";
-import type { Exchange, Person } from "../shared/model";
+import type { Exchange, Person, State } from "../shared/model";
 // Integral min-cost flow: each participant gives and receives exactly k gifts.
 export function matchExchange(
   e: Exchange,
   people: Person[],
+  households: Pick<State, "households" | "householdMemberships">,
   previous: [string, string][] = [],
 ): [string, string][] {
   const ps = e.participantIds.map((id) => people.find((p) => p.id === id)!);
   if (ps.some((p) => !p) || ps.length > 100)
     throw new Error("Choose between 2 and 100 eligible participants.");
+  const inGroup = new Set(
+    households.households
+      .filter((h) => h.groupId === e.groupId)
+      .map((h) => h.id),
+  );
+  const memberships = new Map<string, Set<string>>();
+  for (const m of households.householdMemberships) {
+    if (!inGroup.has(m.householdId)) continue;
+    if (!memberships.has(m.personId)) memberships.set(m.personId, new Set());
+    memberships.get(m.personId)!.add(m.householdId);
+  }
   const n = ps.length,
     k = e.count,
     N = 2 * n + 2,
@@ -34,8 +46,9 @@ export function matchExchange(
         i === j ||
         controls(ps[i]).some((a) => controls(ps[j]).includes(a)) ||
         (e.excludeHousehold &&
-          ps[i].household &&
-          ps[i].household === ps[j].household) ||
+          [...(memberships.get(ps[i].id) ?? [])].some((id) =>
+            memberships.get(ps[j].id)?.has(id),
+          )) ||
         e.exclusions.some(([a, b]) => a === ps[i].id && b === ps[j].id)
       )
         continue;

@@ -1,3 +1,4 @@
+import { familyGroupLabel } from "../shared/households";
 import { useEffect, useRef, useState } from "react";
 import {
   Link as LinkIcon,
@@ -17,13 +18,13 @@ export function GroupForm() {
   const { mutate, close } = useApp();
   return (
     <Form
-      submit="Create group"
+      submit="Create family group"
       onSubmit={async (f) => {
         await mutate("groups", { name: value(f, "name") });
         close();
       }}
     >
-      <Field label="Group name">
+      <Field label="Family group name">
         <input
           name="name"
           required
@@ -32,8 +33,8 @@ export function GroupForm() {
         />
       </Field>
       <p className="muted">
-        Invite friends and family after creating your group. Only its members
-        can see lists shared with it.
+        Invite friends and family after creating your family group. Only its
+        members can see lists shared with it.
       </p>
     </Form>
   );
@@ -48,7 +49,6 @@ export function PersonForm({ id }: { id?: string }) {
         await mutate(person ? "people/update" : "people", {
           ...(person ? { id: person.id, revision: person.revision } : {}),
           name: value(f, "name"),
-          household: value(f, "household"),
         });
         close();
       }}
@@ -56,12 +56,10 @@ export function PersonForm({ id }: { id?: string }) {
       <Field label="Name">
         <input name="name" required defaultValue={person?.name} />
       </Field>
-      <Field
-        label="Household"
-        hint="Use the same name for people in one household. Exchanges can avoid household matches."
-      >
-        <input name="household" defaultValue={person?.household} />
-      </Field>
+      <p className="muted">
+        Choose this person’s households under each family group in Settings
+        after saving their profile.
+      </p>
       {!person && (
         <p className="muted">
           You’ll manage this person’s wishes. They can claim the profile later
@@ -146,13 +144,15 @@ export function ListForm({ list }: { list?: List }) {
                 value={g.id}
                 defaultChecked={list?.groupIds.includes(g.id)}
               />
-              {g.name}
+              {familyGroupLabel(g, world)}
             </label>
           ))
         ) : (
-          <p>Create a group in Settings to share this list.</p>
+          <p>Create a family group in Settings to share this list.</p>
         )}
-        <small>Leaving every group unchecked keeps the list private.</small>
+        <small>
+          Leaving every family group unchecked keeps the list private.
+        </small>
       </fieldset>
       <ListPolicyFields list={list} />
       {list && (
@@ -484,13 +484,15 @@ export function GiftForm({
             >
               <option value="private">Only me</option>
               <option value="hidden">
-                Selected groups, hidden from recipient
+                Selected family groups, hidden from recipient
               </option>
-              <option value="visible">Selected groups and the recipient</option>
+              <option value="visible">
+                Selected family groups and the recipient
+              </option>
             </select>
           </Field>
           <fieldset className="choice-group">
-            <legend>Share with these groups</legend>
+            <legend>Share with these family groups</legend>
             {world.groups.map((g) => (
               <label className="check" key={g.id}>
                 <input
@@ -499,7 +501,7 @@ export function GiftForm({
                   value={g.id}
                   defaultChecked={gift?.groupIds.includes(g.id)}
                 />
-                {g.name}
+                {familyGroupLabel(g, world)}
               </label>
             ))}
           </fieldset>
@@ -587,11 +589,11 @@ export function ExchangeForm() {
           placeholder="A just-because gift exchange"
         />
       </Field>
-      <Field label="Group">
+      <Field label="Family group">
         <select value={groupId} onChange={(e) => setGroupId(e.target.value)}>
           {world.groups.map((g) => (
             <option key={g.id} value={g.id}>
-              {g.name}
+              {familyGroupLabel(g, world)}
             </option>
           ))}
         </select>
@@ -624,6 +626,12 @@ export function ExchangeForm() {
         <input type="checkbox" name="households" defaultChecked />
         Avoid matching people in the same household
       </label>
+      <p className="muted">
+        Household setup is optional. This excludes people who share any
+        household in the selected family group. Manage households in Settings;
+        matching names alone do not exclude anyone. Completed drawings never
+        change.
+      </p>
       <Field
         label="Other exclusions"
         hint="One direction per line, using exact names: Alex Morgan > Sam Morgan"
@@ -643,8 +651,8 @@ export function ExchangeForm() {
         </select>
       </Field>
       <p className="muted">
-        Every participant needs a Surprise list shared with the group before the
-        draw. Only givers and their guardians see their assignments.
+        Every participant needs a Surprise list shared with the family group
+        before the draw. Only givers and their guardians see their assignments.
       </p>
     </Form>
   );

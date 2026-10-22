@@ -2201,3 +2201,33 @@ main {
     margin-top: 24px;
   }
 }
+
+.household-settings {
+  margin: 24px 0;
+}
+.household-settings > .section-heading {
+  margin-bottom: 8px;
+}
+.household-settings h4,
+.household-settings h5 {
+  font-size: 15px;
+}
+.household-settings h5 {
+  margin: 24px 0 4px;
+}
+.household-settings > p {
+  font-size: 13px;
+  max-width: 65ch;
+}
+.household-settings .setting-row {
+  align-items: start;
+  flex-wrap: wrap;
+}
+.household-settings .setting-row > div:first-child {
+  flex: 1 1 180px;
+  overflow-wrap: anywhere;
+}
+.household-settings .actions {
+  flex: 0 1 auto;
+  flex-wrap: wrap;
+}
