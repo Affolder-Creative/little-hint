@@ -28,6 +28,7 @@ export function assertStagingSeed(env = process.env) {
 }
 
 export function validateDeployment(env = process.env) {
+  productPhotoOverride(env);
   if (deploymentEnvironment(env) !== "staging") return;
   assertStagingDatabase(env);
   if (env.NODE_ENV !== "production")
@@ -36,4 +37,15 @@ export function validateDeployment(env = process.env) {
     throw new Error("Staging requires an HTTPS APP_URL.");
   if (!env.NODE_EXTRA_CA_CERTS)
     throw new Error("Staging requires NODE_EXTRA_CA_CERTS for Mailpit TLS.");
+}
+
+// Empty Compose values leave the administrator preference editable.
+export function productPhotoOverride(env = process.env): boolean | undefined {
+  const value = env.AUTO_IMPORT_PRODUCT_PHOTOS;
+  if (value === undefined || value === "") return undefined;
+  if (value !== "true" && value !== "false")
+    throw new Error(
+      "AUTO_IMPORT_PRODUCT_PHOTOS must be true, false, or empty.",
+    );
+  return value === "true";
 }

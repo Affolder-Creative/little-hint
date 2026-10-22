@@ -91,3 +91,38 @@ Staging has no production backup sidecar or production backup repository. Its sy
 - Verify private SMTP/database ports, distinct volumes/network, no production credentials, and no public PR deployments.
 
 Repository checks include `npm run typecheck`, `npm test`, `npm run test:compose`, and `npm run test:tooling`. PostgreSQL seed tests use `npm run test:staging-integration` with `STAGING_TEST_DATABASE_URL` pointing to a **disposable local** database named `little_hint_staging` owned by `little_hint_staging`; the tests truncate its application/authentication tables. Never point them at a deployed environment.
+
+## Automatic product photos
+
+Administration → Product imports → **Automatically import product photos** is
+OFF by default, including on upgrades. The preference is shared by everyone on
+that instance. Staging can edit it while all external provider restrictions stay
+in force. Manual uploads and existing photos are unaffected.
+
+`AUTO_IMPORT_PRODUCT_PHOTOS=true` or `false` overrides the saved preference and
+locks its admin control. Leave it unset or empty to use the saved preference,
+falling back to OFF. Only these exact values are accepted; invalid nonempty
+values fail startup. The Compose definitions pass it to both app and worker.
+Changing the environment requires redeploying both; changing the saved admin
+preference needs no restart. Removing an override restores the saved preference.
+
+Each import attempt reads the preference when it starts. Pending jobs use the
+latest preference; an already-running import may still finish with a photo.
+Completed previews stay usable. Enabling photos does not backfill old gifts.
+With photos OFF, a usable title skips paid fallback even if the page has no photo.
+Missing usable metadata can still use the configured paid provider in production.
+
+For a staging rollout, build the reviewed feature commit with the **Staging
+image** workflow on main and set its digest as `LITTLE_HINT_STAGING_IMAGE`.
+Use the feature branch for the staging Compose source if its configuration has
+changed. Deploy app and worker together. Test OFF → ON → OFF with a controlled
+public product fixture, checking image requests, media records/files, manual
+uploads, existing photos, and persistence after restart. Verify an environment
+override locks both the UI and write API, then remove it to restore UI testing.
+Keep real provider credentials disabled in staging; use mocked provider tests
+for paid-fallback behavior. Leave staging OFF when testing finishes.
+
+A rollback to code predating this preference restores automatic photo importing,
+even if the environment says false. No migration or media deletion is part of
+this change. Abandoned previews and manual uploads can still leave unused files;
+a retention and cleanup policy is separate work.

@@ -8,7 +8,7 @@ import ipaddr from "ipaddr.js";
 import { load } from "cheerio";
 import sharp from "sharp";
 import { z } from "zod";
-import { config, spend } from "./settings";
+import { automaticallyImportProductPhotos, config, spend } from "./settings";
 import {
   scrapingProviders,
   selectedScrapingProvider,
@@ -393,6 +393,8 @@ export async function importProduct(
   url: string,
   userId: string,
 ): Promise<Partial<Item>> {
+  // Snapshot when this attempt starts, not when the job was queued.
+  const importPhotos = await automaticallyImportProductPhotos();
   await validateUrl(url);
   const cfg = await config();
   let result: Partial<Item> & { remoteImage?: string } = {};
@@ -400,12 +402,12 @@ export async function importProduct(
     const page = await safeFetch(url);
     result = parseProduct(page.buffer.toString("utf8"), page.url);
   } catch {}
-  result = await paidProductPreview(url, result, cfg);
+  result = await paidProductPreview(url, result, cfg, importPhotos);
   if (!result.title)
     throw new Error(
       "This shop blocked the preview. You can still add the gift manually.",
     );
-  if (result.remoteImage) {
+  if (importPhotos && result.remoteImage) {
     try {
       const image = await safeFetch(result.remoteImage, 5_000_000);
       if (!/^image\/(png|jpeg|webp|gif)/i.test(image.contentType))
@@ -430,9 +432,11 @@ export async function paidProductPreview(
   url: string,
   result: Partial<Item> & { remoteImage?: string },
   cfg: Record<string, string>,
+  importPhotos = false,
 ): Promise<Partial<Item> & { remoteImage?: string }> {
   const provider = selectedScrapingProvider(cfg);
-  if ((result.title && result.remoteImage) || !provider) return result;
+  if ((result.title && (!importPhotos || result.remoteImage)) || !provider)
+    return result;
   try {
     await validateUrl(url);
     await spend(provider);
