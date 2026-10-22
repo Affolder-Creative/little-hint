@@ -1,5 +1,5 @@
 #!/bin/sh
-# Run once on the staging host. Never replace a live CA during a redeploy.
+# Run once as root on the staging host. Never replace a live CA during a redeploy.
 set -eu
 if [ "$#" -ne 1 ]; then
   echo 'Usage: sh scripts/staging-tls.sh /absolute/new/staging/tls/directory' >&2

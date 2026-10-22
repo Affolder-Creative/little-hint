@@ -24,10 +24,10 @@ Check available memory, disk, Docker, and proxy status. The Compose limits total
 Create SMTP certificates once on the staging host, using the checked-out script:
 
 ```sh
-sh scripts/staging-tls.sh /data/little-hint-staging/tls
+sudo sh scripts/staging-tls.sh /data/little-hint-staging/tls
 ```
 
-The script refuses to overwrite an existing directory. It generates a private CA and a `mailpit` server certificate valid for one year. Only public `ca.crt` is mounted into app and worker through `NODE_EXTRA_CA_CERTS`; only Mailpit receives its server private key. The private CA key stays on the host. Preserve ownership and permissions when transferring these files. Mailpit's pinned image runs as root; its private key stays mode 0600.
+The script refuses to overwrite an existing directory. It generates a private CA and a `mailpit` server certificate valid for one year. Only public `ca.crt` is mounted into app and worker through `NODE_EXTRA_CA_CERTS`; only Mailpit receives its server private key. The private CA key stays on the host. Preserve ownership and permissions when transferring these files. Mailpit's pinned image runs as UID 0 with all Linux capabilities dropped. Its private key must belong to host root and stay mode 0600. Running the script with `sudo` sets that ownership. When transferring certificates, verify `mailpit.key` is owned by `root:root`; a mode-0600 key owned by another user is unreadable even to container root.
 
 Schedule certificate maintenance with your normal operations process. Before expiry, generate a new certificate set in a new directory, update `STAGING_TLS_DIR`, and recreate app, worker, and Mailpit together. Node loads additional CA certificates at process startup. Never disable certificate validation as a workaround.
 

@@ -20,6 +20,11 @@ cleanup() {
 }
 trap cleanup EXIT
 sh scripts/staging-tls.sh "$STAGING_TLS_DIR" > "$scratch/tls.log" 2>&1
+# Mailpit runs as UID 0 with all capabilities dropped. On native Linux it
+# cannot read a runner-owned mode-0600 key, so match the host-root setup.
+docker run --rm --user 0 --entrypoint chown \
+  --mount "type=bind,source=$STAGING_TLS_DIR,target=/tls" \
+  postgres:18-alpine 0:0 /tls/mailpit.key
 "${compose[@]}" up -d --wait --wait-timeout 180
 "${compose[@]}" exec -T -e ALLOW_SYNTHETIC_DATA=1 app node dist/server/cli.js seed-staging
 if "${compose[@]}" exec -T -e ALLOW_SYNTHETIC_DATA=1 app node dist/server/cli.js seed-staging > "$scratch/reseed.log" 2>&1; then
