@@ -1,4 +1,5 @@
 # Standalone stack. Do not merge with the production Compose definition.
+# Coolify requires literal bind paths; local smoke tests override them.
 name: little-hint-staging
 x-app: &app
   image: ${LITTLE_HINT_STAGING_IMAGE:?Set LITTLE_HINT_STAGING_IMAGE to the staging image digest}
@@ -17,7 +18,7 @@ x-app: &app
   volumes:
     - staging-uploads:/data/uploads
     - type: bind
-      source: ${STAGING_TLS_DIR:?Set STAGING_TLS_DIR to the server certificate directory}/ca.crt
+      source: /data/little-hint-staging/tls/ca.crt
       target: /run/mailpit-ca.crt
       read_only: true
   read_only: true
@@ -58,11 +59,11 @@ services:
     volumes:
       - staging-mail:/data
       - type: bind
-        source: ${STAGING_TLS_DIR:?Set STAGING_TLS_DIR}/mailpit.crt
+        source: /data/little-hint-staging/tls/mailpit.crt
         target: /run/mailpit-tls/mailpit.crt
         read_only: true
       - type: bind
-        source: ${STAGING_TLS_DIR:?Set STAGING_TLS_DIR}/mailpit.key
+        source: /data/little-hint-staging/tls/mailpit.key
         target: /run/mailpit-tls/mailpit.key
         read_only: true
     expose: ["8025", "1025"]

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 // Exercise Docker Compose itself: a build must parse without runtime secrets,
@@ -140,6 +141,18 @@ console.log(
   "Compose checks passed: secret-free build, required runtime secrets, and shared local/registry app-worker images.",
 );
 
+// Coolify validates bind sources before Docker interpolates environment values.
+const stagingSource = readFileSync(
+  new URL("../compose.staging.yaml", import.meta.url),
+  "utf8",
+);
+for (const [, source] of stagingSource.matchAll(/^\s+source:\s*(.+)$/gm)) {
+  assert.match(
+    source,
+    /^\/data\/little-hint-staging\/tls\/(ca\.crt|mailpit\.crt|mailpit\.key)$/,
+    "Coolify requires a literal staging certificate bind source.",
+  );
+}
 const stagingVars = {
   LITTLE_HINT_STAGING_IMAGE:
     "ghcr.io/example/little-hint-staging@sha256:" + "b".repeat(64),
@@ -148,7 +161,6 @@ const stagingVars = {
   STAGING_AUTH_SECRET: "staging-auth-only",
   STAGING_ENCRYPTION_KEY: "staging-encryption-only",
   STAGING_MAILPIT_UI_AUTH: "tester:staging-only",
-  STAGING_TLS_DIR: "/tmp/staging-tls",
 };
 for (const missing of Object.keys(stagingVars)) {
   const variables = { ...stagingVars };

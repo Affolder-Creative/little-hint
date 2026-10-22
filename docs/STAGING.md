@@ -27,9 +27,11 @@ Create SMTP certificates once on the staging host, using the checked-out script:
 sudo sh scripts/staging-tls.sh /data/little-hint-staging/tls
 ```
 
+Coolify rejects variable interpolation in bind-mount sources, so the Compose file uses the literal host path `/data/little-hint-staging/tls`. Create certificates there before loading the Compose file.
+
 The script refuses to overwrite an existing directory. It generates a private CA and a `mailpit` server certificate valid for one year. Only public `ca.crt` is mounted into app and worker through `NODE_EXTRA_CA_CERTS`; only Mailpit receives its server private key. The private CA key stays on the host. Preserve ownership and permissions when transferring these files. Mailpit's pinned image runs as UID 0 with all Linux capabilities dropped. Its private key must belong to host root and stay mode 0600. Running the script with `sudo` sets that ownership. When transferring certificates, verify `mailpit.key` is owned by `root:root`; a mode-0600 key owned by another user is unreadable even to container root.
 
-Schedule certificate maintenance with your normal operations process. Before expiry, generate a new certificate set in a new directory, update `STAGING_TLS_DIR`, and recreate app, worker, and Mailpit together. Node loads additional CA certificates at process startup. Never disable certificate validation as a workaround.
+Schedule certificate maintenance with your normal operations process. Before expiry, generate a new certificate set in a new directory. Stop the staging stack, retain the previous directory under a dated name, and move the new directory to `/data/little-hint-staging/tls`. Recreate app, worker, and Mailpit together. Node loads additional CA certificates at process startup. Never disable certificate validation as a workaround.
 
 ## 3. Configure Coolify
 
@@ -41,7 +43,6 @@ Set the variables from `.env.staging.example` as Runtime-only. Use fresh secrets
 - `STAGING_AUTH_SECRET`: at least 32 random characters.
 - `STAGING_ENCRYPTION_KEY`: 32 random bytes encoded as base64.
 - `STAGING_MAILPIT_UI_AUTH`: `operator:` followed by a long random alphanumeric password, stored only in Coolify and your password manager.
-- `STAGING_TLS_DIR`: the absolute directory created above on the staging server.
 - `STAGING_APP_URL`: the exact public HTTPS origin, with no path or internal port.
 - `LITTLE_HINT_STAGING_IMAGE`: the digest reported by the staging image workflow.
 

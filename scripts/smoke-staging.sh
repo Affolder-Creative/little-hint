@@ -10,7 +10,31 @@ export STAGING_MAILPIT_UI_AUTH=operator:local-smoke-only
 scratch=$(mktemp -d)
 export STAGING_TLS_DIR="$scratch/tls"
 project="little-hint-staging-smoke-${RANDOM}-$$"
-compose=(docker compose --env-file /dev/null -p "$project" -f compose.staging.yaml)
+# Keep production-host bind paths literal for Coolify. Compose merges these
+# test-only mounts by container target, leaving the deployed file unchanged.
+cat > "$scratch/compose.override.yaml" <<'YAML'
+x-test-ca: &test-ca
+  type: bind
+  source: ${STAGING_TLS_DIR}/ca.crt
+  target: /run/mailpit-ca.crt
+  read_only: true
+services:
+  app:
+    volumes: [*test-ca]
+  worker:
+    volumes: [*test-ca]
+  mailpit:
+    volumes:
+      - type: bind
+        source: ${STAGING_TLS_DIR}/mailpit.crt
+        target: /run/mailpit-tls/mailpit.crt
+        read_only: true
+      - type: bind
+        source: ${STAGING_TLS_DIR}/mailpit.key
+        target: /run/mailpit-tls/mailpit.key
+        read_only: true
+YAML
+compose=(docker compose --env-file /dev/null -p "$project" -f compose.staging.yaml -f "$scratch/compose.override.yaml")
 cleanup() {
   status=$?
   if (( status != 0 )); then "${compose[@]}" logs --no-color app worker mailpit db; fi
