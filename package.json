@@ -18,6 +18,8 @@
     "test:e2e": "playwright test",
     "typecheck": "tsc --noEmit",
     "demo": "tsx src/server/cli.ts demo",
+    "seed:staging": "tsx src/server/cli.ts seed-staging",
+    "test:staging-integration": "vitest run tests/staging-seed.integration.test.ts",
     "test:compose": "node scripts/check-compose.mjs",
     "test:tooling": "node --test scripts/*.test.mjs",
     "licenses:check": "node scripts/licenses.mjs",

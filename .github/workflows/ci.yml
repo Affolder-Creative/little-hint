@@ -110,6 +110,12 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run test:integration
+      - name: Create isolated staging test database
+        run: |
+          docker exec $(docker ps -q --filter ancestor=postgres:18-alpine) psql -U little_hint -d little_hint_test -v ON_ERROR_STOP=1 -c "CREATE ROLE little_hint_staging LOGIN PASSWORD 'ci-staging-only'" -c "CREATE DATABASE little_hint_staging OWNER little_hint_staging"
+      - run: npm run test:staging-integration
+        env:
+          STAGING_TEST_DATABASE_URL: postgres://little_hint_staging:ci-staging-only@localhost:5432/little_hint_staging
   browser:
     needs: changes
     if: needs.changes.outputs.browser == 'true'
@@ -200,6 +206,11 @@ jobs:
         env:
           LITTLE_HINT_IMAGE: little-hint:ci
         run: bash scripts/smoke-image.sh
+      - name: Staging stack smoke test
+        if: matrix.arch == 'amd64'
+        env:
+          LITTLE_HINT_STAGING_IMAGE: little-hint:ci
+        run: bash scripts/smoke-staging.sh
       - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: little-hint:ci

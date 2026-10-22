@@ -1,5 +1,7 @@
 # Deployment checklist
 
+For feature testing with synthetic data, use the [isolated staging setup](STAGING.md).
+
 This repository contains reusable deployment instructions. Keep each installation's actual values and status in a private operator record, such as ignored `.local/deployment/DEPLOYMENT.md`, and in your password manager or deployment platform. Never commit that record or raw API responses.
 
 ## Installation settings

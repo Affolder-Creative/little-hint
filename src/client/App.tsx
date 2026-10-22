@@ -306,9 +306,12 @@ export function App() {
               reconnect.
             </div>
           )}
-          {world.me.email.endsWith("@example.test") && (
+          {(world.environment === "staging" ||
+            world.me.email.endsWith("@example.test")) && (
             <div className="demo-banner">
-              Illustrative demo data · Development instance
+              {world.environment === "staging"
+                ? "Staging · Synthetic data · Email captured in test inbox"
+                : "Illustrative demo data · Development instance"}
             </div>
           )}
           <main id="main" tabIndex={-1}>

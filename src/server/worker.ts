@@ -5,6 +5,8 @@ import { PgBoss } from "pg-boss";
 import { readState, transact, pool } from "./db";
 import { importProduct } from "./imports";
 import { deliverNotice, pollTelegram } from "./notifications";
+import { validateDeployment } from "./deployment";
+validateDeployment();
 const boss = new PgBoss(process.env.DATABASE_URL!);
 boss.on("error", () => console.error("Background queue error."));
 await boss.start();

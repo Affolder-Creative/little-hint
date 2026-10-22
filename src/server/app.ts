@@ -27,7 +27,9 @@ import {
   verifyTwilio,
 } from "./notifications";
 import type { Actor } from "../shared/model";
+import { deploymentEnvironment, validateDeployment } from "./deployment";
 export async function makeApp() {
+  validateDeployment();
   const app = Fastify({
     logger: {
       level: process.env.LOG_LEVEL ?? "warn",
@@ -153,7 +155,10 @@ export async function makeApp() {
   }
   app.get("/api/v1/world", async (req) => {
     const a = await actor(req);
-    return world(await readState(), a);
+    return {
+      ...world(await readState(), a),
+      environment: deploymentEnvironment(),
+    };
   });
   app.get<{ Params: { id: string } }>(
     "/api/v1/lists/:id/gift-summary",

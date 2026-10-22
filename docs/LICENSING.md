@@ -100,8 +100,8 @@ CI and release jobs inspect the actual built image, fetch or reuse sources,
 rehash cached inputs, assemble the bundles, and compare their complete bytes
 with the reviewed archive hashes. A missing input, hash mismatch, corrupt cache,
 changed runtime component, empty inventory, or changed bundle fails the job
-before publication. The base image digest and added ca-certificates version are
-pinned to avoid silently changing the reviewed Alpine sources.
+before publication. The base image digest pins the runtime Alpine packages, including its existing
+CA certificate bundle. The build does not fetch additional Alpine packages.
 
 To review a dependency or base-image update:
 
