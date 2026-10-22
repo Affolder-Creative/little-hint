@@ -27,7 +27,7 @@ Create SMTP certificates once on the staging host, using the checked-out script:
 sudo sh scripts/staging-tls.sh /data/little-hint-staging/tls
 ```
 
-Coolify rejects variable interpolation in bind-mount sources, so the Compose file uses the literal host path `/data/little-hint-staging/tls`. Create certificates there before loading the Compose file.
+Coolify rejects variable interpolation in bind-mount sources, so the Compose file uses the literal host path `/data/little-hint-staging/tls`. Use short volume syntax with `:ro` because this Coolify version drops `read_only` from long-form bind mounts. Create certificates there before loading the Compose file.
 
 The script refuses to overwrite an existing directory. It generates a private CA and a `mailpit` server certificate valid for one year. Only public `ca.crt` is mounted into app and worker through `NODE_EXTRA_CA_CERTS`; only Mailpit receives its server private key. The private CA key stays on the host. Preserve ownership and permissions when transferring these files. Mailpit's pinned image runs as UID 0 with all Linux capabilities dropped. Its private key must belong to host root and stay mode 0600. Running the script with `sudo` sets that ownership. When transferring certificates, verify `mailpit.key` is owned by `root:root`; a mode-0600 key owned by another user is unreadable even to container root.
 

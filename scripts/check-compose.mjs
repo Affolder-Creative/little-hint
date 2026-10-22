@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 // Exercise Docker Compose itself: a build must parse without runtime secrets,
@@ -17,7 +16,7 @@ const required = {
   BETTER_AUTH_SECRET: "compose-check-auth-only",
   SETTINGS_ENCRYPTION_KEY: "compose-check-encryption-only",
 };
-function config(file, variables = {}) {
+function config(file, variables = {}, interpolate = true) {
   const result = spawnSync(
     "docker",
     [
@@ -26,6 +25,7 @@ function config(file, variables = {}) {
       emptyFile,
       ...[file].flat().flatMap((name) => ["-f", name]),
       "config",
+      ...(!interpolate ? ["--no-interpolate"] : []),
       "--format",
       "json",
     ],
@@ -142,16 +142,24 @@ console.log(
 );
 
 // Coolify validates bind sources before Docker interpolates environment values.
-const stagingSource = readFileSync(
-  new URL("../compose.staging.yaml", import.meta.url),
-  "utf8",
-);
-for (const [, source] of stagingSource.matchAll(/^\s+source:\s*(.+)$/gm)) {
-  assert.match(
-    source,
-    /^\/data\/little-hint-staging\/tls\/(ca\.crt|mailpit\.crt|mailpit\.key)$/,
-    "Coolify requires a literal staging certificate bind source.",
-  );
+const unexpandedStaging = config("compose.staging.yaml", {}, false);
+assert.equal(unexpandedStaging.status, 0, unexpandedStaging.stderr);
+for (const service of Object.values(
+  JSON.parse(unexpandedStaging.stdout).services,
+)) {
+  for (const volume of service.volumes ?? []) {
+    if (volume.type !== "bind") continue;
+    assert.match(
+      volume.source,
+      /^\/data\/little-hint-staging\/tls\/(ca\.crt|mailpit\.crt|mailpit\.key)$/,
+      "Coolify requires a literal staging certificate bind source.",
+    );
+    assert.equal(
+      volume.read_only,
+      true,
+      "Certificate mounts must stay read-only.",
+    );
+  }
 }
 const stagingVars = {
   LITTLE_HINT_STAGING_IMAGE:

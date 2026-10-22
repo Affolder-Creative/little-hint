@@ -17,10 +17,7 @@ x-app: &app
     NODE_EXTRA_CA_CERTS: /run/mailpit-ca.crt
   volumes:
     - staging-uploads:/data/uploads
-    - type: bind
-      source: /data/little-hint-staging/tls/ca.crt
-      target: /run/mailpit-ca.crt
-      read_only: true
+    - /data/little-hint-staging/tls/ca.crt:/run/mailpit-ca.crt:ro
   read_only: true
   tmpfs:
     - /tmp:size=128M,mode=1777
@@ -58,14 +55,8 @@ services:
       MP_DISABLE_VERSION_CHECK: "true"
     volumes:
       - staging-mail:/data
-      - type: bind
-        source: /data/little-hint-staging/tls/mailpit.crt
-        target: /run/mailpit-tls/mailpit.crt
-        read_only: true
-      - type: bind
-        source: /data/little-hint-staging/tls/mailpit.key
-        target: /run/mailpit-tls/mailpit.key
-        read_only: true
+      - /data/little-hint-staging/tls/mailpit.crt:/run/mailpit-tls/mailpit.crt:ro
+      - /data/little-hint-staging/tls/mailpit.key:/run/mailpit-tls/mailpit.key:ro
     expose: ["8025", "1025"]
     healthcheck:
       test: [CMD, /mailpit, readyz]
