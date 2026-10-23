@@ -6,6 +6,11 @@ async function preview(page: Page, actorIndex = 0) {
   const fixture = stagingFixtures();
   const actor = fixture.actors[actorIndex];
   const paths: Record<string, string> = {
+    groups: "groups.create",
+    items: "items.create",
+    comments: "comments.create",
+    reservations: "reservations.create",
+    "reservations/update": "reservations.update",
     lists: "lists.create",
     "lists/update": "lists.update",
     "group-events": "group-events.create",
@@ -249,4 +254,266 @@ test("sharing dialogs fit desktop and phone in both themes", async ({
       });
       await page.getByRole("button", { name: "Close dialog" }).click();
     }
+});
+
+test("search recovery and person tabs work with a keyboard", async ({
+  page,
+}) => {
+  const { state } = await preview(page);
+  await page.goto("/");
+  await page
+    .getByRole("textbox", { name: "Search gifts" })
+    .fill("no matching gifts xyz");
+  await expect(
+    page.getByRole("heading", { name: "No gifts match your filters" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Clear filters" }).click();
+  await expect(page.locator(".gift-card").first()).toBeVisible();
+  await page.goto(`/people/${state.people[1].id}`);
+  await page.getByRole("tab", { name: "Their wishes" }).focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(page.getByRole("tab", { name: "Ideas for Sam" })).toBeFocused();
+  await expect(page.getByRole("tabpanel")).toHaveAttribute(
+    "aria-labelledby",
+    "person-tab-ideas",
+  );
+  await expect(
+    page.getByRole("heading", { name: "No gift ideas for Sam Morgan yet" }),
+  ).toBeVisible();
+  await page.keyboard.press("Home");
+  await expect(page.getByRole("tab", { name: "Their wishes" })).toBeFocused();
+});
+
+test("creating a group leads directly to invitations", async ({ page }) => {
+  await preview(page);
+  await page.goto("/settings?section=groups");
+  await page
+    .getByRole("button", { name: "Create family group", exact: true })
+    .click();
+  await page.getByLabel("Family group name").fill("New circle");
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Create family group", exact: true })
+    .click();
+  await expect(page).toHaveURL(/section=groups&group=.+&view=members/);
+  await expect(
+    page.getByRole("combobox", { name: "Family group", exact: true }),
+  ).toContainText("New circle");
+  await expect(
+    page.getByRole("heading", { name: "Members & invitations" }),
+  ).toBeVisible();
+});
+
+test("private note success clears the composer and offline actions are disabled", async ({
+  page,
+  context,
+}) => {
+  const { state, actor } = await preview(page, 1);
+  const gift = world(state, actor).items.find(
+    (i) => !i.isRecipient && !i.archived && i.available && i.comments,
+  )!;
+  await page.goto(`/gift/${gift.id}`);
+  await page.getByLabel("Your note").fill("A useful private detail");
+  await page.getByRole("button", { name: "Add private note" }).click();
+  await expect(
+    page.getByText("A useful private detail", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByLabel("Your note")).toHaveValue("");
+  await context.setOffline(true);
+  await expect(
+    page.getByRole("button", { name: "I’ll get this" }),
+  ).toBeDisabled();
+  await expect(
+    page.getByRole("button", { name: "Add private note" }),
+  ).toBeDisabled();
+  await expect(
+    page.getByText("Reconnect to save these changes."),
+  ).toBeVisible();
+});
+
+test("photo upload blocks saving and reports completion", async ({ page }) => {
+  await preview(page);
+  let finish!: () => void;
+  const pending = new Promise<void>((resolve) => {
+    finish = resolve;
+  });
+  await page.route("**/api/v1/media", async (route) => {
+    await pending;
+    await route.fulfill({
+      json: { url: "/brand/little-hint/symbols/little-hint-tag-color.svg" },
+    });
+  });
+  await page.goto("/lists");
+  await page.getByRole("button", { name: "Add a gift", exact: true }).click();
+  await page
+    .getByLabel("Gift name", { exact: true })
+    .fill("A gift with a photo");
+  await expect(page.getByLabel("Price in USD")).not.toBeVisible();
+  await page.getByText("Optional gift details", { exact: true }).click();
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "gift.png",
+    mimeType: "image/png",
+    buffer: Buffer.from("fixture"),
+  });
+  await expect(
+    page.getByRole("button", { name: "Add to wish list", exact: true }),
+  ).toBeDisabled();
+  await expect(
+    page.getByRole("status").filter({ hasText: "Uploading photo…" }),
+  ).toBeVisible();
+  finish();
+  await expect(
+    page.getByRole("status").filter({ hasText: "Photo uploaded." }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Add to wish list", exact: true }),
+  ).toBeEnabled();
+});
+
+test("security identifies this device and admin failures never show zero pending", async ({
+  page,
+}) => {
+  const { actor } = await preview(page);
+  const session = {
+    id: "this-session",
+    token: "fixture-token",
+    userId: actor.id,
+    createdAt: new Date().toISOString(),
+    expiresAt: new Date(Date.now() + 86400000).toISOString(),
+    userAgent: "Mozilla/5.0 (Macintosh) Chrome/130 Safari/537",
+  };
+  await page.route("**/api/auth/list-sessions", (route) =>
+    route.fulfill({ json: [session] }),
+  );
+  await page.route("**/api/auth/get-session", (route) =>
+    route.fulfill({ json: { session, user: actor } }),
+  );
+  await page.route("**/api/v1/admin/jobs", (route) =>
+    route.fulfill({ status: 503, json: { error: "Unavailable" } }),
+  );
+  await page.goto("/settings?section=security");
+  await expect(
+    page.getByText("Chrome on Mac · This device", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", {
+      name: /Revoke Chrome on Mac session.*on this device/,
+    }),
+  ).toBeVisible();
+  await page.goto("/settings?section=admin");
+  await expect(
+    page.getByRole("button", { name: "Retry delivery status" }),
+  ).toBeVisible();
+  await expect(page.getByText(/0 imports pending/)).toHaveCount(0);
+  await expect(page.getByText(/Worker: Not reporting/)).toHaveCount(0);
+});
+
+test("SMS verification offers resend and number correction", async ({
+  page,
+}) => {
+  await preview(page);
+  const phones: string[] = [];
+  await page.route("**/api/v1/channels/sms/start", (route) => {
+    phones.push(route.request().postDataJSON().phone);
+    return route.fulfill({ json: { ok: true } });
+  });
+  await page.goto("/settings?section=notifications");
+  await page.getByRole("button", { name: "Set up SMS" }).click();
+  await page.getByLabel("US mobile number").fill("+13175551234");
+  await page.getByRole("checkbox", { name: /I agree/ }).check();
+  await page.getByRole("button", { name: "Send verification code" }).click();
+  await expect(
+    page.getByRole("status").filter({ hasText: "Code sent to +13175551234" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Resend code" }).click();
+  await expect(page.getByText(/Another code was sent/)).toBeVisible();
+  expect(phones).toEqual(["+13175551234", "+13175551234"]);
+  await page.getByRole("button", { name: "Change number" }).click();
+  await expect(page.getByLabel("US mobile number")).toHaveValue("+13175551234");
+});
+
+test("adding a saved draft refreshes the device list", async ({ page }) => {
+  const { actor } = await preview(page);
+  await page.addInitScript((id) => {
+    localStorage.setItem(`little-hint:draft-optin:${id}`, "yes");
+    localStorage.setItem(
+      `little-hint:drafts:${id}`,
+      JSON.stringify([
+        {
+          id: "draft-to-add",
+          title: "Remembered gift",
+          url: "",
+          description: "",
+          savedAt: new Date().toISOString(),
+        },
+      ]),
+    );
+  }, actor.id);
+  await page.goto("/settings?section=device");
+  await page.getByRole("button", { name: "Review & add" }).click();
+  await page.getByRole("button", { name: "Add to wish list" }).click();
+  await expect(page.getByRole("dialog")).not.toBeVisible();
+  await expect(page.getByText(/No saved drafts on this device/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Review & add" })).toHaveCount(
+    0,
+  );
+});
+
+test("P2 mobile and desktop surfaces retain layout and accessible names", async ({
+  page,
+}) => {
+  const { state, actor } = await preview(page);
+  const gift = world(state, actor).items.find(
+    (i) => !i.isRecipient && !i.archived,
+  )!;
+  for (const width of [1280, 390])
+    for (const colorScheme of ["light", "dark"] as const) {
+      await page.setViewportSize({ width, height: width === 1280 ? 800 : 844 });
+      await page.emulateMedia({ colorScheme });
+      for (const [name, route] of [
+        ["gift", `/gift/${gift.id}`],
+        ["notifications", "/settings?section=notifications"],
+        ["security", "/settings?section=security"],
+      ]) {
+        await page.goto(route);
+        await expect(page.locator("main h1")).toBeVisible();
+        expect(
+          await page.evaluate(
+            () => document.documentElement.scrollWidth - innerWidth,
+          ),
+        ).toBeLessThanOrEqual(1);
+        if (name === "gift" && width === 390)
+          expect(
+            await page
+              .locator(".gift-detail > .gift-photo")
+              .evaluate((el) => el.getBoundingClientRect().height),
+          ).toBeLessThanOrEqual(100);
+        await page.screenshot({
+          path: `.local/critique-visual/p2-${name}-${width}-${colorScheme}.png`,
+          fullPage: true,
+        });
+      }
+    }
+});
+
+test("a single reserved gift can be marked purchased from Buying", async ({
+  page,
+}) => {
+  const { state, actor } = await preview(page, 1);
+  const reservation = world(state, actor).buying.find(
+    (r) => r.quantity === 1 && r.purchased === 0,
+  )!;
+  await page.goto("/buying");
+  await page
+    .getByRole("button", {
+      name: `Mark ${reservation.titleSnapshot} purchased`,
+      exact: true,
+    })
+    .click();
+  await expect(
+    page.getByRole("status").filter({ hasText: "Marked purchased." }),
+  ).toBeVisible();
+  expect(
+    state.reservations.find((r) => r.id === reservation.id)?.purchased,
+  ).toBe(1);
 });

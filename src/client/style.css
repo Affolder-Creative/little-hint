@@ -2380,3 +2380,54 @@ main {
 .exchange-panel section li {
   margin-block: 8px;
 }
+
+/* Keep optional input and service settings in readable task groups. */
+.optional-fields > summary {
+  cursor: pointer;
+  font-weight: 550;
+  padding-block: 10px;
+}
+.optional-fields[open] > :not(summary) {
+  margin-top: 16px;
+}
+.notification-topics {
+  display: grid;
+  gap: 20px;
+}
+.integration-group + .integration-group {
+  margin-top: 24px;
+}
+.integration-group h4 {
+  margin-bottom: 8px;
+}
+.session-agent {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 700px) {
+  .gift-detail > .gift-photo.without-photo {
+    aspect-ratio: auto;
+    height: 96px;
+  }
+  .gift-detail > .gift-photo.without-photo svg {
+    width: 32px;
+    height: 32px;
+  }
+  .selected-group-heading {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .topbar .icon-button,
+  .topbar .button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+.choice-group > .action-wrap {
+  justify-self: start;
+}

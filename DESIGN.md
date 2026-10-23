@@ -238,3 +238,5 @@ Browser favicons use the approved micro tag without a surrounding tile. The tag 
 - Don't add shadows to ordinary gift cards or list rows.
 - Don't use invented product photography or present demonstration fixtures as real gifts.
 - Don't rely on color alone to explain availability or list privacy.
+
+Optional gift notes, price, quantity, tags and photos share a disclosure below the gift name and destination. Upload progress is announced and saving waits for the photo. On phones, missing-photo placeholders stay compact. Notification topics and administration integrations use labeled task groups; channel setup stays next to its checkbox. Session rows identify this device where available, with readable browser names and expandable details. Loading and failure states never stand in for empty data.

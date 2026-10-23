@@ -156,6 +156,13 @@ export function App() {
     if (query.data)
       localStorage.setItem("little-hint:last-account", query.data.me.id);
   }, [query.data?.me.id]);
+  useEffect(() => {
+    if (!query.data) return;
+    const main = document.getElementById("main");
+    const heading = main?.querySelector<HTMLElement>("h1");
+    document.title = `${heading?.textContent ?? "Little Hint"} · Little Hint`;
+    main?.focus({ preventScroll: true });
+  }, [location.pathname, location.search, !!query.data]);
   const mutate = async <T = any,>(path: string, body: unknown): Promise<T> => {
     if (!navigator.onLine)
       throw new Error("Go online to complete this action.");
@@ -174,7 +181,11 @@ export function App() {
     );
   if (query.isPending)
     return (
-      <div className="loading-screen">
+      <div
+        className="loading-screen"
+        role="status"
+        aria-label="Loading Little Hint"
+      >
         <Logo dark={dark} />
         <LoaderCircle className="spin" aria-label="Loading Little Hint" />
       </div>
@@ -308,8 +319,8 @@ export function App() {
           {!online && (
             <div className="offline-banner">
               <WifiOff size={17} />
-              You’re offline. Buying actions will be available when you
-              reconnect.
+              You’re offline. Shared data may be out of date. Reconnect to
+              reserve, buy, or save shared changes.
             </div>
           )}
           {(world.environment === "staging" ||
@@ -397,6 +408,7 @@ function OfflineDrafts({ dark }: { dark: boolean }) {
   const enabled =
     account && localStorage.getItem(`little-hint:draft-optin:${account}`);
   const [saved, setSaved] = useState(false);
+  const [clearing, setClearing] = useState(false);
   return (
     <div className="offline-page">
       <Logo dark={dark} />
@@ -408,6 +420,8 @@ function OfflineDrafts({ dark }: { dark: boolean }) {
       {enabled ? (
         <Form
           submit="Save personal draft"
+          allowOffline
+          resetOnSuccess
           onSubmit={async (f) => {
             saveDraft(account!, {
               title: value(f, "title"),
@@ -442,15 +456,34 @@ function OfflineDrafts({ dark }: { dark: boolean }) {
       <button className="button secondary" onClick={() => location.reload()}>
         Try connecting again
       </button>
-      <button
-        className="text-button"
-        onClick={() => {
-          clearPersonalData();
-          location.reload();
-        }}
-      >
+      <button className="text-button" onClick={() => setClearing(true)}>
         Clear personal data on this device
       </button>
+      {clearing && (
+        <Modal title="Clear this device?" onClose={() => setClearing(false)}>
+          <p>
+            This deletes your saved personal drafts and local preferences on
+            this device. Your account and shared lists stay on the server.
+          </p>
+          <div className="actions">
+            <button
+              className="button secondary"
+              onClick={() => setClearing(false)}
+            >
+              Keep personal data
+            </button>
+            <button
+              className="button"
+              onClick={() => {
+                clearPersonalData();
+                location.reload();
+              }}
+            >
+              Delete local data
+            </button>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
@@ -508,18 +541,24 @@ function Action({
   onClick,
   children,
   secondary = false,
+  label,
 }: {
+  label?: string;
   onClick: () => Promise<unknown>;
   children: ReactNode;
   secondary?: boolean;
 }) {
   const [busy, setBusy] = useState(false),
     [error, setError] = useState("");
+  const online = useOnline();
   return (
     <span className="action-wrap">
       <button
         className={`button small ${secondary ? "secondary" : ""}`}
-        disabled={busy}
+        type="button"
+        aria-label={label}
+        title={!online ? "Reconnect to complete this action" : undefined}
+        disabled={busy || !online}
         onClick={async () => {
           setBusy(true);
           setError("");
@@ -543,7 +582,17 @@ function Action({
     </span>
   );
 }
-function Browser({ items }: { items: GiftView[] }) {
+function Browser({
+  items,
+  emptyTitle = "A little inspiration starts here",
+  emptyText = "Add a wish or ask your people to share their lists.",
+  emptyAction,
+}: {
+  items: GiftView[];
+  emptyTitle?: string;
+  emptyText?: string;
+  emptyAction?: ReactNode;
+}) {
   const [search, setSearch] = useState(""),
     [tag, setTag] = useState(""),
     [available, setAvailable] = useState(false);
@@ -600,15 +649,27 @@ function Browser({ items }: { items: GiftView[] }) {
         </div>
       ) : (
         <Empty
-          title={
-            items.length
-              ? "Nothing here just yet"
-              : "A little inspiration starts here"
+          title={items.length ? "No gifts match your filters" : emptyTitle}
+          action={
+            items.length ? (
+              <button
+                className="button secondary"
+                onClick={() => {
+                  setSearch("");
+                  setTag("");
+                  setAvailable(false);
+                }}
+              >
+                Clear filters
+              </button>
+            ) : (
+              emptyAction
+            )
           }
         >
           {items.length
-            ? "Try another search or filter."
-            : "Add a wish or ask your people to share their lists."}
+            ? "Try a different search, or clear your filters to see all gifts."
+            : emptyText}
         </Empty>
       )}
     </>
@@ -630,8 +691,20 @@ function Home() {
       {incoming && <Invitations />}
       <div className="home-intro">
         <div>
-          <h2>From your circle</h2>
-          <p>A few things they’ve been wishing for.</p>
+          <h2>
+            {!world.groups.length
+              ? "Start with your people"
+              : others.length
+                ? "From your circle"
+                : "Your wishes"}
+          </h2>
+          <p>
+            {!world.groups.length
+              ? "Create a family group to share wishes and plan gifts together."
+              : others.length
+                ? "A few things they’ve been wishing for."
+                : "Your gift ideas, ready to share with your people."}
+          </p>
         </div>
         <Link className="text-button" to="/people">
           Meet your people <ArrowRight size={16} />
@@ -679,6 +752,13 @@ function People() {
           Managed profile
         </button>
       </Header>
+      <p className="notice">
+        Invite adults who manage their own wishes from{" "}
+        <Link to="/settings?section=groups&view=members">
+          family-group invitations
+        </Link>
+        . Create a managed profile for someone whose wishes you’ll look after.
+      </p>
       <div className="people-list">
         {world.people.map((p) => (
           <Link className="person-row" key={p.id} to={`/people/${p.id}`}>
@@ -707,7 +787,14 @@ function PersonPage() {
   const person = world.people.find((p) => p.id === id);
   if (!person)
     return (
-      <Empty title="Person not found">
+      <Empty
+        title="Person not found"
+        action={
+          <Link className="button secondary" to="/people">
+            Back to your people
+          </Link>
+        }
+      >
         This profile may no longer be shared with you.
       </Empty>
     );
@@ -746,30 +833,87 @@ function PersonPage() {
           </button>
         )}
       </Header>
-      <div className="tabs" role="tablist" aria-label="Gift types">
-        <button
-          role="tab"
-          aria-selected={tab === "wishes"}
-          onClick={() => setTab("wishes")}
-        >
-          {person.userId === world.me.id ? "My wishes" : "Their wishes"}
-        </button>
-        <button
-          role="tab"
-          aria-selected={tab === "ideas"}
-          onClick={() => setTab("ideas")}
-        >
-          Ideas for {person.name.split(" ")[0]}
-        </button>
+      <div
+        className="tabs"
+        role="tablist"
+        aria-label="Gift types"
+        onKeyDown={(event) => {
+          if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key))
+            return;
+          event.preventDefault();
+          const next =
+            event.key === "Home"
+              ? "wishes"
+              : event.key === "End"
+                ? "ideas"
+                : tab === "wishes"
+                  ? "ideas"
+                  : "wishes";
+          setTab(next);
+          document.getElementById(`person-tab-${next}`)?.focus();
+        }}
+      >
+        {["wishes", "ideas"].map((key) => (
+          <button
+            key={key}
+            id={`person-tab-${key}`}
+            role="tab"
+            aria-controls="person-gifts"
+            tabIndex={tab === key ? 0 : -1}
+            aria-selected={tab === key}
+            onClick={() => setTab(key)}
+          >
+            {key === "ideas"
+              ? `Ideas for ${person.name.split(" ")[0]}`
+              : person.userId === world.me.id
+                ? "My wishes"
+                : "Their wishes"}
+          </button>
+        ))}
       </div>
-      <Browser
-        items={world.items.filter(
-          (i) =>
-            !i.archived &&
-            i.recipientIds.includes(id!) &&
-            (tab === "wishes" ? !!i.listId : !i.listId),
-        )}
-      />
+      <div
+        id="person-gifts"
+        role="tabpanel"
+        aria-labelledby={`person-tab-${tab}`}
+        tabIndex={0}
+      >
+        <Browser
+          key={`${id}-${tab}`}
+          emptyTitle={
+            tab === "ideas"
+              ? `No gift ideas for ${person.name} yet`
+              : "No wishes shared yet"
+          }
+          emptyText={
+            tab === "ideas"
+              ? "Save an idea here and choose who can see it."
+              : own
+                ? "Add a gift to a wish list to get started."
+                : "Ask them to share a wish list with your family group."
+          }
+          emptyAction={
+            tab === "ideas" && !own ? (
+              <button
+                className="button"
+                onClick={() =>
+                  open(
+                    `An idea for ${person.name}`,
+                    <GiftForm recipientId={id} />,
+                  )
+                }
+              >
+                Add an idea
+              </button>
+            ) : undefined
+          }
+          items={world.items.filter(
+            (i) =>
+              !i.archived &&
+              i.recipientIds.includes(id!) &&
+              (tab === "wishes" ? !!i.listId : !i.listId),
+          )}
+        />
+      </div>
     </>
   );
 }
@@ -794,16 +938,29 @@ function Lists() {
   );
   if (id && !list)
     return (
-      <Empty title="List not found">
+      <Empty
+        title="List not found"
+        action={
+          <Link className="button secondary" to="/lists">
+            Back to my lists
+          </Link>
+        }
+      >
         This list may no longer be shared with you.
       </Empty>
     );
   if (list)
     return (
       <>
-        <Link className="back-link" to="/lists">
+        <Link
+          className="back-link"
+          to={list.canEdit ? "/lists" : `/people/${list.ownerIds[0]}`}
+        >
           <ArrowLeft size={16} />
-          My lists
+          {list.canEdit
+            ? "My lists"
+            : (world.people.find((p) => p.id === list.ownerIds[0])?.name ??
+              "Their wishes")}
         </Link>
         <Header title={list.name} description={list.description}>
           <Privacy mode={list.mode} />
@@ -986,7 +1143,16 @@ function GiftDetail() {
     [exchange, setExchange] = useState("");
   if (!gift)
     return (
-      <Empty title="Gift not found">It may no longer be shared with you.</Empty>
+      <Empty
+        title="Gift not found"
+        action={
+          <Link className="button secondary" to="/">
+            Browse gifts
+          </Link>
+        }
+      >
+        It may no longer be shared with you.
+      </Empty>
     );
   const choices = world.exchanges.flatMap((e) =>
     e.status === "drawn"
@@ -1017,15 +1183,28 @@ function GiftDetail() {
             <span>For {gift.recipientNames.join(" & ")}</span>
           </div>
           <h1>{gift.title}</h1>
+          <p className="status">
+            {gift.archived
+              ? "Archived"
+              : gift.isRecipient
+                ? gift.mode === "surprise"
+                  ? "On your list · Buying plans stay a surprise"
+                  : "On your list · Purchase activity is visible"
+                : gift.available
+                  ? `${gift.available} available to reserve`
+                  : "Taken care of"}
+          </p>
           <p className="detail-price">{dollars(gift.priceCents)}</p>
           {gift.description && (
             <p className="description">{gift.description}</p>
           )}
-          <div className="tags">
-            {gift.tags.map((t) => (
-              <span key={t}>{t}</span>
-            ))}
-          </div>
+          {gift.tags.length > 0 && (
+            <div className="tags">
+              {gift.tags.map((t) => (
+                <span key={t}>{t}</span>
+              ))}
+            </div>
+          )}
           <p className="muted">
             Quantity wanted: {gift.quantity}
             {gift.importedAt && (
@@ -1112,7 +1291,9 @@ function GiftDetail() {
                         exchangeId: c?.id,
                         giverId: c?.giver,
                       });
-                      toast("Reserved. You’ve got this one.");
+                      toast(
+                        "Reserved. Open Buying to record your purchase or release the reservation.",
+                      );
                     }}
                   >
                     <ShoppingBag size={16} />
@@ -1240,6 +1421,7 @@ function GiftDetail() {
           {!gift.archived && (
             <Form
               submit="Add private note"
+              resetOnSuccess
               onSubmit={async (f) => {
                 await mutate("comments", {
                   itemId: gift.id,
@@ -1274,7 +1456,10 @@ function Buying() {
             .map((r) => (
               <div className="buying-row" key={r.id}>
                 {r.item ? (
-                  <Link to={`/gift/${r.item.id}`}>
+                  <Link
+                    to={`/gift/${r.item.id}`}
+                    aria-label={`View ${r.titleSnapshot}`}
+                  >
                     <GiftPhoto gift={r.item} />
                   </Link>
                 ) : (
@@ -1299,6 +1484,25 @@ function Buying() {
                   )}
                 </div>
                 <div className="actions">
+                  {r.quantity === 1 && r.purchased === 0 && (
+                    <Action
+                      secondary
+                      onClick={async () => {
+                        await mutate("reservations/update", {
+                          id: r.id,
+                          revision: r.revision,
+                          quantity: 1,
+                          purchased: 1,
+                        });
+                        toast(
+                          "Marked purchased. You can change this with Update purchase.",
+                        );
+                      }}
+                      label={`Mark ${r.titleSnapshot} purchased`}
+                    >
+                      Mark purchased
+                    </Action>
+                  )}
                   <button
                     className="button secondary small"
                     onClick={() =>
@@ -1334,8 +1538,9 @@ function Buying() {
                             />
                           </Field>
                           <p>
-                            Purchased units remain reserved until you explicitly
-                            release them.
+                            Marking a gift purchased keeps it covered so nobody
+                            else buys it. Use Release if you are no longer
+                            getting it.
                           </p>
                         </Form>,
                       )
@@ -1691,7 +1896,16 @@ function Exchanges() {
           ))}
         </div>
       ) : (
-        <Empty title="A reason to surprise each other">
+        <Empty
+          title="A reason to surprise each other"
+          action={
+            !world.groups.length ? (
+              <Link className="button" to="/settings?section=groups">
+                Create or join a family group
+              </Link>
+            ) : undefined
+          }
+        >
           Create a family group, choose participants, and let Little Hint draw
           the names. It works any time of year.
         </Empty>
@@ -1739,6 +1953,12 @@ function SettingsPage({
     !!localStorage.getItem(`little-hint:draft-optin:${world.me.id}`),
   );
   const [drafts, setDrafts] = useState(getDrafts(world.me.id));
+  useEffect(() => {
+    const refresh = () => setDrafts(getDrafts(world.me.id));
+    window.addEventListener("little-hint:drafts-changed", refresh);
+    return () =>
+      window.removeEventListener("little-hint:drafts-changed", refresh);
+  }, [world.me.id]);
   const [deletedDraft, setDeletedDraft] = useState<
     ReturnType<typeof getDrafts>[number] | null
   >(null);
@@ -1790,6 +2010,7 @@ function SettingsPage({
                 </div>
                 <button
                   className="text-button"
+                  aria-label={`Edit profile for ${p.name}`}
                   onClick={() => open("Edit profile", <PersonForm id={p.id} />)}
                 >
                   Edit
@@ -1949,7 +2170,9 @@ function SettingsPage({
                 data-group-id={g.id}
                 hidden={g.id !== selectedGroup?.id}
               >
-                <h3>{familyGroupLabel(g, world)}</h3>
+                <h3 className="selected-group-heading">
+                  {familyGroupLabel(g, world)}
+                </h3>
                 <p>
                   {g.ownerId === world.me.id
                     ? "You own this family group."
@@ -2017,6 +2240,13 @@ function SettingsPage({
                                         close();
                                       }}
                                     >
+                                      <p>
+                                        Transfer <strong>{g.name}</strong> to{" "}
+                                        <strong>
+                                          {person?.name ?? "this member"}
+                                        </strong>
+                                        .
+                                      </p>
                                       <Field label="New owner’s verified email">
                                         <input
                                           type="email"
@@ -2178,8 +2408,9 @@ function SettingsPage({
                     disabled={!world.preferences.chatId}
                   />
                   Telegram{" "}
-                  {world.preferences.chatId ? "· Linked" : "· Link below"}
+                  {world.preferences.chatId ? "· Linked" : "· Not linked"}
                 </label>
+                {!world.preferences.chatId && <TelegramSetup />}
                 <label className="check">
                   <input
                     type="checkbox"
@@ -2193,41 +2424,79 @@ function SettingsPage({
                   SMS{" "}
                   {world.preferences.phoneVerified
                     ? `· ${world.preferences.phone}`
-                    : "· Verify below"}
+                    : "· Not verified"}
                 </label>
+                {(!world.preferences.phoneVerified ||
+                  world.preferences.smsOptOut) && (
+                  <button
+                    type="button"
+                    className="text-button"
+                    onClick={() => open("Verify your phone", <SmsForm />)}
+                  >
+                    Set up SMS
+                  </button>
+                )}
+                {world.preferences.smsOptOut && (
+                  <p className="muted">
+                    SMS is opted out. Reply START to the sender to resume
+                    delivery, then verify your number here.
+                  </p>
+                )}
               </fieldset>
-              <fieldset className="choice-group">
-                <legend>Which updates?</legend>
+              <div className="notification-topics">
                 {[
-                  "invitation",
-                  "reservation",
-                  "purchase",
-                  "discussion",
-                  "contribution",
-                  "exchange",
-                  "access",
-                ].map((event) => (
-                  <label className="check" key={event}>
-                    <input
-                      type="checkbox"
-                      name="events"
-                      value={event}
-                      defaultChecked={world.preferences.events.includes(event)}
-                    />
-                    {
-                      {
-                        invitation: "Invitations",
-                        reservation: "Reservations",
-                        purchase: "Purchases",
-                        discussion: "Private discussions",
-                        contribution: "Contributions",
-                        exchange: "Exchange assignments",
-                        access: "Access changes",
-                      }[event]
-                    }
-                  </label>
+                  {
+                    title: "People & access",
+                    events: ["invitation", "access"],
+                  },
+                  {
+                    title: "Gift coordination",
+                    events: [
+                      "reservation",
+                      "purchase",
+                      "discussion",
+                      "contribution",
+                    ],
+                  },
+                  { title: "Exchanges", events: ["exchange"] },
+                ].map((group) => (
+                  <fieldset className="choice-group" key={group.title}>
+                    <legend>{group.title}</legend>
+                    {group.events.map((event) => (
+                      <label className="check" key={event}>
+                        <input
+                          type="checkbox"
+                          name="events"
+                          value={event}
+                          defaultChecked={world.preferences.events.includes(
+                            event,
+                          )}
+                        />
+                        {
+                          {
+                            invitation: "Invitations",
+                            reservation: "Reservations",
+                            purchase: "Purchases",
+                            discussion: "Private discussions",
+                            contribution: "Contributions",
+                            exchange: "Exchange assignments",
+                            access: "Access changes",
+                          }[
+                            event as
+                              | "invitation"
+                              | "reservation"
+                              | "purchase"
+                              | "discussion"
+                              | "contribution"
+                              | "exchange"
+                              | "access"
+                          ]
+                        }
+                      </label>
+                    ))}
+                  </fieldset>
                 ))}
-              </fieldset>
+              </div>
               <label className="check">
                 <input
                   type="checkbox"
@@ -2241,39 +2510,6 @@ function SettingsPage({
                 Message previews contain a generic update and a sign-in link.
               </p>
             </Form>
-            <div className="actions">
-              <Action
-                secondary
-                onClick={async () => {
-                  const r = await api<{ url: string }>("channels/telegram", {});
-                  open(
-                    "Link Telegram",
-                    <>
-                      <p>
-                        Open your personal bot link and tap Start. This link
-                        expires in 15 minutes and can be used once.
-                      </p>
-                      <a
-                        className="button"
-                        href={r.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        Open Telegram <ExternalLink size={16} />
-                      </a>
-                    </>,
-                  );
-                }}
-              >
-                Link Telegram
-              </Action>
-              <button
-                className="button secondary small"
-                onClick={() => open("Verify your phone", <SmsForm />)}
-              >
-                Set up SMS
-              </button>
-            </div>
           </section>
           <section
             className="settings-section"
@@ -2300,6 +2536,7 @@ function SettingsPage({
                         "Delete saved drafts?",
                         <Confirm
                           label="Delete drafts and turn off"
+                          allowOffline
                           onConfirm={async () => disableDrafts()}
                         >
                           Turning off personal drafts permanently deletes{" "}
@@ -2340,6 +2577,12 @@ function SettingsPage({
                 >
                   Undo deletion
                 </button>
+              </p>
+            )}
+            {draftsEnabled && !drafts.length && (
+              <p className="notice">
+                No saved drafts on this device. When you’re offline, save a
+                personal gift idea here and add it to a list after reconnecting.
               </p>
             )}
             {drafts.map((d) => (
@@ -2409,11 +2652,66 @@ function SettingsPage({
     </>
   );
 }
+function TelegramSetup() {
+  const { open, close, toast } = useApp();
+  const client = useQueryClient();
+  return (
+    <Action
+      secondary
+      onClick={async () => {
+        const result = await api<{ url: string }>("channels/telegram", {});
+        open(
+          "Link Telegram",
+          <>
+            <p>
+              Open your personal bot link and tap Start. This link expires in 15
+              minutes and can be used once.
+            </p>
+            <a
+              className="button"
+              href={result.url}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Open Telegram <ExternalLink size={16} />
+            </a>
+            <p>
+              Return here after tapping Start to check the connection. If the
+              link expires, close this dialog and choose Link Telegram again.
+            </p>
+            <Action
+              secondary
+              onClick={async () => {
+                const latest = await api<World>("world");
+                if (!latest.preferences.chatId)
+                  throw new Error(
+                    "Telegram is not linked yet. Tap Start in the bot, then check again.",
+                  );
+                await client.invalidateQueries({ queryKey: ["world"] });
+                close();
+                toast(
+                  "Telegram linked. Choose your notification preferences and save them.",
+                );
+              }}
+            >
+              Check Telegram connection
+            </Action>
+          </>,
+        );
+      }}
+    >
+      Link Telegram
+    </Action>
+  );
+}
 function SmsForm() {
   const { mutate, close, toast } = useApp();
   const [sent, setSent] = useState(false);
+  const [phone, setPhone] = useState("");
+  const [resendNotice, setResendNotice] = useState("");
   return (
     <Form
+      key={sent ? "code" : "phone"}
       submit={sent ? "Verify & enable SMS" : "Send verification code"}
       onSubmit={async (f) => {
         if (sent) {
@@ -2425,6 +2723,7 @@ function SmsForm() {
               telegram: w.preferences.telegram,
               sms: true,
               events: w.preferences.events,
+              recipientUpdates: w.preferences.recipientUpdates,
             })),
           );
           close();
@@ -2434,25 +2733,64 @@ function SmsForm() {
             phone: value(f, "phone"),
             consent: f.get("consent") === "on",
           });
+          setPhone(value(f, "phone"));
           setSent(true);
         }
       }}
     >
       {sent ? (
-        <Field label="Verification code">
-          <input
-            name="code"
-            required
-            inputMode="numeric"
-            autoComplete="one-time-code"
-          />
-        </Field>
+        <>
+          <p role="status">
+            Code sent to {phone}. Codes expire; request another if yours no
+            longer works.
+          </p>
+          <Field
+            label="Verification code"
+            hint="Enter the digits from the text message."
+          >
+            <input
+              name="code"
+              required
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              pattern="[0-9]{4,10}"
+              minLength={4}
+              maxLength={10}
+              autoFocus
+            />
+          </Field>
+          <div className="actions">
+            <Action
+              secondary
+              onClick={async () => {
+                await api("channels/sms/start", { phone, consent: true });
+                setResendNotice(
+                  "Another code was sent. Use the latest text message. If too many requests are made, wait before trying again.",
+                );
+              }}
+            >
+              Resend code
+            </Action>
+            <button
+              className="text-button"
+              type="button"
+              onClick={() => {
+                setSent(false);
+                setResendNotice("");
+              }}
+            >
+              Change number
+            </button>
+          </div>
+          <p role="status">{resendNotice}</p>
+        </>
       ) : (
         <>
           <Field label="US mobile number">
             <input
               name="phone"
               type="tel"
+              defaultValue={phone}
               placeholder="+15551234567"
               pattern="\+1[2-9][0-9]{9}"
               required
@@ -2515,9 +2853,43 @@ function PasskeyLabelForm({
     </Form>
   );
 }
+function sessionName(agent?: string | null) {
+  const ua = agent ?? "";
+  const browser = /Edg/.test(ua)
+    ? "Edge"
+    : /Firefox|FxiOS/.test(ua)
+      ? "Firefox"
+      : /Chrome|CriOS/.test(ua)
+        ? "Chrome"
+        : /Safari/.test(ua)
+          ? "Safari"
+          : "Browser";
+  const device = /iPhone/.test(ua)
+    ? "iPhone"
+    : /iPad/.test(ua)
+      ? "iPad"
+      : /Android/.test(ua)
+        ? "Android"
+        : /Windows/.test(ua)
+          ? "Windows"
+          : /Macintosh/.test(ua)
+            ? "Mac"
+            : /Linux/.test(ua)
+              ? "Linux"
+              : "unknown device";
+  return `${browser} on ${device}`;
+}
 function Security() {
   const { open, close, toast } = useApp();
   const client = useQueryClient();
+  const current = useQuery({
+    queryKey: ["current-session"],
+    queryFn: async () => {
+      const result = await authClient.getSession();
+      if (result.error) throw new Error(result.error.message);
+      return result.data;
+    },
+  });
   const sessions = useQuery({
     queryKey: ["sessions"],
     queryFn: async () => {
@@ -2558,6 +2930,10 @@ function Security() {
       >
         <KeyRound size={17} /> Add a passkey
       </button>
+      {keys.isPending && <p role="status">Loading passkeys…</p>}
+      {keys.isSuccess && !keys.data?.length && (
+        <p>No passkeys yet. Add one on a trusted device.</p>
+      )}
       {keys.data?.map((k) => (
         <div className="setting-row" key={k.id}>
           <span className="passkey-label">{k.name || "Passkey"}</span>
@@ -2582,6 +2958,7 @@ function Security() {
           </button>
           <Action
             secondary
+            label={`Remove passkey ${k.name || "Passkey"}`}
             onClick={async () => {
               const r = await authClient.passkey.deletePasskey({ id: k.id });
               if (r.error) throw new Error(r.error.message);
@@ -2593,36 +2970,76 @@ function Security() {
         </div>
       ))}
       <h3>Active sessions</h3>
+      {sessions.isPending && <p role="status">Loading active sessions…</p>}
+      {sessions.isSuccess && !sessions.data?.length && (
+        <p>No active sessions were returned. Refresh to check again.</p>
+      )}
+      {current.error && (
+        <p role="status">
+          We couldn’t identify this device. Session details are still available
+          below.
+        </p>
+      )}
       {sessions.data?.map((s) => (
         <div className="setting-row" key={s.id}>
           <div>
             <strong>
-              {s.userAgent?.includes("Mobile")
-                ? "Mobile browser"
-                : "Browser session"}
+              {sessionName(s.userAgent)}
+              {s.id === current.data?.session.id ? " · This device" : ""}
             </strong>
-            <p>Started {new Date(s.createdAt).toLocaleDateString()}</p>
+            <p>
+              Started {new Date(s.createdAt).toLocaleString()} · Expires{" "}
+              {new Date(s.expiresAt).toLocaleDateString()}
+            </p>
+            <details>
+              <summary>Browser details</summary>
+              <p className="session-agent">
+                {s.userAgent || "Browser details unavailable"}
+              </p>
+            </details>
           </div>
           <Action
             secondary
+            label={`Revoke ${sessionName(s.userAgent)} session started ${new Date(s.createdAt).toLocaleString()}${s.id === current.data?.session.id ? " on this device" : ""}`}
             onClick={async () => {
               const r = await authClient.revokeSession({ token: s.token });
               if (r.error) throw new Error(r.error.message);
               await client.invalidateQueries({ queryKey: ["sessions"] });
               await client.invalidateQueries({ queryKey: ["world"] });
+              await client.invalidateQueries({ queryKey: ["current-session"] });
             }}
           >
-            Revoke
+            {s.id === current.data?.session.id
+              ? "Sign out this device"
+              : "Revoke"}
           </Action>
         </div>
       ))}
       {(keys.error || sessions.error) && (
-        <p className="error">
-          Security settings could not be loaded. Refresh to try again.
-        </p>
+        <div role="alert" className="error">
+          <p>Some security settings could not be loaded.</p>
+          <button
+            className="button secondary"
+            onClick={() => {
+              keys.refetch();
+              sessions.refetch();
+              current.refetch();
+            }}
+          >
+            Retry security settings
+          </button>
+        </div>
       )}
     </section>
   );
+}
+function integrationGroup(key: string) {
+  if (key.startsWith("SMTP_")) return "Email delivery";
+  if (key.startsWith("TELEGRAM_")) return "Telegram";
+  if (key.startsWith("TWILIO_")) return "SMS";
+  if (key.startsWith("OPENAI_")) return "AI assistance";
+  if (key.includes("SCRAP")) return "Product import services";
+  return "Usage limits";
 }
 function Admin() {
   const { toast } = useApp();
@@ -2662,6 +3079,9 @@ function Admin() {
   return (
     <section className="settings-section">
       <h2>Administration</h2>
+      {settings.isPending && (
+        <p role="status">Loading administration settings…</p>
+      )}
       <h3>Product imports</h3>
       {photos && (
         <Form
@@ -2708,106 +3128,152 @@ function Admin() {
         precedence. A blank saved value removes the UI override.
       </p>
       <div className="integration-settings">
-        {settings.data
-          ?.filter((s) => s.key !== "AUTO_IMPORT_PRODUCT_PHOTOS")
-          .map((s) => (
-            <details key={s.key}>
-              <summary>
-                <span>
-                  {s.key === "SCRAPING_PROVIDER"
-                    ? "Product import provider"
-                    : scrapingProviders.find((p) => p.key === s.key)?.name
-                      ? `${scrapingProviders.find((p) => p.key === s.key)!.name} API key`
-                      : s.key.replaceAll("_", " ").toLowerCase()}
-                </span>
-                <small>
-                  {s.configured ? "Configured" : "Not configured"} · {s.source}
-                </small>
-              </summary>
-              <Form
-                submit="Save setting"
-                disabled={s.source === "environment"}
-                onSubmit={async (f) => {
-                  await api("admin/settings", {
-                    key: s.key,
-                    value: value(f, "value"),
-                  });
-                  await client.invalidateQueries({
-                    queryKey: ["admin-settings"],
-                  });
-                  toast("Setting saved.");
-                }}
+        {[
+          "Email delivery",
+          "Telegram",
+          "SMS",
+          "Product import services",
+          "AI assistance",
+          "Usage limits",
+        ].map((group) => {
+          const entries =
+            settings.data?.filter(
+              (s) =>
+                s.key !== "AUTO_IMPORT_PRODUCT_PHOTOS" &&
+                integrationGroup(s.key) === group,
+            ) ?? [];
+          return (
+            entries.length > 0 && (
+              <section
+                className="integration-group"
+                key={group}
+                aria-label={group}
               >
-                {s.key === "SCRAPING_PROVIDER" ? (
-                  <>
-                    <Field
-                      label="Paid import provider"
-                      hint="Try a free direct import first, then at most one paid provider. Automatic selection prefers Scraping Fish."
-                    >
-                      <select
-                        name="value"
-                        defaultValue={s.value || "auto"}
-                        disabled={s.source === "environment"}
-                      >
-                        <option value="auto">Automatic selection</option>
-                        <option value="none">Direct import only</option>
-                        {scrapingProviders.map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.name}
-                          </option>
-                        ))}
-                      </select>
-                    </Field>
-                    <p className="muted">
-                      Current paid provider:{" "}
-                      {scrapingProviders.find(
-                        (p) => p.id === s.effectiveProvider,
-                      )?.name ?? "None configured"}
-                      . Requests count toward the integration daily limit.
-                      Failed imports never switch to another paid provider.
-                    </p>
-                  </>
-                ) : (
-                  <Field
-                    label="New value"
-                    hint={s.default ? `Default: ${s.default}` : undefined}
-                  >
-                    <input
-                      name="value"
-                      type={/KEY|TOKEN|PASS/.test(s.key) ? "password" : "text"}
-                      autoComplete="off"
+                <h4>{group}</h4>
+                {entries.map((s) => (
+                  <details key={s.key}>
+                    <summary>
+                      <span>
+                        {s.key === "SCRAPING_PROVIDER"
+                          ? "Product import provider"
+                          : scrapingProviders.find((p) => p.key === s.key)?.name
+                            ? `${scrapingProviders.find((p) => p.key === s.key)!.name} API key`
+                            : s.key.replaceAll("_", " ").toLowerCase()}
+                      </span>
+                      <small>
+                        {s.configured ? "Configured" : "Not configured"} ·{" "}
+                        {s.source}
+                      </small>
+                    </summary>
+                    <Form
+                      submit="Save setting"
                       disabled={s.source === "environment"}
-                      placeholder={
-                        s.source === "environment"
-                          ? "Managed through deployment environment"
-                          : "Enter a replacement value"
-                      }
-                    />
-                  </Field>
-                )}
-              </Form>
-            </details>
-          ))}
+                      onSubmit={async (f) => {
+                        await api("admin/settings", {
+                          key: s.key,
+                          value: value(f, "value"),
+                        });
+                        await client.invalidateQueries({
+                          queryKey: ["admin-settings"],
+                        });
+                        toast("Setting saved.");
+                      }}
+                    >
+                      {s.key === "SCRAPING_PROVIDER" ? (
+                        <>
+                          <Field
+                            label="Paid import provider"
+                            hint="Try a free direct import first, then at most one paid provider. Automatic selection prefers Scraping Fish."
+                          >
+                            <select
+                              name="value"
+                              defaultValue={s.value || "auto"}
+                              disabled={s.source === "environment"}
+                            >
+                              <option value="auto">Automatic selection</option>
+                              <option value="none">Direct import only</option>
+                              {scrapingProviders.map((p) => (
+                                <option key={p.id} value={p.id}>
+                                  {p.name}
+                                </option>
+                              ))}
+                            </select>
+                          </Field>
+                          <p className="muted">
+                            Current paid provider:{" "}
+                            {scrapingProviders.find(
+                              (p) => p.id === s.effectiveProvider,
+                            )?.name ?? "None configured"}
+                            . Requests count toward the integration daily limit.
+                            Failed imports never switch to another paid
+                            provider.
+                          </p>
+                        </>
+                      ) : (
+                        <Field
+                          label="New value"
+                          hint={s.default ? `Default: ${s.default}` : undefined}
+                        >
+                          <input
+                            name="value"
+                            type={
+                              /KEY|TOKEN|PASS/.test(s.key) ? "password" : "text"
+                            }
+                            autoComplete="off"
+                            disabled={s.source === "environment"}
+                            placeholder={
+                              s.source === "environment"
+                                ? "Managed through deployment environment"
+                                : "Enter a replacement value"
+                            }
+                          />
+                        </Field>
+                      )}
+                    </Form>
+                  </details>
+                ))}
+              </section>
+            )
+          );
+        })}
       </div>
       <h3>Background delivery & backups</h3>
-      <p>
-        Worker:{" "}
-        {jobs.data?.workerLastSeen &&
-        Date.now() - jobs.data.workerLastSeen < 60000
-          ? "Online"
-          : "Not reporting"}
-        . Backups are managed by the Housewatch Digital backup sidecar. Check
-        its health and restore status in Coolify.
-      </p>
-      <p>
-        {jobs.data?.imports.filter(
-          (j) => j.status === "pending" || j.status === "running",
-        ).length ?? 0}{" "}
-        imports pending ·{" "}
-        {jobs.data?.notifications.filter((j) => j.status === "pending")
-          .length ?? 0}{" "}
-        notifications pending
-      </p>
+      {jobs.isPending && (
+        <p role="status">Loading background delivery status…</p>
+      )}
+      {jobs.error && (
+        <div role="alert">
+          <p className="error">
+            Background delivery status is unavailable. Pending counts and worker
+            health could not be checked.
+          </p>
+          <button className="button secondary" onClick={() => jobs.refetch()}>
+            Retry delivery status
+          </button>
+        </div>
+      )}
+      {jobs.data && !jobs.error && (
+        <>
+          <p>
+            Worker:{" "}
+            {jobs.data?.workerLastSeen &&
+            Date.now() - jobs.data.workerLastSeen < 60000
+              ? "Online"
+              : "Not reporting"}
+            . Backups are managed by the Housewatch Digital backup sidecar.
+            Check its health and restore status in Coolify.
+          </p>
+          <p>
+            {jobs.data?.imports.filter(
+              (j) => j.status === "pending" || j.status === "running",
+            ).length ?? 0}{" "}
+            imports pending ·{" "}
+            {jobs.data?.notifications.filter((j) => j.status === "pending")
+              .length ?? 0}{" "}
+            notifications pending
+          </p>
+        </>
+      )}
       {jobs.data?.notifications
         .filter((j) => j.status === "failed")
         .map((j) => (
@@ -2827,7 +3293,15 @@ function Admin() {
           </div>
         ))}
       {settings.error && (
-        <p className="error">Could not load administration settings.</p>
+        <div role="alert">
+          <p className="error">Could not load administration settings.</p>
+          <button
+            className="button secondary"
+            onClick={() => settings.refetch()}
+          >
+            Retry administration settings
+          </button>
+        </div>
       )}
     </section>
   );

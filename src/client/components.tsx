@@ -24,6 +24,7 @@ import {
   Eye,
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useOnline } from "./pwa";
 import type { GiftView } from "../shared/model";
 import { dollars, initials } from "./api";
 
@@ -188,6 +189,8 @@ export function Form({
   disabled = false,
   className = "",
   review,
+  resetOnSuccess = false,
+  allowOffline = false,
 }: {
   onSubmit: (data: FormData) => Promise<unknown>;
   children: ReactNode;
@@ -195,6 +198,8 @@ export function Form({
   disabled?: boolean;
   className?: string;
   review?: (data: FormData) => ReactNode | null;
+  resetOnSuccess?: boolean;
+  allowOffline?: boolean;
 }) {
   const [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
@@ -203,6 +208,7 @@ export function Form({
     data: FormData;
     content: ReactNode;
   } | null>(null);
+  const online = useOnline();
   const reviewRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (pending) reviewRef.current?.focus();
@@ -218,7 +224,9 @@ export function Form({
   }, [dirty]);
   async function send(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const data = pending?.data ?? new FormData(e.currentTarget);
+    const form = e.currentTarget;
+    if (!online && !allowOffline) return;
+    const data = pending?.data ?? new FormData(form);
     if (!pending && review) {
       const content = review(data);
       if (content) {
@@ -230,6 +238,7 @@ export function Form({
     setError("");
     try {
       await onSubmit(data);
+      if (resetOnSuccess) form.reset();
       setDirty(false);
     } catch (e) {
       setError((e as Error).message);
@@ -270,7 +279,14 @@ export function Form({
           {error}
         </p>
       )}
-      <button disabled={busy || disabled} className="button" type="submit">
+      {!online && !allowOffline && (
+        <p role="status">Reconnect to save these changes.</p>
+      )}
+      <button
+        disabled={busy || disabled || (!online && !allowOffline)}
+        className="button"
+        type="submit"
+      >
         {busy ? <LoaderCircle className="spin" size={17} /> : null}
         {busy ? "Saving…" : pending ? "Confirm and save" : submit}
       </button>
@@ -334,7 +350,9 @@ export function GiftPhoto({ gift }: { gift: GiftView }) {
           ? Mountain
           : Gift;
   return (
-    <div className={`gift-photo photo-${gift.tags.join("").length % 4}`}>
+    <div
+      className={`gift-photo photo-${gift.tags.join("").length % 4} ${!gift.image || failed ? "without-photo" : ""}`}
+    >
       {gift.image && !failed ? (
         <img
           src={gift.image}

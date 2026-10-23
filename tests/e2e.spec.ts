@@ -15,6 +15,7 @@ test("real email-code sign-in, gift creation, buyer reservation, and surprise pr
   await ap.getByRole("button", { name: "Add a gift", exact: true }).click();
   await ap.getByLabel("Gift name", { exact: true }).fill(title);
   await ap.getByLabel("Wish list", { exact: true }).selectOption(list.id);
+  await ap.getByText("Optional gift details", { exact: true }).click();
   await ap.getByLabel("Price in USD", { exact: true }).fill("29.50");
   await ap.getByLabel("Quantity wanted", { exact: true }).fill("2");
   await ap
@@ -35,7 +36,10 @@ test("real email-code sign-in, gift creation, buyer reservation, and surprise pr
   await expect(
     sp
       .getByRole("status")
-      .filter({ hasText: "Reserved. You’ve got this one." }),
+      .filter({
+        hasText:
+          "Reserved. Open Buying to record your purchase or release the reservation.",
+      }),
   ).toBeVisible();
   await sp
     .getByLabel("Your note", { exact: true })
@@ -367,7 +371,7 @@ test("passkey registration and sign-in through a virtual platform authenticator"
   await page
     .locator(".setting-row")
     .filter({ hasText: label })
-    .getByRole("button", { name: "Remove", exact: true })
+    .getByRole("button", { name: `Remove passkey ${label}`, exact: true })
     .click();
   await expect(
     page.getByRole("button", { name: `Rename ${label}`, exact: true }),
