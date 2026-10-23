@@ -68,8 +68,9 @@ export function PersonForm({ id }: { id?: string }) {
         <input name="name" required defaultValue={person?.name} />
       </Field>
       <p className="muted">
-        Choose this person’s households under each family group in Settings
-        after saving their profile.
+        {person?.userId === world.me.id
+          ? "This is the name your people see on your profile."
+          : "Choose this person’s households under each family group in Settings after saving their profile."}
       </p>
       {!person && (
         <p className="muted">

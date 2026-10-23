@@ -28,9 +28,13 @@ function HouseholdForm({
         close();
       }}
     >
+      <p>
+        Group people who should not draw each other when an exchange avoids
+        household matches.
+      </p>
       <Field
         label="Household name"
-        hint="Names do not need to be unique. Members help distinguish households with the same name."
+        hint="Choose a name the members will recognize."
       >
         <input
           name="name"
@@ -41,8 +45,11 @@ function HouseholdForm({
         />
       </Field>
       <p className="muted">
-        For {group.name}. Renaming keeps memberships and future exchange
-        exclusions intact.
+        For {group.name}.{" "}
+        {household
+          ? "Renaming keeps memberships and future exchange exclusions intact."
+          : "After saving, choose the people in this household."}{" "}
+        Names can repeat; member names help tell households apart.
       </p>
     </Form>
   );

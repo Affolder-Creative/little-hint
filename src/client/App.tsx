@@ -1038,13 +1038,15 @@ function Lists() {
         title="Your little hints"
         description="Things you’d love, in lists that feel like you."
       >
-        <button
-          className="button"
-          onClick={() => open("A new wish list", <ListForm />)}
-        >
-          <Plus size={17} />
-          Create a list
-        </button>
+        {(mine.length > 0 || showArchived) && (
+          <button
+            className="button"
+            onClick={() => open("A new wish list", <ListForm />)}
+          >
+            <Plus size={17} />
+            Create a list
+          </button>
+        )}
       </Header>
       <div className="tabs" role="group" aria-label="List status">
         <button
@@ -1124,7 +1126,7 @@ function Lists() {
               className="button"
               onClick={() => open("Your first wish list", <ListForm />)}
             >
-              Create a wish list
+              Create a list
             </button>
           }
         >
