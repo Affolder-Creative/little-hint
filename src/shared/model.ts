@@ -26,6 +26,7 @@ export interface HouseholdMembership extends Base {
   personId: string;
 }
 export interface Invitation extends Base {
+  invitedById?: string;
   email: string;
   groupId?: string;
   bootstrap?: boolean;
@@ -285,13 +286,15 @@ export interface World {
     contribution: Contribution;
     title: string;
     purchaser: boolean;
+    contributorName: string;
+    purchaserName: string;
   }>;
   people: Person[];
   groups: Group[];
   households: Household[];
   householdMemberships: HouseholdMembership[];
   groupEvents: Array<GroupEvent & { canManage: boolean }>;
-  invitations: Invitation[];
+  invitations: Array<Invitation & { groupName?: string; inviterName?: string }>;
   lists: Array<
     List & {
       canEdit: boolean;
@@ -310,5 +313,5 @@ export interface World {
   >;
   preferences: Preferences;
   imports: ImportJob[];
-  links: Link[];
+  links: Array<Link & { targetName?: string; requesterName?: string }>;
 }

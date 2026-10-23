@@ -8,7 +8,11 @@ import type { Group, GroupEvent, List } from "../shared/model";
 import { canManageGroupEvents, peopleForGroup } from "../shared/group-events";
 import { Avatar, Empty, Field, Form, Header, Privacy } from "./components";
 import { useApp } from "./context";
-import { ListPolicyFields, listPolicyValues } from "./ListPolicyFields";
+import {
+  ListPolicyFields,
+  listPolicyValues,
+  SharingReview,
+} from "./ListPolicyFields";
 
 export function EventForm({
   event,
@@ -47,6 +51,9 @@ export function EventForm({
           : `Create ${participants.length} wish ${participants.length === 1 ? "list" : "lists"}`
       }
       disabled={!event && participants.length === 0}
+      review={(data) =>
+        !event ? <SharingReview data={data} audience={[group.name]} /> : null
+      }
       onSubmit={async (form) => {
         if (participants.some((id) => !people.some((p) => p.id === id)))
           throw new Error(
@@ -119,66 +126,69 @@ export function EventForm({
           placeholder="Dates, gift ideas, or anything everyone should know."
         />
       </Field>
-      <fieldset className="choice-group form-section event-participants">
-        <legend>Who needs a wish list?</legend>
-        <p className="muted">
-          Each selected person gets a wish list. Everyone in this family group
-          can shop from it.
-        </p>
-        <div className="event-selection-actions">
-          <span aria-live="polite">{participants.length} selected</span>
-          <button
-            type="button"
-            className="text-button"
-            onClick={() => setParticipants(people.map((p) => p.id))}
-          >
-            Select all
-          </button>
-          <button
-            type="button"
-            className="text-button"
-            onClick={() => setParticipants([])}
-          >
-            Clear
-          </button>
-        </div>
-        {people.map((person) => (
-          <label className="check event-person-choice" key={person.id}>
-            <input
-              type="checkbox"
-              name="participantIds"
-              value={person.id}
-              checked={participants.includes(person.id)}
-              onChange={(e) =>
-                setParticipants((selected) =>
-                  e.target.checked
-                    ? [...selected, person.id]
-                    : selected.filter((id) => id !== person.id),
-                )
-              }
-            />
-            <span>
-              {person.name}
-              {!person.userId && <small>Managed profile</small>}
-            </span>
-          </label>
-        ))}
-        {event && (
+      <ListPolicyFields list={policy} event>
+        <fieldset className="choice-group form-section event-participants">
+          <legend>Who needs a wish list?</legend>
+          <p className="muted">
+            Each selected person gets a wish list. Everyone in this family group
+            can shop from it.
+          </p>
+          <div className="event-selection-actions">
+            <span aria-live="polite">{participants.length} selected</span>
+            <button
+              type="button"
+              className="text-button"
+              data-form-change
+              onClick={() => setParticipants(people.map((p) => p.id))}
+            >
+              Select all
+            </button>
+            <button
+              type="button"
+              className="text-button"
+              data-form-change
+              onClick={() => setParticipants([])}
+            >
+              Clear
+            </button>
+          </div>
+          {people.map((person) => (
+            <label className="check event-person-choice" key={person.id}>
+              <input
+                type="checkbox"
+                name="participantIds"
+                value={person.id}
+                checked={participants.includes(person.id)}
+                onChange={(e) =>
+                  setParticipants((selected) =>
+                    e.target.checked
+                      ? [...selected, person.id]
+                      : selected.filter((id) => id !== person.id),
+                  )
+                }
+              />
+              <span>
+                {person.name}
+                {!person.userId && <small>Managed profile</small>}
+              </span>
+            </label>
+          ))}
+          {event && (
+            <small>
+              Removing someone archives their list and keeps its gifts and
+              purchase history shared with the family group. Re-adding them
+              restores the same list.
+            </small>
+          )}
+          {!event && !participants.length && (
+            <small>Select at least one person to create the event.</small>
+          )}
           <small>
-            Removing someone archives their list and keeps its gifts and
-            purchase history shared with the family group. Re-adding them
-            restores the same list.
+            New family-group members are added only when a leader selects them
+            here.
           </small>
-        )}
-        {!event && !participants.length && (
-          <small>Select at least one person to create the event.</small>
-        )}
-        <small>
-          New family-group members are added only when a leader selects them
-          here.
-        </small>
-      </fieldset>
-      <ListPolicyFields list={policy} event />
+        </fieldset>
+      </ListPolicyFields>
       {!event && (
         <p className="muted">
           Lists are shared immediately. Check privacy and reveal settings before

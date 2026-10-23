@@ -7,11 +7,16 @@ import {
   Check,
   Plus,
 } from "lucide-react";
-import type { GiftView, Group, List } from "../shared/model";
+import type { GiftView, Group, List, World } from "../shared/model";
 import { Form, Field, Privacy } from "./components";
 import { useApp } from "./context";
 import { api } from "./api";
-import { ListPolicyFields, listPolicyValues } from "./ListPolicyFields";
+import {
+  ListPolicyFields,
+  listPolicyValues,
+  SharingReview,
+} from "./ListPolicyFields";
+import { ExchangeReview, participantLabel } from "./ExchangeReview";
 export const value = (f: FormData, k: string) => String(f.get(k) ?? "");
 const selected = (f: FormData, k: string) => f.getAll(k).map(String);
 export function GroupForm({ onCreated }: { onCreated?: (id: string) => void }) {
@@ -80,6 +85,17 @@ export function ListForm({ list }: { list?: List }) {
     <Form
       className="list-form"
       submit={list ? "Save list" : "Create list"}
+      review={(data) =>
+        !list?.modeLocked && data.getAll("groupIds").length > 0 ? (
+          <SharingReview
+            data={data}
+            list={list}
+            audience={world.groups
+              .filter((g) => data.getAll("groupIds").includes(g.id))
+              .map((g) => g.name)}
+          />
+        ) : null
+      }
       onSubmit={async (f) => {
         await mutate(list ? "lists/update" : "lists", {
           ...(list
@@ -114,49 +130,50 @@ export function ListForm({ list }: { list?: List }) {
           placeholder="Favorite colors, sizes, or anything helpful."
         />
       </Field>
-      {!list && (
+      <ListPolicyFields list={list}>
+        {!list && (
+          <fieldset className="choice-group form-section">
+            <legend>Who is this list for?</legend>
+            {world.people.map((p) => (
+              <label className="check" key={p.id}>
+                <input
+                  type="checkbox"
+                  name="ownerIds"
+                  value={p.id}
+                  defaultChecked={p.id === mine[0]?.id}
+                />
+                {p.name}
+                {!mine.includes(p) && <small>Invitation to co-own</small>}
+              </label>
+            ))}
+            <small>
+              Include yourself or a profile you manage. Joint owners must accept
+              before sharing.
+            </small>
+          </fieldset>
+        )}
         <fieldset className="choice-group form-section">
-          <legend>Who is this list for?</legend>
-          {world.people.map((p) => (
-            <label className="check" key={p.id}>
-              <input
-                type="checkbox"
-                name="ownerIds"
-                value={p.id}
-                defaultChecked={p.id === mine[0]?.id}
-              />
-              {p.name}
-              {!mine.includes(p) && <small>Invitation to co-own</small>}
-            </label>
-          ))}
+          <legend>Share with</legend>
+          {world.groups.length ? (
+            world.groups.map((g) => (
+              <label className="check" key={g.id}>
+                <input
+                  type="checkbox"
+                  name="groupIds"
+                  value={g.id}
+                  defaultChecked={list?.groupIds.includes(g.id)}
+                />
+                {familyGroupLabel(g, world)}
+              </label>
+            ))
+          ) : (
+            <p>Create a family group in Settings to share this list.</p>
+          )}
           <small>
-            Include yourself or a profile you manage. Joint owners must accept
-            before sharing.
+            Leaving every family group unchecked keeps the list private.
           </small>
         </fieldset>
-      )}
-      <fieldset className="choice-group form-section">
-        <legend>Share with</legend>
-        {world.groups.length ? (
-          world.groups.map((g) => (
-            <label className="check" key={g.id}>
-              <input
-                type="checkbox"
-                name="groupIds"
-                value={g.id}
-                defaultChecked={list?.groupIds.includes(g.id)}
-              />
-              {familyGroupLabel(g, world)}
-            </label>
-          ))
-        ) : (
-          <p>Create a family group in Settings to share this list.</p>
-        )}
-        <small>
-          Leaving every family group unchecked keeps the list private.
-        </small>
-      </fieldset>
-      <ListPolicyFields list={list} />
+      </ListPolicyFields>
       {list && (
         <label className="check">
           <input
@@ -544,42 +561,51 @@ export function GiftForm({
     </Form>
   );
 }
-export function ExchangeForm() {
+export function ExchangeForm({
+  exchange,
+}: {
+  exchange?: World["exchanges"][number];
+}) {
   const { world, mutate, close } = useApp();
-  const [groupId, setGroupId] = useState(world.groups[0]?.id ?? "");
+  const [groupId, setGroupId] = useState(
+    exchange?.groupId ?? world.groups[0]?.id ?? "",
+  );
   const group = world.groups.find((g) => g.id === groupId);
   const people = world.people.filter((p) =>
     [p.userId, ...p.guardians].some((u) => u && group?.memberIds.includes(u)),
   );
+  const [participants, setParticipants] = useState(
+    exchange?.participantIds ?? people.map((p) => p.id),
+  );
+  const [exclusions, setExclusions] = useState<[string, string][]>(
+    exchange?.exclusions ?? [],
+  );
+  const [giver, setGiver] = useState("");
+  const [recipient, setRecipient] = useState("");
+  const plan = (f: FormData) => ({
+    name: value(f, "name"),
+    groupId,
+    participantIds: participants,
+    count: Number(value(f, "count")) as 1 | 2 | 3,
+    excludeHousehold: f.has("households"),
+    exclusions,
+    previousId: value(f, "previousId") || undefined,
+  });
   return (
     <Form
-      submit="Create exchange"
+      submit={exchange ? "Save exchange" : "Create exchange"}
+      disabled={participants.length < 2}
+      review={(f) => (
+        <>
+          <h3>Review your exchange</h3>
+          <p>{value(f, "name")}</p>
+          <ExchangeReview world={world} exchange={plan(f)} />
+        </>
+      )}
       onSubmit={async (f) => {
-        const exclusions = value(f, "exclusions")
-          .split("\n")
-          .filter(Boolean)
-          .map((line) => line.split(">").map((v) => v.trim()))
-          .map(([a, b]) => {
-            const giver = people.find(
-                (p) => p.name.toLowerCase() === a?.toLowerCase(),
-              ),
-              recipient = people.find(
-                (p) => p.name.toLowerCase() === b?.toLowerCase(),
-              );
-            if (!giver || !recipient)
-              throw new Error(
-                "Use exact participant names in exclusions, separated by >.",
-              );
-            return [giver.id, recipient.id];
-          });
-        await mutate("exchanges", {
-          name: value(f, "name"),
-          groupId,
-          count: Number(value(f, "count")),
-          participantIds: selected(f, "participants"),
-          excludeHousehold: f.get("households") === "on",
-          exclusions,
-          previousId: value(f, "previousId") || undefined,
+        await mutate(exchange ? "exchanges/update" : "exchanges", {
+          ...plan(f),
+          ...(exchange ? { id: exchange.id, revision: exchange.revision } : {}),
         });
         close();
       }}
@@ -588,11 +614,32 @@ export function ExchangeForm() {
         <input
           name="name"
           required
+          defaultValue={exchange?.name}
+          maxLength={160}
           placeholder="A just-because gift exchange"
         />
       </Field>
       <Field label="Family group">
-        <select value={groupId} onChange={(e) => setGroupId(e.target.value)}>
+        <select
+          value={groupId}
+          disabled={!!exchange}
+          onChange={(e) => {
+            const next = world.groups.find((g) => g.id === e.target.value)!;
+            setGroupId(next.id);
+            setParticipants(
+              world.people
+                .filter((p) =>
+                  [p.userId, ...p.guardians].some(
+                    (u) => u && next.memberIds.includes(u),
+                  ),
+                )
+                .map((p) => p.id),
+            );
+            setExclusions([]);
+            setGiver("");
+            setRecipient("");
+          }}
+        >
           {world.groups.map((g) => (
             <option key={g.id} value={g.id}>
               {familyGroupLabel(g, world)}
@@ -602,59 +649,159 @@ export function ExchangeForm() {
       </Field>
       <Field
         label="People each participant gives to"
-        hint="Choose 2 and each participant gives to 2 people and receives from 2 people."
+        hint="Each person gives and receives the same number of gifts."
       >
-        <select name="count">
-          <option value="1">1 person</option>
-          <option value="2">2 people</option>
-          <option value="3">3 people</option>
+        <select name="count" defaultValue={exchange?.count ?? 1}>
+          {[1, 2, 3].map((n) => (
+            <option key={n} value={n}>
+              {n} {n === 1 ? "person" : "people"}
+            </option>
+          ))}
         </select>
       </Field>
-      <fieldset className="choice-group" key={groupId}>
+      <fieldset className="choice-group">
         <legend>Participants</legend>
         {people.map((p) => (
           <label className="check" key={p.id}>
             <input
               type="checkbox"
-              name="participants"
-              value={p.id}
-              defaultChecked
+              checked={participants.includes(p.id)}
+              onChange={(e) => {
+                setParticipants((current) =>
+                  e.target.checked
+                    ? [...current, p.id]
+                    : current.filter((id) => id !== p.id),
+                );
+                if (!e.target.checked) {
+                  setExclusions((current) =>
+                    current.filter((pair) => !pair.includes(p.id)),
+                  );
+                  setGiver("");
+                  setRecipient("");
+                }
+              }}
             />
-            {p.name}
+            {participantLabel(world, p.id)}
           </label>
         ))}
+        {participants.length < 2 && <p>Select at least two people.</p>}
       </fieldset>
       <label className="check">
-        <input type="checkbox" name="households" defaultChecked />
+        <input
+          name="households"
+          type="checkbox"
+          defaultChecked={exchange?.excludeHousehold ?? true}
+        />
         Avoid matching people in the same household
       </label>
       <p className="muted">
-        Household setup is optional. This excludes people who share any
-        household in the selected family group. Manage households in Settings;
-        matching names alone do not exclude anyone. Completed drawings never
-        change.
+        Households are optional and managed in family-group Settings. Matching
+        names alone do not exclude anyone.
       </p>
-      <Field
-        label="Other exclusions"
-        hint="One direction per line, using exact names: Alex Morgan > Sam Morgan"
-      >
-        <textarea name="exclusions" rows={2} />
-      </Field>
+      <fieldset className="choice-group">
+        <legend>Other exclusions</legend>
+        <div className="form-row">
+          <Field label="Giver">
+            <select
+              value={giver}
+              onChange={(e) => {
+                setGiver(e.target.value);
+                if (recipient === e.target.value) setRecipient("");
+              }}
+            >
+              <option value="">Choose a person</option>
+              {people
+                .filter((p) => participants.includes(p.id))
+                .map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {participantLabel(world, p.id)}
+                  </option>
+                ))}
+            </select>
+          </Field>
+          <Field label="Will not give to">
+            <select
+              value={recipient}
+              onChange={(e) => setRecipient(e.target.value)}
+            >
+              <option value="">Choose a person</option>
+              {people
+                .filter((p) => participants.includes(p.id) && p.id !== giver)
+                .map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {participantLabel(world, p.id)}
+                  </option>
+                ))}
+            </select>
+          </Field>
+        </div>
+        <button
+          type="button"
+          className="button secondary"
+          data-form-change
+          disabled={
+            !giver ||
+            !recipient ||
+            exclusions.some(([a, b]) => a === giver && b === recipient)
+          }
+          onClick={() => {
+            setExclusions([...exclusions, [giver, recipient]]);
+            setGiver("");
+            setRecipient("");
+          }}
+        >
+          Add exclusion
+        </button>
+        {exclusions.map(([a, b]) => (
+          <div className="setting-row" key={`${a}:${b}`}>
+            <span>
+              {participantLabel(world, a)} will not give to{" "}
+              {participantLabel(world, b)}
+            </span>
+            <button
+              type="button"
+              className="text-button"
+              data-form-change
+              aria-label={`Remove exclusion: ${participantLabel(world, a)} to ${participantLabel(world, b)}`}
+              onClick={() =>
+                setExclusions(
+                  exclusions.filter((pair) => pair[0] !== a || pair[1] !== b),
+                )
+              }
+            >
+              Remove
+            </button>
+          </div>
+        ))}
+        <small>
+          Each rule applies in one direction. Add a second rule to exclude the
+          reverse match.
+        </small>
+      </fieldset>
       <Field label="Prefer different matches from">
-        <select name="previousId">
+        <select
+          name="previousId"
+          key={groupId}
+          defaultValue={exchange?.previousId ?? ""}
+        >
           <option value="">No previous exchange</option>
           {world.exchanges
-            .filter((e) => e.groupId === groupId && e.status !== "draft")
+            .filter(
+              (e) =>
+                e.groupId === groupId &&
+                e.status !== "draft" &&
+                e.id !== exchange?.id,
+            )
             .map((e) => (
-              <option value={e.id} key={e.id}>
+              <option key={e.id} value={e.id}>
                 {e.name}
               </option>
             ))}
         </select>
       </Field>
       <p className="muted">
-        Every participant needs a Surprise list shared with the family group
-        before the draw. Only givers and their guardians see their assignments.
+        Every participant needs a Surprise list shared with this group before
+        the draw. Only givers and their guardians see their assignments.
       </p>
     </Form>
   );

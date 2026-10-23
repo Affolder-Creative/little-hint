@@ -78,6 +78,7 @@ import {
   GroupEventSettings,
   ManagedEventNotice,
 } from "./GroupEvents";
+import { ExchangeReview, exchangeMissingLists } from "./ExchangeReview";
 import { scrapingProviders } from "../shared/scraping-providers";
 const nav = [
   { to: "/", label: "Home", icon: Heart },
@@ -455,18 +456,27 @@ function OfflineDrafts({ dark }: { dark: boolean }) {
 }
 function Invitations() {
   const { world, mutate, toast } = useApp();
+  const { id } = useParams();
   const mine = world.invitations.filter(
-    (i) => i.email === world.me.email.toLowerCase(),
+    (i) => i.email === world.me.email.toLowerCase() && (!id || i.id === id),
   );
   return (
     <section className="invitations">
+      {id && <h1>Family group invitation</h1>}
       {mine.length ? (
         mine.map((i) => (
           <div className="invitation" key={i.id}>
             <Mail size={22} />
             <div>
-              <h3>You’re invited to a family group.</h3>
-              <p>Accept to see the lists shared with this family group.</p>
+              <h3>Join {i.groupName ?? "your family group"}</h3>
+              <p>
+                {i.inviterName ? `${i.inviterName} invited you. ` : ""}Accept to
+                see lists shared with this family group.
+              </p>
+              <p className="muted">
+                For {i.email} · Expires{" "}
+                {new Date(i.expiresAt).toLocaleDateString()}
+              </p>
             </div>
             <Action
               onClick={async () => {
@@ -479,7 +489,17 @@ function Invitations() {
           </div>
         ))
       ) : (
-        <p className="muted">No pending invitations for this email address.</p>
+        <div>
+          <p>No pending invitations for {world.me.email}.</p>
+          <p>
+            This invitation may have expired, been accepted, or be for another
+            email. Ask the inviter for a new invitation, or sign out in Settings
+            and use the invited email.
+          </p>
+          <Link className="button secondary" to="/settings">
+            Open Settings
+          </Link>
+        </div>
       )}
     </section>
   );
@@ -1165,6 +1185,11 @@ function GiftDetail() {
                           close();
                         }}
                       >
+                        <p>
+                          <strong>{gift.title}</strong> · For{" "}
+                          {gift.recipientNames.join(" & ")} · Purchased by{" "}
+                          {r.buyerName}
+                        </p>
                         <Field label="Contribution in USD">
                           <input
                             name="amount"
@@ -1292,6 +1317,12 @@ function Buying() {
                             toast("Purchase status updated.");
                           }}
                         >
+                          <p>
+                            <strong>{r.titleSnapshot}</strong>
+                            {r.item
+                              ? ` · For ${r.item.recipientNames.join(" & ")}`
+                              : ""}
+                          </p>
                           <Field label="Quantity purchased">
                             <input
                               name="purchased"
@@ -1333,6 +1364,12 @@ function Buying() {
                               close();
                             }}
                           >
+                            <p>
+                              <strong>{r.titleSnapshot}</strong>
+                              {r.item
+                                ? ` · For ${r.item.recipientNames.join(" & ")}`
+                                : ""}
+                            </p>
                             <Field label="Target amount in USD">
                               <input
                                 name="amount"
@@ -1377,6 +1414,12 @@ function Buying() {
                             close();
                           }}
                         >
+                          <p>
+                            <strong>{r.titleSnapshot}</strong>
+                            {r.item
+                              ? ` · For ${r.item.recipientNames.join(" & ")}`
+                              : ""}
+                          </p>
                           <Field label="Units to release">
                             <input
                               name="release"
@@ -1435,64 +1478,76 @@ function Buying() {
       {contributions.length > 0 && (
         <section className="detail-section">
           <h2>Contributions</h2>
-          {contributions.map(({ contribution: c, purchaser, title }) => (
-            <div className="reservation-row" key={c.id}>
-              <div>
-                <strong>{title}</strong>
-                <p>
-                  {dollars(c.amountCents)} · {c.status}
-                  {c.userId === world.me.id ? " · Your contribution" : ""}
-                </p>
+          {contributions.map(
+            ({
+              contribution: c,
+              purchaser,
+              title,
+              contributorName,
+              purchaserName,
+            }) => (
+              <div className="reservation-row" key={c.id}>
+                <div>
+                  <strong>{title}</strong>
+                  <p>
+                    {contributorName} contributing to {purchaserName}'s purchase
+                  </p>
+                  <p>
+                    {dollars(c.amountCents)} · {c.status}
+                    {c.userId === world.me.id ? " · Your contribution" : ""}
+                  </p>
+                </div>
+                {c.status === "pledged" && c.userId === world.me.id && (
+                  <>
+                    <Action
+                      onClick={() =>
+                        mutate("contributions/update", {
+                          id: c.id,
+                          revision: c.revision,
+                          status: "sent",
+                        })
+                      }
+                    >
+                      Mark sent
+                    </Action>
+                    <Action
+                      secondary
+                      onClick={() =>
+                        mutate("contributions/update", {
+                          id: c.id,
+                          revision: c.revision,
+                          status: "cancelled",
+                        })
+                      }
+                    >
+                      Cancel pledge
+                    </Action>
+                  </>
+                )}
+                {c.status === "sent" && purchaser && (
+                  <Action
+                    onClick={() =>
+                      mutate("contributions/update", {
+                        id: c.id,
+                        revision: c.revision,
+                        status: "received",
+                      })
+                    }
+                  >
+                    Confirm {contributorName}'s {dollars(c.amountCents)}{" "}
+                    received
+                  </Action>
+                )}
               </div>
-              {c.status === "pledged" && c.userId === world.me.id && (
-                <>
-                  <Action
-                    onClick={() =>
-                      mutate("contributions/update", {
-                        id: c.id,
-                        revision: c.revision,
-                        status: "sent",
-                      })
-                    }
-                  >
-                    Mark sent
-                  </Action>
-                  <Action
-                    secondary
-                    onClick={() =>
-                      mutate("contributions/update", {
-                        id: c.id,
-                        revision: c.revision,
-                        status: "cancelled",
-                      })
-                    }
-                  >
-                    Cancel pledge
-                  </Action>
-                </>
-              )}
-              {c.status === "sent" && purchaser && (
-                <Action
-                  onClick={() =>
-                    mutate("contributions/update", {
-                      id: c.id,
-                      revision: c.revision,
-                      status: "received",
-                    })
-                  }
-                >
-                  Confirm receipt
-                </Action>
-              )}
-            </div>
-          ))}
+            ),
+          )}
         </section>
       )}
     </>
   );
 }
 function Exchanges() {
-  const { world, open, mutate, toast } = useApp();
+  const { world, open, mutate, toast, close } = useApp();
   return (
     <>
       <Header
@@ -1556,20 +1611,49 @@ function Exchanges() {
               {e.canManage && (
                 <div className="actions">
                   {e.status === "draft" && (
-                    <Action
-                      onClick={async () => {
-                        await mutate("exchanges/draw", {
-                          id: e.id,
-                          revision: e.revision,
-                        });
-                        toast(
-                          "Names drawn. Each giver can see their own assignments.",
-                        );
-                      }}
-                    >
-                      <Shuffle size={16} />
-                      Draw names
-                    </Action>
+                    <>
+                      <ExchangeReview world={world} exchange={e} />
+                      <button
+                        className="button secondary"
+                        onClick={() =>
+                          open("Edit exchange", <ExchangeForm exchange={e} />)
+                        }
+                      >
+                        Edit exchange
+                      </button>
+                      <button
+                        className="button"
+                        disabled={exchangeMissingLists(world, e).length > 0}
+                        onClick={() =>
+                          open(
+                            "Review before drawing names",
+                            <Form
+                              submit="Draw names"
+                              onSubmit={async () => {
+                                await mutate("exchanges/draw", {
+                                  id: e.id,
+                                  revision: e.revision,
+                                });
+                                close();
+                                toast(
+                                  "Names drawn. Each giver can see their own assignments.",
+                                );
+                              }}
+                            >
+                              <ExchangeReview world={world} exchange={e} />
+                              <p>
+                                Drawing locks these participants and rules and
+                                notifies the givers. Review them before
+                                continuing.
+                              </p>
+                            </Form>,
+                          )
+                        }
+                      >
+                        <Shuffle size={16} />
+                        Draw names
+                      </button>
+                    </>
                   )}
                   {e.status !== "cancelled" && (
                     <button
@@ -1655,6 +1739,16 @@ function SettingsPage({
     !!localStorage.getItem(`little-hint:draft-optin:${world.me.id}`),
   );
   const [drafts, setDrafts] = useState(getDrafts(world.me.id));
+  const [deletedDraft, setDeletedDraft] = useState<
+    ReturnType<typeof getDrafts>[number] | null
+  >(null);
+  const disableDrafts = () => {
+    localStorage.removeItem(`little-hint:draft-optin:${world.me.id}`);
+    localStorage.removeItem(draftKey(world.me.id));
+    setDraftsEnabled(false);
+    setDrafts([]);
+    setDeletedDraft(null);
+  };
   const mine = world.people.filter(
     (p) => p.userId === world.me.id || p.guardians.includes(world.me.id),
   );
@@ -1741,7 +1835,15 @@ function SettingsPage({
               .filter((l) => l.kind === "profile")
               .map((l) => (
                 <div className="notice" key={l.id}>
-                  <p>A profile claim request is pending.</p>
+                  <p>
+                    Claim profile:{" "}
+                    <strong>
+                      {l.targetName ?? "Profile no longer available"}
+                    </strong>
+                    . Requested by {l.requesterName ?? "the profile guardian"}{" "}
+                    for {l.email}. Expires{" "}
+                    {new Date(l.expiresAt).toLocaleDateString()}.
+                  </p>
                   {l.email === world.me.email && (
                     <Action
                       onClick={() => mutate("links/accept", { id: l.id })}
@@ -1798,7 +1900,15 @@ function SettingsPage({
               .filter((l) => l.kind === "ownership")
               .map((l) => (
                 <div className="notice" key={l.id}>
-                  <p>A family-group ownership request is pending.</p>
+                  <p>
+                    Take ownership of{" "}
+                    <strong>
+                      {l.targetName ?? "Family group no longer available"}
+                    </strong>
+                    . Requested by {l.requesterName ?? "the group owner"} for{" "}
+                    {l.email}. Expires{" "}
+                    {new Date(l.expiresAt).toLocaleDateString()}.
+                  </p>
                   {(l.email === world.me.email || l.userId === world.me.id) && (
                     <Action
                       onClick={() => mutate("links/accept", { id: l.id })}
@@ -2177,18 +2287,27 @@ function SettingsPage({
                 type="checkbox"
                 checked={draftsEnabled}
                 onChange={(e) => {
-                  setDraftsEnabled(e.target.checked);
-                  if (e.target.checked)
+                  if (e.target.checked) {
                     localStorage.setItem(
                       `little-hint:draft-optin:${world.me.id}`,
                       "yes",
                     );
-                  else {
-                    localStorage.removeItem(
-                      `little-hint:draft-optin:${world.me.id}`,
-                    );
-                    localStorage.removeItem(draftKey(world.me.id));
-                    setDrafts([]);
+                    setDraftsEnabled(true);
+                  } else {
+                    const count = getDrafts(world.me.id).length;
+                    if (count)
+                      open(
+                        "Delete saved drafts?",
+                        <Confirm
+                          label="Delete drafts and turn off"
+                          onConfirm={async () => disableDrafts()}
+                        >
+                          Turning off personal drafts permanently deletes{" "}
+                          {count} saved {count === 1 ? "draft" : "drafts"} on
+                          this device. Keep this setting on to retain them.
+                        </Confirm>,
+                      );
+                    else disableDrafts();
                   }
                 }}
               />
@@ -2196,8 +2315,33 @@ function SettingsPage({
             </label>
             <p className="muted">
               Only your own draft titles, links, and notes are stored offline.
-              Signing out clears them. Shared lists and purchases stay online.
+              Turning this off deletes saved drafts. Signing out clears them.
+              Shared lists and purchases stay online.
             </p>
+            {deletedDraft && (
+              <p role="status">
+                Deleted “{deletedDraft.title}”.{" "}
+                <button
+                  className="text-button"
+                  onClick={() => {
+                    const current = getDrafts(world.me.id);
+                    const restored = current.some(
+                      (d) => d.id === deletedDraft.id,
+                    )
+                      ? current
+                      : [...current, deletedDraft];
+                    localStorage.setItem(
+                      draftKey(world.me.id),
+                      JSON.stringify(restored),
+                    );
+                    setDrafts(restored);
+                    setDeletedDraft(null);
+                  }}
+                >
+                  Undo deletion
+                </button>
+              </p>
+            )}
             {drafts.map((d) => (
               <div className="setting-row" key={d.id}>
                 <div>
@@ -2216,7 +2360,10 @@ function SettingsPage({
                   className="icon-button"
                   aria-label={`Delete draft ${d.title}`}
                   onClick={() => {
-                    const rows = drafts.filter((x) => x.id !== d.id);
+                    const rows = getDrafts(world.me.id).filter(
+                      (x) => x.id !== d.id,
+                    );
+                    setDeletedDraft(d);
                     localStorage.setItem(
                       draftKey(world.me.id),
                       JSON.stringify(rows),

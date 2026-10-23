@@ -160,6 +160,10 @@ test("mobile shell clears safe areas, resizing, and date dialogs", async ({
   await page.goto("/lists");
   for (const button of ["Create a list", "Create event"]) {
     await page.getByRole("button", { name: button, exact: true }).click();
+    await page.getByRole("radio", { name: /See the plans/ }).check();
+    await page
+      .getByText("Optional dates and gift summaries", { exact: true })
+      .click();
     for (const width of [1440, 393, 320]) {
       await page.setViewportSize({
         width,
@@ -197,6 +201,7 @@ test("mobile shell clears safe areas, resizing, and date dialogs", async ({
       path: `test-results/visual/${button === "Create event" ? "event" : "list"}-dates-narrow.png`,
     });
     await page.getByRole("button", { name: "Close dialog" }).click();
+    await page.getByRole("button", { name: "Discard changes" }).click();
   }
   await page.goto("/exchanges");
   await page
@@ -214,6 +219,10 @@ test("list dates lock at sharing, archives restore, and controls fit desktop and
   await page.goto("/lists");
   await page
     .getByRole("button", { name: "Create a list", exact: true })
+    .click();
+  await page.getByRole("radio", { name: /See the plans/ }).check();
+  await page
+    .getByText("Optional dates and gift summaries", { exact: true })
     .click();
   const title = `Birthday planning ${Date.now()}`;
   await page.getByLabel("List name", { exact: true }).fill(title);
@@ -256,6 +265,7 @@ test("list dates lock at sharing, archives restore, and controls fit desktop and
     .getByRole("dialog")
     .getByRole("button", { name: "Create list", exact: true })
     .click();
+  await page.getByRole("button", { name: "Confirm and save" }).click();
   await expect(page.getByRole("dialog")).not.toBeVisible();
   await page.getByRole("link", { name: new RegExp(title) }).click();
   const world = await (await page.request.get("/api/v1/world")).json();
@@ -297,6 +307,7 @@ test("list dates lock at sharing, archives restore, and controls fit desktop and
   await sharedDate.fill("2099-10-18");
   await expectDialogFieldsToFit(page);
   await page.getByRole("button", { name: "Close dialog", exact: true }).click();
+  await page.getByRole("button", { name: "Discard changes" }).click();
   await page.getByRole("button", { name: "Archive list", exact: true }).click();
   await expect(
     page.getByText(
@@ -334,6 +345,9 @@ test.describe("touch reveal settings", () => {
     await page.goto("/lists");
     for (const button of ["Create a list", "Create event"]) {
       await page.getByRole("button", { name: button, exact: true }).tap();
+      await page
+        .getByText("Optional dates and gift summaries", { exact: true })
+        .tap();
       const dialog = page.getByRole("dialog");
       const date = dialog.locator('input[name="revealAfter"]');
       const exchange = page.getByLabel(
@@ -417,6 +431,8 @@ test.describe("touch reveal settings", () => {
           exact: true,
         })
         .tap();
+      if (button === "Create event")
+        await page.getByRole("button", { name: "Confirm and save" }).tap();
       await expect(dialog).not.toBeVisible();
       const world = await (await page.request.get("/api/v1/world")).json();
       const saved = (
@@ -436,12 +452,15 @@ test.describe("touch reveal settings", () => {
     await page.goto("/lists");
     for (const button of ["Create a list", "Create event"]) {
       await page.getByRole("button", { name: button, exact: true }).tap();
+      await page
+        .getByText("Optional dates and gift summaries", { exact: true })
+        .tap();
       await expect(page.locator('input[name="mode"]').first()).toHaveValue(
         "transparent",
       );
       await expect(
         page.getByRole("radio", { name: /See the plans/ }),
-      ).toBeChecked();
+      ).not.toBeChecked();
       await page.getByRole("radio", { name: /Keep it a surprise/ }).check();
       await expect(
         page.getByRole("radio", { name: /Keep it a surprise/ }),
@@ -506,6 +525,7 @@ test.describe("touch reveal settings", () => {
         await page
           .getByRole("button", { name: /^Create \d+ wish lists?$/ })
           .tap();
+        await page.getByRole("button", { name: "Confirm and save" }).tap();
         await expect(page.getByRole("dialog")).not.toBeVisible();
         const world = await (await page.request.get("/api/v1/world")).json();
         const event = world.groupEvents.find(
@@ -521,6 +541,7 @@ test.describe("touch reveal settings", () => {
         );
       } else {
         await page.getByRole("button", { name: "Close dialog" }).tap();
+        await page.getByRole("button", { name: "Discard changes" }).tap();
       }
     }
   });

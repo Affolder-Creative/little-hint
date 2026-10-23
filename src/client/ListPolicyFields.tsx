@@ -1,4 +1,4 @@
-import { useId, useState, type SyntheticEvent } from "react";
+import { useId, useState, type SyntheticEvent, type ReactNode } from "react";
 import { Eye, LockKeyhole } from "lucide-react";
 import type { List } from "../shared/model";
 import { dateHasElapsed } from "../shared/list-dates";
@@ -40,13 +40,15 @@ export function listPolicyValues(form: FormData, list?: Policy) {
 export function ListPolicyFields({
   list,
   event = false,
+  children,
 }: {
   list?: Policy;
   event?: boolean;
+  children?: ReactNode;
 }) {
   const exchangeHintId = useId();
   const privacyHintId = useId();
-  const [mode, setMode] = useState(list?.mode ?? "transparent");
+  const [mode, setMode] = useState(list?.mode ?? "");
   const [revealAfter, setRevealAfter] = useState(list?.revealAfter ?? "");
   const [revealExchangeGivers, setRevealExchangeGivers] = useState(
     !!list?.revealExchangeGivers,
@@ -84,12 +86,13 @@ export function ListPolicyFields({
             type="radio"
             name="mode"
             value="transparent"
+            required
             checked={mode === "transparent"}
             onChange={() => setMode("transparent")}
           />
           <Eye size={20} />
           <span>
-            <strong>See the plans</strong>
+            <strong>See the plans (Transparent)</strong>
             <small>
               {event
                 ? "Each recipient can see who reserves or purchases their gifts."
@@ -107,7 +110,7 @@ export function ListPolicyFields({
           />
           <LockKeyhole size={20} />
           <span>
-            <strong>Keep it a surprise</strong>
+            <strong>Keep it a surprise (Surprise)</strong>
             <small>
               {event
                 ? "Each person adds wishes. The group coordinates gifts privately."
@@ -121,131 +124,174 @@ export function ListPolicyFields({
             : "Privacy mode locks when first shared."}
         </small>
       </fieldset>
-      <fieldset className="choice-group form-section">
-        <legend>After the occasion</legend>
-        <Field
-          label="Archive after"
-          hint={
-            event
-              ? "Optional. Archive all event lists after this day. An event leader can restore them."
-              : "Optional. Hide this list from active browsing after this day. Restore it anytime."
-          }
-        >
-          <input
-            type="date"
-            name="archiveAfter"
-            defaultValue={list?.archiveAfter ?? ""}
-          />
-        </Field>
-        <div className="policy-summary">
+      {children}
+      <details
+        className="policy-options"
+        open={!!(list?.archiveAfter || list?.revealAfter)}
+      >
+        <summary>Optional dates and gift summaries</summary>
+        <fieldset className="choice-group form-section">
+          <legend>After the occasion</legend>
           <Field
-            label={
-              mode === "transparent"
-                ? "Gift summary available after"
-                : "Reveal gifts after"
-            }
+            label="Archive after"
             hint={
-              <span className="policy-guidance">
-                {list?.modeLocked && !list.revealAfter ? (
-                  <span>
-                    Shared without a reveal date. Gift summaries stay hidden.
-                  </span>
-                ) : (
-                  <>
-                    <span>
-                      Optional. After this day,{" "}
-                      {event ? "each recipient" : "list owners"} can view
-                      purchased gifts, buyers, and contributor names
-                      {mode === "surprise"
-                        ? ", even with Keep it a surprise."
-                        : "."}
-                      {mode === "transparent" &&
-                        " Purchase activity is already visible with See the plans."}
-                    </span>
-                    <span>
-                      {list?.modeLocked
-                        ? revealLocked
-                          ? "Gift summaries are now available. This date is fixed."
-                          : "After sharing, this date can only move later."
-                        : event
-                          ? "Choose before creating the event. After creation, this date can only move later."
-                          : "Choose before first sharing. After sharing, this date can only move later."}
-                    </span>
-                  </>
-                )}
-                <span>
-                  Contribution amounts and private discussions always stay
-                  private.
-                </span>
-              </span>
+              event
+                ? "Optional. Archive all event lists after this day. An event leader can restore them."
+                : "Optional. Hide this list from active browsing after this day. Restore it anytime."
             }
           >
             <input
               type="date"
-              name="revealAfter"
-              // iOS Reset falls back to the HTML default value. Keep it at
-              // the initial date instead of mirroring each picker selection.
-              defaultValue={list?.revealAfter ?? ""}
-              disabled={revealLocked}
-              min={
-                list?.modeLocked ? (list.revealAfter ?? undefined) : undefined
-              }
-              onInput={syncRevealDate}
-              onChange={syncRevealDate}
-              onBlur={syncRevealDate}
+              name="archiveAfter"
+              defaultValue={list?.archiveAfter ?? ""}
             />
           </Field>
-          <div className="policy-exchange">
-            <label className="check">
+          <div className="policy-summary">
+            <Field
+              label={
+                mode === "transparent"
+                  ? "Gift summary available after"
+                  : "Reveal gifts after"
+              }
+              hint={
+                <span className="policy-guidance">
+                  {list?.modeLocked && !list.revealAfter ? (
+                    <span>
+                      Shared without a reveal date. Gift summaries stay hidden.
+                    </span>
+                  ) : (
+                    <>
+                      <span>
+                        Optional. After this day,{" "}
+                        {event ? "each recipient" : "list owners"} can view
+                        purchased gifts, buyers, and contributor names
+                        {mode === "surprise"
+                          ? ", even with Keep it a surprise."
+                          : "."}
+                        {mode === "transparent" &&
+                          " Purchase activity is already visible with See the plans."}
+                      </span>
+                      <span>
+                        {list?.modeLocked
+                          ? revealLocked
+                            ? "Gift summaries are now available. This date is fixed."
+                            : "After sharing, this date can only move later."
+                          : event
+                            ? "Choose before creating the event. After creation, this date can only move later."
+                            : "Choose before first sharing. After sharing, this date can only move later."}
+                      </span>
+                    </>
+                  )}
+                  <span>
+                    Contribution amounts and private discussions always stay
+                    private.
+                  </span>
+                </span>
+              }
+            >
               <input
-                type="checkbox"
-                name="revealExchangeGivers"
-                aria-describedby={exchangeHintId}
-                checked={!!revealAfter && revealExchangeGivers}
-                disabled={list?.modeLocked || !revealAfter}
-                onChange={(e) => setRevealExchangeGivers(e.target.checked)}
+                type="date"
+                name="revealAfter"
+                // iOS Reset falls back to the HTML default value. Keep it at
+                // the initial date instead of mirroring each picker selection.
+                defaultValue={list?.revealAfter ?? ""}
+                disabled={revealLocked}
+                min={
+                  list?.modeLocked ? (list.revealAfter ?? undefined) : undefined
+                }
+                onInput={syncRevealDate}
+                onChange={syncRevealDate}
+                onBlur={syncRevealDate}
               />
-              Include secret exchange gifts and giver names
-            </label>
-            <small id={exchangeHintId} className="policy-guidance">
-              <span>
-                {list?.modeLocked
-                  ? "This choice is locked after first sharing."
-                  : !revealAfter
-                    ? mode === "transparent"
-                      ? "Choose a gift summary date above to enable this option."
-                      : "Choose a reveal date above to enable this option."
-                    : "This choice locks when first shared."}
-              </span>
-              <span>
-                Leave unchecked to keep secret exchange gifts and giver names
-                out of the summary. Other purchased gifts are included either
-                way.
-              </span>
-            </small>
+            </Field>
+            <div className="policy-exchange">
+              <label className="check">
+                <input
+                  type="checkbox"
+                  name="revealExchangeGivers"
+                  aria-describedby={exchangeHintId}
+                  checked={!!revealAfter && revealExchangeGivers}
+                  disabled={list?.modeLocked || !revealAfter}
+                  onChange={(e) => setRevealExchangeGivers(e.target.checked)}
+                />
+                Include secret exchange gifts and giver names
+              </label>
+              <small id={exchangeHintId} className="policy-guidance">
+                <span>
+                  {list?.modeLocked
+                    ? "This choice is locked after first sharing."
+                    : !revealAfter
+                      ? mode === "transparent"
+                        ? "Choose a gift summary date above to enable this option."
+                        : "Choose a reveal date above to enable this option."
+                      : "This choice locks when first shared."}
+                </span>
+                <span>
+                  Leave unchecked to keep secret exchange gifts and giver names
+                  out of the summary. Other purchased gifts are included either
+                  way.
+                </span>
+              </small>
+            </div>
           </div>
-        </div>
-        <Field
-          label={event ? "Event timezone" : "List timezone"}
-          hint="Dates take effect after the selected day ends. This timezone locks when first shared."
-        >
-          <select
-            name="timeZone"
-            defaultValue={timeZone}
-            disabled={list?.modeLocked}
+          <Field
+            label={event ? "Event timezone" : "List timezone"}
+            hint="Dates take effect after the selected day ends. This timezone locks when first shared."
           >
-            {[
-              ...new Set([
-                timeZone,
-                "UTC",
-                ...Intl.supportedValuesOf("timeZone"),
-              ]),
-            ].map((zone) => (
-              <option key={zone}>{zone}</option>
-            ))}
-          </select>
-        </Field>
-      </fieldset>
+            <select
+              name="timeZone"
+              defaultValue={timeZone}
+              disabled={list?.modeLocked}
+            >
+              {[
+                ...new Set([
+                  timeZone,
+                  "UTC",
+                  ...Intl.supportedValuesOf("timeZone"),
+                ]),
+              ].map((zone) => (
+                <option key={zone}>{zone}</option>
+              ))}
+            </select>
+          </Field>
+        </fieldset>
+      </details>
     </>
+  );
+}
+
+export function SharingReview({
+  data,
+  audience,
+  list,
+}: {
+  data: FormData;
+  audience: string[];
+  list?: Policy;
+}) {
+  const policy = listPolicyValues(data, list);
+  return (
+    <section aria-label="Review sharing">
+      <h3>Review before sharing</h3>
+      <p>
+        <strong>{String(data.get("name"))}</strong>
+      </p>
+      <p>Shared with: {audience.join(", ") || "Only the list owners"}.</p>
+      <p>
+        {policy.mode === "surprise"
+          ? "Surprise: recipients cannot see reservations or purchases."
+          : "Transparent: recipients can see who reserves and purchases their gifts."}
+      </p>
+      <p>
+        {policy.revealAfter
+          ? `Gift summaries become available after ${policy.revealAfter} in ${policy.timeZone}. ${policy.revealExchangeGivers ? "Secret exchange gifts and giver names are included." : "Secret exchange gifts and giver names stay hidden."}`
+          : "No gift summary is scheduled. This cannot be enabled after sharing."}
+      </p>
+      <p>
+        Privacy and exchange-reveal choices lock when shared. A scheduled
+        summary date can only move later. Amounts and private discussions stay
+        private.
+      </p>
+    </section>
   );
 }

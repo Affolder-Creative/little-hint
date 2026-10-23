@@ -36,7 +36,7 @@ test("leaders manage an occasion while recipients add wishes and unselected memb
       .click();
     await expect(
       leader.getByRole("radio", { name: /See the plans/ }),
-    ).toBeChecked();
+    ).not.toBeChecked();
     // This workflow exercises surprise privacy; it is now an explicit choice.
     await leader.getByRole("radio", { name: /Keep it a surprise/ }).check();
     await leader
@@ -107,6 +107,7 @@ test("leaders manage an occasion while recipients add wishes and unselected memb
     await leader
       .getByRole("button", { name: "Create 2 wish lists", exact: true })
       .click();
+    await leader.getByRole("button", { name: "Confirm and save" }).click();
     await expect(leader).toHaveURL(/\/events\//);
     const eventId = new URL(leader.url()).pathname.split("/").pop()!;
     const eventUrl = `/events/${eventId}`;
