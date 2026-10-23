@@ -1,3 +1,4 @@
+import { SettingsNavigation, settingsSections } from "./SettingsNavigation";
 import { Confirm } from "./Confirm";
 import { familyGroupLabel } from "../shared/households";
 import { HouseholdSettings } from "./Households";
@@ -12,6 +13,7 @@ import {
   useNavigate,
   useLocation,
   useParams,
+  useSearchParams,
 } from "react-router-dom";
 import {
   Heart,
@@ -463,13 +465,13 @@ function Invitations() {
           <div className="invitation" key={i.id}>
             <Mail size={22} />
             <div>
-              <h3>You’re invited to a circle.</h3>
+              <h3>You’re invited to a family group.</h3>
               <p>Accept to see the lists shared with this family group.</p>
             </div>
             <Action
               onClick={async () => {
                 await mutate("invitations/accept", { id: i.id });
-                toast("You’re in. Welcome to the circle.");
+                toast("You’re in. Welcome to the family group.");
               }}
             >
               Accept invitation
@@ -1622,6 +1624,33 @@ function SettingsPage({
 }) {
   const { world, open, mutate, close, toast } = useApp();
   const client = useQueryClient();
+  const [params, setParams] = useSearchParams();
+  const requestedSection = params.get("section");
+  const section = settingsSections.some(
+    (s) => s.id === requestedSection && (s.id !== "admin" || world.me.admin),
+  )
+    ? requestedSection!
+    : "profile";
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }, [section]);
+  const selectedGroup =
+    world.groups.find((g) => g.id === params.get("group")) ?? world.groups[0];
+  const groupView = ["members", "households", "events"].includes(
+    params.get("view") ?? "",
+  )
+    ? params.get("view")!
+    : "members";
+  const groupDestination = (view: string) => {
+    const next = new URLSearchParams(params);
+    next.set("section", "groups");
+    next.set("view", view);
+    if (selectedGroup) next.set("group", selectedGroup.id);
+    return `?${next}`;
+  };
+  const pendingGroupRequests =
+    world.invitations.filter((i) => i.email === world.me.email.toLowerCase())
+      .length + world.links.filter((l) => l.kind === "ownership").length;
   const [draftsEnabled, setDraftsEnabled] = useState(
     !!localStorage.getItem(`little-hint:draft-optin:${world.me.id}`),
   );
@@ -1632,475 +1661,603 @@ function SettingsPage({
   return (
     <>
       <Header
-        title="Make yourself at home"
-        description="Your profile, your circle, and the little details."
+        title="Settings"
+        description="Manage your account, family groups, and preferences."
       />
       <div className="settings-layout">
-        <section className="settings-section">
-          <h2>Your profile</h2>
-          {mine.map((p) => (
-            <div className="setting-row" key={p.id}>
-              <Avatar name={p.name} small />
-              <div>
-                <strong>{p.name}</strong>
-                <p>{p.userId ? "Your account" : "Managed profile"}</p>
-              </div>
-              <button
-                className="text-button"
-                onClick={() => open("Edit profile", <PersonForm id={p.id} />)}
-              >
-                Edit
-              </button>
-              {!p.userId && (
+        <SettingsNavigation
+          section={section}
+          admin={world.me.admin}
+          pendingRequests={pendingGroupRequests}
+        />
+        {/* Keep panels mounted so switching sections preserves unsaved form values. */}
+        <div className="settings-content">
+          {pendingGroupRequests > 0 && section !== "groups" && (
+            <p className="notice">
+              <Link to="?section=groups">
+                Review {pendingGroupRequests} pending family-group{" "}
+                {pendingGroupRequests === 1 ? "request" : "requests"}
+              </Link>
+            </p>
+          )}
+          <section
+            className="settings-section"
+            hidden={section !== "profile"}
+            aria-labelledby="settings-profile-title"
+          >
+            <h2 id="settings-profile-title">Profile &amp; appearance</h2>
+            <p>Edit your details and the profiles you manage.</p>
+            {mine.map((p) => (
+              <div className="setting-row" key={p.id}>
+                <Avatar name={p.name} small />
+                <div>
+                  <strong>{p.name}</strong>
+                  <p>{p.userId ? "Your account" : "Managed profile"}</p>
+                </div>
                 <button
                   className="text-button"
-                  onClick={() =>
-                    open(
-                      "Link a profile to an account",
-                      <Form
-                        submit="Create claim request"
-                        onSubmit={async (f) => {
-                          await mutate("people/link", {
-                            id: p.id,
-                            email: value(f, "email"),
-                          });
-                          close();
-                          toast(
-                            "Claim request ready. They can accept it in Settings after signing in.",
-                          );
-                        }}
-                      >
-                        <Field label="Their verified account email">
-                          <input type="email" name="email" required />
-                        </Field>
-                        <p>
-                          They must sign in with this email and accept. Your
-                          guardian access will end when they claim the profile.
-                          Invite them to the family group separately if needed.
-                        </p>
-                      </Form>,
-                    )
-                  }
+                  onClick={() => open("Edit profile", <PersonForm id={p.id} />)}
                 >
-                  Link account
+                  Edit
                 </button>
-              )}
-            </div>
-          ))}
-          {world.links
-            .filter((l) => l.kind !== "telegram")
-            .map((l) => (
-              <div className="notice" key={l.id}>
-                <p>
-                  {l.kind === "profile"
-                    ? "A profile claim request"
-                    : "A family-group ownership request"}{" "}
-                  is pending.
-                </p>
-                {(l.email === world.me.email ||
-                  (l.kind === "ownership" && l.userId === world.me.id)) && (
-                  <Action onClick={() => mutate("links/accept", { id: l.id })}>
-                    Accept request
-                  </Action>
-                )}
-              </div>
-            ))}
-          <Field label="Appearance">
-            <select value={theme} onChange={(e) => setTheme(e.target.value)}>
-              <option value="system">Follow this device</option>
-              <option value="light">Light</option>
-              <option value="dark">Dark</option>
-            </select>
-          </Field>
-        </section>
-        <section className="settings-section">
-          <div className="section-heading">
-            <h2>Your family groups</h2>
-            <button
-              className="text-button"
-              onClick={() => open("Create a family group", <GroupForm />)}
-            >
-              <Plus size={16} />
-              Create family group
-            </button>
-          </div>
-          <p className="muted">
-            Family groups control membership, invitations, shared lists, and
-            exchanges. You can create or join more than one.
-          </p>
-          <Invitations />
-          {world.groups.map((g) => (
-            <div className="group-settings" key={g.id} data-group-id={g.id}>
-              <h3>{familyGroupLabel(g, world)}</h3>
-              <p>
-                {g.ownerId === world.me.id
-                  ? "You own this family group."
-                  : "You’re a member of this family group."}
-              </p>
-              <GroupEventSettings group={g} />
-              <HouseholdSettings group={g} />
-              <div className="member-list">
-                {g.memberIds.map((uid) => {
-                  const person = world.people.find((p) => p.userId === uid);
-                  return (
-                    <div key={uid}>
-                      <Avatar name={person?.name ?? "Member"} small />
-                      <span>
-                        {person?.name ?? "Member"}
-                        {uid === g.ownerId
-                          ? " · Owner"
-                          : g.eventLeaderIds?.includes(uid)
-                            ? " · Event leader"
-                            : ""}
-                      </span>
-                      {g.ownerId === world.me.id && uid !== world.me.id && (
-                        <>
-                          <button
-                            className="text-button"
-                            onClick={() =>
-                              open(
-                                "Transfer family-group ownership",
-                                <Form
-                                  submit="Request transfer"
-                                  onSubmit={async (f) => {
-                                    await mutate("groups/transfer", {
-                                      groupId: g.id,
-                                      userId: uid,
-                                      email: value(f, "email"),
-                                    });
-                                    close();
-                                  }}
-                                >
-                                  <Field label="New owner’s verified email">
-                                    <input type="email" name="email" required />
-                                  </Field>
-                                  <p>
-                                    The new owner must accept in Settings before
-                                    ownership changes.
-                                  </p>
-                                </Form>,
-                              )
-                            }
-                          >
-                            Transfer ownership
-                          </button>
-                          <button
-                            className="icon-button"
-                            aria-label={`Remove ${person?.name ?? "member"}`}
-                            onClick={() =>
-                              open(
-                                "Remove this member?",
-                                <Confirm
-                                  label="Remove member"
-                                  onConfirm={() =>
-                                    mutate("groups/remove", {
-                                      groupId: g.id,
-                                      userId: uid,
-                                    })
-                                  }
-                                >
-                                  They will lose this family group’s access.
-                                  Unpurchased reservations with no remaining
-                                  access will be released.
-                                </Confirm>,
-                              )
-                            }
-                          >
-                            <Trash2 size={15} />
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-              {g.ownerId === world.me.id ? (
-                <>
+                {!p.userId && (
                   <button
-                    className="button secondary small"
+                    className="text-button"
                     onClick={() =>
                       open(
-                        `Invite someone to ${familyGroupLabel(g, world)}`,
+                        "Link a profile to an account",
                         <Form
-                          submit="Send invitation"
+                          submit="Create claim request"
                           onSubmit={async (f) => {
-                            await mutate("groups/invite", {
-                              groupId: g.id,
+                            await mutate("people/link", {
+                              id: p.id,
                               email: value(f, "email"),
                             });
                             close();
-                            toast("Invitation queued for delivery.");
+                            toast(
+                              "Claim request ready. They can accept it in Settings after signing in.",
+                            );
                           }}
                         >
-                          <Field label="Email address">
+                          <Field label="Their verified account email">
                             <input type="email" name="email" required />
                           </Field>
                           <p>
-                            The invitation is tied to this address and expires
-                            in seven days.
+                            They must sign in with this email and accept. Your
+                            guardian access will end when they claim the
+                            profile. Invite them to the family group separately
+                            if needed.
                           </p>
                         </Form>,
                       )
                     }
                   >
-                    <Mail size={16} />
-                    Invite someone
+                    Link account
                   </button>
-                  {world.invitations
-                    .filter((i) => i.groupId === g.id)
-                    .map((i) => (
-                      <div className="setting-row" key={i.id}>
-                        <span>{i.email} · Pending</span>
-                        <Action
-                          secondary
-                          onClick={() =>
-                            mutate("invitations/revoke", { id: i.id })
-                          }
-                        >
-                          Revoke
-                        </Action>
-                      </div>
-                    ))}
-                </>
-              ) : (
-                <button
-                  className="text-button"
-                  onClick={() =>
-                    open(
-                      "Leave this family group?",
-                      <Confirm
-                        label="Leave family group"
-                        onConfirm={() =>
-                          mutate("groups/remove", {
-                            groupId: g.id,
-                            userId: world.me.id,
-                          })
-                        }
-                      >
-                        You’ll lose access to lists shared only through this
-                        family group.
-                      </Confirm>,
-                    )
-                  }
-                >
-                  Leave family group
-                </button>
-              )}
-            </div>
-          ))}
-        </section>
-        <section className="settings-section">
-          <h2>Keep me in the loop</h2>
-          <Form
-            submit="Save notification preferences"
-            onSubmit={async (f) => {
-              await mutate("preferences", {
-                email: f.get("email") === "on",
-                telegram: f.get("telegram") === "on",
-                sms: f.get("sms") === "on",
-                events: f.getAll("events"),
-                recipientUpdates: f.get("recipientUpdates") === "on",
-              });
-              toast("Notification preferences saved.");
-            }}
-          >
-            <fieldset className="choice-group">
-              <legend>Where to send updates</legend>
-              <label className="check">
-                <input
-                  type="checkbox"
-                  name="email"
-                  defaultChecked={world.preferences.email}
-                />
-                Email
-              </label>
-              <label className="check">
-                <input
-                  type="checkbox"
-                  name="telegram"
-                  defaultChecked={world.preferences.telegram}
-                  disabled={!world.preferences.chatId}
-                />
-                Telegram{" "}
-                {world.preferences.chatId ? "· Linked" : "· Link below"}
-              </label>
-              <label className="check">
-                <input
-                  type="checkbox"
-                  name="sms"
-                  defaultChecked={world.preferences.sms}
-                  disabled={
-                    !world.preferences.phoneVerified ||
-                    world.preferences.smsOptOut
-                  }
-                />
-                SMS{" "}
-                {world.preferences.phoneVerified
-                  ? `· ${world.preferences.phone}`
-                  : "· Verify below"}
-              </label>
-            </fieldset>
-            <fieldset className="choice-group">
-              <legend>Which updates?</legend>
-              {[
-                "invitation",
-                "reservation",
-                "purchase",
-                "discussion",
-                "contribution",
-                "exchange",
-                "access",
-              ].map((event) => (
-                <label className="check" key={event}>
-                  <input
-                    type="checkbox"
-                    name="events"
-                    value={event}
-                    defaultChecked={world.preferences.events.includes(event)}
-                  />
-                  {
-                    {
-                      invitation: "Invitations",
-                      reservation: "Reservations",
-                      purchase: "Purchases",
-                      discussion: "Private discussions",
-                      contribution: "Contributions",
-                      exchange: "Exchange assignments",
-                      access: "Access changes",
-                    }[event]
-                  }
-                </label>
-              ))}
-            </fieldset>
-            <label className="check">
-              <input
-                type="checkbox"
-                name="recipientUpdates"
-                defaultChecked={world.preferences.recipientUpdates ?? false}
-              />
-              Notify me about gifts for me on Transparent lists
-            </label>
-            <p className="muted">
-              Surprise gifts stay private regardless of your preferences.
-              Message previews contain a generic update and a sign-in link.
-            </p>
-          </Form>
-          <div className="actions">
-            <Action
-              secondary
-              onClick={async () => {
-                const r = await api<{ url: string }>("channels/telegram", {});
-                open(
-                  "Link Telegram",
-                  <>
-                    <p>
-                      Open your personal bot link and tap Start. This link
-                      expires in 15 minutes and can be used once.
-                    </p>
-                    <a
-                      className="button"
-                      href={r.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      Open Telegram <ExternalLink size={16} />
-                    </a>
-                  </>,
-                );
-              }}
-            >
-              Link Telegram
-            </Action>
-            <button
-              className="button secondary small"
-              onClick={() => open("Verify your phone", <SmsForm />)}
-            >
-              Set up SMS
-            </button>
-          </div>
-        </section>
-        <section className="settings-section">
-          <h2>Little Hint on your device</h2>
-          <Install manual />
-          <label className="check">
-            <input
-              type="checkbox"
-              checked={draftsEnabled}
-              onChange={(e) => {
-                setDraftsEnabled(e.target.checked);
-                if (e.target.checked)
-                  localStorage.setItem(
-                    `little-hint:draft-optin:${world.me.id}`,
-                    "yes",
-                  );
-                else {
-                  localStorage.removeItem(
-                    `little-hint:draft-optin:${world.me.id}`,
-                  );
-                  localStorage.removeItem(draftKey(world.me.id));
-                  setDrafts([]);
-                }
-              }}
-            />
-            Keep personal gift drafts on this device
-          </label>
-          <p className="muted">
-            Only your own draft titles, links, and notes are stored offline.
-            Signing out clears them. Shared lists and purchases stay online.
-          </p>
-          {drafts.map((d) => (
-            <div className="setting-row" key={d.id}>
-              <div>
-                <strong>{d.title}</strong>
-                <p>Draft saved {new Date(d.savedAt).toLocaleDateString()}</p>
+                )}
               </div>
+            ))}
+            {world.links
+              .filter((l) => l.kind === "profile")
+              .map((l) => (
+                <div className="notice" key={l.id}>
+                  <p>A profile claim request is pending.</p>
+                  {l.email === world.me.email && (
+                    <Action
+                      onClick={() => mutate("links/accept", { id: l.id })}
+                    >
+                      Accept request
+                    </Action>
+                  )}
+                </div>
+              ))}
+            <Field label="Appearance">
+              <select value={theme} onChange={(e) => setTheme(e.target.value)}>
+                <option value="system">Follow this device</option>
+                <option value="light">Light</option>
+                <option value="dark">Dark</option>
+              </select>
+            </Field>
+          </section>
+          <section
+            className="settings-section"
+            hidden={section !== "groups"}
+            aria-labelledby="settings-groups-title"
+          >
+            <div className="section-heading">
+              <h2 id="settings-groups-title">Family groups</h2>
               <button
                 className="text-button"
                 onClick={() =>
-                  open("Review personal draft", <GiftForm draft={d} />)
+                  open(
+                    "Create a family group",
+                    <GroupForm
+                      onCreated={(id) =>
+                        setParams({
+                          section: "groups",
+                          group: id,
+                          view: "members",
+                        })
+                      }
+                    />,
+                  )
                 }
               >
-                Review & add
-              </button>
-              <button
-                className="icon-button"
-                aria-label={`Delete draft ${d.title}`}
-                onClick={() => {
-                  const rows = drafts.filter((x) => x.id !== d.id);
-                  localStorage.setItem(
-                    draftKey(world.me.id),
-                    JSON.stringify(rows),
-                  );
-                  setDrafts(rows);
-                }}
-              >
-                <Trash2 size={16} />
+                <Plus size={16} />
+                Create family group
               </button>
             </div>
-          ))}
-        </section>
-        <Security />
-        {world.me.admin && <Admin />}
-        <section className="settings-section">
-          <h2>Signing out</h2>
-          <p>
-            Your account stays safe on the server. Local personal drafts and
-            cached screen data will be cleared.
-          </p>
-          <Action
-            secondary
-            onClick={async () => {
-              const result = await authClient.signOut();
-              if (result.error) throw new Error(result.error.message);
-              clearPersonalData();
-              client.clear();
-              location.assign("/");
-            }}
+            <p className="muted">
+              Family groups control membership, invitations, shared lists, and
+              exchanges. You can create or join more than one.
+            </p>
+            {!!world.invitations.some(
+              (i) => i.email === world.me.email.toLowerCase(),
+            ) && <Invitations />}
+            {world.links
+              .filter((l) => l.kind === "ownership")
+              .map((l) => (
+                <div className="notice" key={l.id}>
+                  <p>A family-group ownership request is pending.</p>
+                  {(l.email === world.me.email || l.userId === world.me.id) && (
+                    <Action
+                      onClick={() => mutate("links/accept", { id: l.id })}
+                    >
+                      Accept request
+                    </Action>
+                  )}
+                </div>
+              ))}
+            {selectedGroup ? (
+              <Field label="Family group">
+                <select
+                  value={selectedGroup.id}
+                  onChange={(e) => {
+                    const next = new URLSearchParams(params);
+                    next.set("section", "groups");
+                    next.set("group", e.target.value);
+                    setParams(next);
+                  }}
+                >
+                  {world.groups.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {familyGroupLabel(g, world)}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            ) : (
+              <p>
+                No family groups yet. Create one or accept an invitation to get
+                started.
+              </p>
+            )}
+            {world.groups.map((g) => (
+              <div
+                className="group-settings"
+                key={g.id}
+                data-group-id={g.id}
+                hidden={g.id !== selectedGroup?.id}
+              >
+                <h3>{familyGroupLabel(g, world)}</h3>
+                <p>
+                  {g.ownerId === world.me.id
+                    ? "You own this family group."
+                    : "You’re a member of this family group."}
+                </p>
+                <nav
+                  className="group-settings-nav"
+                  aria-label="Family group settings"
+                >
+                  {[
+                    ["members", "Members"],
+                    ["households", "Households"],
+                    ["events", "Events"],
+                  ].map(([id, label]) => (
+                    <Link
+                      key={id}
+                      to={groupDestination(id)}
+                      aria-current={groupView === id ? "page" : undefined}
+                    >
+                      {label}
+                    </Link>
+                  ))}
+                </nav>
+                <div hidden={groupView !== "households"}>
+                  <HouseholdSettings group={g} />
+                </div>
+                <div hidden={groupView !== "events"}>
+                  <GroupEventSettings group={g} />
+                </div>
+                <div hidden={groupView !== "members"}>
+                  <h4>Members &amp; invitations</h4>
+                  <p className="muted">
+                    Members can access lists shared with this family group.
+                  </p>
+                  <div className="member-list">
+                    {g.memberIds.map((uid) => {
+                      const person = world.people.find((p) => p.userId === uid);
+                      return (
+                        <div key={uid}>
+                          <Avatar name={person?.name ?? "Member"} small />
+                          <span>
+                            {person?.name ?? "Member"}
+                            {uid === g.ownerId
+                              ? " · Owner"
+                              : g.eventLeaderIds?.includes(uid)
+                                ? " · Event leader"
+                                : ""}
+                          </span>
+                          {g.ownerId === world.me.id && uid !== world.me.id && (
+                            <>
+                              <button
+                                className="text-button"
+                                aria-label={`Transfer ownership to ${person?.name ?? "member"}`}
+                                onClick={() =>
+                                  open(
+                                    "Transfer family-group ownership",
+                                    <Form
+                                      submit="Request transfer"
+                                      onSubmit={async (f) => {
+                                        await mutate("groups/transfer", {
+                                          groupId: g.id,
+                                          userId: uid,
+                                          email: value(f, "email"),
+                                        });
+                                        close();
+                                      }}
+                                    >
+                                      <Field label="New owner’s verified email">
+                                        <input
+                                          type="email"
+                                          name="email"
+                                          required
+                                        />
+                                      </Field>
+                                      <p>
+                                        The new owner must accept in Settings
+                                        before ownership changes.
+                                      </p>
+                                    </Form>,
+                                  )
+                                }
+                              >
+                                Transfer ownership
+                              </button>
+                              <button
+                                className="icon-button"
+                                aria-label={`Remove ${person?.name ?? "member"}`}
+                                onClick={() =>
+                                  open(
+                                    "Remove this member?",
+                                    <Confirm
+                                      label="Remove member"
+                                      onConfirm={() =>
+                                        mutate("groups/remove", {
+                                          groupId: g.id,
+                                          userId: uid,
+                                        })
+                                      }
+                                    >
+                                      They will lose this family group’s access.
+                                      Unpurchased reservations with no remaining
+                                      access will be released.
+                                    </Confirm>,
+                                  )
+                                }
+                              >
+                                <Trash2 size={15} />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {g.ownerId === world.me.id ? (
+                    <>
+                      <button
+                        className="button secondary small"
+                        onClick={() =>
+                          open(
+                            `Invite someone to ${familyGroupLabel(g, world)}`,
+                            <Form
+                              submit="Send invitation"
+                              onSubmit={async (f) => {
+                                await mutate("groups/invite", {
+                                  groupId: g.id,
+                                  email: value(f, "email"),
+                                });
+                                close();
+                                toast("Invitation queued for delivery.");
+                              }}
+                            >
+                              <Field label="Email address">
+                                <input type="email" name="email" required />
+                              </Field>
+                              <p>
+                                The invitation is tied to this address and
+                                expires in seven days.
+                              </p>
+                            </Form>,
+                          )
+                        }
+                      >
+                        <Mail size={16} />
+                        Invite someone
+                      </button>
+                      {world.invitations
+                        .filter((i) => i.groupId === g.id)
+                        .map((i) => (
+                          <div className="setting-row" key={i.id}>
+                            <span>{i.email} · Pending</span>
+                            <Action
+                              secondary
+                              onClick={() =>
+                                mutate("invitations/revoke", { id: i.id })
+                              }
+                            >
+                              Revoke
+                            </Action>
+                          </div>
+                        ))}
+                    </>
+                  ) : (
+                    <button
+                      className="text-button"
+                      onClick={() =>
+                        open(
+                          "Leave this family group?",
+                          <Confirm
+                            label="Leave family group"
+                            onConfirm={() =>
+                              mutate("groups/remove", {
+                                groupId: g.id,
+                                userId: world.me.id,
+                              })
+                            }
+                          >
+                            You’ll lose access to lists shared only through this
+                            family group.
+                          </Confirm>,
+                        )
+                      }
+                    >
+                      Leave family group
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </section>
+          <section
+            className="settings-section"
+            hidden={section !== "notifications"}
+            aria-labelledby="settings-notifications-title"
           >
-            <LogOut size={17} />
-            Sign out
-          </Action>
-        </section>
+            <h2 id="settings-notifications-title">Notifications</h2>
+            <p>Choose which updates you receive and where they arrive.</p>
+            <Form
+              submit="Save notification preferences"
+              onSubmit={async (f) => {
+                await mutate("preferences", {
+                  email: f.get("email") === "on",
+                  telegram: f.get("telegram") === "on",
+                  sms: f.get("sms") === "on",
+                  events: f.getAll("events"),
+                  recipientUpdates: f.get("recipientUpdates") === "on",
+                });
+                toast("Notification preferences saved.");
+              }}
+            >
+              <fieldset className="choice-group">
+                <legend>Where to send updates</legend>
+                <label className="check">
+                  <input
+                    type="checkbox"
+                    name="email"
+                    defaultChecked={world.preferences.email}
+                  />
+                  Email
+                </label>
+                <label className="check">
+                  <input
+                    type="checkbox"
+                    name="telegram"
+                    defaultChecked={world.preferences.telegram}
+                    disabled={!world.preferences.chatId}
+                  />
+                  Telegram{" "}
+                  {world.preferences.chatId ? "· Linked" : "· Link below"}
+                </label>
+                <label className="check">
+                  <input
+                    type="checkbox"
+                    name="sms"
+                    defaultChecked={world.preferences.sms}
+                    disabled={
+                      !world.preferences.phoneVerified ||
+                      world.preferences.smsOptOut
+                    }
+                  />
+                  SMS{" "}
+                  {world.preferences.phoneVerified
+                    ? `· ${world.preferences.phone}`
+                    : "· Verify below"}
+                </label>
+              </fieldset>
+              <fieldset className="choice-group">
+                <legend>Which updates?</legend>
+                {[
+                  "invitation",
+                  "reservation",
+                  "purchase",
+                  "discussion",
+                  "contribution",
+                  "exchange",
+                  "access",
+                ].map((event) => (
+                  <label className="check" key={event}>
+                    <input
+                      type="checkbox"
+                      name="events"
+                      value={event}
+                      defaultChecked={world.preferences.events.includes(event)}
+                    />
+                    {
+                      {
+                        invitation: "Invitations",
+                        reservation: "Reservations",
+                        purchase: "Purchases",
+                        discussion: "Private discussions",
+                        contribution: "Contributions",
+                        exchange: "Exchange assignments",
+                        access: "Access changes",
+                      }[event]
+                    }
+                  </label>
+                ))}
+              </fieldset>
+              <label className="check">
+                <input
+                  type="checkbox"
+                  name="recipientUpdates"
+                  defaultChecked={world.preferences.recipientUpdates ?? false}
+                />
+                Notify me about gifts for me on Transparent lists
+              </label>
+              <p className="muted">
+                Surprise gifts stay private regardless of your preferences.
+                Message previews contain a generic update and a sign-in link.
+              </p>
+            </Form>
+            <div className="actions">
+              <Action
+                secondary
+                onClick={async () => {
+                  const r = await api<{ url: string }>("channels/telegram", {});
+                  open(
+                    "Link Telegram",
+                    <>
+                      <p>
+                        Open your personal bot link and tap Start. This link
+                        expires in 15 minutes and can be used once.
+                      </p>
+                      <a
+                        className="button"
+                        href={r.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        Open Telegram <ExternalLink size={16} />
+                      </a>
+                    </>,
+                  );
+                }}
+              >
+                Link Telegram
+              </Action>
+              <button
+                className="button secondary small"
+                onClick={() => open("Verify your phone", <SmsForm />)}
+              >
+                Set up SMS
+              </button>
+            </div>
+          </section>
+          <section
+            className="settings-section"
+            hidden={section !== "device"}
+            aria-labelledby="settings-device-title"
+          >
+            <h2 id="settings-device-title">Device &amp; drafts</h2>
+            <Install manual />
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={draftsEnabled}
+                onChange={(e) => {
+                  setDraftsEnabled(e.target.checked);
+                  if (e.target.checked)
+                    localStorage.setItem(
+                      `little-hint:draft-optin:${world.me.id}`,
+                      "yes",
+                    );
+                  else {
+                    localStorage.removeItem(
+                      `little-hint:draft-optin:${world.me.id}`,
+                    );
+                    localStorage.removeItem(draftKey(world.me.id));
+                    setDrafts([]);
+                  }
+                }}
+              />
+              Keep personal gift drafts on this device
+            </label>
+            <p className="muted">
+              Only your own draft titles, links, and notes are stored offline.
+              Signing out clears them. Shared lists and purchases stay online.
+            </p>
+            {drafts.map((d) => (
+              <div className="setting-row" key={d.id}>
+                <div>
+                  <strong>{d.title}</strong>
+                  <p>Draft saved {new Date(d.savedAt).toLocaleDateString()}</p>
+                </div>
+                <button
+                  className="text-button"
+                  onClick={() =>
+                    open("Review personal draft", <GiftForm draft={d} />)
+                  }
+                >
+                  Review & add
+                </button>
+                <button
+                  className="icon-button"
+                  aria-label={`Delete draft ${d.title}`}
+                  onClick={() => {
+                    const rows = drafts.filter((x) => x.id !== d.id);
+                    localStorage.setItem(
+                      draftKey(world.me.id),
+                      JSON.stringify(rows),
+                    );
+                    setDrafts(rows);
+                  }}
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            ))}
+          </section>
+          <div hidden={section !== "security"}>
+            <Security />
+          </div>
+          {world.me.admin && (
+            <div hidden={section !== "admin"}>
+              <Admin />
+            </div>
+          )}
+          <section className="settings-sign-out">
+            <h2>Sign out</h2>
+            <p>
+              Your account stays safe on the server. Local personal drafts and
+              cached screen data will be cleared.
+            </p>
+            <Action
+              secondary
+              onClick={async () => {
+                const result = await authClient.signOut();
+                if (result.error) throw new Error(result.error.message);
+                clearPersonalData();
+                client.clear();
+                location.assign("/");
+              }}
+            >
+              <LogOut size={17} />
+              Sign out
+            </Action>
+          </section>
+        </div>
       </div>
     </>
   );

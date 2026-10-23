@@ -22,7 +22,7 @@ test("leaders manage an occasion while recipients add wishes and unselected memb
     await login(leader, "sam@example.test");
     await login(shopper, "jamie@example.test");
     const child = await post(leader, "people", { name: "Avery Morgan" });
-    await page.goto("/settings");
+    await page.goto("/settings?section=groups&view=events");
     await page.getByRole("button", { name: "Manage event leaders" }).click();
     await page
       .getByRole("checkbox", { name: "Sam Morgan", exact: true })
@@ -294,7 +294,7 @@ test("leaders manage an occasion while recipients add wishes and unselected memb
     await expect(
       leader.getByRole("button", { name: "Archive event", exact: true }),
     ).toBeVisible();
-    await page.goto("/settings");
+    await page.goto("/settings?section=groups&view=events");
     await page.getByRole("button", { name: "Manage event leaders" }).click();
     await page
       .getByRole("checkbox", { name: "Sam Morgan", exact: true })
@@ -334,7 +334,9 @@ test("family-group households support duplicate names and member-controlled sele
     });
     await post(member, "invitations/accept", { id: invitation.id });
     const child = await post(member, "people", { name: "Household child" });
-    await page.goto("/settings");
+    await page.goto(
+      `/settings?section=groups&view=households&group=${group.id}`,
+    );
     const section = page.locator(`[data-group-id="${group.id}"]`);
     for (let i = 0; i < 2; i++) {
       await section
@@ -352,7 +354,9 @@ test("family-group households support duplicate names and member-controlled sele
     const w = await readWorld(page);
     const homes = w.households.filter((h) => h.groupId === group.id);
     expect(homes).toHaveLength(2);
-    await member.goto("/settings");
+    await member.goto(
+      `/settings?section=groups&view=households&group=${group.id}`,
+    );
     const memberSection = member.locator(`[data-group-id="${group.id}"]`);
     await expect(
       memberSection.getByRole("button", {
@@ -443,4 +447,116 @@ test("family-group households support duplicate names and member-controlled sele
   } finally {
     await context.close();
   }
+});
+
+test("settings navigation isolates tasks and preserves unfinished preferences", async ({
+  page,
+}) => {
+  await login(page, "alex@example.test");
+  const groupName = `Navigation family ${Date.now()}`;
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto("/settings");
+  await expect(
+    page.getByRole("heading", { name: "Profile & appearance" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Create family group", exact: true }),
+  ).not.toBeVisible();
+  const navigation = page.getByRole("navigation", {
+    name: "Settings sections",
+  });
+  await navigation
+    .getByRole("link", { name: "Notifications", exact: true })
+    .click();
+  const email = page.getByRole("checkbox", { name: "Email", exact: true });
+  const wasChecked = await email.isChecked();
+  await email.setChecked(!wasChecked);
+  await navigation
+    .getByRole("link", { name: "Family groups", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Members & invitations" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Create household", exact: true }),
+  ).not.toBeVisible();
+  const groupPicker = page.getByLabel("Family group", { exact: true });
+  for (let i = 0; i < 2; i++) {
+    await page
+      .getByRole("button", { name: "Create family group", exact: true })
+      .click();
+    await page.getByLabel("Family group name", { exact: true }).fill(groupName);
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: "Create family group", exact: true })
+      .click();
+    await expect(page.getByRole("dialog")).not.toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: /^Navigation family/ }),
+    ).toBeVisible();
+    await expect(groupPicker).toHaveValue(
+      new URL(page.url()).searchParams.get("group")!,
+    );
+  }
+
+  const groups = await groupPicker.locator("option").evaluateAll((options) =>
+    options.map((o) => ({
+      id: (o as HTMLOptionElement).value,
+      label: o.textContent,
+    })),
+  );
+  const duplicates = groups.filter((g) => g.label?.includes(groupName));
+  expect(duplicates).toHaveLength(2);
+  expect(duplicates[0].label).not.toBe(duplicates[1].label);
+  await groupPicker.selectOption(duplicates[1].id);
+  await page
+    .getByRole("navigation", { name: "Family group settings" })
+    .getByRole("link", { name: "Households", exact: true })
+    .click();
+  await expect(
+    page.locator(`[data-group-id="${duplicates[1].id}"]`),
+  ).toBeVisible();
+  await navigation
+    .getByRole("link", { name: "Notifications", exact: true })
+    .click();
+  await expect(email).toBeChecked({ checked: !wasChecked });
+  await page.goBack();
+  await expect(groupPicker).toHaveValue(duplicates[1].id);
+  await expect(
+    page.getByRole("button", { name: "Create household", exact: true }),
+  ).toBeVisible();
+  await page.reload();
+  await expect(groupPicker).toHaveValue(duplicates[1].id);
+  for (const [name, width, height] of [
+    ["desktop", 1440, 1000],
+    ["mobile", 393, 852],
+    ["narrow", 320, 740],
+  ] as const) {
+    await page.setViewportSize({ width, height });
+    if (width < 1100) {
+      await page
+        .getByLabel("Settings section", { exact: true })
+        .selectOption("profile");
+      await page
+        .getByLabel("Settings section", { exact: true })
+        .selectOption("groups");
+    }
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    await page.screenshot({
+      path: `test-results/visual/settings-organized-${name}.png`,
+      fullPage: true,
+    });
+  }
+  expect(
+    (await new AxeBuilder({ page }).include(".settings-layout").analyze())
+      .violations,
+  ).toEqual([]);
+  await page.goto("/settings?section=unknown&group=unknown");
+  await expect(
+    page.getByRole("heading", { name: "Profile & appearance" }),
+  ).toBeVisible();
 });

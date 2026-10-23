@@ -47,7 +47,8 @@ run does nothing; it does not reset edits or overwrite existing data. Do not
 rerun `seed-staging` against an occupied database.
 
 1. Sign in as `alex@example.test`, obtaining the code from staging Mailpit.
-2. Open Settings → Your family groups. Two **Household sandbox** family groups
+2. Open Settings → Family groups. Choose a family group, then **Households**.
+   Two **Household sandbox** family groups
    have the same name; their displayed short IDs distinguish them.
 3. The larger group has two **The Smiths** households. The first contains Alex,
    Sam and Avery; the second contains Jamie, Riley and Avery. **Weekend home**

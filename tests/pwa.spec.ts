@@ -13,7 +13,7 @@ test("static-only offline caching, private draft review, and sign-out cleanup", 
     await navigator.serviceWorker.ready;
   });
   await page.reload();
-  await page.goto("/settings");
+  await page.goto("/settings?section=device");
   await page
     .getByLabel("Keep personal gift drafts on this device", { exact: true })
     .check();
@@ -55,7 +55,7 @@ test("static-only offline caching, private draft review, and sign-out cleanup", 
   );
   expect(drafts[0].title).toBe("Offline personal thought");
   await context.setOffline(false);
-  await page.goto("/settings");
+  await page.goto("/settings?section=device");
   await expect(
     page.getByText("Offline personal thought", { exact: true }),
   ).toBeVisible();
@@ -80,7 +80,7 @@ test("static-only offline caching, private draft review, and sign-out cleanup", 
     ),
   ).toEqual([]);
   await login(page, "jamie@example.test");
-  await page.goto("/settings");
+  await page.goto("/settings?section=device");
   await expect(
     page.getByText("Offline personal thought", { exact: true }),
   ).toHaveCount(0);
@@ -112,7 +112,7 @@ test("install reminders respect dismissal and standalone mode", async ({
     Number(localStorage.getItem("little-hint:install")),
   );
   expect(until - Date.now()).toBeGreaterThan(29 * 86400000);
-  await page.goto("/settings");
+  await page.goto("/settings?section=device");
   await expect(
     page.getByRole("heading", { name: "Keep Little Hint handy" }),
   ).toBeVisible();
@@ -132,7 +132,7 @@ test("install reminders respect dismissal and standalone mode", async ({
   await expect(
     page.getByRole("heading", { name: "Keep Little Hint handy" }),
   ).toHaveCount(0);
-  await page.goto("/settings");
+  await page.goto("/settings?section=device");
   await expect(
     page.getByText("You’re using the installed Little Hint app."),
   ).toBeVisible();

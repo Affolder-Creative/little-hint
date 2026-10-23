@@ -7,21 +7,23 @@ import {
   Check,
   Plus,
 } from "lucide-react";
-import type { GiftView, List } from "../shared/model";
+import type { GiftView, Group, List } from "../shared/model";
 import { Form, Field, Privacy } from "./components";
 import { useApp } from "./context";
 import { api } from "./api";
 import { ListPolicyFields, listPolicyValues } from "./ListPolicyFields";
 export const value = (f: FormData, k: string) => String(f.get(k) ?? "");
 const selected = (f: FormData, k: string) => f.getAll(k).map(String);
-export function GroupForm() {
-  const { mutate, close } = useApp();
+export function GroupForm({ onCreated }: { onCreated?: (id: string) => void }) {
+  const { mutate, close, toast } = useApp();
   return (
     <Form
       submit="Create family group"
       onSubmit={async (f) => {
-        await mutate("groups", { name: value(f, "name") });
+        const group = await mutate<Group>("groups", { name: value(f, "name") });
         close();
+        onCreated?.(group.id);
+        toast("Family group created. You can invite members now.");
       }}
     >
       <Field label="Family group name">

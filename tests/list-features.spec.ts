@@ -649,7 +649,7 @@ test("provider selection is editable without exposing API keys", async ({
   page,
 }) => {
   await login(page, "alex@example.test");
-  await page.goto("/settings");
+  await page.goto("/settings?section=admin");
   const section = page.locator("details").filter({
     has: page.locator("summary", { hasText: "Product import provider" }),
   });

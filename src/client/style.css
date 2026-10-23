@@ -1144,7 +1144,131 @@ main {
   margin-bottom: 5px;
 }
 .settings-layout {
-  max-width: 850px;
+  display: grid;
+  grid-template-columns: 185px minmax(0, 1fr);
+  gap: 40px;
+  max-width: 1040px;
+  align-items: start;
+}
+.settings-content {
+  min-width: 0;
+}
+.settings-layout [hidden] {
+  display: none !important;
+}
+.settings-navigation {
+  position: sticky;
+  top: 28px;
+}
+.settings-nav {
+  display: grid;
+  gap: 4px;
+}
+.settings-nav a {
+  padding: 12px;
+  min-height: 44px;
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.4;
+}
+.settings-nav a:hover,
+.settings-nav a[aria-current] {
+  color: var(--text);
+  background: var(--soft);
+}
+.settings-nav a[aria-current] {
+  font-weight: 600;
+}
+.settings-mobile-navigation {
+  display: none;
+}
+.settings-content > .settings-section,
+.settings-content > div > .settings-section {
+  padding: 0;
+  border: 0;
+}
+.settings-sign-out {
+  margin-top: 40px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+}
+.settings-sign-out h2 {
+  font-size: 17px;
+  margin-bottom: 8px;
+}
+.settings-sign-out p {
+  font-size: 13px;
+  color: var(--muted);
+  max-width: 65ch;
+  margin-bottom: 16px;
+}
+.group-settings-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  border-bottom: 1px solid var(--border);
+  margin: 20px 0 24px;
+}
+.group-settings-nav a {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  color: var(--muted);
+  border-bottom: 2px solid transparent;
+  font-size: 14px;
+}
+.group-settings-nav a[aria-current] {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+  font-weight: 600;
+}
+.group-settings-nav a:hover {
+  color: var(--text);
+}
+.group-settings h3 {
+  overflow-wrap: anywhere;
+}
+.group-settings h4 {
+  font-size: 17px;
+  margin-bottom: 8px;
+}
+.settings-content .section-heading {
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+.settings-content .setting-row {
+  flex-wrap: wrap;
+}
+.settings-content .setting-row > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.settings-content .text-button,
+.settings-content .icon-button {
+  min-height: 44px;
+}
+.settings-content .icon-button {
+  min-width: 44px;
+}
+@media (max-width: 1100px) {
+  .settings-layout {
+    display: block;
+    max-width: 760px;
+  }
+  .settings-navigation {
+    position: static;
+    margin-bottom: 28px;
+  }
+  .settings-nav {
+    display: none;
+  }
+  .settings-mobile-navigation {
+    display: block;
+  }
+  .settings-mobile-navigation .field {
+    max-width: 100%;
+  }
 }
 .settings-section {
   padding: 32px 0;

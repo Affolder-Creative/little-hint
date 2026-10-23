@@ -203,7 +203,16 @@ export function HouseholdSettings({ group }: { group: Group }) {
                   <strong>{p.name}</strong>
                   <p>
                     {theirs.length
-                      ? theirs.map((h) => householdLabel(h, world)).join("; ")
+                      ? theirs
+                          .map((h) =>
+                            households.some(
+                              (other) =>
+                                other.id !== h.id && other.name === h.name,
+                            )
+                              ? `${h.name} · ${h.id.slice(0, 8)}`
+                              : h.name,
+                          )
+                          .join("; ")
                       : "No household"}
                   </p>
                 </div>

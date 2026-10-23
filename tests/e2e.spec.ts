@@ -131,7 +131,7 @@ test("desktop and mobile screens are usable without overflow", async ({
   });
   await page.goto("/settings");
   await expect(
-    page.getByRole("heading", { name: "Make yourself at home" }),
+    page.getByRole("heading", { name: "Settings", exact: true }),
   ).toBeVisible();
   await expect
     .poll(() =>
@@ -142,6 +142,9 @@ test("desktop and mobile screens are usable without overflow", async ({
     path: "test-results/visual/settings-mobile.png",
     fullPage: true,
   });
+  await page
+    .getByLabel("Settings section", { exact: true })
+    .selectOption("device");
   await page.getByRole("button", { name: "Show me how", exact: true }).click();
   await expect(
     page.getByText("Choose Install app or Add to Home Screen, if available."),
@@ -153,6 +156,9 @@ test("desktop and mobile screens are usable without overflow", async ({
         .analyze()
     ).violations,
   ).toEqual([]);
+  await page
+    .getByLabel("Settings section", { exact: true })
+    .selectOption("profile");
   await page.getByLabel("Appearance", { exact: true }).selectOption("dark");
   await page.goto("/");
   await expect(
@@ -263,7 +269,7 @@ test("passkey registration and sign-in through a virtual platform authenticator"
       automaticPresenceSimulation: true,
     },
   });
-  await page.goto("/settings");
+  await page.goto("/settings?section=security");
   await page
     .getByRole("button", { name: "Add a passkey", exact: true })
     .click();
@@ -344,7 +350,7 @@ test("passkey registration and sign-in through a virtual platform authenticator"
   expect(
     (await (await page.request.get("/api/v1/world")).json()).me.email,
   ).toBe("sam@example.test");
-  await page.goto("/settings");
+  await page.goto("/settings?section=security");
   await page.evaluate(() => {
     navigator.credentials.create = async () => {
       throw new DOMException("Cancelled", "NotAllowedError");
@@ -398,7 +404,7 @@ test("administrators control automatic photos without affecting manual uploads",
 }) => {
   const key = "AUTO_IMPORT_PRODUCT_PHOTOS";
   await login(page, "alex@example.test");
-  await page.goto("/settings");
+  await page.goto("/settings?section=admin");
   const toggle = page.getByRole("checkbox", {
     name: "Automatically import product photos",
     exact: true,
@@ -453,7 +459,7 @@ test("administrators control automatic photos without affecting manual uploads",
     try {
       const memberPage = await member.newPage();
       await login(memberPage, "sam@example.test");
-      await memberPage.goto("/settings");
+      await memberPage.goto("/settings?section=admin");
       await expect(
         memberPage.getByRole("checkbox", {
           name: "Automatically import product photos",
