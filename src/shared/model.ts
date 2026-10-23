@@ -9,7 +9,6 @@ export interface Person extends Base {
   name: string;
   userId?: string;
   guardians: string[];
-  household: string;
   admin?: boolean;
 }
 export interface Group extends Base {
@@ -17,6 +16,14 @@ export interface Group extends Base {
   ownerId: string;
   memberIds: string[];
   eventLeaderIds?: string[];
+}
+export interface Household extends Base {
+  groupId: string;
+  name: string;
+}
+export interface HouseholdMembership extends Base {
+  householdId: string;
+  personId: string;
 }
 export interface Invitation extends Base {
   email: string;
@@ -193,6 +200,8 @@ export interface Records {
   media: Media;
   people: Person;
   groups: Group;
+  households: Household;
+  householdMemberships: HouseholdMembership;
   groupEvents: GroupEvent;
   invitations: Invitation;
   lists: List;
@@ -215,6 +224,8 @@ export const kinds: Kind[] = [
   "media",
   "people",
   "groups",
+  "households",
+  "householdMemberships",
   "groupEvents",
   "invitations",
   "lists",
@@ -277,6 +288,8 @@ export interface World {
   }>;
   people: Person[];
   groups: Group[];
+  households: Household[];
+  householdMemberships: HouseholdMembership[];
   groupEvents: Array<GroupEvent & { canManage: boolean }>;
   invitations: Invitation[];
   lists: Array<

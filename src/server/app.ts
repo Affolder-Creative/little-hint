@@ -168,6 +168,10 @@ export async function makeApp() {
     },
   );
   const routes: Record<string, string> = {
+    households: "households.create",
+    "households/update": "households.update",
+    "households/delete": "households.delete",
+    "households/memberships": "households.memberships",
     groups: "groups.create",
     "groups/event-leaders": "groups.event-leaders",
     "group-events": "group-events.create",

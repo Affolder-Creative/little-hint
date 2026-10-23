@@ -1,3 +1,4 @@
+import { familyGroupLabel } from "../shared/households";
 /* Group events extend the existing list rows and focused forms. Organizers choose
    recipients once; families open individual wish lists. Keep gift activity private. */
 import { useState } from "react";
@@ -34,7 +35,7 @@ export function EventForm({
     return (
       <p>
         Event management is no longer available. Close this form and refresh
-        your groups.
+        your family groups.
       </p>
     );
   return (
@@ -49,7 +50,7 @@ export function EventForm({
       onSubmit={async (form) => {
         if (participants.some((id) => !people.some((p) => p.id === id)))
           throw new Error(
-            "Group membership changed. Close and reopen this form to choose current members.",
+            "Family-group membership changed. Close and reopen this form to choose current members.",
           );
         const result = await mutate<{ id: string }>(
           event ? "group-events/update" : "group-events",
@@ -69,11 +70,15 @@ export function EventForm({
         );
         close();
         navigate(`/events/${result.id}`);
-        toast(event ? "Event updated." : "Your group’s wish lists are ready.");
+        toast(
+          event
+            ? "Event updated."
+            : "Your family group’s wish lists are ready.",
+        );
       }}
     >
       {!event && groups.length > 1 ? (
-        <Field label="Group">
+        <Field label="Family group">
           <select
             value={groupId}
             onChange={(e) => {
@@ -88,7 +93,7 @@ export function EventForm({
           >
             {groups.map((g) => (
               <option key={g.id} value={g.id}>
-                {g.name}
+                {familyGroupLabel(g, world)}
               </option>
             ))}
           </select>
@@ -105,7 +110,7 @@ export function EventForm({
           placeholder="Christmas 2026"
         />
       </Field>
-      <Field label="A note for the group">
+      <Field label="A note for the family group">
         <textarea
           name="description"
           rows={2}
@@ -117,8 +122,8 @@ export function EventForm({
       <fieldset className="choice-group form-section event-participants">
         <legend>Who needs a wish list?</legend>
         <p className="muted">
-          Each selected person gets a wish list. Everyone in this group can shop
-          from it.
+          Each selected person gets a wish list. Everyone in this family group
+          can shop from it.
         </p>
         <div className="event-selection-actions">
           <span aria-live="polite">{participants.length} selected</span>
@@ -161,15 +166,16 @@ export function EventForm({
         {event && (
           <small>
             Removing someone archives their list and keeps its gifts and
-            purchase history shared with the group. Re-adding them restores the
-            same list.
+            purchase history shared with the family group. Re-adding them
+            restores the same list.
           </small>
         )}
         {!event && !participants.length && (
           <small>Select at least one person to create the event.</small>
         )}
         <small>
-          New group members are added only when a leader selects them here.
+          New family-group members are added only when a leader selects them
+          here.
         </small>
       </fieldset>
       <ListPolicyFields list={policy} event />
@@ -199,8 +205,8 @@ export function EventLeadersForm({ group }: { group: Group }) {
       }}
     >
       <p>
-        You manage events as the group owner. Choose other members who can
-        create and manage every event in {group.name}.
+        You manage events as the family group owner. Choose other members who
+        can create and manage every event in {group.name}.
       </p>
       <fieldset className="choice-group">
         <legend>Event leaders</legend>
@@ -222,9 +228,9 @@ export function EventLeadersForm({ group }: { group: Group }) {
         )}
       </fieldset>
       <p className="muted">
-        Event leaders manage event settings and participants. Only the group
-        owner manages membership and appoints leaders. People still edit their
-        own gifts.
+        Event leaders manage event settings and participants. Only the family
+        group owner manages membership and appoints leaders. People still edit
+        their own gifts.
       </p>
     </Form>
   );
@@ -243,7 +249,10 @@ export function GroupEventSettings({ group }: { group: Group }) {
           <button
             className="text-button"
             onClick={() =>
-              open("Create a group event", <EventForm groupId={group.id} />)
+              open(
+                "Create a family group event",
+                <EventForm groupId={group.id} />,
+              )
             }
           >
             <Plus size={16} />
@@ -298,7 +307,7 @@ export function GroupEventsSection({ archived }: { archived: boolean }) {
         {canCreate && (
           <button
             className="button secondary small"
-            onClick={() => open("Create a group event", <EventForm />)}
+            onClick={() => open("Create a family group event", <EventForm />)}
           >
             <Plus size={17} />
             Create event
@@ -337,7 +346,7 @@ export function GroupEventsSection({ archived }: { archived: boolean }) {
             ? "No archived group events."
             : canCreate
               ? "Plan one occasion and create a wish list for each person taking part."
-              : "Your group owner or an event leader can create an occasion with wish lists for everyone taking part."}
+              : "Your family-group owner or an event leader can create an occasion with wish lists for everyone taking part."}
         </p>
       )}
     </section>

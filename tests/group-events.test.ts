@@ -40,13 +40,11 @@ function fixture() {
     name: actor.name,
     userId: actor.id,
     guardians: [],
-    household: "",
   }));
   const child: Person = {
     ...stamp(),
     name: "Child",
     guardians: [actors[2].id],
-    household: "",
   };
   state.people.push(...people, child);
   const group = command(state, actors[0], "groups.create", {

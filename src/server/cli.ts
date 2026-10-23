@@ -5,6 +5,7 @@ import { stamp, command, activateAccount } from "./domain";
 import type { Actor } from "../shared/model";
 import { assertStagingSeed, assertStagingDatabase } from "./deployment";
 import { seedStaging } from "./staging-seed";
+import { addHouseholdScenario } from "./household-fixtures";
 const cmd = process.argv[2];
 try {
   if (process.env.APP_ENV === "staging") assertStagingDatabase();
@@ -17,6 +18,22 @@ try {
     const emails = await seedStaging(pool);
     console.log(
       `Synthetic staging data created. Retrieve sign-in codes from Mailpit: ${emails.join(", ")}`,
+    );
+  } else if (cmd === "seed-households") {
+    assertStagingSeed();
+    const { rows } = await pool.query(
+      'SELECT id,name,email FROM "user" WHERE email = ANY($1)',
+      [
+        ["alex", "sam", "jamie", "riley", "taylor"].map(
+          (n) => `${n}@example.test`,
+        ),
+      ],
+    );
+    const added = await transact((s) => addHouseholdScenario(s, rows));
+    console.log(
+      added
+        ? "Synthetic household scenario added."
+        : "Household scenario already exists; nothing changed.",
     );
   } else if (cmd === "bootstrap") {
     const email = process.argv[3]?.trim().toLowerCase();
@@ -149,7 +166,7 @@ try {
     );
   } else
     throw new Error(
-      "Commands: migrate, bootstrap <email>, demo, seed-staging, invalidate-sessions",
+      "Commands: migrate, bootstrap <email>, demo, seed-staging, seed-households, invalidate-sessions",
     );
 } finally {
   await pool.end();
