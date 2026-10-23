@@ -1,5 +1,32 @@
 # Changelog
 
+## [0.2.0](https://github.com/kaffolder7/little-hint/compare/v0.1.0...v0.2.0) (2026-10-23)
+
+
+### Features
+
+* add isolated staging deployments ([#19](https://github.com/kaffolder7/little-hint/issues/19)) ([5159e10](https://github.com/kaffolder7/little-hint/commit/5159e10ba575c8496f0922b845a8cc1458321e67))
+* add leader-managed group events ([#9](https://github.com/kaffolder7/little-hint/issues/9)) ([d0926ee](https://github.com/kaffolder7/little-hint/commit/d0926ee147f086894105f37a03e20d932457ba9b))
+* add structured households and organize settings ([#23](https://github.com/kaffolder7/little-hint/issues/23)) ([ca30e8f](https://github.com/kaffolder7/little-hint/commit/ca30e8f0c1755c8b3560c74803c6a9cc1af694fa))
+* make automatic product photos optional ([#22](https://github.com/kaffolder7/little-hint/issues/22)) ([587233d](https://github.com/kaffolder7/little-hint/commit/587233dd5b87e41459e163d93c5b001526328929))
+* polish wishlist and group-event dialogs ([#15](https://github.com/kaffolder7/little-hint/issues/15)) ([40ec04c](https://github.com/kaffolder7/little-hint/commit/40ec04cbb4f91a64758fd552ba5df2862a17b5b0))
+
+
+### Fixes
+
+* clear wishlist dates and tighten event spacing ([#16](https://github.com/kaffolder7/little-hint/issues/16)) ([85c578e](https://github.com/kaffolder7/little-hint/commit/85c578ee0759e7aaf435b2497317a123efb090e9))
+* correct iOS date fields and list privacy defaults ([#14](https://github.com/kaffolder7/little-hint/issues/14)) ([7ce7cd0](https://github.com/kaffolder7/little-hint/commit/7ce7cd070458168bb18d850b172103ad318cea30))
+* document Coolify staging build configuration ([#21](https://github.com/kaffolder7/little-hint/issues/21)) ([a13947d](https://github.com/kaffolder7/little-hint/commit/a13947d2a37f9f309d1b0d4463171a8d9889facc))
+* improve mobile PWA layout and clarify gift settings ([#13](https://github.com/kaffolder7/little-hint/issues/13)) ([dc23053](https://github.com/kaffolder7/little-hint/commit/dc230536399ac3289ee42e4ccf30590228935c2f))
+* speed up PR CI with selective checks ([#18](https://github.com/kaffolder7/little-hint/issues/18)) ([30c1594](https://github.com/kaffolder7/little-hint/commit/30c159429adcd72b5b0064a81e29fa613a1691f2))
+* support native iOS reset for gift summary dates ([#17](https://github.com/kaffolder7/little-hint/issues/17)) ([ed644de](https://github.com/kaffolder7/little-hint/commit/ed644de6cd946da107f250e956e24a7fd8af7141))
+* use Coolify-compatible staging certificate paths ([#20](https://github.com/kaffolder7/little-hint/issues/20)) ([23ce5c3](https://github.com/kaffolder7/little-hint/commit/23ce5c3cb540a5623d1db92a5ddca852c82e780e))
+
+
+### Automation
+
+* require opt-in for Pages deployment ([#11](https://github.com/kaffolder7/little-hint/issues/11)) ([5ff1957](https://github.com/kaffolder7/little-hint/commit/5ff19573b63d4f3db399e05191646198d29a3530))
+
 ## 0.1.0 (2026-10-19)
 
 
