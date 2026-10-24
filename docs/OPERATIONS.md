@@ -4,6 +4,10 @@ For feature testing with synthetic data, use the [isolated staging setup](STAGIN
 
 ## Coolify deployment
 
+For published images, follow [Coolify release upgrades](COOLIFY_UPGRADES.md). The
+compilation instructions below apply to installations that build from source;
+keep the release guide's tag command when using the existing production setup.
+
 Create a Little Hint project in your Coolify team and select its production environment. Connect your fork of `YOUR-ACCOUNT/little-hint` and the Compose build pack, with `/compose.yaml`. Set the app service domain to `https://littlehint.example.com:3000` in Coolify's Compose domain mapping. Port 3000 is internal; do not publish the database or worker. Coolify supplies HTTPS through its proxy. `APP_URL` must be `https://littlehint.example.com`, without the port.
 
 ### Separate image compilation from runtime configuration
@@ -77,11 +81,11 @@ Configure a separate Little Hint restic repository path, a new strong `RESTIC_PA
 
 Create Coolify scheduled tasks targeting the backup container. Confirm the actual container name after deployment. Schedules use the deployment server's timezone.
 
-| Task | Command | Schedule | Timeout |
-|---|---|---|---|
-| Nightly encrypted backup | `backup-sidecar run` | `0 3 * * *` | 3600 seconds |
-| Weekly prune | `backup-sidecar prune` | `0 4 * * 0` | 3600 seconds |
-| Monthly integrity check | `backup-sidecar check` | `0 5 1 * *` | 3600 seconds |
+| Task                     | Command                | Schedule    | Timeout      |
+| ------------------------ | ---------------------- | ----------- | ------------ |
+| Nightly encrypted backup | `backup-sidecar run`   | `0 3 * * *` | 3600 seconds |
+| Weekly prune             | `backup-sidecar prune` | `0 4 * * 0` | 3600 seconds |
+| Monthly integrity check  | `backup-sidecar check` | `0 5 1 * *` | 3600 seconds |
 
 Set `RESTIC_KEEP_DAILY=30`, weekly/monthly retention to 0, and `BACKUP_MAX_AGE_SECONDS=93600`. This keeps 30 daily snapshots, which can span more than 30 calendar days if runs are missed. A nightly run applies retention; the separate prune removes unreferenced data. Enable Coolify failure notifications and inspect backup health. A schedule alone is not evidence of a successful backup.
 

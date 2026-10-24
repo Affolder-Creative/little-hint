@@ -4,6 +4,10 @@ Use a separate deployment server for staging. Run one persistent stack with an a
 
 The examples below are placeholders. Record real server names, domains, resource IDs, credentials, and deployed digests in your private operator record. Never copy production data or environment variables into staging.
 
+For release promotion, use the [Coolify release upgrade procedure](COOLIFY_UPGRADES.md).
+It deploys the public release digest to staging before production. The branch
+build workflow below is for feature testing.
+
 ## 1. Build a selected branch
 
 Merge the staging workflow into `main` before its first dispatch. GitHub requires a manually dispatched workflow to exist on the default branch. Feature branches must include the staging support introduced with this workflow.
@@ -15,7 +19,7 @@ Merge the staging workflow into `main` before its first dispatch. GitHub require
 
 The workflow builds only `linux/amd64` on a standard Ubuntu runner, caches Docker layers, serializes staging builds, and times out after 30 minutes. It does not run automatically on pushes, rerun the release pipeline, update production tags, or call Coolify. For a private repository it consumes the owner's Actions allowance. Inspect actual run duration before estimating monthly use. Keep cache storage within the account's included allowance.
 
-The separate `ghcr.io/YOUR-ACCOUNT/little-hint-staging` package starts private. Verify its visibility and configure read-only package access on the staging server through Coolify's registry settings. Never make a private image public to work around authentication.
+The separate `ghcr.io/affolder-creative/little-hint-staging` package starts private. Verify its visibility and configure read-only package access on the staging server through Coolify's registry settings. Never make a private image public to work around authentication.
 
 ## 2. Prepare the staging server
 
@@ -44,7 +48,7 @@ Set the variables from `.env.staging.example` as Runtime-only. Use fresh secrets
 - `STAGING_ENCRYPTION_KEY`: 32 random bytes encoded as base64.
 - `STAGING_MAILPIT_UI_AUTH`: `operator:` followed by a long random alphanumeric password, stored only in Coolify and your password manager.
 - `STAGING_APP_URL`: the exact public HTTPS origin, with no path or internal port.
-- `LITTLE_HINT_STAGING_IMAGE`: the digest reported by the staging image workflow.
+- `LITTLE_HINT_STAGING_IMAGE`: the digest reported by the staging image workflow, or the public release digest when verifying a release.
 
 Map the app domain, for example `https://littlehint-staging.example.com:3000`, to service `app`. Map a separate HTTPS hostname, for example `https://littlehint-staging-mail.example.com:8025`, to `mailpit`. Create DNS pointing to the staging server and verify TLS. The port suffixes are internal routing targets, not public port numbers. Do not expose database port 5432 or SMTP port 1025.
 
