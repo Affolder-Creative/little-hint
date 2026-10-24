@@ -23,6 +23,7 @@ jobs:
       browser: ${{ steps.select.outputs.browser }}
       containers: ${{ steps.select.outputs.containers }}
       brand: ${{ steps.select.outputs.brand }}
+      browser-image: ${{ steps.browser-image.outputs.image }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -37,6 +38,10 @@ jobs:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: node scripts/ci-policy.mjs select
+      - id: browser-image
+        if: steps.select.outputs.browser == 'true'
+        name: Select the locked Playwright image
+        run: node scripts/ci-browser-image.mjs >> "$GITHUB_OUTPUT"
   quality:
     needs: changes
     runs-on: ubuntu-24.04
@@ -120,11 +125,15 @@ jobs:
     needs: changes
     if: needs.changes.outputs.browser == 'true'
     runs-on: ubuntu-24.04
+    container:
+      image: ${{ needs.changes.outputs.browser-image }}
+      options: --ipc=host
     timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        suite: [e2e, sign-in, list-features, group-events, polish, pwa, critique]
+        suite:
+          [e2e, sign-in, list-features, group-events, polish, pwa, critique]
     services:
       postgres:
         image: postgres:18-alpine
@@ -137,7 +146,8 @@ jobs:
           --health-cmd "pg_isready -U little_hint -d little_hint_e2e"
           --health-interval 5s --health-timeout 5s --health-retries 15
     env:
-      DATABASE_URL: postgres://little_hint:ci-only@localhost:5432/little_hint_e2e
+      DATABASE_URL: postgres://little_hint:ci-only@postgres:5432/little_hint_e2e
+      PLAYWRIGHT_DOCKER_IMAGE: ${{ needs.changes.outputs.browser-image }}
       BETTER_AUTH_SECRET: ci-browser-only-secret-at-least-32-characters
       SETTINGS_ENCRYPTION_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
       UPLOAD_DIR: .local/uploads
@@ -151,7 +161,7 @@ jobs:
           node-version: "24"
           cache: npm
       - run: npm ci
-      - run: npx --no-install playwright install --with-deps chromium
+      - run: node scripts/ci-browser-image.mjs verify
       - run: npm run build
       - name: Browser suite with isolated fixtures
         env:

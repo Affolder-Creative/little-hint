@@ -12,13 +12,33 @@ export function classifyPaths(paths) {
     // Shared tooling can change how any check behaves. Unknown files also run
     // everything, so new inputs cannot silently escape validation.
     if (
-      file.startsWith(".github/") ||
+      file === ".github/workflows/ci.yml" ||
       /^(package(?:-lock)?\.json|tsconfig\.json|vite\.config\.ts)$/.test(
         file,
       ) ||
       /^scripts\/(ci.*|build(?:-sw)?\.mjs|tooling\.test\.mjs)$/.test(file)
     )
       return selection(true);
+
+    // These workflows/settings do not execute the application. Quality still
+    // validates workflow syntax; the Pages workflow validates its own site.
+    if (
+      [
+        ".github/workflows/pages.yml",
+        ".github/workflows/pr-title.yml",
+        ".github/dependabot.yml",
+        ".github/rulesets/main.json",
+      ].includes(file)
+    )
+      continue;
+    if (
+      /^\.github\/workflows\/(?:release|staging|security|migrate-release-images)\.yml$/.test(
+        file,
+      )
+    ) {
+      selected.containers = true;
+      continue;
+    }
 
     if (
       /^(docs|marketing|design|\.impeccable)\//.test(file) ||
@@ -58,6 +78,7 @@ export function classifyPaths(paths) {
       /^(src\/client|public)\//.test(file) ||
       file === "index.html" ||
       file === "playwright.config.ts" ||
+      file === "tests/browser-server.ts" ||
       /^tests\/.*\.spec\.ts$/.test(file) ||
       file === "tests/browser-helpers.ts"
     ) {

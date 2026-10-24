@@ -6,9 +6,9 @@ import { login, post, expectDialogFieldsToFit } from "./browser-helpers";
 // Browser contexts fetch the app assets independently. Respect the real server
 // limiter rather than disabling it for this suite.
 test.beforeEach(async ({ request }) => {
-  // The CI proxy already stays below the server limit. Only unpaced local
-  // runs need to reserve a fresh rate-limit window before each test.
-  if (process.env.E2E_REQUESTS_PACED === "1") return;
+  // The isolated browser server has its own general request budget. Local
+  // runs against the production entrypoint still respect its real limit.
+  if (process.env.E2E_BROWSER_TEST_SERVER === "1") return;
   const response = await request.get("/api/health");
   if (
     response.status() === 429 ||

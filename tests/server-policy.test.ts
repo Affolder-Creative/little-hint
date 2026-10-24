@@ -10,7 +10,7 @@ vi.mock("../src/server/db", () => ({
 }));
 vi.mock("../src/server/auth", () => ({
   appUrl: "https://littlehint.example.test",
-  makeAuth: () => ({}),
+  makeAuth: () => ({ api: { getSession: async () => null } }),
 }));
 vi.mock("fastify", async (importOriginal) => {
   const actual = await importOriginal<typeof import("fastify")>();
@@ -42,6 +42,71 @@ afterEach(async () => {
   app = undefined;
   vi.restoreAllMocks();
   vi.unstubAllEnvs();
+});
+
+describe("request limits", () => {
+  it("enforces the production default after 150 requests even in test mode", async () => {
+    vi.stubEnv("NODE_ENV", "test");
+    app = await makeApp();
+    for (let i = 0; i < 150; i++)
+      expect((await app.inject("/api/health")).statusCode).toBe(200);
+    const limited = await app.inject("/api/health");
+    expect(limited.statusCode).toBe(429);
+    expect(Number(limited.headers["retry-after"])).toBeGreaterThan(0);
+    expect(limited.json()).toEqual({
+      error: "Too many requests. Wait a moment and try again.",
+    });
+    expect(
+      (await app.inject({ url: "/api/health", remoteAddress: "127.0.0.2" }))
+        .statusCode,
+    ).toBe(200);
+  });
+
+  it("allows browser bursts but preserves route-specific limits", async () => {
+    vi.stubEnv("NODE_ENV", "test");
+    vi.stubEnv(
+      "DATABASE_URL",
+      "postgres://test:test@localhost/little_hint_e2e",
+    );
+    app = await makeApp({ browserTest: true });
+    for (let i = 0; i < 200; i++)
+      expect((await app.inject("/api/health")).statusCode).toBe(200);
+    for (const [route, max] of [
+      ["start", 5],
+      ["verify", 10],
+    ] as const) {
+      const request = () =>
+        app!.inject({
+          method: "POST",
+          url: `/api/v1/channels/sms/${route}`,
+          headers: { origin: "https://littlehint.example.test" },
+          payload: {},
+        });
+      // The real SMS routes reject unauthenticated callers until their own
+      // request budget is exhausted, without contacting any provider.
+      for (let i = 0; i < max; i++)
+        expect((await request()).statusCode).toBe(401);
+      expect((await request()).statusCode).toBe(429);
+    }
+  });
+
+  it.each([
+    ["production", "production", "little_hint_e2e"],
+    ["test", "production", "little_hint_e2e"],
+    ["development", "test", "little_hint_e2e"],
+    ["test", "test", "little_hint"],
+    ["test", "test", "little_hint_test"],
+  ])(
+    "rejects the browser override in %s/%s with database %s",
+    async (nodeEnv, appEnv, database) => {
+      vi.stubEnv("NODE_ENV", nodeEnv);
+      vi.stubEnv("APP_ENV", appEnv);
+      vi.stubEnv("DATABASE_URL", `postgres://test:test@localhost/${database}`);
+      await expect(makeApp({ browserTest: true })).rejects.toThrow(
+        /Browser tests require/,
+      );
+    },
+  );
 });
 
 describe("server logging policy", () => {
