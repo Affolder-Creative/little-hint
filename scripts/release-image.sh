@@ -25,7 +25,7 @@ case "${1:-}" in
       assert.equal(i.Os,"linux");
       assert.equal(i.Config.Labels["org.opencontainers.image.revision"],process.env.RELEASE_SHA);
       assert.equal(i.Config.Labels["org.opencontainers.image.version"],process.env.VERSION);
-      assert.equal(i.Config.Labels["org.opencontainers.image.source"],"https://github.com/kaffolder7/little-hint");
+      assert.equal(i.Config.Labels["org.opencontainers.image.source"],"https://github.com/Affolder-Creative/little-hint");
     '
     cid=$(docker create little-hint:release)
     trap 'docker rm "$cid" >/dev/null' EXIT

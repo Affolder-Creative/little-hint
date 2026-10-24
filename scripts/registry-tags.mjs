@@ -6,7 +6,7 @@ const result = spawnSync(
   [
     "api",
     "--paginate",
-    "users/kaffolder7/packages/container/little-hint/versions?per_page=100",
+    "orgs/Affolder-Creative/packages/container/little-hint/versions?per_page=100",
     "--jq",
     ".[].metadata.container.tags[]",
   ],

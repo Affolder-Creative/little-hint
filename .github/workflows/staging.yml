@@ -21,13 +21,16 @@ jobs:
     permissions:
       contents: read
       packages: write
-    env:
-      IMAGE: ghcr.io/${{ github.repository }}-staging
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
+      - name: Resolve registry image
+        # Container repository names must be lowercase, including mixed-case owners.
+        run: |
+          owner_repo=$(printf '%s' "$GITHUB_REPOSITORY" | tr '[:upper:]' '[:lower:]')
+          echo "IMAGE=ghcr.io/$owner_repo-staging" >> "$GITHUB_ENV"
       - name: Resolve selected commit
         id: source
         run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"

@@ -15,7 +15,7 @@ providers; personal self-hosting has no Little Hint license fee. Read the
 
 Choose one installation path:
 
-- **Release image:** use a completed [GitHub Release](https://github.com/kaffolder7/little-hint/releases)
+- **Release image:** use a completed [GitHub Release](https://github.com/Affolder-Creative/little-hint/releases)
   and follow [Deploying a release](RELEASING.md#deploying-a-release). Verify the
   download checksums. Private repositories and GHCR packages require access;
   repository visibility alone does not make a package public.

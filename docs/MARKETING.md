@@ -36,11 +36,13 @@ The workflow always validates the site. Deployment stays disabled until the `PAG
 2. Ensure the `github-pages` environment permits deployments from `main`.
 3. In **Settings → Secrets and variables → Actions → Variables**, set the repository variable `PAGES_ENABLED` to `true`. Only enable it after completing the Pages setup.
 4. Run **Marketing site** from the Actions tab on `main`, or push a marketing change to `main`. Pull requests validate assets and links but never deploy.
-5. Set the Pages custom domain to `littlehint.affoldercreative.com`. Verify domain ownership in GitHub, configure the DNS CNAME `littlehint` to `kaffolder7.github.io`, and enforce HTTPS when the certificate is ready. This Actions-based workflow does not require a repository `CNAME` file.
+5. Set the Pages custom domain to `littlehint.affoldercreative.com`. Verify domain ownership in GitHub, configure the DNS CNAME `littlehint` to `affolder-creative.github.io`, and enforce HTTPS when the certificate is ready. This Actions-based workflow does not require a repository `CNAME` file.
 6. Confirm the deployment succeeds and visit `https://littlehint.affoldercreative.com/`. In the repository's About settings, use that URL for **Website**. Check the homepage, share image, and source/setup links without signing in to GitHub.
 
 Only `marketing/` is uploaded. The workflow cannot publish server code, secrets, documentation, or the design concepts outside that directory. No app service worker or PWA manifest is registered on the marketing site.
 
-The HTML's canonical URL and Open Graph URL/image use `https://littlehint.affoldercreative.com/`. GitHub links use `kaffolder7/little-hint` and its `main` branch. Update these if the domain or repository moves. Local assets and anchors are relative and work under the project subpath.
+The HTML's canonical URL and Open Graph URL/image use `https://littlehint.affoldercreative.com/`. GitHub links use `Affolder-Creative/little-hint` and its `main` branch. Update these if the domain or repository moves. Local assets and anchors are relative and work under the project subpath.
 
 See [GitHub's custom Pages workflow documentation](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages).
+
+When transferring repository ownership, follow the [organization transfer checklist](ORGANIZATION_TRANSFER.md), including the DNS target and organization domain verification. The public custom-domain URL stays the same.

@@ -120,7 +120,8 @@ assert.notEqual(
   0,
   "Registry deployment must require an explicit image.",
 );
-const registryImage = "ghcr.io/kaffolder7/little-hint@sha256:" + "a".repeat(64);
+const registryImage =
+  "ghcr.io/affolder-creative/little-hint@sha256:" + "a".repeat(64);
 const registryResult = config(registryFiles, {
   ...required,
   LITTLE_HINT_IMAGE: registryImage,
