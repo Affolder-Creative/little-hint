@@ -64,7 +64,7 @@ The initial release is `v0.1.0`. npm publishing is disabled by `private: true`.
    upload Docker-loadable archives, deployment files, notices, the three shared
    corresponding-source bundles, SBOMs, image digests and `SHA256SUMS`. Publish the GitHub Release last.
 
-Registry location: `ghcr.io/kaffolder7/little-hint`. Tags are `0.1.0`-style full
+Registry location: `ghcr.io/affolder-creative/little-hint`. Tags are `0.1.0`-style full
 versions, `0.1`-style minor aliases, `latest`, and internal
 `sha-<full-commit>-<architecture>` staging tags. Full versions and staging tags
 are reused rather than overwritten. Older-version retries do not move aliases
@@ -148,7 +148,7 @@ branch protection here. Until then, PR-only merging is a maintainer convention.
 When eligible, apply the prepared ruleset:
 
 ```sh
-gh api --method POST repos/kaffolder7/little-hint/rulesets \
+gh api --method POST repos/Affolder-Creative/little-hint/rulesets \
   --input .github/rulesets/main.json
 ```
 
@@ -164,3 +164,7 @@ Before launch, license the separately maintained
 backup sidecar, enable private vulnerability reporting, and complete the manual
 production checks in [VALIDATION.md](VALIDATION.md). Do not label this project as
 OSI open source under PolyForm Perimeter.
+
+For the move from the personal account to Affolder Creative, follow the
+[organization transfer checklist](ORGANIZATION_TRANSFER.md) before publishing
+the first organization-owned image.

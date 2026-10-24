@@ -1,0 +1,25 @@
+name: Migrate release images
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: little-hint-release
+  cancel-in-progress: false
+jobs:
+  copy:
+    if: github.repository == 'Affolder-Creative/little-hint' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: sudo apt-get update && sudo apt-get install -y skopeo
+      - name: Copy published images without rebuilding
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash scripts/migrate-release-images.sh

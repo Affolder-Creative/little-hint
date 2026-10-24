@@ -29,7 +29,7 @@ function checkMain(t, { sha = checked, ref, response, apiStatus = 0 }) {
       ...process.env,
       PATH: `${root}${path.delimiter}${process.env.PATH}`,
       CHECKED_SHA: sha,
-      GITHUB_REPOSITORY: "kaffolder7/little-hint",
+      GITHUB_REPOSITORY: "Affolder-Creative/little-hint",
       GITHUB_OUTPUT: output,
       GITHUB_STEP_SUMMARY: summary,
       TEST_GH_ARGS: path.join(root, "args"),
@@ -40,7 +40,7 @@ function checkMain(t, { sha = checked, ref, response, apiStatus = 0 }) {
   assert.ifError(result.error);
   assert.equal(
     readFileSync(path.join(root, "args"), "utf8"),
-    "api\nrepos/kaffolder7/little-hint/git/ref/heads/main\n",
+    "api\nrepos/Affolder-Creative/little-hint/git/ref/heads/main\n",
   );
   return {
     ...result,

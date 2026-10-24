@@ -18,7 +18,7 @@ B's generated hero uses serif lettering despite the original sans-serif directio
 
 Audience: self-hosters who want gift coordination for families and friends. Primary action: Self-host Little Hint. Secondary action: View on GitHub. One selected static page, no public signup, analytics, custom domain, or payment processing.
 
-The selected direction is implemented in `marketing/`, with a dedicated GitHub Pages workflow that publishes only that directory. Expected default URL: https://kaffolder7.github.io/little-hint/ subject to repository configuration. See `docs/MARKETING.md` for setup and screenshot provenance.
+The selected direction is implemented in `marketing/`, with a dedicated GitHub Pages workflow that publishes only that directory. Expected default URL: https://affolder-creative.github.io/little-hint/ subject to repository configuration. See `docs/MARKETING.md` for setup and screenshot provenance.
 
 ## Generation record
 

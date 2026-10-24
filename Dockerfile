@@ -38,7 +38,7 @@ ENV NODE_ENV=production PORT=3000 UPLOAD_DIR=/data/uploads
 ARG VERSION=development
 ARG REVISION=unknown
 LABEL org.opencontainers.image.title="Little Hint" \
-      org.opencontainers.image.source="https://github.com/kaffolder7/little-hint" \
+      org.opencontainers.image.source="https://github.com/Affolder-Creative/little-hint" \
       org.opencontainers.image.version=$VERSION \
       org.opencontainers.image.revision=$REVISION \
       org.opencontainers.image.licenses="PolyForm-Perimeter-1.0.0"

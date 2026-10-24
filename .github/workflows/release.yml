@@ -15,7 +15,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   select:
-    if: github.repository == 'kaffolder7/little-hint' && github.ref == 'refs/heads/main'
+    if: github.repository == 'Affolder-Creative/little-hint' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     outputs:
@@ -95,7 +95,7 @@ jobs:
             runner: ubuntu-24.04-arm
     env:
       GH_TOKEN: ${{ github.token }}
-      IMAGE: ghcr.io/kaffolder7/little-hint
+      IMAGE: ghcr.io/affolder-creative/little-hint
       VERSION: ${{ needs.prepare.outputs.version }}
       RELEASE_SHA: ${{ needs.prepare.outputs.sha }}
       ARCH: ${{ matrix.arch }}
@@ -176,7 +176,7 @@ jobs:
       packages: write
     env:
       GH_TOKEN: ${{ github.token }}
-      IMAGE: ghcr.io/kaffolder7/little-hint
+      IMAGE: ghcr.io/affolder-creative/little-hint
       VERSION: ${{ needs.prepare.outputs.version }}
       RELEASE_SHA: ${{ needs.prepare.outputs.sha }}
       RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
