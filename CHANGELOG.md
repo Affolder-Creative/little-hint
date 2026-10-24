@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.2.1](https://github.com/kaffolder7/little-hint/compare/v0.2.0...v0.2.1) (2026-10-24)
+
+
+### Fixes
+
+* clarify list and profile guidance (P3) ([#26](https://github.com/kaffolder7/little-hint/issues/26)) ([ece43e3](https://github.com/kaffolder7/little-hint/commit/ece43e357c615ef13170ebb3c8afe02e0d31f7e1))
+* improve task flow and interface recovery (P2) ([#25](https://github.com/kaffolder7/little-hint/issues/25)) ([bed8fda](https://github.com/kaffolder7/little-hint/commit/bed8fda76105409b202d8ff01bef1488fb6ab5e2))
+* protect sharing and gift coordination (P1) ([#24](https://github.com/kaffolder7/little-hint/issues/24)) ([496f563](https://github.com/kaffolder7/little-hint/commit/496f5636b5641929813de3fc368284710ae2ff8b))
+
 ## [0.2.0](https://github.com/kaffolder7/little-hint/compare/v0.1.0...v0.2.0) (2026-10-23)
 
 
