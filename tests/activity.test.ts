@@ -49,6 +49,8 @@ function fixture() {
 afterEach(() => vi.useRealTimers());
 describe("notification inbox and audiences", () => {
   it("delivers followed additions once for overlapping follows, never to unrelated users or the actor", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-24T12:00:00Z"));
     const f = fixture();
     for (const [target, targetId] of [
       ["person", f.people[0].id],
