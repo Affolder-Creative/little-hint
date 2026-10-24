@@ -10,6 +10,120 @@ const script = fileURLToPath(new URL("./release-ref.mjs", import.meta.url));
 const checked = "a".repeat(40);
 const newer = "b".repeat(40);
 
+function releaseCommand(
+  t,
+  command,
+  {
+    createdTag = "",
+    retryTag = "",
+    tagSha = checked,
+    version = "0.3.0",
+    draft = true,
+    ancestorStatus = 0,
+  } = {},
+) {
+  const root = mkdtempSync(
+    path.join(tmpdir(), "little-hint-release-candidate-"),
+  );
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  writeFileSync(path.join(root, "package.json"), JSON.stringify({ version }));
+  writeFileSync(
+    path.join(root, "gh"),
+    `#!/bin/sh
+echo "$*" >> "$TEST_CALLS"
+if [ "$1" = release ]; then printf '%s' "$TEST_RELEASE";
+else printf '%s' "$TEST_TAG_REF"; fi
+`,
+    { mode: 0o755 },
+  );
+  writeFileSync(
+    path.join(root, "git"),
+    `#!/bin/sh
+echo "git $*" >> "$TEST_CALLS"
+if [ "$1" = rev-parse ]; then printf '%s' "$TEST_TAG_SHA";
+else exit "$TEST_ANCESTOR_STATUS"; fi
+`,
+    { mode: 0o755 },
+  );
+  const output = path.join(root, "output");
+  const calls = path.join(root, "calls");
+  writeFileSync(output, "");
+  writeFileSync(calls, "");
+  const result = spawnSync(process.execPath, [script, command], {
+    cwd: root,
+    encoding: "utf8",
+    env: {
+      ...process.env,
+      PATH: `${root}${path.delimiter}${process.env.PATH}`,
+      GITHUB_REF: "refs/heads/main",
+      GITHUB_SHA: newer,
+      GITHUB_REPOSITORY: "Affolder-Creative/little-hint",
+      CHECKED_SHA: checked,
+      CREATED_TAG: createdTag,
+      RETRY_TAG: retryTag,
+      GITHUB_OUTPUT: output,
+      TEST_CALLS: calls,
+      TEST_RELEASE: JSON.stringify({ isDraft: draft }),
+      TEST_TAG_REF: JSON.stringify({ object: { type: "commit", sha: tagSha } }),
+      TEST_TAG_SHA: tagSha,
+      TEST_ANCESTOR_STATUS: String(ancestorStatus),
+    },
+  });
+  assert.ifError(result.error);
+  return {
+    ...result,
+    output: readFileSync(output, "utf8"),
+    calls: readFileSync(calls, "utf8"),
+  };
+}
+
+test("ordinary main merge produces no release candidate or release API calls", (t) => {
+  const result = releaseCommand(t, "resolve");
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.output, "");
+  assert.equal(result.calls, "");
+});
+
+test("draft candidate resolves only its selected commit and package version", (t) => {
+  const result = releaseCommand(t, "resolve", { createdTag: "v0.3.0" });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.output, "tag=v0.3.0\nversion=0.3.0\n");
+});
+
+for (const [name, options] of [
+  ["moved tag", { tagSha: newer }],
+  ["wrong version", { version: "0.4.0" }],
+  ["published release", { draft: false }],
+])
+  test(`candidate rejects ${name} without exposing build outputs`, (t) => {
+    const result = releaseCommand(t, "resolve", {
+      createdTag: "v0.3.0",
+      ...options,
+    });
+    assert.notEqual(result.status, 0);
+    assert.equal(result.output, "");
+  });
+
+test("manual retry selects the old draft commit and requires main ancestry", (t) => {
+  const result = releaseCommand(t, "select", { retryTag: "v0.3.0" });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.output, `sha=${checked}\n`);
+  assert.match(result.calls, /git rev-parse v0\.3\.0\^\{commit\}/);
+  assert.ok(
+    result.calls.includes(
+      `git merge-base --is-ancestor ${checked} origin/main`,
+    ),
+  );
+  assert.notEqual(
+    releaseCommand(t, "select", { retryTag: "v0.3.0", ancestorStatus: 1 })
+      .status,
+    0,
+  );
+  const resolved = releaseCommand(t, "resolve", { retryTag: "v0.3.0" });
+  assert.equal(resolved.status, 0, resolved.stderr);
+  assert.equal(resolved.output, "tag=v0.3.0\nversion=0.3.0\n");
+});
+
 function checkMain(t, { sha = checked, ref, response, apiStatus = 0 }) {
   const root = mkdtempSync(path.join(tmpdir(), "little-hint-release-ref-"));
   t.after(() => rmSync(root, { recursive: true, force: true }));

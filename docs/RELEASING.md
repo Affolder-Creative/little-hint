@@ -8,25 +8,39 @@ PR diff, including deleted files and both paths of a rename:
 | Check                      | PR changes that select it                                                                                                          |
 | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
 | PostgreSQL 18 integration  | Backend/shared code or the integration test                                                                                        |
-| All six browser suites     | App source, public assets, HTML entrypoint, browser tests/helpers, or Playwright configuration                                     |
+| All seven browser suites   | App source, public assets, HTML entrypoint, browser tests/helpers, or Playwright configuration                                     |
 | AMD64 and ARM64 containers | Docker/Compose/environment examples, dependencies, build/compliance/release tooling, LICENSE, or server app/worker/CLI entrypoints |
 | Brand tooling audit        | Brand sources, audit tooling, compliance policy, or notice tooling                                                                 |
-| All checks                 | Dependencies, TypeScript/Vite/build configuration, CI tooling, any `.github/` change, or an unrecognized path                      |
+| All checks                 | Dependencies, TypeScript/Vite/build configuration, CI tooling/the CI workflow, or an unrecognized path                             |
 
 Docs, marketing, and design changes do not select unrelated expensive checks.
 Unit-test-only changes use the quality job. Mixed changes select the union of
 their checks. An unavailable diff runs everything. Manual and reusable CI runs,
-including every main merge and release retry, always run the full suite.
+including release candidates and release retries, always run the full suite.
+Ordinary main merges only maintain the release PR unless they create a release candidate.
+Pages, PR-title, Dependabot, and branch-ruleset changes do not select application
+checks. Release, staging, security, and image-migration workflow changes select
+container checks. Unknown GitHub configuration still selects everything.
 The selection is recorded in the run summary; `scripts/ci-policy.mjs` contains
 the exact path rules, with coverage in `npm run test:tooling`.
 
 Each browser suite gets a fresh database and real local email-code authentication.
-External service credentials are unnecessary. The browser launcher paces requests
-through a local proxy to stay below the production rate limit; it does not disable
-that limit. It sets `E2E_REQUESTS_PACED=1` so list tests avoid also waiting for a
-fresh rate-limit window before every test. Unpaced local runs keep that wait.
-The launcher selects unused ports so a running development app cannot satisfy
-its readiness check. Both CI and release container jobs use native runners:
+External service credentials are unnecessary. Browser jobs use the official
+Playwright Noble image selected from the exact package-lock version, with Node 24
+and Postgres reached through its service hostname. An incompatible installed
+Playwright version fails before testing; there is no per-job apt or browser install.
+
+The browser launcher builds a separate test server into `.local/browser-server`.
+It serves the production frontend with the same server application and a general
+budget of 10,000 requests/minute, removing the old 600 ms delay per request.
+The override requires `NODE_ENV=test`, a test deployment environment, and the
+`little_hint_e2e` database. Production entrypoints never enable it. Authentication
+and endpoint-specific limits remain enabled; dedicated server tests verify the
+default 150-request budget, per-IP isolation, and stricter endpoint limits.
+`E2E_BROWSER_TEST_SERVER=1` only tells browser fixtures to skip the general-limit
+cooldown. Local tests against the normal server retain the cooldown. The launcher
+selects an unused port so a development app cannot satisfy its readiness check.
+Both CI and release container jobs use native runners:
 `ubuntu-24.04` for AMD64 and `ubuntu-24.04-arm` for ARM64, without QEMU.
 
 `CI gate` requires successful selection and quality checks, validates every
@@ -49,13 +63,15 @@ The initial release is `v0.1.0`. npm publishing is disabled by `private: true`.
 
 ## Release sequence
 
-1. A merge to main runs reusable CI for that exact commit.
+1. A merge to main selects the commit and checks that it is still current.
 2. Release Please creates or updates the version/changelog PR. Review and merge
    it only when the version is ready. GitHub's built-in token avoids another
    credential, but bot-created PR workflows need a maintainer to click
    **Approve workflows to run**. Approve again after bot updates if GitHub asks.
-3. A merged release PR produces a tagged draft release. Publication checks that
-   its commit matches the successful CI run and its version matches package.json.
+3. A merged release PR produces a tagged draft release. Verify that its commit
+   matches the selected commit and its version matches package.json, then run
+   full reusable CI against that exact commit. No tag means no full CI or image
+   build. Image jobs depend on successful CI; failed candidates remain drafts.
 4. Each platform gets an OCI build with BuildKit provenance and SBOM attestations,
    an app/worker smoke test, a vulnerability scan, an SPDX image SBOM, and a
    corresponding-source coverage check. The reviewed source bundles are checked
@@ -97,6 +113,21 @@ successful checks on its exact final head before squash-merging. Then wait for
 the merged commit's full release workflow and completed publication before
 starting deployment.
 
+## Measuring CI performance
+
+Keep standard GitHub runners while measuring the workflow changes. Compare ten
+representative completed runs by change category, recording queue delay, browser
+setup, test duration, and total runner minutes separately. Do not compare a
+docs-only run with a full application run. The target is routine application PRs
+under three minutes with all suites retained; container-changing PRs can take
+longer. The October 24 baseline was 47 seconds for docs, 5m 6s for a full run,
+and 11m 35s when Ubuntu dependency downloads stalled. A normal browser e2e step
+took about 224 seconds with pacing. These are samples, not percentile estimates.
+
+A future Blacksmith benchmark should start with container builds after measuring
+these changes. It is not required for this workflow, and no runner migration or
+recurring monitoring is configured.
+
 ## Recovery
 
 Failures leave the release in draft. Open **Actions → Release → Run workflow**,
@@ -115,7 +146,7 @@ are not one atomic transaction: a failure can leave staged images or partially
 uploaded draft assets. Review the failed job before retrying.
 
 Merges are serialized for release processing. If main advances while an older
-push run is waiting or checking CI, the stale run skips release generation and
+push run is waiting to prepare a release, the stale run skips release generation and
 finishes successfully, with a notice and summary naming both commits. Release
 resolution, image builds, and publication are skipped too; the latest main run
 will collect the merged changes. API failures or invalid commit metadata still
@@ -168,9 +199,8 @@ severity fail CI; container scanning fails on fixable high/critical findings.
 No vulnerability exceptions are preconfigured. Any future exception needs a
 specific reason, scope, owner and expiry in a reviewed PR.
 
-GitHub currently requires an account upgrade or a public repository to enforce
-branch protection here. Until then, PR-only merging is a maintainer convention.
-When eligible, apply the prepared ruleset:
+The public organization repository supports the prepared branch ruleset.
+To restore it when missing:
 
 ```sh
 gh api --method POST repos/Affolder-Creative/little-hint/rulesets \
