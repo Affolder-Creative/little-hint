@@ -92,6 +92,16 @@ Staging has no production backup sidecar or production backup repository. Its sy
 
 Repository checks include `npm run typecheck`, `npm test`, `npm run test:compose`, and `npm run test:tooling`. PostgreSQL seed tests use `npm run test:staging-integration` with `STAGING_TEST_DATABASE_URL` pointing to a **disposable local** database named `little_hint_staging` owned by `little_hint_staging`; the tests truncate its application/authentication tables. Never point them at a deployed environment.
 
+## Cloudflare analytics review
+
+To review the optional analytics CSP, set `CLOUDFLARE_WEB_ANALYTICS=true` as a
+Runtime-only variable on the staging resource and redeploy app and worker.
+It defaults to `false`; enable it only when reviewing analytics with synthetic
+data. This allows Cloudflare's beacon and reporting hosts without enabling
+inline scripts or unrelated hosts. Cloudflare must already inject the beacon
+for live analytics to appear. See [operations](OPERATIONS.md#optional-cloudflare-web-analytics)
+for verification and opt-out instructions. Production settings are independent.
+
 ## Automatic product photos
 
 Administration → Product imports → **Automatically import product photos** is
