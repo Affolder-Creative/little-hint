@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.2.2](https://github.com/kaffolder7/little-hint/compare/v0.2.1...v0.2.2) (2026-10-24)
+
+
+### Fixes
+
+* enable Scraping Fish JavaScript rendering ([#31](https://github.com/kaffolder7/little-hint/issues/31)) ([38836c9](https://github.com/kaffolder7/little-hint/commit/38836c9a3996d8f9f6d8d5b4e8ed62b57260e87d))
+* refresh Little Hint copy and terminology ([#32](https://github.com/kaffolder7/little-hint/issues/32)) ([5412eaf](https://github.com/kaffolder7/little-hint/commit/5412eaf1a5d77ad55cea397a32f150ce33cc1ac3))
+* resolve Fastify and Cloudflare analytics warnings ([#28](https://github.com/kaffolder7/little-hint/issues/28)) ([5c1fc84](https://github.com/kaffolder7/little-hint/commit/5c1fc849369cd9acddb0c35df82c23ac6007f2fd))
+
+
+### Dependencies
+
+* bump fast-uri ([#29](https://github.com/kaffolder7/little-hint/issues/29)) ([afcf9d4](https://github.com/kaffolder7/little-hint/commit/afcf9d42138b4420fdc9401c2d190977a7b220ff))
+
 ## [0.2.1](https://github.com/kaffolder7/little-hint/compare/v0.2.0...v0.2.1) (2026-10-24)
 
 
