@@ -95,9 +95,13 @@ are not one atomic transaction: a failure can leave staged images or partially
 uploaded draft assets. Review the failed job before retrying.
 
 Merges are serialized for release processing. If main advances while an older
-run is waiting, the stale run refuses release generation; the latest run will
-collect the merged changes. No tag is accepted merely because its name looks
-like a release version.
+push run is waiting or checking CI, the stale run skips release generation and
+finishes successfully, with a notice and summary naming both commits. Release
+resolution, image builds, and publication are skipped too; the latest main run
+will collect the merged changes. API failures or invalid commit metadata still
+fail the run. Manual draft retries remain eligible for older commits on main's
+history and keep all tag, version, and checked-commit validation. No tag is
+accepted merely because its name looks like a release version.
 
 ## Deploying a release
 

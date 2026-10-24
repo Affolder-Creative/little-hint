@@ -56,19 +56,21 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - name: Check main has not moved before release generation
+        id: freshness
         if: github.event_name == 'push'
         env:
           GH_TOKEN: ${{ github.token }}
           CHECKED_SHA: ${{ needs.select.outputs.sha }}
-        run: test "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)" = "$CHECKED_SHA"
+        run: node scripts/release-ref.mjs check-main
       - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' && steps.freshness.outputs.current == 'true'
         id: release
         with:
           target-branch: main
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
       - id: resolve
+        if: github.event_name == 'workflow_dispatch' || steps.freshness.outputs.current == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           RETRY_TAG: ${{ inputs.tag }}
