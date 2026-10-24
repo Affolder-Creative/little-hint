@@ -98,6 +98,38 @@ for (const [description, files, expected] of [
     flags(["containers", "brand"]),
   ],
   ["workflow", [".github/workflows/ci.yml"], full],
+  ["Pages workflow", [".github/workflows/pages.yml"], flags()],
+  ["PR title workflow", [".github/workflows/pr-title.yml"], flags()],
+  ["Dependabot configuration", [".github/dependabot.yml"], flags()],
+  ["branch ruleset", [".github/rulesets/main.json"], flags()],
+  [
+    "release workflow",
+    [".github/workflows/release.yml"],
+    flags(["containers"]),
+  ],
+  [
+    "staging workflow",
+    [".github/workflows/staging.yml"],
+    flags(["containers"]),
+  ],
+  [
+    "security workflow",
+    [".github/workflows/security.yml"],
+    flags(["containers"]),
+  ],
+  [
+    "registry migration workflow",
+    [".github/workflows/migrate-release-images.yml"],
+    flags(["containers"]),
+  ],
+  ["unknown workflow", [".github/workflows/new.yml"], full],
+  ["unknown GitHub configuration", [".github/new.json"], full],
+  ["browser server", ["tests/browser-server.ts"], flags(["browser"])],
+  [
+    "unrelated workflow and application",
+    [".github/workflows/pages.yml", "src/server/domain.ts"],
+    flags(["integration", "browser"]),
+  ],
   ["CI selector", ["scripts/ci-policy.mjs"], full],
   ["unknown path", ["new-runtime/config.json"], full],
   [
