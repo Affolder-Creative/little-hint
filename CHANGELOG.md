@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/Affolder-Creative/little-hint/compare/v0.3.1...v0.4.0) (2026-10-24)
+
+
+### Features
+
+* add notification center, push, follows, and private-note mentions ([#46](https://github.com/Affolder-Creative/little-hint/issues/46)) ([5586ff5](https://github.com/Affolder-Creative/little-hint/commit/5586ff56547e24870c52a1d7fd7435908508b6d5))
+
 ## [0.3.1](https://github.com/Affolder-Creative/little-hint/compare/v0.3.0...v0.3.1) (2026-10-24)
 
 
