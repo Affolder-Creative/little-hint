@@ -44,6 +44,25 @@ if (
       git(["merge-base", "--is-ancestor", sha, "origin/main"]);
     }
     output("sha", sha);
+  } else if (process.argv[2] === "check-main") {
+    const checked = process.env.CHECKED_SHA;
+    const ref = JSON.parse(
+      gh(["api", `repos/${process.env.GITHUB_REPOSITORY}/git/ref/heads/main`]),
+    ).object;
+    if (
+      ref?.type !== "commit" ||
+      ![checked, ref.sha].every(
+        (sha) => typeof sha === "string" && /^[a-f0-9]{40}$/.test(sha),
+      )
+    )
+      throw new Error("Cannot verify the checked commit against main.");
+    const current = checked === ref.sha;
+    if (!current) {
+      const message = `Release generation skipped: checked commit ${checked} was superseded by main at ${ref.sha}. The latest main run will collect the merged changes.`;
+      console.log(`::notice::${message}`);
+      appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${message}\n`);
+    }
+    output("current", current);
   } else if (process.argv[2] === "resolve") {
     const tag = process.env.RETRY_TAG || process.env.CREATED_TAG;
     if (tag) {
@@ -67,5 +86,5 @@ if (
       output("tag", tag);
       output("version", version);
     }
-  } else throw new Error("Expected select or resolve.");
+  } else throw new Error("Expected select, check-main, or resolve.");
 }
