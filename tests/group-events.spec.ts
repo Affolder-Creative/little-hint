@@ -21,8 +21,13 @@ test("leaders manage an occasion while recipients add wishes and unselected memb
     await login(page, "alex@example.test");
     await login(leader, "sam@example.test");
     await login(shopper, "jamie@example.test");
+    const familyGroup = (await readWorld(page)).groups.find(
+      (group) => group.name === "The Morgan circle",
+    )!;
     const child = await post(leader, "people", { name: "Avery Morgan" });
-    await page.goto("/settings?section=groups&view=events");
+    await page.goto(
+      `/settings?section=groups&view=events&group=${familyGroup.id}`,
+    );
     await page.getByRole("button", { name: "Manage event leaders" }).click();
     await page
       .getByRole("checkbox", { name: "Sam Morgan", exact: true })
@@ -170,10 +175,10 @@ test("leaders manage an occasion while recipients add wishes and unselected memb
     ).toBeVisible();
     await leader
       .getByRole("main")
-      .getByRole("button", { name: "Add a gift", exact: true })
+      .getByRole("button", { name: "Add item", exact: true })
       .click();
     await leader
-      .getByLabel("Gift name", { exact: true })
+      .getByLabel("Item name", { exact: true })
       .fill("Avery’s watercolor set");
     await expect(leader.getByLabel("Wish list", { exact: true })).toHaveValue(
       childList.id,
@@ -199,7 +204,7 @@ test("leaders manage an occasion while recipients add wishes and unselected memb
     await shopper.locator(`a[href="/lists/${childList.id}"]`).click();
     await shopper.locator(`a[href="/gift/${gift.id}"]`).click();
     await shopper
-      .getByRole("button", { name: "I’ll get this", exact: true })
+      .getByRole("button", { name: "Reserve gift", exact: true })
       .click();
     await expect
       .poll(async () =>
@@ -282,7 +287,7 @@ test("leaders manage an occasion while recipients add wishes and unselected memb
       .click();
     await expect(
       leader.getByText(
-        "This event is archived. Gifts and purchase history are preserved.",
+        "This event is archived. Items and purchase history are kept.",
       ),
     ).toBeVisible();
     await leader
@@ -295,7 +300,9 @@ test("leaders manage an occasion while recipients add wishes and unselected memb
     await expect(
       leader.getByRole("button", { name: "Archive event", exact: true }),
     ).toBeVisible();
-    await page.goto("/settings?section=groups&view=events");
+    await page.goto(
+      `/settings?section=groups&view=events&group=${familyGroup.id}`,
+    );
     await page.getByRole("button", { name: "Manage event leaders" }).click();
     await page
       .getByRole("checkbox", { name: "Sam Morgan", exact: true })

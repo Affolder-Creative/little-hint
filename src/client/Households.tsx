@@ -29,8 +29,8 @@ function HouseholdForm({
       }}
     >
       <p>
-        Group people who should not draw each other when an exchange avoids
-        household matches.
+        Put people in the same household if they should not draw each other in a
+        gift exchange. The exchange must have that rule turned on.
       </p>
       <Field
         label="Household name"
@@ -47,7 +47,7 @@ function HouseholdForm({
       <p className="muted">
         For {group.name}.{" "}
         {household
-          ? "Renaming keeps memberships and future exchange exclusions intact."
+          ? "Changing the name keeps the same people in this household."
           : "After saving, choose the people in this household."}{" "}
         Names can repeat; member names help tell households apart.
       </p>
@@ -134,9 +134,9 @@ export function HouseholdSettings({ group }: { group: Group }) {
         )}
       </div>
       <p className="muted">
-        Optional: organize people for household exclusions in gift exchanges.
-        Family-group membership controls invitations and shared-list access. A
-        person can belong to more than one household.
+        Households help prevent people from drawing each other in gift
+        exchanges. They do not change who can see shared wish lists. A person
+        can belong to more than one household.
       </p>
       {!households.length && (
         <p className="muted">
@@ -181,10 +181,9 @@ export function HouseholdSettings({ group }: { group: Group }) {
                         })
                       }
                     >
-                      Remove {h.name} and its household memberships? People,
-                      family-group membership, lists, and completed drawings
-                      will stay intact. Future drawings will use the remaining
-                      households.
+                      Delete {h.name}? People stay in the family group and keep
+                      their wish lists. Names already drawn do not change.
+                      Future exchanges use the remaining households.
                     </Confirm>,
                   )
                 }
@@ -197,7 +196,7 @@ export function HouseholdSettings({ group }: { group: Group }) {
       ))}
       {!!households.length && (
         <>
-          <h5>People and memberships</h5>
+          <h5>People in each household</h5>
           {people.map((p) => {
             const theirs = households.filter((h) =>
               world.householdMemberships.some(

@@ -99,7 +99,7 @@ describe("P1 coordination permissions", () => {
         ...edit,
         revision: exchange.revision,
       }),
-    ).toThrow("Only an undrawn");
+    ).toThrow("before names are drawn");
     expect(exchange).toEqual(before);
   });
   it("rejects exclusions outside participants without changing a draft", () => {
@@ -124,7 +124,7 @@ describe("P1 coordination permissions", () => {
         revision: 1,
         exclusions: [[input.participantIds[0], state.people[4].id]],
       }),
-    ).toThrow("two different selected");
+    ).toThrow("two different people taking part");
     expect(draft).toEqual(before);
   });
 });

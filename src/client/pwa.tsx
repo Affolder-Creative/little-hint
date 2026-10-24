@@ -103,7 +103,7 @@ export function Install({
       <div>
         <h3>Keep Little Hint handy</h3>
         <p>
-          Add Little Hint to your Home Screen for quick access to your lists.
+          Keep your wish lists a tap away. Add Little Hint to your Home Screen.
         </p>
         {guide && (
           <div className="install-guide">
@@ -149,7 +149,11 @@ export function Install({
                 navigator.clipboard
                   .writeText(location.origin)
                   .then(() => setError("Link copied."))
-                  .catch(() => setError(location.origin))
+                  .catch(() =>
+                    setError(
+                      `Could not copy the link. Copy this address instead: ${location.origin}`,
+                    ),
+                  )
               }
             >
               Copy Little Hint link <ArrowUpRight size={14} />
@@ -219,7 +223,7 @@ export function UpdateNotice() {
             hasPendingWrites() ||
             document.querySelector('dialog[open],form[data-dirty="true"]')
           ) {
-            setMessage("Finish or close your form before updating.");
+            setMessage("Finish saving or close your form before updating.");
             return;
           }
           requested.current = true;

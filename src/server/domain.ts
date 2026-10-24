@@ -31,7 +31,7 @@ function matchExchange(...args: Parameters<typeof solveExchange>) {
   } catch {
     fail(
       400,
-      "These restrictions cannot produce a balanced draw. Add participants, reduce recipients per giver, or relax household and pair exclusions.",
+      "We cannot draw names with these rules. Add people, have each person give to fewer people, or allow more people to draw each other.",
     );
   }
 }
@@ -101,11 +101,14 @@ function checkSharedListPolicy(
 ) {
   if (current.modeLocked) {
     if (next.mode !== current.mode)
-      fail(409, "Privacy mode is locked after sharing.");
+      fail(409, "This privacy choice cannot change after sharing.");
     if ((next.timeZone ?? "UTC") !== (current.timeZone ?? "UTC"))
-      fail(409, "The timezone is locked after sharing.");
+      fail(409, "The time zone cannot change after sharing.");
     if (!!next.revealExchangeGivers !== !!current.revealExchangeGivers)
-      fail(409, "Exchange gift privacy is locked after sharing.");
+      fail(
+        409,
+        "Whether secret exchange gifts appear in the summary cannot change after sharing.",
+      );
     if (
       (next.revealAfter ?? null) !== (current.revealAfter ?? null) &&
       (!current.revealAfter ||
@@ -275,7 +278,7 @@ const canEdit = (s: State, a: Actor, i: Item) =>
     : i.creatorId === a.id;
 const getItem = (s: State, a: Actor, id: string) =>
   s.items.find((i) => i.id === id && itemVisible(s, a, i)) ??
-  fail(404, "Gift not found.");
+  fail(404, "Item not found.");
 const archived = (s: State, i: Item) =>
   i.archived || !!s.lists.find((l) => l.id === i.listId && listIsArchived(l));
 const name = (s: State, userId: string) =>
@@ -1069,7 +1072,10 @@ export function command(
       if (p.revealExchangeGivers && !p.revealAfter)
         fail(400, "Choose a reveal date to reveal exchange givers.");
       if (pending.length && p.groupIds.length)
-        fail(400, "Create the joint list privately until everyone accepts.");
+        fail(
+          400,
+          "Create the list without sharing it with a family group. Everyone on the list must accept shared ownership first.",
+        );
       const l: List = {
         ...stamp(),
         ...p,
@@ -1123,7 +1129,10 @@ export function command(
       checkGroups(s, a, p.groupIds);
       checkSharedListPolicy(l, { ...l, ...p });
       if (l.pendingOwnerIds.length && p.groupIds.length)
-        fail(409, "Wait for joint owners to accept before sharing.");
+        fail(
+          409,
+          "Wait for everyone to accept shared ownership before sharing this list with a family group.",
+        );
       if (listIsArchived(l) && !p.archived) p.archiveAfter = null;
       Object.assign(l, p, {
         modeLocked: l.modeLocked || p.groupIds.length > 0,
@@ -1159,7 +1168,7 @@ export function command(
       } else {
         checkRecipients(s, a, recipients);
         if (recipients.some((id) => controls(s, a, id)))
-          fail(400, "Use a wish list for your own gifts.");
+          fail(400, "Add items for yourself to a wish list.");
         checkGroups(s, a, p.groupIds);
         if (p.visibility !== "private" && !p.groupIds.length)
           fail(400, "Select a family group to share this idea.");
@@ -1210,7 +1219,7 @@ export function command(
         })
         .parse(b);
       const i = getItem(s, a, p.id);
-      if (!canEdit(s, a, i)) fail(403, "You cannot edit this gift.");
+      if (!canEdit(s, a, i)) fail(403, "You cannot edit this item.");
       checkRevision(i, p.revision);
       checkImage(s, a, p.image);
       if (!i.listId) {
@@ -1304,7 +1313,7 @@ export function command(
       if (p.quantity > r.quantity || p.purchased > p.quantity)
         fail(
           400,
-          "Reserve additional units separately; purchased units cannot exceed the reservation.",
+          "Make a new reservation to buy more. The quantity purchased cannot be higher than the quantity reserved.",
         );
       const i = s.items.find((i) => i.id === r.itemId)!;
       if (
@@ -1316,12 +1325,15 @@ export function command(
         p.poolTargetCents &&
         (r.exchangeId || !itemVisible(s, a, i) || archived(s, i))
       )
-        fail(400, "A contribution pool is not available for this reservation.");
+        fail(400, "Contributions are not available for this reservation.");
       const pledged = s.contributions
         .filter((c) => c.reservationId === r.id && c.status !== "cancelled")
         .reduce((n, c) => n + c.amountCents, 0);
       if (p.poolTargetCents && p.poolTargetCents < pledged)
-        fail(409, "The target cannot be below existing contributions.");
+        fail(
+          409,
+          "The contribution goal must cover the contributions already promised.",
+        );
       const increased = p.purchased > r.purchased;
       if (increased) r.purchasedAt = new Date().toISOString();
       Object.assign(r, p);
@@ -1351,15 +1363,18 @@ export function command(
             r.quantity > 0 &&
             !r.exchangeId &&
             r.poolTargetCents,
-        ) ?? fail(404, "Pool not found.");
+        ) ?? fail(404, "Shared gift not found.");
       const i = getItem(s, a, r.itemId);
       if (recipient(s, a, i) || archived(s, i) || r.buyerId === a.id)
-        fail(403, "You cannot contribute to this pool.");
+        fail(403, "You cannot contribute to this gift.");
       const total = s.contributions
         .filter((c) => c.reservationId === r.id && c.status !== "cancelled")
         .reduce((n, c) => n + c.amountCents, 0);
       if (total + p.amountCents > r.poolTargetCents!)
-        fail(409, "That exceeds the remaining contribution target.");
+        fail(
+          409,
+          "That amount is more than this gift still needs. Enter a smaller amount.",
+        );
       const c = { ...stamp(), ...p, userId: a.id, status: "pledged" as const };
       s.contributions.push(c);
       notify(s, "contribution", [r.buyerId], { itemId: i.id });
@@ -1385,7 +1400,10 @@ export function command(
         (p.status === "sent" && c.status !== "pledged") ||
         (p.status === "cancelled" && c.status !== "pledged")
       )
-        fail(409, "That contribution transition is not available.");
+        fail(
+          409,
+          "This contribution can no longer be changed that way. Refresh to see its current status.",
+        );
       c.status = p.status;
       touch(c);
       notify(s, "contribution", [r.buyerId, c.userId], { itemId: r.itemId });
@@ -1397,7 +1415,7 @@ export function command(
         .parse(b);
       const i = getItem(s, a, p.itemId);
       if (recipient(s, a, i) || archived(s, i))
-        fail(403, "Private discussion is unavailable.");
+        fail(403, "Private notes are not available for this item.");
       const exchangeReservation = s.reservations.find(
         (r) =>
           r.itemId === i.id &&
@@ -1430,7 +1448,10 @@ export function command(
         if (!existing) fail(404, "Exchange not found.");
         checkRevision(existing!, edit.revision);
         if (existing!.status !== "draft")
-          fail(409, "Only an undrawn exchange can be edited.");
+          fail(
+            409,
+            "You can only edit an exchange before names are drawn and before it is cancelled.",
+          );
       }
       const p = z
         .object({
@@ -1459,7 +1480,7 @@ export function command(
       )
         fail(
           400,
-          "Exclusions must connect two different selected participants.",
+          "Choose two different people taking part in this exchange: a giver and someone they should not draw.",
         );
       if (existing && p.previousId === existing.id)
         fail(400, "Choose a different previous exchange.");
@@ -1537,7 +1558,7 @@ export function command(
       )
         fail(
           400,
-          "Each participant needs a Surprise list shared with this family group.",
+          "Each person needs a wish list set to Keep it a surprise and shared with this family group.",
         );
       e.assignments = matchExchange(
         e,
@@ -1596,7 +1617,10 @@ export function command(
         .parse(b);
       const prefs = preferences(s, a);
       if (p.sms && (!prefs.phoneVerified || prefs.smsOptOut))
-        fail(400, "Verify your phone and opt in before enabling SMS.");
+        fail(
+          400,
+          "Verify your phone number and agree to receive text messages first.",
+        );
       if (p.telegram && !prefs.chatId)
         fail(400, "Link Telegram before enabling notifications.");
       Object.assign(prefs, p);
@@ -1608,7 +1632,7 @@ export function command(
     case "imports.create": {
       const p = z.object({ url: z.url().max(2048) }).parse(b);
       if (!/^https?:\/\//.test(p.url))
-        fail(400, "Use an HTTP or HTTPS product URL.");
+        fail(400, "Use a full shop link starting with https:// or http://.");
       const j = {
         ...stamp(),
         userId: a.id,
@@ -1646,14 +1670,20 @@ export function idempotent(
   body: unknown,
 ): unknown {
   if (!/^[a-zA-Z0-9_-]{16,100}$/.test(key))
-    fail(400, "A valid Idempotency-Key is required.");
+    fail(
+      400,
+      "We could not identify this action. Refresh the page and try again.",
+    );
   const fingerprint = createHash("sha256")
     .update(JSON.stringify([action, body]))
     .digest("hex");
   const prior = s.replays.find((r) => r.userId === a.id && r.key === key);
   if (prior) {
     if (prior.fingerprint !== fingerprint)
-      fail(409, "This request key was already used for another action.");
+      fail(
+        409,
+        "We could not confirm this action. Refresh to check your changes before trying again.",
+      );
     return { ok: true, replayed: true };
   }
   const result = command(s, a, action, body);

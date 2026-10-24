@@ -4,6 +4,7 @@ import rateLimit from "@fastify/rate-limit";
 import statics from "@fastify/static";
 import { fromNodeHeaders } from "better-auth/node";
 import { z, ZodError } from "zod";
+import { validationMessage } from "./validation-message";
 import { createReadStream, existsSync } from "node:fs";
 import path from "node:path";
 import { makeAuth, appUrl } from "./auth";
@@ -102,10 +103,7 @@ export async function makeApp() {
       return reply.code(error.status).send({ error: error.message });
     if (error instanceof ZodError)
       return reply.code(400).send({
-        error: error.issues
-          .map((i) => `${i.path.join(".")}: ${i.message}`)
-          .slice(0, 3)
-          .join("; "),
+        error: validationMessage(error),
       });
     if ((error as { statusCode?: number }).statusCode === 429)
       return reply

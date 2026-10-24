@@ -60,7 +60,7 @@ describe("staging boundaries", () => {
     });
     await expect(
       saveSetting("SMTP_HOST", "real-mail.example.com"),
-    ).rejects.toThrow("Staging integrations are fixed");
+    ).rejects.toThrow("This test app uses a private email inbox");
   });
 });
 describe("representative staging fixtures", () => {

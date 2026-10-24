@@ -15,7 +15,7 @@ test("static-only offline caching, private draft review, and sign-out cleanup", 
   await page.reload();
   await page.goto("/settings?section=device");
   await page
-    .getByLabel("Keep personal gift drafts on this device", { exact: true })
+    .getByLabel("Save wish-list drafts on this device", { exact: true })
     .check();
   const me = (await (await page.request.get("/api/v1/world")).json()).me;
   await page.evaluate(() => fetch("/api/v1/world"));
@@ -39,7 +39,7 @@ test("static-only offline caching, private draft review, and sign-out cleanup", 
     page.getByRole("heading", { name: "A little pause." }),
   ).toBeVisible();
   await page
-    .getByLabel("Gift name", { exact: true })
+    .getByLabel("Item name", { exact: true })
     .fill("Offline personal thought");
   await page
     .getByLabel("Notes", { exact: true })
@@ -90,9 +90,9 @@ test("install reminders respect dismissal and standalone mode", async ({
 }) => {
   await login(page, "alex@example.test");
   const w = await (await page.request.get("/api/v1/world")).json();
-  await page.getByRole("button", { name: "Add a gift", exact: true }).click();
+  await page.getByRole("button", { name: "Add item", exact: true }).click();
   await page
-    .getByLabel("Gift name", { exact: true })
+    .getByLabel("Item name", { exact: true })
     .fill(`Install trigger ${Date.now()}`);
   await page
     .getByLabel("Wish list", { exact: true })

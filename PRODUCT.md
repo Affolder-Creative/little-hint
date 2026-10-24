@@ -26,6 +26,30 @@ Invite-only. Surprise and Transparent lists. Scoped suggestions, quantities, con
 
 Little Hint. Gift ideas, shared thoughtfully. Use approved brand/little-hint-final artwork without reconstructing its lettering. Warm palette and accessible light/dark interface.
 
+## Voice and terminology
+
+Write for friends and family making gift plans. Be warm and direct. Welcome screens,
+empty states, and marketing can play with “drop a hint” or “take a hint.” Use that
+wordplay sparingly. Instructions, privacy choices, errors, and purchases stay plain.
+
+- An **item** goes on a wish list, including lists shared by several people and
+  lists managed for someone else. Use Add item, Item name, Edit item, and Search items.
+- A **gift idea** is something saved for another person outside their wish list.
+  Use Add gift idea, Gift idea name, and Edit gift idea.
+- A **gift** is something someone plans to give. Use Reserve gift and Mark as purchased.
+- **Wish list** names the collection. **Hint** adds personality, not a new data type.
+- Keep navigation and headings recognizable. Use short sentences and name the next
+  action. Match screen-reader labels to the visible actions.
+- Say Keep it a surprise or See the plans. Explain summary dates and sharing
+  restrictions without promising permanent secrecy when a reveal is scheduled.
+- Family groups share lists. Households prevent exchange matches when that rule is
+  enabled. Keep those concepts distinct. Shared ownership is different from viewing.
+- Never imply that a reservation buys something, a contribution sends money, or
+  cancelling a reservation cancels a shop order. Invitations waiting for delivery
+  are not yet sent. Notifications never include private gift details.
+- Keep the approved tagline, Gift ideas, shared thoughtfully. Technical names belong
+  in setup instructions only where they help someone configure the app.
+
 ## Operating context
 
 Mobile and desktop browsers and installed PWAs. Operators configure the public address and SMTP sender independently. English and USD initially.

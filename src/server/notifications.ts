@@ -153,8 +153,8 @@ export async function deliverNotice(id: string) {
         : "/settings";
   const link = new URL(actionPath, origin()).href;
   const message = inv
-    ? `You've been invited to Little Hint. Sign in with this email address and accept your invitation: ${link}`
-    : `You have an update in Little Hint. Sign in to view it: ${link}`;
+    ? `A little hint: you're invited. Sign in to Little Hint with this email address to accept: ${link}`
+    : `A little update is waiting in Little Hint. Sign in to see it: ${link}`;
   try {
     for (const channel of ["email", "telegram", "sms"] as const) {
       s = await readState();
@@ -173,8 +173,8 @@ export async function deliverNotice(id: string) {
         await sendEmail(user.email, {
           kind: inv ? "invitation" : "update",
           text: inv
-            ? "You've been invited to Little Hint. Sign in with this email address and accept your invitation."
-            : "You have an update in Little Hint. Sign in to view it.",
+            ? "You're invited to Little Hint. Sign in with this email address to accept, then start sharing wish lists with your people."
+            : "A little update is waiting for you. Sign in to Little Hint to see it.",
           actionPath,
         });
       if (channel === "telegram" && current.chatId)
@@ -216,7 +216,8 @@ export async function deliverNotice(id: string) {
     await transact((s) => {
       const n = s.notices.find((n) => n.id === id)!;
       n.attempts++;
-      n.error = "Provider unavailable. Check integration settings.";
+      n.error =
+        "The delivery service is unavailable. Check Connected services in app settings.";
       if (n.attempts >= 5) n.status = "failed";
       n.revision++;
     });
@@ -311,10 +312,16 @@ export function isUSPhone(phone: string): boolean {
 }
 export async function smsStart(a: Actor, phone: string, consent: boolean) {
   if (!consent || !isUSPhone(phone))
-    fail(400, "Use a US phone number beginning with +1 and consent to SMS.");
+    fail(
+      400,
+      "Enter a US phone number starting with +1 and agree to receive text messages.",
+    );
   const c = await config();
   if (!c.TWILIO_VERIFY_SERVICE_SID)
-    fail(400, "SMS verification is not configured.");
+    fail(
+      400,
+      "Text-message verification is not set up. Ask the app administrator for help.",
+    );
   await twilioCall(
     `/v2/Services/${c.TWILIO_VERIFY_SERVICE_SID}/Verifications`,
     { To: phone, Channel: "sms" },

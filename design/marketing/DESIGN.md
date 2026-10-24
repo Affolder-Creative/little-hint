@@ -75,6 +75,10 @@ components:
 
 **Creative North Star: "See it together"**
 
+Copy follows the voice and terminology in `PRODUCT.md`. The headline is “Go ahead.
+Drop a hint.” Setup instructions explain self-hosting plainly. Screenshots and the
+social preview use the same vocabulary as the app.
+
 This record covers the finished static marketing page in `marketing/index.html` and `marketing/style.css`. It follows the user's selected concept B in `design/marketing-concepts/b-see-it-together.png`. The application has its own root `DESIGN.md`; this document does not change that system.
 
 Ivory backgrounds, sienna actions, blush sections, and Fraunces headings surround actual app captures. The approved SVG logo supplies the lettering. The marketing page stays light regardless of system theme. Product screenshots explain gift coordination, while compact feature descriptions keep the page short.

@@ -46,7 +46,7 @@ describe("automatic product photo preference", () => {
         source: "environment",
       });
       await expect(saveSetting(key, "true")).rejects.toThrow(
-        "environment variable",
+        "set on the server",
       );
       vi.stubEnv(key, "");
       expect(await automaticallyImportProductPhotos()).toBe(value !== "true");
@@ -88,12 +88,10 @@ describe("automatic product photo preference", () => {
       "PAID_DAILY_LIMIT",
     ])
       await expect(saveSetting(provider, "anything")).rejects.toThrow(
-        "Staging integrations are fixed",
+        "This test app uses a private email inbox",
       );
     vi.stubEnv(key, "false");
     expect(await automaticallyImportProductPhotos()).toBe(false);
-    await expect(saveSetting(key, "true")).rejects.toThrow(
-      "environment variable",
-    );
+    await expect(saveSetting(key, "true")).rejects.toThrow("set on the server");
   });
 });

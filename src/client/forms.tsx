@@ -1,3 +1,4 @@
+import { actionError } from "./copy";
 import { useNavigate } from "react-router-dom";
 import { familyGroupLabel } from "../shared/households";
 import { useEffect, useRef, useState } from "react";
@@ -55,7 +56,7 @@ export function PersonForm({ id }: { id?: string }) {
   const person = world.people.find((p) => p.id === id);
   return (
     <Form
-      submit={person ? "Save profile" : "Create managed profile"}
+      submit={person ? "Save profile" : "Create profile"}
       onSubmit={async (f) => {
         await mutate(person ? "people/update" : "people", {
           ...(person ? { id: person.id, revision: person.revision } : {}),
@@ -74,8 +75,8 @@ export function PersonForm({ id }: { id?: string }) {
       </p>
       {!person && (
         <p className="muted">
-          You’ll manage this person’s wishes. They can claim the profile later
-          through an email verification and confirmation.
+          You will manage this person’s wish lists. They can take over later by
+          verifying their email and accepting your invitation.
         </p>
       )}
     </Form>
@@ -148,12 +149,12 @@ export function ListForm({ list }: { list?: List }) {
                   defaultChecked={p.id === mine[0]?.id}
                 />
                 {p.name}
-                {!mine.includes(p) && <small>Invitation to co-own</small>}
+                {!mine.includes(p) && <small>Invite to share ownership</small>}
               </label>
             ))}
             <small>
-              Include yourself or a profile you manage. Joint owners must accept
-              before sharing.
+              Include yourself or someone whose profile you manage. Everyone
+              else must accept the invitation before you share this list.
             </small>
           </fieldset>
         )}
@@ -279,7 +280,8 @@ export function GiftForm({
     if (job?.status === "failed") {
       setImporting(false);
       setError(
-        job.error ?? "Preview unavailable. You can add this gift manually.",
+        job.error ??
+          "We could not get the details. You can still enter them yourself.",
       );
     }
   }, [job?.status]);
@@ -290,7 +292,7 @@ export function GiftForm({
       const j = await mutate("imports", { url: data.url });
       setJobId(j.id);
     } catch (e) {
-      setError((e as Error).message);
+      setError(actionError(e));
       setImporting(false);
     }
   }
@@ -310,7 +312,7 @@ export function GiftForm({
       change("image", j.url);
       setUploadStatus("Photo uploaded.");
     } catch (e) {
-      setError((e as Error).message);
+      setError(actionError(e));
       setUploadStatus("");
     } finally {
       setUploading(false);
@@ -357,7 +359,7 @@ export function GiftForm({
             !localStorage.getItem(`little-hint:draft-optin:${world.me.id}`)
           )
             throw new Error(
-              "Go online to save this gift, or enable personal drafts in Settings.",
+              "Reconnect to save, or turn on personal drafts in Settings for your own wish-list items.",
             );
           saveDraft(world.me.id, {
             title: data.title,
@@ -381,7 +383,15 @@ export function GiftForm({
             ),
           );
         window.dispatchEvent(new Event("little-hint:drafts-changed"));
-        toast(gift ? "Gift updated." : "A little hint, saved.");
+        toast(
+          gift
+            ? idea
+              ? "Gift idea updated."
+              : "Item updated."
+            : idea
+              ? "Gift idea saved."
+              : "A little hint, saved.",
+        );
         close();
       }}
     >
@@ -415,16 +425,18 @@ export function GiftForm({
       )}
       {job?.status === "complete" && (
         <p className="success" role="status">
-          <Check size={16} /> Preview found. Review the details before saving.
+          <Check size={16} /> Details found. Check them before saving.
         </p>
       )}
-      <Field label="Gift name">
+      <Field label={idea ? "Gift idea name" : "Item name"}>
         <input
           value={data.title}
           required
           maxLength={160}
           onChange={(e) => change("title", e.target.value)}
-          placeholder="Something they’ll love"
+          placeholder={
+            idea ? "Something they would love" : "A book, a game, a day out"
+          }
         />
       </Field>
       {!idea && !gift && (
@@ -450,7 +462,7 @@ export function GiftForm({
         className="optional-fields"
         open={!!gift || !!draft || job?.status === "complete"}
       >
-        <summary>Optional gift details</summary>
+        <summary>More details</summary>
         <Field label="A helpful note">
           <textarea
             rows={3}
@@ -509,7 +521,10 @@ export function GiftForm({
         <p role="status">{uploadStatus}</p>
         {data.image && (
           <div className="image-preview">
-            <img src={data.image} alt="Gift preview" />
+            <img
+              src={data.image}
+              alt={idea ? "Gift idea photo" : "Item photo"}
+            />
             <button
               className="text-button"
               type="button"
@@ -522,7 +537,7 @@ export function GiftForm({
         )}
         {job?.result?.importedAt && (
           <small className="muted">
-            From {job.result.source}, retrieved{" "}
+            From {job.result.source}, checked{" "}
             {new Date(job.result.importedAt).toLocaleString()}. Prices can
             change.
           </small>
@@ -537,7 +552,7 @@ export function GiftForm({
             >
               <option value="private">Only me</option>
               <option value="hidden">
-                Selected family groups, hidden from recipient
+                Selected family groups, but not the recipient
               </option>
               <option value="visible">
                 Selected family groups and the recipient
@@ -559,8 +574,8 @@ export function GiftForm({
             ))}
           </fieldset>
           <p className="muted">
-            Buying activity stays a surprise, even when the recipient can see
-            this idea.
+            Who reserves or buys this gift stays hidden from the recipient, even
+            if they can see the idea.
           </p>
         </>
       )}
@@ -571,24 +586,28 @@ export function GiftForm({
             name="archived"
             defaultChecked={gift.archived}
           />
-          Archive this gift
+          {idea ? "Archive this gift idea" : "Archive this item"}
         </label>
       )}
       {duplicate && (
         <div className="duplicate">
-          <strong>This looks like an existing gift: {duplicate.title}</strong>
+          <strong>
+            This looks like something already saved: {duplicate.title}
+          </strong>
           <p>
-            Use the existing entry to coordinate one purchase, or create a
-            separate gift intentionally.
+            Open what is already saved to keep gift plans together, or save
+            another if you want it listed separately.
           </p>
-          <a href={`/gift/${duplicate.id}`}>View existing gift</a>
+          <a href={`/gift/${duplicate.id}`}>
+            {duplicate.listId ? "View saved item" : "View saved gift idea"}
+          </a>
           <label className="check">
             <input
               type="checkbox"
               checked={allowDuplicate}
               onChange={(e) => setAllowDuplicate(e.target.checked)}
             />
-            Create a separate entry with its own reservations
+            Save separately with its own gift plans
           </label>
         </div>
       )}
@@ -733,7 +752,7 @@ export function ExchangeForm({
         names alone do not exclude anyone.
       </p>
       <fieldset className="choice-group">
-        <legend>Other exclusions</legend>
+        <legend>Matches to avoid</legend>
         <div className="form-row">
           <Field label="Giver">
             <select
@@ -784,7 +803,7 @@ export function ExchangeForm({
             setRecipient("");
           }}
         >
-          Add exclusion
+          Add rule
         </button>
         {exclusions.map(([a, b]) => (
           <div className="setting-row" key={`${a}:${b}`}>
@@ -796,7 +815,7 @@ export function ExchangeForm({
               type="button"
               className="text-button"
               data-form-change
-              aria-label={`Remove exclusion: ${participantLabel(world, a)} to ${participantLabel(world, b)}`}
+              aria-label={`Remove rule: ${participantLabel(world, a)} to ${participantLabel(world, b)}`}
               onClick={() =>
                 setExclusions(
                   exclusions.filter((pair) => pair[0] !== a || pair[1] !== b),
@@ -808,8 +827,8 @@ export function ExchangeForm({
           </div>
         ))}
         <small>
-          Each rule applies in one direction. Add a second rule to exclude the
-          reverse match.
+          This stops the giver from drawing the selected person. Add another
+          rule with their names swapped to prevent the match both ways.
         </small>
       </fieldset>
       <Field label="Prefer different matches from">
@@ -818,7 +837,7 @@ export function ExchangeForm({
           key={groupId}
           defaultValue={exchange?.previousId ?? ""}
         >
-          <option value="">No previous exchange</option>
+          <option value="">Do not use a previous exchange</option>
           {world.exchanges
             .filter(
               (e) =>
@@ -834,8 +853,9 @@ export function ExchangeForm({
         </select>
       </Field>
       <p className="muted">
-        Every participant needs a Surprise list shared with this group before
-        the draw. Only givers and their guardians see their assignments.
+        Before drawing names, everyone needs a wish list set to Keep it a
+        surprise and shared with this group. Each person can only see who they
+        drew, plus matches for profiles they manage.
       </p>
     </Form>
   );

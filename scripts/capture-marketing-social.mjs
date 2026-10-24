@@ -27,7 +27,7 @@ try {
     .logo{width:230px;height:auto}h1{font:600 69px/1.08 Fraunces,serif;letter-spacing:-2px;margin:54px 0 20px;font-variation-settings:"SOFT" 65,"WONK" 1}
     p{font-size:24px;line-height:1.5;margin:0;max-width:650px}.tag{position:absolute;width:220px;right:80px;top:195px}
     footer{position:absolute;left:70px;right:70px;bottom:40px;border-top:1px solid #e6d9cf;padding-top:20px;font-size:18px;color:#746057;display:flex;justify-content:space-between}
-  </style></head><body><img class="logo" src="${logo}" alt="Little Hint"><h1>A little thought.<br>A lovely surprise.</h1><p>Wish lists, gift ideas, and quiet coordination<br>for your favorite people.</p><img class="tag" src="${tag}" alt=""><footer><span>Self-hosted. Invite-only.</span><span>Gift ideas, shared thoughtfully.</span></footer></body></html>`);
+  </style></head><body><img class="logo" src="${logo}" alt="Little Hint"><h1>Go ahead.<br>Drop a hint.</h1><p>Share wish lists.<br>Take a hint from your favorite people.</p><img class="tag" src="${tag}" alt=""><footer><span>Host it yourself. Invite your people.</span><span>Gift ideas, shared thoughtfully.</span></footer></body></html>`);
   await page.evaluate(() => document.fonts.ready);
   await page.screenshot({ path: "marketing/assets/social-preview.png" });
   console.log("Created marketing/assets/social-preview.png (1200 × 630)");

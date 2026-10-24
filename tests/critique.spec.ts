@@ -8,6 +8,7 @@ async function preview(page: Page, actorIndex = 0) {
   const paths: Record<string, string> = {
     groups: "groups.create",
     items: "items.create",
+    "items/update": "items.update",
     comments: "comments.create",
     reservations: "reservations.create",
     "reservations/update": "reservations.update",
@@ -82,7 +83,7 @@ test("new shared lists require deliberate privacy and a review before saving", a
   ).toBeVisible();
   await expect(
     page.getByText(
-      "Surprise: recipients cannot see reservations or purchases.",
+      "Keep it a surprise: recipients cannot see who reserves or buys their gifts.",
     ),
   ).toBeVisible();
   await expect(page.getByLabel("List name", { exact: true })).not.toBeVisible();
@@ -101,16 +102,16 @@ test("Escape preserves dirty gift fields until the user chooses to discard", asy
   await page.goto("/lists");
   await page.getByRole("link", { name: /Alex's wishes/ }).click();
   await page
-    .getByRole("button", { name: "Add a gift", exact: true })
+    .getByRole("button", { name: "Add item", exact: true })
     .last()
     .click();
-  await page.getByLabel("Gift name", { exact: true }).fill("Do not lose this");
+  await page.getByLabel("Item name", { exact: true }).fill("Do not lose this");
   await page.keyboard.press("Escape");
   await expect(
     page.getByRole("heading", { name: "Discard your changes?" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Keep editing" }).click();
-  await expect(page.getByLabel("Gift name", { exact: true })).toHaveValue(
+  await expect(page.getByLabel("Item name", { exact: true })).toHaveValue(
     "Do not lose this",
   );
   await page.getByRole("button", { name: "Close dialog" }).click();
@@ -159,18 +160,18 @@ test("draft deletion is reversible and disabling drafts requires confirmation", 
   await expect(
     page.getByRole("button", { name: "Delete draft A saved thought" }),
   ).toBeVisible();
-  await page.getByLabel("Keep personal gift drafts on this device").click();
+  await page.getByLabel("Save wish-list drafts on this device").click();
   await expect(page.getByRole("dialog")).toContainText("1 saved draft");
   await page.getByRole("button", { name: "Close dialog" }).click();
   await expect(
-    page.getByLabel("Keep personal gift drafts on this device"),
+    page.getByLabel("Save wish-list drafts on this device"),
   ).toBeChecked();
-  await page.getByLabel("Keep personal gift drafts on this device").click();
+  await page.getByLabel("Save wish-list drafts on this device").click();
   await page
     .getByRole("button", { name: "Delete drafts and turn off" })
     .click();
   await expect(
-    page.getByLabel("Keep personal gift drafts on this device"),
+    page.getByLabel("Save wish-list drafts on this device"),
   ).not.toBeChecked();
 });
 
@@ -211,7 +212,7 @@ test("exchange exclusions use IDs and drafts can be reviewed and edited", async 
     .getByLabel("Giver", { exact: true })
     .selectOption(state.people[1].id);
   await page.getByLabel("Will not give to").selectOption(state.people[2].id);
-  await page.getByRole("button", { name: "Add exclusion" }).click();
+  await page.getByRole("button", { name: "Add rule" }).click();
   await page
     .getByRole("dialog")
     .getByRole("button", { name: "Create exchange", exact: true })
@@ -262,15 +263,15 @@ test("search recovery and person tabs work with a keyboard", async ({
   const { state } = await preview(page);
   await page.goto("/");
   await page
-    .getByRole("textbox", { name: "Search gifts" })
+    .getByRole("textbox", { name: "Search items and gift ideas" })
     .fill("no matching gifts xyz");
   await expect(
-    page.getByRole("heading", { name: "No gifts match your filters" }),
+    page.getByRole("heading", { name: "No matches found" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Clear filters" }).click();
   await expect(page.locator(".gift-card").first()).toBeVisible();
   await page.goto(`/people/${state.people[1].id}`);
-  await page.getByRole("tab", { name: "Their wishes" }).focus();
+  await page.getByRole("tab", { name: "On their wish lists" }).focus();
   await page.keyboard.press("ArrowRight");
   await expect(page.getByRole("tab", { name: "Ideas for Sam" })).toBeFocused();
   await expect(page.getByRole("tabpanel")).toHaveAttribute(
@@ -281,7 +282,9 @@ test("search recovery and person tabs work with a keyboard", async ({
     page.getByRole("heading", { name: "No gift ideas for Sam Morgan yet" }),
   ).toBeVisible();
   await page.keyboard.press("Home");
-  await expect(page.getByRole("tab", { name: "Their wishes" })).toBeFocused();
+  await expect(
+    page.getByRole("tab", { name: "On their wish lists" }),
+  ).toBeFocused();
 });
 
 test("creating a group leads directly to invitations", async ({ page }) => {
@@ -321,7 +324,7 @@ test("private note success clears the composer and offline actions are disabled"
   await expect(page.getByLabel("Your note")).toHaveValue("");
   await context.setOffline(true);
   await expect(
-    page.getByRole("button", { name: "I’ll get this" }),
+    page.getByRole("button", { name: "Reserve gift" }),
   ).toBeDisabled();
   await expect(
     page.getByRole("button", { name: "Add private note" }),
@@ -344,12 +347,12 @@ test("photo upload blocks saving and reports completion", async ({ page }) => {
     });
   });
   await page.goto("/lists");
-  await page.getByRole("button", { name: "Add a gift", exact: true }).click();
+  await page.getByRole("button", { name: "Add item", exact: true }).click();
   await page
-    .getByLabel("Gift name", { exact: true })
+    .getByLabel("Item name", { exact: true })
     .fill("A gift with a photo");
   await expect(page.getByLabel("Price in USD")).not.toBeVisible();
-  await page.getByText("Optional gift details", { exact: true }).click();
+  await page.getByText("More details", { exact: true }).click();
   await page.locator('input[type="file"]').setInputFiles({
     name: "gift.png",
     mimeType: "image/png",
@@ -397,15 +400,15 @@ test("security identifies this device and admin failures never show zero pending
   ).toBeVisible();
   await expect(
     page.getByRole("button", {
-      name: /Revoke Chrome on Mac session.*on this device/,
+      name: /Sign out Chrome on Mac, signed in.*on this device/,
     }),
   ).toBeVisible();
   await page.goto("/settings?section=admin");
+  await expect(page.getByRole("button", { name: "Check again" })).toBeVisible();
+  await expect(page.getByText(/0 shop lookups waiting/)).toHaveCount(0);
   await expect(
-    page.getByRole("button", { name: "Retry delivery status" }),
-  ).toBeVisible();
-  await expect(page.getByText(/0 imports pending/)).toHaveCount(0);
-  await expect(page.getByText(/Worker: Not reporting/)).toHaveCount(0);
+    page.getByText(/Updates and shop lookups: No recent activity reported/),
+  ).toHaveCount(0);
 });
 
 test("SMS verification offers resend and number correction", async ({
@@ -418,7 +421,7 @@ test("SMS verification offers resend and number correction", async ({
     return route.fulfill({ json: { ok: true } });
   });
   await page.goto("/settings?section=notifications");
-  await page.getByRole("button", { name: "Set up SMS" }).click();
+  await page.getByRole("button", { name: "Set up text messages" }).click();
   await page.getByLabel("US mobile number").fill("+13175551234");
   await page.getByRole("checkbox", { name: /I agree/ }).check();
   await page.getByRole("button", { name: "Send verification code" }).click();
@@ -453,7 +456,7 @@ test("adding a saved draft refreshes the device list", async ({ page }) => {
   await page.getByRole("button", { name: "Review & add" }).click();
   await page.getByRole("button", { name: "Add to wish list" }).click();
   await expect(page.getByRole("dialog")).not.toBeVisible();
-  await expect(page.getByText(/No saved drafts on this device/)).toBeVisible();
+  await expect(page.getByText(/No drafts saved on this device/)).toBeVisible();
   await expect(page.getByRole("button", { name: "Review & add" })).toHaveCount(
     0,
   );
@@ -506,14 +509,102 @@ test("a single reserved gift can be marked purchased from Buying", async ({
   await page.goto("/buying");
   await page
     .getByRole("button", {
-      name: `Mark ${reservation.titleSnapshot} purchased`,
+      name: `Mark ${reservation.titleSnapshot} as purchased`,
       exact: true,
     })
     .click();
   await expect(
-    page.getByRole("status").filter({ hasText: "Marked purchased." }),
+    page.getByRole("status").filter({ hasText: "Marked as purchased." }),
   ).toBeVisible();
   expect(
     state.reservations.find((r) => r.id === reservation.id)?.purchased,
   ).toBe(1);
+});
+
+test("wish-list items and ideas for others keep distinct names through saving and editing", async ({
+  page,
+}) => {
+  const { state, actor } = await preview(page);
+  const mine = state.lists.find((list) => list.name === "Alex's wishes")!;
+  const other = state.people.find((person) => person.name === "Sam Morgan")!;
+  const managed = command(state, actor, "people.create", { name: "Casey" }) as {
+    id: string;
+  };
+  const managedList = command(state, actor, "lists.create", {
+    name: "Casey's wish list",
+    ownerIds: [managed.id],
+    groupIds: [state.groups[0].id],
+    mode: "surprise",
+  }) as { id: string };
+
+  await page.goto(`/lists/${mine.id}`);
+  await expect(
+    page.getByRole("textbox", { name: "Search items", exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Add item", exact: true })
+    .last()
+    .click();
+  await page.getByLabel("Item name", { exact: true }).fill("My new item");
+  await page
+    .getByRole("button", { name: "Add to wish list", exact: true })
+    .click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  const item = state.items.find((entry) => entry.title === "My new item")!;
+  expect(item.listId).toBe(mine.id);
+  await page.goto(`/gift/${item.id}`);
+  await page.getByRole("button", { name: "Edit item", exact: true }).click();
+  await page.getByLabel("Item name", { exact: true }).fill("My edited item");
+  await page.getByRole("button", { name: "Save changes", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "My edited item", exact: true }),
+  ).toBeVisible();
+
+  await page.goto(`/lists/${managedList.id}`);
+  await page
+    .getByRole("button", { name: "Add item", exact: true })
+    .last()
+    .click();
+  await page.getByLabel("Item name", { exact: true }).fill("An item for Casey");
+  await page
+    .getByRole("button", { name: "Add to wish list", exact: true })
+    .click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  expect(
+    state.items.find((entry) => entry.title === "An item for Casey")
+      ?.recipientIds,
+  ).toEqual([managed.id]);
+
+  await page.goto(`/people/${other.id}`);
+  await page
+    .getByRole("button", { name: "Add gift idea", exact: true })
+    .first()
+    .click();
+  await page
+    .getByLabel("Gift idea name", { exact: true })
+    .fill("A private idea for Sam");
+  await page
+    .getByRole("button", { name: "Save gift idea", exact: true })
+    .click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  const idea = state.items.find(
+    (entry) => entry.title === "A private idea for Sam",
+  )!;
+  expect(idea.listId).toBeUndefined();
+  expect(idea.recipientIds).toEqual([other.id]);
+  expect(idea.visibility).toBe("private");
+  await page.goto(`/gift/${idea.id}`);
+  await page
+    .getByRole("button", { name: "Edit gift idea", exact: true })
+    .click();
+  await page
+    .getByLabel("Gift idea name", { exact: true })
+    .fill("An edited idea for Sam");
+  await page.getByRole("button", { name: "Save changes", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "An edited idea for Sam", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Reserve gift", exact: true }),
+  ).toBeVisible();
 });
