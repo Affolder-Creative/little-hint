@@ -1,6 +1,17 @@
 # Changelog
 
-## [0.2.3](https://github.com/Affolder-Creative/little-hint/compare/v0.2.2...v0.2.3) (2026-10-24)
+## [0.3.0](https://github.com/Affolder-Creative/little-hint/compare/v0.2.2...v0.3.0) (2026-10-24)
+
+### Distribution migration
+
+This pre-1.0 minor release marks the move to Affolder Creative. The repository is
+`Affolder-Creative/little-hint`, and new release images are published to
+`ghcr.io/affolder-creative/little-hint`. Update Coolify repository references and
+app/worker image references together; use the published release digest. See the
+[organization transfer checklist](docs/ORGANIZATION_TRANSFER.md) for package
+access and deployment migration. Historical images remain in the personal
+namespace for existing installations and older release bundles.
+
 
 
 ### Fixes
