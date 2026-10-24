@@ -18,26 +18,28 @@ export async function expectDialogFieldsToFit(page: Page) {
         ...el.querySelectorAll<HTMLElement>(
           ".field input, .field select, .field textarea",
         ),
-      ].map((input) => {
-        const rect = input.getBoundingClientRect();
-        const field = input.closest(".field")!.getBoundingClientRect();
-        return {
-          name: input.getAttribute("name"),
-          fits:
-            rect.left >=
-              Math.max(
-                field.left,
-                bounds.left + parseFloat(padding.paddingLeft),
-              ) -
-                1 &&
-            rect.right <=
-              Math.min(
-                field.right,
-                bounds.right - parseFloat(padding.paddingRight),
-              ) +
-                1,
-        };
-      }),
+      ]
+        .filter((input) => input.getClientRects().length > 0)
+        .map((input) => {
+          const rect = input.getBoundingClientRect();
+          const field = input.closest(".field")!.getBoundingClientRect();
+          return {
+            name: input.getAttribute("name"),
+            fits:
+              rect.left >=
+                Math.max(
+                  field.left,
+                  bounds.left + parseFloat(padding.paddingLeft),
+                ) -
+                  1 &&
+              rect.right <=
+                Math.min(
+                  field.right,
+                  bounds.right - parseFloat(padding.paddingRight),
+                ) +
+                  1,
+          };
+        }),
     };
   });
   expect(layout.overflow, "dialog horizontal overflow").toBeLessThanOrEqual(1);

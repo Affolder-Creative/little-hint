@@ -25,6 +25,9 @@
 body {
   margin: 0;
 }
+[hidden] {
+  display: none !important;
+}
 button,
 input,
 select,
@@ -2354,4 +2357,26 @@ main {
 .household-settings .actions {
   flex: 0 1 auto;
   flex-wrap: wrap;
+}
+
+/* Review steps preserve the form while making the sharing commitment explicit. */
+.policy-options {
+  margin-block: 16px;
+}
+.policy-options > summary {
+  cursor: pointer;
+  padding-block: 12px;
+  color: var(--accent);
+}
+.form-review {
+  outline-offset: 4px;
+}
+.form-review h3 {
+  margin-top: 0;
+}
+.exchange-panel .actions > section {
+  flex-basis: 100%;
+}
+.exchange-panel section li {
+  margin-block: 8px;
 }

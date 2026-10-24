@@ -13,6 +13,7 @@ if (
     "list-features",
     "group-events",
     "polish",
+    "critique",
     "pwa",
   ].includes(suite)
 )

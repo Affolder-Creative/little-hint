@@ -527,14 +527,20 @@ export function world(s: State, a: Actor): World {
           a.id,
         ),
       })),
-    invitations: s.invitations.filter(
-      (i) =>
-        !i.revoked &&
-        !i.acceptedBy &&
-        Date.parse(i.expiresAt) > Date.now() &&
-        (normalizedEmail(i.email) === normalizedEmail(a.email) ||
-          !!s.groups.find((g) => g.id === i.groupId && g.ownerId === a.id)),
-    ),
+    invitations: s.invitations
+      .filter(
+        (i) =>
+          !i.revoked &&
+          !i.acceptedBy &&
+          Date.parse(i.expiresAt) > Date.now() &&
+          (normalizedEmail(i.email) === normalizedEmail(a.email) ||
+            !!s.groups.find((g) => g.id === i.groupId && g.ownerId === a.id)),
+      )
+      .map((i) => ({
+        ...i,
+        groupName: s.groups.find((g) => g.id === i.groupId)?.name,
+        inviterName: s.people.find((p) => p.userId === i.invitedById)?.name,
+      })),
     lists: s.lists
       .filter(
         (l) =>
@@ -560,6 +566,12 @@ export function world(s: State, a: Actor): World {
           contribution: { ...contribution },
           title: r.titleSnapshot,
           purchaser: r.buyerId === a.id,
+          contributorName:
+            s.people.find((p) => p.userId === contribution.userId)?.name ??
+            "Former member",
+          purchaserName:
+            s.people.find((p) => p.userId === r.buyerId)?.name ??
+            "Former member",
         },
       ];
     }),
@@ -614,7 +626,18 @@ export function world(s: State, a: Actor): World {
           Date.parse(l.expiresAt) > Date.now() &&
           (l.userId === a.id || l.email === normalizedEmail(a.email)),
       )
-      .map(({ tokenHash, ...l }) => l),
+      .map(({ tokenHash, ...l }) => ({
+        ...l,
+        targetName:
+          l.kind === "profile"
+            ? s.people.find((p) => p.id === l.targetId)?.name
+            : l.kind === "ownership"
+              ? s.groups.find((g) => g.id === l.targetId)?.name
+              : undefined,
+        requesterName: s.people.find(
+          (p) => p.userId === (l.requestedBy ?? l.userId),
+        )?.name,
+      })),
   };
 }
 function checkRevision(r: Base, v: number) {
@@ -872,6 +895,7 @@ export function command(
         ...stamp(),
         email: normalizedEmail(p.email),
         groupId: p.groupId,
+        invitedById: a.id,
         expiresAt: new Date(Date.now() + 7 * 86400000).toISOString(),
       };
       s.invitations.push(inv);
@@ -1390,7 +1414,24 @@ export function command(
       if (!exchangeReservation) notifyGift(s, a, i, "discussion");
       return { ok: true };
     }
-    case "exchanges.create": {
+    case "exchanges.create":
+    case "exchanges.update": {
+      const updating = action === "exchanges.update";
+      const edit = updating ? z.object({ id, revision }).parse(b) : undefined;
+      const existing = edit
+        ? s.exchanges.find(
+            (e) =>
+              e.id === edit.id &&
+              e.organizerId === a.id &&
+              groupAccess(s, a, e.groupId),
+          )
+        : undefined;
+      if (edit) {
+        if (!existing) fail(404, "Exchange not found.");
+        checkRevision(existing!, edit.revision);
+        if (existing!.status !== "draft")
+          fail(409, "Only an undrawn exchange can be edited.");
+      }
       const p = z
         .object({
           name: text,
@@ -1406,6 +1447,22 @@ export function command(
         })
         .parse(b);
       if (!groupAccess(s, a, p.groupId)) fail(404, "Family group not found.");
+      if (existing && p.groupId !== existing.groupId)
+        fail(400, "An exchange cannot move to another family group.");
+      if (
+        p.exclusions.some(
+          ([from, to]) =>
+            from === to ||
+            !p.participantIds.includes(from) ||
+            !p.participantIds.includes(to),
+        )
+      )
+        fail(
+          400,
+          "Exclusions must connect two different selected participants.",
+        );
+      if (existing && p.previousId === existing.id)
+        fail(400, "Choose a different previous exchange.");
       const g = s.groups.find((g) => g.id === p.groupId)!;
       if (
         p.participantIds.some(
@@ -1426,14 +1483,17 @@ export function command(
       )
         fail(404, "Previous exchange not found.");
       const e: Exchange = {
-        ...stamp(),
+        ...(existing ?? stamp()),
         ...p,
         organizerId: a.id,
         status: "draft",
         assignments: [],
       };
       matchExchange(e, s.people, s);
-      s.exchanges.push(e);
+      if (existing) {
+        Object.assign(existing, e);
+        touch(existing);
+      } else s.exchanges.push(e);
       return { id: e.id };
     }
     case "exchanges.draw": {

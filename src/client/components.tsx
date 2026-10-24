@@ -115,32 +115,69 @@ export function Modal({
   onClose: () => void;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const [discarding, setDiscarding] = useState(false);
+  const keepEditing = useRef<HTMLButtonElement>(null);
+  const previousFocus = useRef<HTMLElement | null>(null);
+  const requestClose = () => {
+    if (ref.current?.querySelector('form[data-busy="true"]')) return;
+    if (ref.current?.querySelector('form[data-dirty="true"]')) {
+      previousFocus.current = document.activeElement as HTMLElement;
+      setDiscarding(true);
+    } else onClose();
+  };
+  useEffect(() => {
+    if (discarding) keepEditing.current?.focus();
+    else previousFocus.current?.focus();
+  }, [discarding]);
   useEffect(() => {
     const el = ref.current!;
     el.showModal();
-    const handle = (e: Event) => {
-      e.preventDefault();
-      onClose();
-    };
-    el.addEventListener("cancel", handle);
     return () => {
-      el.removeEventListener("cancel", handle);
       el.close();
     };
   }, []);
   return (
-    <dialog ref={ref} className="dialog" aria-labelledby="dialog-title">
+    <dialog
+      ref={ref}
+      className="dialog"
+      aria-labelledby="dialog-title"
+      onCancel={(event) => {
+        event.preventDefault();
+        if (discarding) setDiscarding(false);
+        else requestClose();
+      }}
+    >
       <div className="dialog-heading">
         <h2 id="dialog-title">{title}</h2>
         <button
           className="icon-button"
           aria-label="Close dialog"
-          onClick={onClose}
+          onClick={requestClose}
         >
           <X />
         </button>
       </div>
-      <div className="dialog-body">{children}</div>
+      {discarding && (
+        <div className="dialog-body" role="alert">
+          <h3>Discard your changes?</h3>
+          <p>Your unfinished changes have not been saved.</p>
+          <div className="actions">
+            <button
+              ref={keepEditing}
+              className="button"
+              onClick={() => setDiscarding(false)}
+            >
+              Keep editing
+            </button>
+            <button className="button secondary" onClick={onClose}>
+              Discard changes
+            </button>
+          </div>
+        </div>
+      )}
+      <div className="dialog-body" hidden={discarding}>
+        {children}
+      </div>
     </dialog>
   );
 }
@@ -150,19 +187,45 @@ export function Form({
   submit = "Save",
   disabled = false,
   className = "",
+  review,
 }: {
   onSubmit: (data: FormData) => Promise<unknown>;
   children: ReactNode;
   submit?: string;
   disabled?: boolean;
   className?: string;
+  review?: (data: FormData) => ReactNode | null;
 }) {
   const [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [dirty, setDirty] = useState(false);
+  const [pending, setPending] = useState<{
+    data: FormData;
+    content: ReactNode;
+  } | null>(null);
+  const reviewRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (pending) reviewRef.current?.focus();
+  }, [pending]);
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty]);
   async function send(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const data = new FormData(e.currentTarget);
+    const data = pending?.data ?? new FormData(e.currentTarget);
+    if (!pending && review) {
+      const content = review(data);
+      if (content) {
+        setPending({ data, content });
+        return;
+      }
+    }
     setBusy(true);
     setError("");
     try {
@@ -180,8 +243,28 @@ export function Form({
       onSubmit={send}
       onChange={() => setDirty(true)}
       data-dirty={dirty}
+      data-busy={busy}
+      onClick={(event) => {
+        if ((event.target as Element).closest("[data-form-change]"))
+          setDirty(true);
+      }}
     >
-      <fieldset disabled={busy}>{children}</fieldset>
+      <fieldset disabled={busy} hidden={!!pending}>
+        {children}
+      </fieldset>
+      {pending && (
+        <div ref={reviewRef} tabIndex={-1} className="form-review">
+          {pending.content}
+          <button
+            type="button"
+            disabled={busy}
+            className="text-button"
+            onClick={() => setPending(null)}
+          >
+            Back to editing
+          </button>
+        </div>
+      )}
       {error && (
         <p role="alert" className="error">
           {error}
@@ -189,7 +272,7 @@ export function Form({
       )}
       <button disabled={busy || disabled} className="button" type="submit">
         {busy ? <LoaderCircle className="spin" size={17} /> : null}
-        {busy ? "Saving…" : submit}
+        {busy ? "Saving…" : pending ? "Confirm and save" : submit}
       </button>
     </form>
   );

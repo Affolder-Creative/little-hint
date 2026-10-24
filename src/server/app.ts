@@ -196,6 +196,7 @@ export async function makeApp() {
     "contributions/update": "contributions.update",
     comments: "comments.create",
     exchanges: "exchanges.create",
+    "exchanges/update": "exchanges.update",
     "exchanges/draw": "exchanges.draw",
     "exchanges/cancel": "exchanges.cancel",
     preferences: "preferences.update",
