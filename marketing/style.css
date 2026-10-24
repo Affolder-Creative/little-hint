@@ -343,9 +343,9 @@ h2 {
   font-size: 14px;
   font-weight: 600;
 }
-.access-note {
+.release-note {
   max-width: 64ch;
-  font-size: 12px;
+  font-size: 14px;
   color: var(--muted);
   margin: 16px auto 0;
 }

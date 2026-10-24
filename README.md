@@ -11,6 +11,24 @@ A self-hosted, invite-only gift coordination PWA for families and friends. React
 
 The [master plan](MASTER_PLAN.md) is the approved product contract. Read [architecture](docs/ARCHITECTURE.md), [operations](docs/OPERATIONS.md), and [validation/release checks](docs/VALIDATION.md) before deployment. Production activation and physical-device acceptance still require the checks recorded there.
 
+## Release status and support
+
+Little Hint is an early 0.x release. It is source-available and free to self-host
+for personal use under [PolyForm Perimeter 1.0.0](LICENSE), which restricts
+competing products and services. You provide and pay for your own server, email
+service, and any optional providers. See [licensing](docs/LICENSING.md) for details.
+
+Expect changes before 1.0. Back up the database and uploads before upgrading and
+read the release notes, including any migration or rollback instructions. Bug
+reports are welcome through GitHub Issues; support is provided as time allows,
+with no response-time or uptime guarantee. Security fixes target the latest
+released version. Report vulnerabilities privately as described in
+[SECURITY.md](SECURITY.md).
+
+Start with the [installation guide](docs/DEPLOYMENT.md). Review the outstanding
+[device, provider, and recovery checks](docs/VALIDATION.md#required-before-broad-production-use)
+before relying on an installation for real gift plans.
+
 ## Local development
 
 Requires Node.js 24+, npm, and PostgreSQL 18 (Docker is convenient).
@@ -58,7 +76,7 @@ docker compose --env-file .env.production exec app \
 
 `compose.build.yaml` builds the shared image without loading deployment settings. `compose.yaml` starts that image and validates the required runtime secrets. Keep these commands separate; do not combine the two files with multiple `-f` arguments.
 
-`app` migrates before starting. `worker` waits for app health. Both use the same non-root image. The production environment enables the existing Housewatch Digital backup sidecar, which has its own image, credentials, health check, and Coolify schedules. PostgreSQL and uploads persist in separate volumes. Configure Coolify's domain/proxy for app port 3000, with HTTPS and your public origin as `APP_URL`, for example `https://littlehint.example.com`. See the operations guide for Coolify environment configuration, provider setup, and backups.
+`app` migrates before starting. `worker` waits for app health. Both use the same non-root image. The optional Housewatch Digital backup sidecar has its own image, credentials, health check, and schedules. The example leaves it disabled; configure a backup method and verify a restore before storing important data. PostgreSQL and uploads persist in separate volumes. Configure Coolify's domain/proxy for app port 3000, with HTTPS and your public origin as `APP_URL`, for example `https://littlehint.example.com`. See the operations guide for Coolify environment configuration, provider setup, and backups.
 
 Configure the SMTP sender independently from the app URL. An alias on an existing verified email domain is sufficient, for example `Little Hint <littlehint@example.com>`. All `example.com` addresses in this repository are placeholders. Keep real domains, administrator emails, resource IDs, credentials, and deployment records in ignored `.env.production` or `.local/deployment/` files, or your deployment platform's settings. Use the [deployment checklist](docs/DEPLOYMENT.md) for each installation.
 
