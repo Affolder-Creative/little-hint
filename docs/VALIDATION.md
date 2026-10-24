@@ -51,6 +51,34 @@ Status on 2026-10-19: implementation and local validation are complete except th
 - New personal lists and group events default to See the plans, displayed before Keep it a surprise. The transparent-mode date field says Gift summary available after and explains that purchase activity is already visible. Surprise-mode reveal wording is retained. The group-event browser workflow passed, including confirmation that an existing surprise event remains selected and locked when edited.
 - The simulator is iOS 27.0, not the reported physical iPhone running 27.0.1. The native-engine reproduction adds evidence beyond desktop WebKit but does not certify physical-device behavior.
 
+## Public-launch installation and marketing checks, 2026-10-24
+
+- Built a fresh ARM64 Linux image from source based on `fc8ec5b`, with the
+  public-launch documentation and environment-example changes. No host Node.js
+  installation was needed for the Docker build.
+- Started the production Compose definition with a copied production environment
+  example, new random secrets, empty PostgreSQL/uploads volumes, and the optional
+  backup profile disabled. A test-only overlay supplied a local image and a
+  private Mailpit service with a trusted test CA. No real email was sent.
+- Verified empty-database migration, non-root app execution, administrator
+  bootstrap, email-code delivery over verified SMTP STARTTLS, sign-in, admin
+  access, wish-list/item creation, uploads, and worker health. Repeated migrations
+  succeeded. Account, session, item, and upload data survived app/worker recreation.
+  The disposable stack and its volumes were removed afterward.
+- Marketing static checks and the existing browser suite passed at 1440, 768,
+  390, and 320px, including assets, anchors, keyboard entry, no horizontal
+  overflow, WCAG A/AA checks, and operation without JavaScript. Desktop/mobile
+  screenshots were reviewed after the license, hosting-cost, and release-status
+  copy changes. Canonical and Open Graph URLs use the custom domain.
+- Compose validation, release-tooling tests, formatting, and diff whitespace
+  checks passed. No application runtime code changed.
+
+This verifies a local fresh installation and SMTP integration with a controlled
+provider. It does not certify a public reverse proxy, real mail deliverability,
+physical devices, off-host backup recovery, or anonymous GHCR access. Complete
+those checks for each installation. Public Pages availability is checked after
+repository visibility changes.
+
 ## Commands
 
 ```sh

@@ -107,7 +107,10 @@ accepted merely because its name looks like a release version.
 
 Download the deployment bundle from a completed release. Its example environment
 contains a digest-pinned `LITTLE_HINT_IMAGE` and no deployment secrets. Fill in
-all required runtime settings, then run:
+all required runtime settings, including SMTP and your exact HTTPS `APP_URL`.
+Leave `COMPOSE_PROFILES` empty until the optional backup sidecar's credentials
+and image access are configured. See the [first-install checklist](DEPLOYMENT.md#first-installation)
+for secret generation, proxy routing, and acceptance checks. Then run:
 
 ```sh
 docker compose --env-file .env.production -f compose.yaml -f compose.ghcr.yaml up -d

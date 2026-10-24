@@ -28,7 +28,7 @@ The checked-in WebP images include the Home screen on desktop and mobile, and re
 
 ## Enable GitHub Pages when ready
 
-Repository visibility remains private. GitHub Pages for a private repository requires a plan that supports it; otherwise make the repository public separately or change the plan. Do not change visibility merely to run this workflow. A public Pages site does not grant visitors access to a private repository. The landing page currently explains that source and setup links require access; remove that note when the repository becomes public.
+The public address is `https://littlehint.affoldercreative.com/`. The page describes personal self-hosting, infrastructure costs, the source-available license, and early-release support. Its source and setup links require the application repository to be public for visitors without access. GitHub Pages for a private repository requires a plan that supports it; a public Pages site alone does not expose a private repository.
 
 The workflow always validates the site. Deployment stays disabled until the `PAGES_ENABLED` repository variable is `true`, so merges do not fail while Pages is unavailable or the site is not ready to publish. Runs on `main` explain the skipped deployment in their summary.
 
@@ -36,10 +36,11 @@ The workflow always validates the site. Deployment stays disabled until the `PAG
 2. Ensure the `github-pages` environment permits deployments from `main`.
 3. In **Settings → Secrets and variables → Actions → Variables**, set the repository variable `PAGES_ENABLED` to `true`. Only enable it after completing the Pages setup.
 4. Run **Marketing site** from the Actions tab on `main`, or push a marketing change to `main`. Pull requests validate assets and links but never deploy.
-5. Confirm the deployment succeeds and visit `https://kaffolder7.github.io/little-hint/`. In the repository's About settings, use that URL for **Website**.
+5. Set the Pages custom domain to `littlehint.affoldercreative.com`. Verify domain ownership in GitHub, configure the DNS CNAME `littlehint` to `kaffolder7.github.io`, and enforce HTTPS when the certificate is ready. This Actions-based workflow does not require a repository `CNAME` file.
+6. Confirm the deployment succeeds and visit `https://littlehint.affoldercreative.com/`. In the repository's About settings, use that URL for **Website**. Check the homepage, share image, and source/setup links without signing in to GitHub.
 
 Only `marketing/` is uploaded. The workflow cannot publish server code, secrets, documentation, or the design concepts outside that directory. No app service worker or PWA manifest is registered on the marketing site.
 
-The HTML's canonical URL, Open Graph URL/image, and GitHub links assume `kaffolder7/little-hint` and its `main` branch. Update them if the repository moves or a custom domain is added. Local assets and anchors are relative and work under the project subpath.
+The HTML's canonical URL and Open Graph URL/image use `https://littlehint.affoldercreative.com/`. GitHub links use `kaffolder7/little-hint` and its `main` branch. Update these if the domain or repository moves. Local assets and anchors are relative and work under the project subpath.
 
 See [GitHub's custom Pages workflow documentation](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages).
