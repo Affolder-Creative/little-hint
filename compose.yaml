@@ -7,6 +7,7 @@ x-app: &app
   environment:
     NODE_ENV: production
     APP_URL: ${APP_URL:-https://littlehint.example.com}
+    CLOUDFLARE_WEB_ANALYTICS: ${CLOUDFLARE_WEB_ANALYTICS:-false}
     DATABASE_URL: postgresql://little_hint:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@db:5432/little_hint
     BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?Set BETTER_AUTH_SECRET}
     SETTINGS_ENCRYPTION_KEY: ${SETTINGS_ENCRYPTION_KEY:?Set SETTINGS_ENCRYPTION_KEY}

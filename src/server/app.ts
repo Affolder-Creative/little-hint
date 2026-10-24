@@ -1,4 +1,4 @@
-import Fastify from "fastify";
+import Fastify, { LogController } from "fastify";
 import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
 import statics from "@fastify/static";
@@ -27,7 +27,11 @@ import {
   verifyTwilio,
 } from "./notifications";
 import type { Actor } from "../shared/model";
-import { deploymentEnvironment, validateDeployment } from "./deployment";
+import {
+  cloudflareWebAnalyticsEnabled,
+  deploymentEnvironment,
+  validateDeployment,
+} from "./deployment";
 export async function makeApp() {
   validateDeployment();
   const app = Fastify({
@@ -40,20 +44,29 @@ export async function makeApp() {
         "res.headers.set-cookie",
       ],
     },
-    disableRequestLogging: true,
+    logController: new LogController({ disableRequestLogging: true }),
     bodyLimit: 6_000_000,
     trustProxy: false,
   });
   const auth = makeAuth();
+  const cloudflareAnalytics = cloudflareWebAnalyticsEnabled();
   await app.register(helmet, {
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'"],
+        scriptSrc: [
+          "'self'",
+          ...(cloudflareAnalytics
+            ? ["https://static.cloudflareinsights.com"]
+            : []),
+        ],
         styleSrc: ["'self'", "'unsafe-inline'"],
         imgSrc: ["'self'", "blob:", "data:"],
         fontSrc: ["'self'"],
-        connectSrc: ["'self'"],
+        connectSrc: [
+          "'self'",
+          ...(cloudflareAnalytics ? ["https://cloudflareinsights.com"] : []),
+        ],
         objectSrc: ["'none'"],
         baseUri: ["'self'"],
         frameAncestors: ["'none'"],
