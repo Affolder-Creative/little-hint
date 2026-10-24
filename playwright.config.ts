@@ -9,6 +9,8 @@ export default defineConfig({
   use: {
     baseURL: process.env.E2E_BASE_URL ?? "http://localhost:5173",
     headless: true,
+    // Exercise the full browser's service worker lifecycle in headless mode.
+    channel: "chromium",
     launchOptions: {
       executablePath: process.env.CHROME_PATH || undefined,
     },
