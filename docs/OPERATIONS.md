@@ -114,13 +114,13 @@ Logs deliberately omit gift content, buyer discussions, assignments, and secrets
 
 ## Product import providers
 
-Direct HTML import runs first. If the title or image is missing, Little Hint makes at most one paid provider request. Configure API keys in Administration or through `SCRAPINGFISH_API_KEY`, `SCRAPINGBEE_API_KEY`, `SCRAPEDO_API_KEY`, and `SCRAPINGDOG_API_KEY`. API keys saved in Administration remain encrypted and are never returned to the browser.
+Direct HTML import runs first. If the title is missing, or the image URL is missing while automatic photo imports are enabled, Little Hint makes at most one paid provider request. Configure API keys in Administration or through `SCRAPINGFISH_API_KEY`, `SCRAPINGBEE_API_KEY`, `SCRAPEDO_API_KEY`, and `SCRAPINGDOG_API_KEY`. API keys saved in Administration remain encrypted and are never returned to the browser.
 
 `SCRAPING_PROVIDER` accepts `auto`, `none`, `scrapingfish`, `scrapingbee`, `scrapedo`, or `scrapingdog`. Leave the environment variable empty to use the Administration selector. Automatic selection chooses the first configured provider in this order: Scraping Fish, ScrapingBee, Scrape.do, Scrapingdog. It does not try a second provider when the selected provider fails. An explicit selection without its key uses direct import only. `none` disables paid scraping.
 
-The generic integrations request HTML without enabling extra JavaScript rendering or premium proxy options. ScrapingBee retains its dedicated US Amazon product endpoint. Each paid attempt counts against the existing per-provider `PAID_DAILY_LIMIT`, even when it fails locally. The limit counts requests, not currency or provider credits. Provider-specific credit consumption and request-pack expiry are managed in the provider account.
+Scraping Fish requests HTML with `render_js=true` so dynamically loaded product details can be included. It uses Fish's default rendering wait and the app's existing 35-second overall provider timeout. Rendering can increase import time. If the provider fails or times out, usable direct metadata is preserved; if no title is available, the user can still add the gift manually. Other generic integrations do not enable extra JavaScript rendering or premium proxy options. ScrapingBee retains its dedicated US Amazon product endpoint. Each paid attempt counts against the existing per-provider `PAID_DAILY_LIMIT`, even when it fails locally. The limit counts requests, not currency or provider credits. Provider-specific credit consumption and request-pack expiry are managed in the provider account.
 
-References: [Scraping Fish](https://scrapingfish.com/docs/quickstart), [Scrape.do](https://scrape.do/documentation/), [Scrapingdog](https://www.scrapingdog.com/documentation/).
+References: [Scraping Fish](https://scrapingfish.com/docs/quickstart), [Fish JavaScript rendering](https://scrapingfish.com/docs/js-rendering), [Scrape.do](https://scrape.do/documentation/), [Scrapingdog](https://www.scrapingdog.com/documentation/).
 
 ## List dates and gift summaries
 

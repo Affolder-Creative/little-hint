@@ -1,11 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-vi.mock("../src/server/settings", () => ({ config: vi.fn(), spend: vi.fn() }));
+const mocks = vi.hoisted(() => ({ direct: vi.fn() }));
+vi.mock("undici", () => ({ Agent: class {}, fetch: mocks.direct }));
+vi.mock("../src/server/settings", () => ({
+  config: vi.fn(),
+  spend: vi.fn(),
+  automaticallyImportProductPhotos: vi.fn(async () => false),
+}));
 vi.mock("../src/server/db", () => ({ transact: vi.fn() }));
 vi.mock("node:dns/promises", () => ({
   lookup: vi.fn(async () => [{ address: "93.184.216.34", family: 4 }]),
 }));
-import { spend } from "../src/server/settings";
-import { paidProductPreview } from "../src/server/imports";
+import { config, spend } from "../src/server/settings";
+import { importProduct, paidProductPreview } from "../src/server/imports";
 import { scrapingRequest } from "../src/server/scraping";
 import {
   scrapingProviders,
@@ -17,6 +23,10 @@ const keys = Object.fromEntries(
 );
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.direct.mockReset();
+  vi.mocked(config).mockResolvedValue(
+    keys as Awaited<ReturnType<typeof config>>,
+  );
   vi.mocked(spend).mockResolvedValue(undefined);
 });
 afterEach(() => vi.unstubAllGlobals());
@@ -83,6 +93,30 @@ describe("provider selection", () => {
       ).amazon,
     ).toBe(false);
   });
+  it("enables rendering only for Fish, using its default rendering wait", () => {
+    const fish = scrapingRequest("scrapingfish", "fish", target);
+    expect(fish.url.origin + fish.url.pathname).toBe(
+      "https://api.scrapingfish.com/api/v1/",
+    );
+    expect(fish.url.searchParams.get("render_js")).toBe("true");
+    expect(fish.url.searchParams.has("render_js_timeout_ms")).toBe(false);
+    expect(fish.url.searchParams.has("extract_rules")).toBe(false);
+    expect(
+      scrapingRequest("scrapingbee", "bee", target).url.searchParams.get(
+        "render_js",
+      ),
+    ).toBe("false");
+    expect(
+      scrapingRequest("scrapedo", "do", target).url.searchParams.has(
+        "render_js",
+      ),
+    ).toBe(false);
+    expect(
+      scrapingRequest("scrapingdog", "dog", target).url.searchParams.get(
+        "dynamic",
+      ),
+    ).toBe("false");
+  });
 });
 
 describe("single paid preview attempt", () => {
@@ -141,10 +175,12 @@ describe("single paid preview attempt", () => {
     expect(fetcher).not.toHaveBeenCalled();
     expect(spend).not.toHaveBeenCalled();
   });
-  it.each(["http", "network", "oversize", "captcha"])(
+  it.each(["http", "network", "timeout", "oversize", "captcha"])(
     "preserves direct metadata after %s failure, without another provider",
     async (failure) => {
       const fetcher = vi.fn(async () => {
+        if (failure === "timeout")
+          throw new DOMException("Provider timed out", "TimeoutError");
         if (failure === "network")
           throw new Error("Provider timeout with private-key");
         if (failure === "http")
@@ -169,5 +205,54 @@ describe("single paid preview attempt", () => {
     vi.mocked(spend).mockRejectedValue(new Error("Daily limit reached"));
     expect(await paidProductPreview(target, {}, keys)).toEqual({});
     expect(fetcher).not.toHaveBeenCalled();
+  });
+});
+
+describe("full import fallback flow", () => {
+  const productHtml =
+    '<script type="application/ld+json">{"@type":"Product","name":"Coffee mug","description":"A ceramic mug","image":"/mug.png","offers":{"price":"25","priceCurrency":"USD"}}</script>';
+
+  it("keeps successful direct imports free even with Fish configured", async () => {
+    mocks.direct.mockResolvedValue(new Response(productHtml));
+    const fetcher = vi.fn();
+    vi.stubGlobal("fetch", fetcher);
+    expect(await importProduct(target, "owner")).toMatchObject({
+      title: "Coffee mug",
+      description: "A ceramic mug",
+      priceCents: 2500,
+    });
+    expect(mocks.direct).toHaveBeenCalledTimes(1);
+    expect(fetcher).not.toHaveBeenCalled();
+    expect(spend).not.toHaveBeenCalled();
+  });
+
+  it("parses Fish HTML after a failed direct fetch without downloading disabled photos", async () => {
+    mocks.direct.mockRejectedValue(new Error("Shop unavailable"));
+    const fetcher = vi.fn(async () => new Response(productHtml));
+    vi.stubGlobal("fetch", fetcher);
+    const result = await importProduct(target, "owner");
+    expect(result).toMatchObject({
+      title: "Coffee mug",
+      description: "A ceramic mug",
+      priceCents: 2500,
+    });
+    expect(result).not.toHaveProperty("image");
+    expect(result).not.toHaveProperty("remoteImage");
+    expect(mocks.direct).toHaveBeenCalledTimes(1);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(spend).toHaveBeenCalledExactlyOnceWith("scrapingfish");
+  });
+
+  it("retains the manual-entry error when direct fetching and Fish both fail", async () => {
+    mocks.direct.mockRejectedValue(new Error("Shop unavailable"));
+    const fetcher = vi.fn(async () => {
+      throw new DOMException("Provider timed out", "TimeoutError");
+    });
+    vi.stubGlobal("fetch", fetcher);
+    await expect(importProduct(target, "owner")).rejects.toThrow(
+      "You can still add the gift manually.",
+    );
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(spend).toHaveBeenCalledExactlyOnceWith("scrapingfish");
   });
 });
