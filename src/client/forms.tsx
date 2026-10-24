@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import { familyGroupLabel } from "../shared/households";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -21,13 +22,16 @@ export const value = (f: FormData, k: string) => String(f.get(k) ?? "");
 const selected = (f: FormData, k: string) => f.getAll(k).map(String);
 export function GroupForm({ onCreated }: { onCreated?: (id: string) => void }) {
   const { mutate, close, toast } = useApp();
+  const navigate = useNavigate();
   return (
     <Form
       submit="Create family group"
       onSubmit={async (f) => {
         const group = await mutate<Group>("groups", { name: value(f, "name") });
         close();
-        onCreated?.(group.id);
+        if (onCreated) onCreated(group.id);
+        else
+          navigate(`/settings?section=groups&group=${group.id}&view=members`);
         toast("Family group created. You can invite members now.");
       }}
     >
@@ -237,6 +241,8 @@ export function GiftForm({
   const [jobId, setJobId] = useState(""),
     [importing, setImporting] = useState(false),
     [error, setError] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState("");
   const [duplicate, setDuplicate] = useState<GiftView | null>(null);
   const [allowDuplicate, setAllowDuplicate] = useState(false);
   const job = world.imports.find((j) => j.id === jobId);
@@ -290,6 +296,8 @@ export function GiftForm({
   async function upload(file?: File) {
     if (!file) return;
     setError("");
+    setUploading(true);
+    setUploadStatus("Uploading photo…");
     try {
       const r = await fetch("/api/v1/media", {
         method: "POST",
@@ -299,8 +307,12 @@ export function GiftForm({
       const j = await r.json();
       if (!r.ok) throw new Error(j.error);
       change("image", j.url);
+      setUploadStatus("Photo uploaded.");
     } catch (e) {
       setError((e as Error).message);
+      setUploadStatus("");
+    } finally {
+      setUploading(false);
     }
   }
   return (
@@ -308,7 +320,11 @@ export function GiftForm({
       submit={
         gift ? "Save changes" : idea ? "Save gift idea" : "Add to wish list"
       }
-      disabled={!!duplicate && !allowDuplicate}
+      disabled={uploading || (!!duplicate && !allowDuplicate)}
+      allowOffline={
+        !idea &&
+        !!localStorage.getItem(`little-hint:draft-optin:${world.me.id}`)
+      }
       onSubmit={async (f) => {
         const payload = {
           ...data,
@@ -363,6 +379,7 @@ export function GiftForm({
               getDrafts(world.me.id).filter((d) => d.id !== draft.id),
             ),
           );
+        window.dispatchEvent(new Event("little-hint:drafts-changed"));
         toast(gift ? "Gift updated." : "A little hint, saved.");
         close();
       }}
@@ -396,7 +413,7 @@ export function GiftForm({
         </p>
       )}
       {job?.status === "complete" && (
-        <p className="success">
+        <p className="success" role="status">
           <Check size={16} /> Preview found. Review the details before saving.
         </p>
       )}
@@ -428,72 +445,88 @@ export function GiftForm({
           </select>
         </Field>
       )}
-      <Field label="A helpful note">
-        <textarea
-          rows={3}
-          value={data.description}
-          onChange={(e) => change("description", e.target.value)}
-          maxLength={5000}
-          placeholder="A size, a favorite color, or why it caught your eye."
-        />
-      </Field>
-      <div className="form-row">
-        <Field label="Price in USD">
-          <input
-            type="number"
-            min="0"
-            max="1000000"
-            step="0.01"
-            value={data.price}
-            onChange={(e) => change("price", e.target.value)}
-            placeholder="Optional"
+      <details
+        className="optional-fields"
+        open={!!gift || !!draft || job?.status === "complete"}
+      >
+        <summary>Optional gift details</summary>
+        <Field label="A helpful note">
+          <textarea
+            rows={3}
+            value={data.description}
+            onChange={(e) => change("description", e.target.value)}
+            maxLength={5000}
+            placeholder="A size, a favorite color, or why it caught your eye."
           />
         </Field>
-        <Field label="Quantity wanted">
-          <input
-            type="number"
-            min="1"
-            max="999"
-            required
-            value={data.quantity}
-            onChange={(e) => change("quantity", Number(e.target.value))}
-          />
-        </Field>
-      </div>
-      <Field label="Tags" hint="Separate tags with commas.">
-        <input
-          value={data.tags}
-          onChange={(e) => change("tags", e.target.value)}
-          placeholder="Coffee, Kitchen, Slow mornings"
-        />
-      </Field>
-      <label className="upload">
-        <Upload size={18} />
-        <span>{data.image ? "Replace photo" : "Add a photo"}</span>
-        <input
-          type="file"
-          accept="image/png,image/jpeg,image/webp,image/gif"
-          onChange={(e) => upload(e.target.files?.[0])}
-        />
-      </label>
-      {data.image && (
-        <div className="image-preview">
-          <img src={data.image} alt="Gift preview" />
-          <button
-            className="text-button"
-            type="button"
-            onClick={() => change("image", "")}
-          >
-            Remove photo
-          </button>
+        <div className="form-row">
+          <Field label="Price in USD">
+            <input
+              type="number"
+              min="0"
+              max="1000000"
+              step="0.01"
+              value={data.price}
+              onChange={(e) => change("price", e.target.value)}
+              placeholder="Optional"
+            />
+          </Field>
+          <Field label="Quantity wanted">
+            <input
+              type="number"
+              min="1"
+              max="999"
+              required
+              value={data.quantity}
+              onChange={(e) => change("quantity", Number(e.target.value))}
+            />
+          </Field>
         </div>
-      )}
-      {job?.result?.importedAt && (
-        <small className="muted">
-          From {job.result.source}, retrieved{" "}
-          {new Date(job.result.importedAt).toLocaleString()}. Prices can change.
-        </small>
-      )}
+        <Field label="Tags" hint="Separate tags with commas.">
+          <input
+            value={data.tags}
+            onChange={(e) => change("tags", e.target.value)}
+            placeholder="Coffee, Kitchen, Slow mornings"
+          />
+        </Field>
+        <label className="upload">
+          <Upload size={18} />
+          <span>
+            {uploading
+              ? "Uploading photo…"
+              : data.image
+                ? "Replace photo"
+                : "Add a photo"}
+          </span>
+          <input
+            type="file"
+            disabled={uploading}
+            accept="image/png,image/jpeg,image/webp,image/gif"
+            onChange={(e) => upload(e.target.files?.[0])}
+          />
+        </label>
+        <p role="status">{uploadStatus}</p>
+        {data.image && (
+          <div className="image-preview">
+            <img src={data.image} alt="Gift preview" />
+            <button
+              className="text-button"
+              type="button"
+              disabled={uploading}
+              onClick={() => change("image", "")}
+            >
+              Remove photo
+            </button>
+          </div>
+        )}
+        {job?.result?.importedAt && (
+          <small className="muted">
+            From {job.result.source}, retrieved{" "}
+            {new Date(job.result.importedAt).toLocaleString()}. Prices can
+            change.
+          </small>
+        )}
+      </details>
       {idea && (
         <>
           <Field label="Who can see this idea?">
