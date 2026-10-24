@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.1](https://github.com/Affolder-Creative/little-hint/compare/v0.3.0...v0.3.1) (2026-10-24)
+
+
+### Fixes
+
+* document Coolify release upgrades ([#43](https://github.com/Affolder-Creative/little-hint/issues/43)) ([50d03f9](https://github.com/Affolder-Creative/little-hint/commit/50d03f90d94553ad2b7e5f856ab52066214d9253))
+* speed up CI while preserving regression coverage ([#44](https://github.com/Affolder-Creative/little-hint/issues/44)) ([1823dad](https://github.com/Affolder-Creative/little-hint/commit/1823dad6dd4e6322288a5aceecb0bdd22309b4c0))
+
 ## [0.3.0](https://github.com/Affolder-Creative/little-hint/compare/v0.2.2...v0.3.0) (2026-10-24)
 
 ### Distribution migration
