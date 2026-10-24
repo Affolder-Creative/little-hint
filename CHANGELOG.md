@@ -1,5 +1,32 @@
 # Changelog
 
+## [0.2.3](https://github.com/Affolder-Creative/little-hint/compare/v0.2.2...v0.2.3) (2026-10-24)
+
+
+### Fixes
+
+* clarify public self-hosting setup ([#35](https://github.com/Affolder-Creative/little-hint/issues/35)) ([784f0be](https://github.com/Affolder-Creative/little-hint/commit/784f0be99599db0f6e3bd61ca1e1bca5a317b651))
+* document Pages HTTPS and DNS-only setup ([#42](https://github.com/Affolder-Creative/little-hint/issues/42)) ([15a2296](https://github.com/Affolder-Creative/little-hint/commit/15a22969e1724a4f19d110d90be27895c25f0fda))
+* migrate ownership to Affolder Creative ([#36](https://github.com/Affolder-Creative/little-hint/issues/36)) ([322ebc4](https://github.com/Affolder-Creative/little-hint/commit/322ebc4851b123961d28a1e2a9a5ad962a91d21d))
+* skip superseded release runs cleanly ([#33](https://github.com/Affolder-Creative/little-hint/issues/33)) ([fc8ec5b](https://github.com/Affolder-Creative/little-hint/commit/fc8ec5b0891b03efe3fdb55a16a4302f46922c32))
+
+
+### Dependencies
+
+* bump the runtime group with 6 updates ([#38](https://github.com/Affolder-Creative/little-hint/issues/38)) ([6665433](https://github.com/Affolder-Creative/little-hint/commit/6665433795b97c971d9643e66ea609e3f4c3b6fa))
+* bump vite from 8.3.4 to 8.3.5 in the development group ([#40](https://github.com/Affolder-Creative/little-hint/issues/40)) ([9d875a3](https://github.com/Affolder-Creative/little-hint/commit/9d875a34a98627aa92f0fdfc620957681fb56b5f))
+
+
+### Build and packaging
+
+* bump axllent/mailpit from v1.31.1 to v1.31.6 ([#37](https://github.com/Affolder-Creative/little-hint/issues/37)) ([fc85b6f](https://github.com/Affolder-Creative/little-hint/commit/fc85b6f7c3a4a847bddf2da3cbdf0f1d40e0084f))
+
+
+### Automation
+
+* bump actions/checkout from 6 to 7 ([#39](https://github.com/Affolder-Creative/little-hint/issues/39)) ([2657d04](https://github.com/Affolder-Creative/little-hint/commit/2657d047dc90a405c6c848b89dd0c8e1c6bd3cd1))
+* bump actions/setup-node from 6 to 7 ([#41](https://github.com/Affolder-Creative/little-hint/issues/41)) ([d08bb32](https://github.com/Affolder-Creative/little-hint/commit/d08bb323713d1bf5b558e3e734b9bbaf31c65698))
+
 ## [0.2.2](https://github.com/kaffolder7/little-hint/compare/v0.2.1...v0.2.2) (2026-10-24)
 
 
