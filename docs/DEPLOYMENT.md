@@ -4,6 +4,16 @@ For feature testing with synthetic data, use the [isolated staging setup](STAGIN
 
 This repository contains reusable deployment instructions. Keep each installation's actual values and status in a private operator record, such as ignored `.local/deployment/DEPLOYMENT.md`, and in your password manager or deployment platform. Never commit that record or raw API responses.
 
+## Public landing page
+
+The project landing page at <https://littlehint.affoldercreative.com/> is published
+from `marketing/` to GitHub Pages, with **Enforce HTTPS** enabled. In Cloudflare,
+keep the `littlehint` CNAME pointing to `affolder-creative.github.io` with proxy
+status **DNS only**, shown as a gray cloud. Leave it DNS-only after certificate issuance.
+See [marketing deployment](MARKETING.md#github-pages-deployment) for setup and
+verification. Self-hosted app installations have their own domains and HTTPS
+configuration.
+
 ## First installation
 
 This is an early 0.x release with support as time allows. You need a Linux host
