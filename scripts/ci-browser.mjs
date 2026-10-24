@@ -3,7 +3,6 @@ import { createWriteStream } from "node:fs";
 import { mkdir, copyFile } from "node:fs/promises";
 import { setTimeout as delay } from "node:timers/promises";
 import { createServer } from "node:net";
-import { createServer as createHttpServer, request } from "node:http";
 
 const suite = process.argv[2];
 if (
@@ -31,15 +30,15 @@ const freePort = () =>
     });
   });
 const port = await freePort();
-const backendPort = await freePort();
 const env = {
   ...process.env,
   NODE_ENV: "test",
+  APP_ENV: "test",
   APP_URL: `http://localhost:${port}`,
-  PORT: backendPort,
+  PORT: port,
   E2E_BASE_URL: `http://localhost:${port}`,
   E2E_BUILT: "1",
-  E2E_REQUESTS_PACED: "1",
+  E2E_BROWSER_TEST_SERVER: "1",
   CI: "true",
   SMTP_HOST: "",
   TELEGRAM_BOT_TOKEN: "",
@@ -48,35 +47,6 @@ const env = {
 await mkdir("test-results", { recursive: true });
 await mkdir(".local/ci-logs", { recursive: true });
 const children = [];
-// Built pages serve static assets through Fastify's real IP rate limiter.
-// Pace the test client instead of weakening or disabling production limits.
-let nextRequest = 0;
-const proxy = createHttpServer((incoming, response) => {
-  const scheduled = Math.max(Date.now(), nextRequest);
-  nextRequest = scheduled + 600; // At most 100 requests/minute, below the real 150.
-  const timer = setTimeout(() => {
-    if (incoming.destroyed) return;
-    const upstream = request(
-      {
-        hostname: "127.0.0.1",
-        port: backendPort,
-        path: incoming.url,
-        method: incoming.method,
-        headers: incoming.headers,
-      },
-      (result) => {
-        response.writeHead(result.statusCode, result.headers);
-        result.pipe(response);
-      },
-    );
-    upstream.on("error", () => {
-      response.writeHead(502);
-      response.end();
-    });
-    incoming.pipe(upstream);
-  }, scheduled - Date.now());
-  incoming.once("error", () => clearTimeout(timer));
-});
 function run(command, args, options = {}) {
   const child = spawn(command, args, { env, stdio: "inherit", ...options });
   const done = new Promise((resolve, reject) => {
@@ -109,14 +79,25 @@ async function stop() {
   );
 }
 try {
-  await new Promise((resolve, reject) => {
-    proxy.once("error", reject);
-    proxy.listen(Number(port), "127.0.0.1", resolve);
-  });
+  await run("npx", [
+    "--no-install",
+    "tsup",
+    "tests/browser-server.ts",
+    "--format",
+    "esm",
+    "--out-dir",
+    ".local/browser-server",
+    "--external",
+    "pg-native",
+  ]).done;
   await run("node", ["dist/server/cli.js", "demo"]).done;
   for (const service of ["index", "worker"]) {
     const log = createWriteStream(`.local/ci-logs/${suite}-${service}.log`);
-    const process = run("node", [`dist/server/${service}.js`], {
+    const entry =
+      service === "index"
+        ? ".local/browser-server/browser-server.js"
+        : "dist/server/worker.js";
+    const process = run("node", [entry], {
       stdio: ["ignore", "pipe", "pipe"],
     });
     children.push(process.child);
@@ -129,7 +110,7 @@ try {
     if (children.some((child) => child.exitCode !== null))
       throw new Error("A browser test service exited. See test-results/*.log.");
     try {
-      ready = (await fetch(`http://127.0.0.1:${backendPort}/api/health`)).ok;
+      ready = (await fetch(`http://127.0.0.1:${port}/api/health`)).ok;
     } catch {}
     if (ready) break;
     await delay(1000);
@@ -143,8 +124,6 @@ try {
   ]).done;
 } finally {
   await stop();
-  proxy.closeAllConnections();
-  await new Promise((resolve) => proxy.close(resolve));
   await mkdir("test-results", { recursive: true });
   for (const service of ["index", "worker"]) {
     await copyFile(

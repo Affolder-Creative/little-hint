@@ -33,8 +33,18 @@ import {
   deploymentEnvironment,
   validateDeployment,
 } from "./deployment";
-export async function makeApp() {
+export async function makeApp(options: { browserTest?: boolean } = {}) {
   validateDeployment();
+  // Only the separate test entrypoint opts in. Production entrypoints never
+  // read an environment switch that could accidentally relax these limits.
+  if (
+    options.browserTest &&
+    (process.env.NODE_ENV !== "test" ||
+      deploymentEnvironment() !== "test" ||
+      new URL(process.env.DATABASE_URL || "postgres://invalid/invalid")
+        .pathname !== "/little_hint_e2e")
+  )
+    throw new Error("Browser tests require test mode and little_hint_e2e.");
   const app = Fastify({
     logger: {
       level: process.env.LOG_LEVEL ?? "warn",
@@ -76,7 +86,10 @@ export async function makeApp() {
     },
     crossOriginEmbedderPolicy: false,
   });
-  await app.register(rateLimit, { max: 150, timeWindow: "1 minute" });
+  await app.register(rateLimit, {
+    max: options.browserTest ? 10_000 : 150,
+    timeWindow: "1 minute",
+  });
   app.addContentTypeParser(
     "application/octet-stream",
     { parseAs: "buffer" },
