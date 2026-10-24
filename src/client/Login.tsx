@@ -146,17 +146,17 @@ export function Login({
             <em>a little hint.</em>
           </h1>
           <p>
-            A place for the things you’d love, the people you love, and the
-            thoughtful surprises in between.
+            Save what you would love, share your wish lists, and help your
+            people find a gift that feels like you.
           </p>
           <div className="story-notes">
             <div>
               <Heart size={22} />
-              <span>Save what catches your eye.</span>
+              <span>Save a few things you would love.</span>
             </div>
             <div>
               <Users size={22} />
-              <span>Share with your own circle.</span>
+              <span>Share your wish lists with your people.</span>
             </div>
             <div>
               <LockKeyhole size={22} />
@@ -165,7 +165,7 @@ export function Login({
           </div>
         </section>
         <section className="login-form-panel">
-          <h2>{sent ? "Check your inbox" : "Come on in."}</h2>
+          <h2>{sent ? "Check your inbox" : "Come on in"}</h2>
           <p>
             {sent
               ? `Enter the code sent to ${email}.`

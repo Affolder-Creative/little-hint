@@ -1,3 +1,4 @@
+import { actionError } from "./copy";
 import {
   useEffect,
   useLayoutEffect,
@@ -102,7 +103,7 @@ export function Privacy({ mode }: { mode: "surprise" | "transparent" }) {
   return (
     <span className={`privacy ${mode}`}>
       {mode === "surprise" ? <LockKeyhole size={13} /> : <Eye size={13} />}{" "}
-      {mode === "surprise" ? "Surprise" : "Transparent"}
+      {mode === "surprise" ? "Keep it a surprise" : "See the plans"}
     </span>
   );
 }
@@ -241,7 +242,7 @@ export function Form({
       if (resetOnSuccess) form.reset();
       setDirty(false);
     } catch (e) {
-      setError((e as Error).message);
+      setError(actionError(e));
     } finally {
       setBusy(false);
     }

@@ -10,9 +10,9 @@ export function RevealPolicy({ list }: { list: List }) {
   return (
     <p className="privacy-note">
       {list.revealAfter
-        ? `${revealed ? "The gift summary is now available to list owners, including for Surprise lists. It shows purchased gifts, buyers, and contributors." : `List owners can view purchased gifts, buyers, and contributors after ${list.revealAfter} ends (${list.timeZone ?? "UTC"}), even with Keep it a surprise.`} ${list.revealExchangeGivers ? "Secret exchange purchases and giver names are also included." : "Secret exchange purchases and giver names stay hidden; other purchased gifts are included."}`
-        : "No gift summary is scheduled. Secret gift exchange identities stay hidden."}{" "}
-      Contribution amounts and private discussions stay private.
+        ? `${revealed ? "List owners can now see purchased gifts, who bought them, and who contributed, even with Keep it a surprise." : `List owners can view purchased gifts, buyers, and contributors after ${list.revealAfter} ends (${list.timeZone ?? "UTC"}), even with Keep it a surprise.`} ${list.revealExchangeGivers ? "Secret exchange purchases and giver names are also included." : "Secret exchange purchases and giver names stay hidden; other purchased gifts are included."}`
+        : "No gift summary is scheduled. Secret exchange giver names stay hidden."}{" "}
+      Contribution amounts and private notes stay private.
     </p>
   );
 }
@@ -28,8 +28,8 @@ export function GiftSummaryPanel({ listId }: { listId: string }) {
     <section className="gift-summary" aria-label="Gift summary">
       <h2>People to thank</h2>
       <p>
-        Purchased gifts, buyers, and contributors, without amounts or private
-        discussions.
+        See which gifts were bought, who bought them, and who contributed.
+        Contribution amounts and private notes stay hidden.
       </p>
       {query.isPending && <p role="status">Loading gift summary…</p>}
       {query.error && (
@@ -42,8 +42,8 @@ export function GiftSummaryPanel({ listId }: { listId: string }) {
       )}
       {!query.error && query.data?.gifts.length === 0 && (
         <p className="notice">
-          No completed gifts are available to show. Unpurchased reservations and
-          pledges are excluded.
+          No purchased gifts to show yet. Reservations and contributions that
+          have not been sent are not included.
         </p>
       )}
       {!query.error &&

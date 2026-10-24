@@ -157,7 +157,7 @@ describe("surprise privacy", () => {
         archived: false,
         description: "",
       }),
-    ).toThrow("locked");
+    ).toThrow("cannot change after sharing");
   });
   it("rechecks authorization when a queued notification is delivered", () => {
     const f = fixture();
@@ -242,7 +242,7 @@ describe("buying coordination", () => {
         "reservations.create",
         { ...body, quantity: 2 },
       ),
-    ).toThrow("another action");
+    ).toThrow("We could not confirm this action");
   });
   it("requires the purchaser to confirm money received and caps pledges", () => {
     const f = fixture(),
@@ -257,7 +257,7 @@ describe("buying coordination", () => {
         reservationId: r.id,
         amountCents: 1000,
       }),
-    ).toThrow("remaining");
+    ).toThrow("more than this gift still needs");
     command(f.s, f.actors[2], "contributions.update", {
       id: c.id,
       revision: c.revision,
@@ -439,7 +439,7 @@ describe("privacy and reconciliation edge cases", () => {
         purchased: 0,
         poolTargetCents: 500,
       }),
-    ).toThrow("existing contributions");
+    ).toThrow("contributions already promised");
     f.item.archived = true;
     command(f.s, f.actors[1], "reservations.update", {
       id: r.id,

@@ -52,7 +52,7 @@ test("main views and email templates retain readable responsive layouts", async 
   )!;
   await page.goto(`/people/${mine.id}`);
   await expect(
-    page.getByRole("tab", { name: "My wishes", exact: true }),
+    page.getByRole("tab", { name: "On my wish lists", exact: true }),
   ).toBeVisible();
   await page.goto(`/lists/${ownList.id}`);
   await expect(
@@ -81,7 +81,7 @@ test("main views and email templates retain readable responsive layouts", async 
     .locator(".reserve-panel > .form-row")
     .boundingBox();
   const action = await page
-    .getByRole("button", { name: "I’ll get this", exact: true })
+    .getByRole("button", { name: "Reserve gift", exact: true })
     .boundingBox();
   expect(action!.y - (controls!.y + controls!.height)).toBeGreaterThanOrEqual(
     16,
@@ -150,9 +150,7 @@ test("main views and email templates retain readable responsive layouts", async 
             .analyze()
         ).violations,
       ).toEqual([]);
-      await page
-        .getByRole("button", { name: "Add a gift", exact: true })
-        .click();
+      await page.getByRole("button", { name: "Add item", exact: true }).click();
       await expect(page.getByRole("dialog")).toBeVisible();
       await page.screenshot({
         path: `test-results/polish/gift-form-${width}-${colorScheme}.png`,
@@ -203,8 +201,8 @@ test("main views and email templates retain readable responsive layouts", async 
               kind,
               text:
                 kind === "invitation"
-                  ? "You've been invited to Little Hint. Sign in with this email address and accept your invitation."
-                  : "You have an update in Little Hint. Sign in to view it.",
+                  ? "You're invited to Little Hint. Sign in with this email address to accept, then start sharing wish lists with your people."
+                  : "A little update is waiting for you. Sign in to Little Hint to see it.",
               actionPath: "/",
             };
       const html = renderEmail(

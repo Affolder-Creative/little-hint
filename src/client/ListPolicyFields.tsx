@@ -92,7 +92,7 @@ export function ListPolicyFields({
           />
           <Eye size={20} />
           <span>
-            <strong>See the plans (Transparent)</strong>
+            <strong>See the plans</strong>
             <small>
               {event
                 ? "Each recipient can see who reserves or purchases their gifts."
@@ -110,18 +110,18 @@ export function ListPolicyFields({
           />
           <LockKeyhole size={20} />
           <span>
-            <strong>Keep it a surprise (Surprise)</strong>
+            <strong>Keep it a surprise</strong>
             <small>
               {event
-                ? "Each person adds wishes. The group coordinates gifts privately."
-                : "You add wishes. Your people coordinate gifts privately."}
+                ? "Each person adds items. Buying plans stay hidden from them."
+                : "Add items to your wish list. Buying plans stay hidden from you."}
             </small>
           </span>
         </label>
         <small id={privacyHintId}>
           {list?.modeLocked
-            ? "Privacy mode is locked after sharing."
-            : "Privacy mode locks when first shared."}
+            ? "This privacy choice cannot change after sharing."
+            : "Choose before sharing. This privacy choice cannot change later."}
         </small>
       </fieldset>
       {children}
@@ -183,8 +183,7 @@ export function ListPolicyFields({
                     </>
                   )}
                   <span>
-                    Contribution amounts and private discussions always stay
-                    private.
+                    Contribution amounts and private notes always stay private.
                   </span>
                 </span>
               }
@@ -219,12 +218,12 @@ export function ListPolicyFields({
               <small id={exchangeHintId} className="policy-guidance">
                 <span>
                   {list?.modeLocked
-                    ? "This choice is locked after first sharing."
+                    ? "This choice cannot change after sharing."
                     : !revealAfter
                       ? mode === "transparent"
                         ? "Choose a gift summary date above to enable this option."
                         : "Choose a reveal date above to enable this option."
-                      : "This choice locks when first shared."}
+                      : "This choice cannot change after sharing."}
                 </span>
                 <span>
                   Leave unchecked to keep secret exchange gifts and giver names
@@ -235,8 +234,8 @@ export function ListPolicyFields({
             </div>
           </div>
           <Field
-            label={event ? "Event timezone" : "List timezone"}
-            hint="Dates take effect after the selected day ends. This timezone locks when first shared."
+            label={event ? "Event time zone" : "List time zone"}
+            hint="Dates take effect after the selected day ends in this time zone. The time zone cannot change after sharing."
           >
             <select
               name="timeZone"
@@ -279,8 +278,8 @@ export function SharingReview({
       <p>Shared with: {audience.join(", ") || "Only the list owners"}.</p>
       <p>
         {policy.mode === "surprise"
-          ? "Surprise: recipients cannot see reservations or purchases."
-          : "Transparent: recipients can see who reserves and purchases their gifts."}
+          ? "Keep it a surprise: recipients cannot see who reserves or buys their gifts."
+          : "See the plans: recipients can see who reserves and buys their gifts."}
       </p>
       <p>
         {policy.revealAfter
@@ -288,9 +287,9 @@ export function SharingReview({
           : "No gift summary is scheduled. This cannot be enabled after sharing."}
       </p>
       <p>
-        Privacy and exchange-reveal choices lock when shared. A scheduled
-        summary date can only move later. Amounts and private discussions stay
-        private.
+        After sharing, you cannot change who sees gift plans or whether secret
+        exchange gifts appear in the summary. You can only move a future summary
+        date later. Contribution amounts and private notes stay private.
       </p>
     </section>
   );

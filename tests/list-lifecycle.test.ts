@@ -144,15 +144,17 @@ describe("reveal policy locks", () => {
       "only move later",
     );
     expect(() => f.update({ revealAfter: null })).toThrow();
-    expect(() => f.update({ timeZone: "UTC" })).toThrow("timezone is locked");
+    expect(() => f.update({ timeZone: "UTC" })).toThrow(
+      "time zone cannot change",
+    );
     expect(() => f.update({ revealExchangeGivers: false })).toThrow(
-      "privacy is locked",
+      "summary cannot change",
     );
     f.update({ groupIds: [], archived: true });
     f.update({ archived: false });
     expect(() => f.update({ revealAfter: "2030-10-19" })).toThrow();
     expect(() => f.update({ mode: "transparent" })).toThrow(
-      "Privacy mode is locked",
+      "This privacy choice cannot change after sharing",
     );
   });
   it("keeps legacy shared lists private and accepts old clients omitting added fields", () => {
@@ -251,13 +253,11 @@ describe("owner gift summaries", () => {
       purchased: 1,
       buyerName: "Sam",
       exchange: false,
-      contributors: f.s.contributions
-        .slice(0, 2)
-        .map((c, n) => ({
-          id: c.id,
-          name: f.actors[n].name,
-          status: c.status,
-        })),
+      contributors: f.s.contributions.slice(0, 2).map((c, n) => ({
+        id: c.id,
+        name: f.actors[n].name,
+        status: c.status,
+      })),
     });
     for (const forbidden of [
       "amountCents",

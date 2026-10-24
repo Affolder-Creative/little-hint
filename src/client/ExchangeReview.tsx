@@ -55,7 +55,7 @@ export function ExchangeReview({
               "Former member: edit participants before drawing"
             )}
             {missing.includes(id)
-              ? " · Needs a Surprise list shared with this group"
+              ? " · Needs a wish list set to Keep it a surprise and shared with this group"
               : " · List ready"}
           </li>
         ))}
@@ -77,7 +77,7 @@ export function ExchangeReview({
           ))}
         </ul>
       ) : (
-        <p>No individual exclusions.</p>
+        <p>No individual matches to avoid.</p>
       )}
       {exchange.previousId && (
         <p>
@@ -89,8 +89,9 @@ export function ExchangeReview({
       )}
       {missing.length > 0 && (
         <p className="notice">
-          Ask the people marked above to create and share a Surprise list before
-          drawing. You can save and edit this draft while they get ready.
+          Ask the people marked above to share a wish list set to Keep it a
+          surprise before you draw names. You can save this exchange and edit it
+          while they get ready.
         </p>
       )}
     </section>

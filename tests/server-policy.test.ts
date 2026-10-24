@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { FastifyServerOptions } from "fastify";
 
@@ -137,4 +138,19 @@ describe("Cloudflare analytics CSP", () => {
       );
     },
   );
+});
+
+it("returns readable validation errors in the existing HTTP error shape", async () => {
+  app = await makeApp();
+  app.get("/test-copy-validation", () =>
+    z
+      .object({ title: z.string().min(1), quantity: z.number().max(999) })
+      .parse({ title: "", quantity: 1000 }),
+  );
+  const response = await app.inject({ url: "/test-copy-validation" });
+  expect(response.statusCode).toBe(400);
+  expect(response.json()).toEqual({
+    error:
+      "Item name: use at least 1 character. Quantity: enter a number no greater than 999.",
+  });
 });

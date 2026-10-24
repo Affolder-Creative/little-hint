@@ -12,10 +12,10 @@ test("real email-code sign-in, gift creation, buyer reservation, and surprise pr
   let w = await (await ap.request.get("/api/v1/world")).json();
   const list = w.lists.find((l: any) => l.canEdit && !l.archived);
   const title = `A thoughtful test gift ${Date.now()}`;
-  await ap.getByRole("button", { name: "Add a gift", exact: true }).click();
-  await ap.getByLabel("Gift name", { exact: true }).fill(title);
+  await ap.getByRole("button", { name: "Add item", exact: true }).click();
+  await ap.getByLabel("Item name", { exact: true }).fill(title);
   await ap.getByLabel("Wish list", { exact: true }).selectOption(list.id);
-  await ap.getByText("Optional gift details", { exact: true }).click();
+  await ap.getByText("More details", { exact: true }).click();
   await ap.getByLabel("Price in USD", { exact: true }).fill("29.50");
   await ap.getByLabel("Quantity wanted", { exact: true }).fill("2");
   await ap
@@ -32,14 +32,12 @@ test("real email-code sign-in, gift creation, buyer reservation, and surprise pr
   await expect(
     sp.getByRole("heading", { name: title, exact: true }),
   ).toBeVisible();
-  await sp.getByRole("button", { name: "I’ll get this", exact: true }).click();
+  await sp.getByRole("button", { name: "Reserve gift", exact: true }).click();
   await expect(
-    sp
-      .getByRole("status")
-      .filter({
-        hasText:
-          "Reserved. Open Buying to record your purchase or release the reservation.",
-      }),
+    sp.getByRole("status").filter({
+      hasText:
+        "Gift reserved. Open Buying to mark it as purchased or cancel your reservation.",
+    }),
   ).toBeVisible();
   await sp
     .getByLabel("Your note", { exact: true })
@@ -85,9 +83,7 @@ test("desktop and mobile screens are usable without overflow", async ({
   await mkdir("test-results/visual", { recursive: true });
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto("/");
-  await expect(
-    page.getByRole("heading", { name: "Come on in." }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Come on in" })).toBeVisible();
   await page.screenshot({
     path: "test-results/visual/login-desktop.png",
     fullPage: true,
@@ -109,7 +105,7 @@ test("desktop and mobile screens are usable without overflow", async ({
     .first()
     .click();
   await expect(
-    page.getByRole("heading", { name: "Your little hints" }),
+    page.getByRole("heading", { name: "Your wish lists" }),
   ).toBeVisible();
   await page
     .getByRole("button", { name: "Create a list", exact: true })
@@ -121,9 +117,7 @@ test("desktop and mobile screens are usable without overflow", async ({
   await page.getByRole("button", { name: "Close dialog" }).click();
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
-  await expect(
-    page.getByRole("heading", { name: /A little thought,/ }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Hi,/ })).toBeVisible();
   await expect
     .poll(() =>
       page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
@@ -277,10 +271,10 @@ test("passkey registration and sign-in through a virtual platform authenticator"
   await page
     .getByRole("button", { name: "Add a passkey", exact: true })
     .click();
-  await expect(page.getByLabel("Passkey label", { exact: true })).toHaveValue(
+  await expect(page.getByLabel("Passkey name", { exact: true })).toHaveValue(
     "Little Hint",
   );
-  await page.getByLabel("Passkey label", { exact: true }).fill("1Password");
+  await page.getByLabel("Passkey name", { exact: true }).fill("1Password");
   await mkdir("test-results/visual", { recursive: true });
   for (const [name, width, height] of [
     ["desktop", 1440, 1000],
@@ -310,8 +304,8 @@ test("passkey registration and sign-in through a virtual platform authenticator"
   await page
     .getByRole("button", { name: "Rename 1Password", exact: true })
     .click();
-  await page.getByLabel("Passkey label", { exact: true }).fill(label);
-  await page.getByRole("button", { name: "Save label", exact: true }).click();
+  await page.getByLabel("Passkey name", { exact: true }).fill(label);
+  await page.getByRole("button", { name: "Save name", exact: true }).click();
   await expect(
     page.getByRole("button", {
       name: `Rename ${label}`,
@@ -348,9 +342,7 @@ test("passkey registration and sign-in through a virtual platform authenticator"
   await page
     .getByRole("button", { name: "Sign in with a passkey", exact: true })
     .click();
-  await expect(
-    page.getByRole("heading", { name: /A little thought,/ }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Hi,/ })).toBeVisible();
   expect(
     (await (await page.request.get("/api/v1/world")).json()).me.email,
   ).toBe("sam@example.test");
@@ -410,7 +402,7 @@ test("administrators control automatic photos without affecting manual uploads",
   await login(page, "alex@example.test");
   await page.goto("/settings?section=admin");
   const toggle = page.getByRole("checkbox", {
-    name: "Automatically import product photos",
+    name: "Add photos from shop links automatically",
     exact: true,
   });
   await expect(toggle).not.toBeChecked();
@@ -466,7 +458,7 @@ test("administrators control automatic photos without affecting manual uploads",
       await memberPage.goto("/settings?section=admin");
       await expect(
         memberPage.getByRole("checkbox", {
-          name: "Automatically import product photos",
+          name: "Add photos from shop links automatically",
         }),
       ).toHaveCount(0);
       expect(

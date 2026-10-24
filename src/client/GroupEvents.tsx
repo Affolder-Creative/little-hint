@@ -38,8 +38,8 @@ export function EventForm({
   if (!group)
     return (
       <p>
-        Event management is no longer available. Close this form and refresh
-        your family groups.
+        You can no longer manage events in this family group. Close this form
+        and refresh the page.
       </p>
     );
   return (
@@ -57,7 +57,7 @@ export function EventForm({
       onSubmit={async (form) => {
         if (participants.some((id) => !people.some((p) => p.id === id)))
           throw new Error(
-            "Family-group membership changed. Close and reopen this form to choose current members.",
+            "The people in this family group have changed. Reopen this form to choose from the current members.",
           );
         const result = await mutate<{ id: string }>(
           event ? "group-events/update" : "group-events",
@@ -175,7 +175,7 @@ export function EventForm({
           ))}
           {event && (
             <small>
-              Removing someone archives their list and keeps its gifts and
+              Removing someone archives their list and keeps its items and
               purchase history shared with the family group. Re-adding them
               restores the same list.
             </small>
@@ -240,7 +240,7 @@ export function EventLeadersForm({ group }: { group: Group }) {
       <p className="muted">
         Event leaders manage event settings and participants. Only the family
         group owner manages membership and appoints leaders. People still edit
-        their own gifts.
+        their own wish-list items.
       </p>
     </Form>
   );
@@ -380,7 +380,7 @@ function EventArchiveForm({ event }: { event: GroupEvent }) {
       <p>
         {event.archived
           ? "Restore lists for current participants. Removed participants’ lists stay archived. The automatic archive date will be cleared."
-          : "Archive every list in this event. Existing gifts and purchase history stay available; new gifts and reservations stop."}
+          : "Archive every list in this event. Existing items and purchase history are kept. No one can add items or make new reservations."}
       </p>
     </Form>
   );
@@ -467,11 +467,11 @@ export function EventPage() {
       </Header>
       <p className="muted">
         Shared with everyone in {group.name}. Each person manages their own
-        gifts.
+        wish-list items.
       </p>
       {event.archived && (
         <p className="notice">
-          This event is archived. Gifts and purchase history are preserved.
+          This event is archived. Items and purchase history are kept.
         </p>
       )}
       {!event.archived && event.archiveAfter && (
@@ -519,7 +519,7 @@ export function ManagedEventNotice({ list }: { list: List }) {
     <div className="managed-event-notice">
       <p>
         Wish list for {names}. Event leaders manage this list’s settings; the
-        recipient or their guardian manages the gifts.
+        recipient or the person managing their profile edits the items.
       </p>
       {event && (
         <Link className="text-button" to={`/events/${event.id}`}>

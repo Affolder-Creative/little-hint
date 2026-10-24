@@ -74,12 +74,12 @@ export async function login(page: Page, email: string) {
   // isVisible() alone can race the initial loading screen with cached cookies.
   await expect(
     page
-      .getByRole("heading", { name: /A little thought,/ })
+      .getByRole("heading", { name: /Hi,/ })
       .or(page.getByLabel("Email address", { exact: true })),
   ).toBeVisible();
   if (
     await page
-      .getByRole("heading", { name: /A little thought,/ })
+      .getByRole("heading", { name: /Hi,/ })
       .isVisible()
       .catch(() => false)
   )
@@ -111,9 +111,7 @@ export async function login(page: Page, email: string) {
     .toHaveLength(6);
   await page.getByLabel("Six-digit code").fill(code);
   await submitAuth(page, "Sign in", "/api/auth/sign-in/email-otp");
-  await expect(
-    page.getByRole("heading", { name: /A little thought,/ }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Hi,/ })).toBeVisible();
   expect(
     await page.evaluate(() =>
       sessionStorage.getItem("little-hint:pending-sign-in"),

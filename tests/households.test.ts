@@ -254,7 +254,7 @@ describe("household exchange exclusions", () => {
     }
     expect(() =>
       command(f.s, f.actors[0], "exchanges.draw", { ...e, revision: 1 }),
-    ).toThrow("relax household");
+    ).toThrow("allow more people to draw each other");
     expect(f.s.exchanges[0].status).toBe("draft");
     const draft = f.exchange();
     draft.excludeHousehold = false;

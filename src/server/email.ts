@@ -31,23 +31,23 @@ export function renderEmail(message: EmailMessage, appUrl: string) {
   const subject = isCode
     ? "Your Little Hint sign-in code"
     : invitation
-      ? "Your Little Hint invitation"
-      : "An update in Little Hint";
+      ? "You're invited to Little Hint"
+      : "A little update from Little Hint";
   const heading = isCode
     ? "Your sign-in code"
     : invitation
-      ? "You're invited."
-      : "A little update for you.";
+      ? "You're invited"
+      : "A little update for you";
   const preview = isCode
     ? "Use this code to sign in to Little Hint. It is valid for 10 minutes."
     : invitation
-      ? "Your invitation is ready in Little Hint."
+      ? "Your people are waiting. Open your Little Hint invitation."
       : "Open Little Hint to see what's new.";
   const text = isCode
     ? `Your Little Hint sign-in code is ${message.code}. It expires in 10 minutes. If you did not request it, ignore this email.`
     : `${message.text} ${url.href}`;
   const content = isCode
-    ? `<p style="margin:0 0 24px">Enter this code on the sign-in page to come on in.</p>
+    ? `<p style="margin:0 0 24px">Enter this code to sign in to Little Hint.</p>
       <div style="background:#f4e4da;border:1px solid #e6d9cf;border-radius:8px;padding:20px 12px;text-align:center;margin:0 0 20px">
         <span style="font-size:32px;line-height:1.3;font-weight:600;letter-spacing:6px;color:#2b201d">${escapeHtml(message.code)}</span>
       </div>

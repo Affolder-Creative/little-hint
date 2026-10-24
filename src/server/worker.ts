@@ -47,7 +47,7 @@ await boss.work<{ id: string }>(
           const row = s.imports.find((i) => i.id === j.id)!;
           row.status = "failed";
           row.error =
-            "Preview unavailable. Add the gift manually or try another product URL.";
+            "We could not get details from that shop. You can still enter them yourself.";
           row.revision++;
         });
       }

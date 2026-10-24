@@ -7,17 +7,14 @@
     <title>Little Hint · Gift ideas, shared thoughtfully.</title>
     <meta
       name="description"
-      content="A self-hosted, invite-only gift coordination app for family and friends. Share wish lists, coordinate purchases, and keep the surprise."
+      content="Save what you would love, share wish lists, and plan gifts with friends and family. Host your own Little Hint app and invite your people."
     />
     <link rel="canonical" href="https://kaffolder7.github.io/little-hint/" />
     <meta property="og:type" content="website" />
-    <meta
-      property="og:title"
-      content="Little Hint · A little thought. A lovely surprise."
-    />
+    <meta property="og:title" content="Little Hint · Go ahead. Drop a hint." />
     <meta
       property="og:description"
-      content="Wish lists, gift ideas, and quiet coordination for your favorite people. Self-hosted. Invite-only."
+      content="Save what you would love. Take a hint from your people. Share wish lists and plan gifts together."
     />
     <meta
       property="og:url"
@@ -31,7 +28,7 @@
     <meta property="og:image:height" content="630" />
     <meta
       property="og:image:alt"
-      content="Little Hint. A little thought. A lovely surprise. Share wish lists and keep the surprise."
+      content="Little Hint. Go ahead. Drop a hint. Share wish lists and plan gifts together."
     />
     <meta name="twitter:card" content="summary_large_image" />
     <link rel="icon" type="image/svg+xml" href="assets/brand/favicon.svg" />
@@ -95,7 +92,7 @@
       /></a>
       <nav aria-label="Main navigation">
         <a href="#features">Features</a>
-        <a href="#self-host">Self-host</a>
+        <a href="#self-host">Set up</a>
         <a href="https://github.com/kaffolder7/little-hint"
           >GitHub
           <svg class="icon" aria-hidden="true"><use href="#github" /></svg
@@ -106,17 +103,17 @@
     <main id="main">
       <section class="hero wrap" aria-labelledby="hero-title">
         <h1 id="hero-title">
-          A little thought.<br class="mobile-break" />
-          A lovely surprise.
+          Go ahead.<br class="mobile-break" />
+          Drop a hint.
         </h1>
         <p class="hero-description">
-          Wish lists, gift ideas, and quiet coordination for your favorite
-          people.
+          Save what you would love, take a hint from your people, and plan gifts
+          together.
         </p>
-        <p class="hero-note">Self-hosted. Invite-only. Made for your circle.</p>
+        <p class="hero-note">Host it yourself. Invite your people.</p>
         <div class="actions">
           <a class="button" href="#self-host"
-            >Self-host Little Hint
+            >Set up Little Hint
             <svg class="icon" aria-hidden="true"><use href="#arrow" /></svg
           ></a>
           <a
@@ -136,7 +133,7 @@
               src="assets/screens/home-desktop.webp"
               width="1920"
               height="1275"
-              alt="Little Hint on desktop: shared gift ideas for Sam, Jamie, and Riley, with available and taken-care-of statuses."
+              alt="Little Hint on desktop: wish-list items for Sam, Jamie, and Riley, showing which gifts are available to reserve."
               fetchpriority="high"
             />
           </div>
@@ -157,7 +154,7 @@
       <section id="features" class="features" aria-labelledby="features-title">
         <div class="wrap">
           <h2 id="features-title" class="visually-hidden">
-            Gift coordination for your circle
+            Gift plans for your people
           </h2>
           <div class="feature-pair">
             <article class="feature">
@@ -165,7 +162,7 @@
                 <img
                   src="assets/screens/buying-detail.webp"
                   width="700"
-                  height="396"
+                  height="492"
                   loading="lazy"
                   alt="The Buying view shows a pour-over set for Sam marked Purchased."
                 />
@@ -173,8 +170,9 @@
               <div class="feature-copy">
                 <h3>Keep the surprise.</h3>
                 <p>
-                  Reserve a gift and mark it purchased. Buying details stay
-                  hidden from recipients on Surprise lists.
+                  Reserve a gift so others know it is covered. Choose Keep it a
+                  surprise to hide buying plans from the recipient. Decide
+                  before sharing whether to reveal a gift summary later.
                 </p>
               </div>
             </article>
@@ -183,9 +181,9 @@
                 <img
                   src="assets/screens/exchange-mobile.webp"
                   width="700"
-                  height="568"
+                  height="608"
                   loading="lazy"
-                  alt="A secret exchange shows Alex only their own assignment: give to Sam."
+                  alt="A secret gift exchange shows Alex who they drew: Sam."
                 />
               </div>
               <div class="feature-copy">
@@ -194,7 +192,7 @@
                   Draw names for a secret exchange, or chip in on a shared gift.
                 </p>
                 <p class="contribution-note">
-                  Track contributions. Payments happen outside Little Hint.
+                  Keep track of contributions here. Send money separately.
                 </p>
               </div>
             </article>
@@ -226,13 +224,14 @@
         class="self-host wrap"
         aria-labelledby="self-host-title"
       >
-        <h2 id="self-host-title">Your circle. Your server.</h2>
+        <h2 id="self-host-title">Your own Little Hint</h2>
         <p class="section-description">
-          Host Little Hint, invite your people, and start sharing ideas.
+          Set up a private Little Hint app, invite your people, and start
+          sharing wish lists.
         </p>
         <p class="hosting-detail">
-          Deploy with Docker Compose, PostgreSQL, HTTPS, and SMTP for sign-in
-          emails.
+          You will need a server and an email service for sign-in codes. The
+          setup guide covers Docker Compose, PostgreSQL, HTTPS, and email.
         </p>
         <div class="actions">
           <a
@@ -242,7 +241,7 @@
             <svg class="icon" aria-hidden="true"><use href="#arrow" /></svg
           ></a>
           <a class="text-link" href="https://github.com/kaffolder7/little-hint"
-            >Explore the repository
+            >View the source code
             <svg class="icon" aria-hidden="true"><use href="#github" /></svg
           ></a>
         </div>

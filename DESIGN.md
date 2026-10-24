@@ -208,7 +208,7 @@ Desktop navigation combines outlined SVG icons with labels. Muted inactive links
 
 ### Privacy and feedback
 
-Privacy badges combine a lock or eye SVG with the words Surprise or Transparent. Native modal dialogs have a sticky title and close control. New lists and events require an explicit Surprise or Transparent choice. Optional archive and reveal dates are collapsed until needed. Reveal-date guidance applies to all lists; the exchange checkbox clearly adds secret exchange purchases and giver names to the summary. Labels keep their help text accessible through described-by relationships. Empty states reuse the approved heart tag with a heading, explanation, and optional action. Installation guidance uses the approved app icon and normal action controls. Reduced-motion preference disables animations and transitions; normal motion is limited to a loading spinner and a brief toast arrival.
+Privacy badges combine a lock or eye SVG with Keep it a surprise or See the plans. Native modal dialogs have a sticky title and close control. New lists and events require an explicit Keep it a surprise or See the plans choice. Optional archive and reveal dates are collapsed until needed. Reveal-date guidance applies to all lists; the exchange checkbox clearly adds secret exchange purchases and giver names to the summary. Labels keep their help text accessible through described-by relationships. Empty states reuse the approved heart tag with a heading, explanation, and optional action. Installation guidance uses the approved app icon and normal action controls. Reduced-motion preference disables animations and transitions; normal motion is limited to a loading spinner and a brief toast arrival.
 
 ### Sign-in
 

@@ -127,7 +127,7 @@ describe("notification privacy and recovery", () => {
     expect(mail.html).not.toContain("Private gift");
     expect(mail.html).toContain("Open Little Hint");
     expect(mail.html).toContain(`/gift/${f.notice.itemId}`);
-    expect(mail.subject).toBe("An update in Little Hint");
+    expect(mail.subject).toBe("A little update from Little Hint");
     expect(mail.attachments[0].cid).toBe("little-hint-logo");
     await deliverNotice(f.notice.id);
     expect(mock.sendMail).toHaveBeenCalledTimes(2);

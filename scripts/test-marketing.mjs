@@ -56,7 +56,7 @@ try {
       });
     await page.getByRole("link", { name: "Features", exact: true }).click();
     assert.ok(page.url().endsWith("#features"));
-    await page.getByRole("link", { name: "Self-host", exact: true }).click();
+    await page.getByRole("link", { name: "Set up", exact: true }).click();
     assert.ok(page.url().endsWith("#self-host"));
   }
   await page.goto(url);
@@ -71,7 +71,7 @@ try {
   const plain = await noJS.newPage();
   await plain.goto(url);
   assert.ok(await plain.getByRole("heading", { level: 1 }).isVisible());
-  await plain.getByRole("link", { name: "Self-host", exact: true }).click();
+  await plain.getByRole("link", { name: "Set up", exact: true }).click();
   assert.ok(plain.url().endsWith("#self-host"));
   assert.deepEqual(failures, []);
   console.log(

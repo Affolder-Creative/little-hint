@@ -231,7 +231,7 @@ test("list dates lock at sharing, archives restore, and controls fit desktop and
     .fill("2099-10-18");
   await page.getByLabel("Archive after", { exact: true }).fill("2099-10-20");
   await page
-    .getByLabel("List timezone", { exact: true })
+    .getByLabel("List time zone", { exact: true })
     .selectOption("America/New_York");
   await page
     .getByLabel("Include secret exchange gifts and giver names", {
@@ -282,7 +282,7 @@ test("list dates lock at sharing, archives restore, and controls fit desktop and
     page.getByRole("radio", { name: /See the plans/ }),
   ).toBeChecked();
   await expect(
-    page.getByLabel("List timezone", { exact: true }),
+    page.getByLabel("List time zone", { exact: true }),
   ).toBeDisabled();
   await expect(
     page.getByLabel("Include secret exchange gifts and giver names", {
@@ -556,7 +556,9 @@ test("gift summaries are owner-only, omit financial data, and remain available i
   const list = await post(page, "lists", {
     name: `Past celebration ${Date.now()}`,
     ownerIds: [world.people.find((p: any) => p.userId === world.me.id).id],
-    groupIds: [world.groups[0].id],
+    groupIds: [
+      world.groups.find((g: any) => g.name === "The Morgan circle").id,
+    ],
     mode: "surprise",
     revealAfter: "2020-01-01",
     timeZone: "UTC",
@@ -672,11 +674,11 @@ test("provider selection is editable without exposing API keys", async ({
   await login(page, "alex@example.test");
   await page.goto("/settings?section=admin");
   const section = page.locator("details").filter({
-    has: page.locator("summary", { hasText: "Product import provider" }),
+    has: page.locator("summary", { hasText: "Service for shop details" }),
   });
   await section.locator("summary").click();
   await section
-    .getByLabel("Paid import provider", { exact: true })
+    .getByLabel("Paid service for shop details", { exact: true })
     .selectOption("scrapingfish");
   await section
     .getByRole("button", { name: "Save setting", exact: true })
@@ -709,7 +711,7 @@ test("provider selection is editable without exposing API keys", async ({
     ).toBe(true);
   }
   await section
-    .getByLabel("Paid import provider", { exact: true })
+    .getByLabel("Paid service for shop details", { exact: true })
     .selectOption("none");
   await section
     .getByRole("button", { name: "Save setting", exact: true })

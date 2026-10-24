@@ -157,14 +157,14 @@ export async function saveSetting(k: string, value: string) {
   if (!photoPreference && deploymentEnvironment() === "staging")
     fail(
       409,
-      "Staging integrations are fixed to the private test inbox; external providers are disabled.",
+      "This test app uses a private email inbox. External services are turned off.",
     );
   if (!photoPreference && !settingKeys.includes(k as SettingKey))
     fail(400, "Unknown setting.");
   if (photoPreference ? productPhotoOverride() !== undefined : process.env[k])
-    fail(409, "This setting is controlled by an environment variable.");
+    fail(409, "This value is set on the server. Change it there instead.");
   if (k === "SCRAPING_PROVIDER" && value && !scrapingSelections.includes(value))
-    fail(400, "Choose an available scraping provider.");
+    fail(400, "Choose an available service for shop details.");
   if (k === "PAID_DAILY_LIMIT" && !/^\d{1,6}$/.test(value))
     fail(400, "Use a daily request limit from 0 to 999999.");
   if (k === "SMTP_PORT" && !/^\d{1,5}$/.test(value))
@@ -192,7 +192,10 @@ export async function spend(service: string) {
       s.usage.push(row);
     }
     if (!Number.isFinite(limit) || row.count >= limit)
-      fail(429, "The integration daily limit has been reached.");
+      fail(
+        429,
+        "The daily limit for paid requests has been reached. Try again tomorrow or ask the app administrator to review the limit.",
+      );
     row.count++;
     row.revision++;
   });

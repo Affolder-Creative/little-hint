@@ -1,3 +1,9 @@
+import {
+  actionError,
+  contributionStatus,
+  settingLabels,
+  settingSources,
+} from "./copy";
 import { SettingsNavigation, settingsSections } from "./SettingsNavigation";
 import { Confirm } from "./Confirm";
 import { familyGroupLabel } from "../shared/households";
@@ -206,7 +212,7 @@ export function App() {
       <div className="loading-screen">
         <Logo dark={dark} />
         <h1>We couldn’t open Little Hint.</h1>
-        <p>{query.error?.message}</p>
+        <p>{actionError(query.error)}</p>
         <button className="button" onClick={() => query.refetch()}>
           Try again
         </button>
@@ -258,8 +264,8 @@ export function App() {
               alt=""
             />
             <p>
-              A little thought.
-              <br />A lovely surprise.
+              A little hint.
+              <br />A thoughtful gift.
             </p>
           </div>
           <NavLink className="settings-link" to="/settings">
@@ -297,12 +303,12 @@ export function App() {
                 <Settings size={20} />
               </Link>
               <button
-                aria-label="Add a gift"
+                aria-label="Add item"
                 className="button small"
                 onClick={() =>
                   world.lists.some((l) => l.canEdit && !l.archived)
                     ? setModal({
-                        title: "Drop a little hint",
+                        title: "Add item",
                         body: <GiftForm />,
                       })
                     : setModal({
@@ -312,23 +318,23 @@ export function App() {
                 }
               >
                 <Plus size={18} />
-                <span>Add a gift</span>
+                <span>Add item</span>
               </button>
             </div>
           </header>
           {!online && (
             <div className="offline-banner">
               <WifiOff size={17} />
-              You’re offline. Shared data may be out of date. Reconnect to
-              reserve, buy, or save shared changes.
+              You are offline. Lists and gift plans may have changed. Reconnect
+              to reserve gifts, update purchases, or save changes.
             </div>
           )}
           {(world.environment === "staging" ||
             world.me.email.endsWith("@example.test")) && (
             <div className="demo-banner">
               {world.environment === "staging"
-                ? "Staging · Synthetic data · Email captured in test inbox"
-                : "Illustrative demo data · Development instance"}
+                ? "Test version · Sample data · Emails go to a test inbox"
+                : "Demo version · Sample data"}
             </div>
           )}
           <main id="main" tabIndex={-1}>
@@ -432,10 +438,10 @@ function OfflineDrafts({ dark }: { dark: boolean }) {
           }}
         >
           <h2>Keep a thought for later</h2>
-          <Field label="Gift name">
+          <Field label="Item name">
             <input name="title" required />
           </Field>
-          <Field label="Product URL">
+          <Field label="Product link">
             <input name="url" type="url" />
           </Field>
           <Field label="Notes">
@@ -449,8 +455,8 @@ function OfflineDrafts({ dark }: { dark: boolean }) {
         </Form>
       ) : (
         <p>
-          Enable personal drafts in Settings while online to save your own gift
-          ideas here.
+          Turn on personal drafts in Settings while online to save items for
+          your own wish lists here.
         </p>
       )}
       <button className="button secondary" onClick={() => location.reload()}>
@@ -462,8 +468,8 @@ function OfflineDrafts({ dark }: { dark: boolean }) {
       {clearing && (
         <Modal title="Clear this device?" onClose={() => setClearing(false)}>
           <p>
-            This deletes your saved personal drafts and local preferences on
-            this device. Your account and shared lists stay on the server.
+            This deletes personal drafts saved on this device. Your account and
+            saved wish lists are kept.
           </p>
           <div className="actions">
             <button
@@ -479,7 +485,7 @@ function OfflineDrafts({ dark }: { dark: boolean }) {
                 location.reload();
               }}
             >
-              Delete local data
+              Delete saved drafts
             </button>
           </div>
         </Modal>
@@ -565,7 +571,7 @@ function Action({
           try {
             await onClick();
           } catch (e) {
-            setError((e as Error).message);
+            setError(actionError(e));
           } finally {
             setBusy(false);
           }
@@ -584,14 +590,16 @@ function Action({
 }
 function Browser({
   items,
-  emptyTitle = "A little inspiration starts here",
-  emptyText = "Add a wish or ask your people to share their lists.",
+  emptyTitle = "No items to show yet",
+  emptyText = "Add an item to your wish list, or ask your people to share theirs.",
   emptyAction,
+  searchLabel = "Search items and gift ideas",
 }: {
   items: GiftView[];
   emptyTitle?: string;
   emptyText?: string;
   emptyAction?: ReactNode;
+  searchLabel?: string;
 }) {
   const [search, setSearch] = useState(""),
     [tag, setTag] = useState(""),
@@ -614,8 +622,8 @@ function Browser({
         <label className="search">
           <Search size={18} />
           <input
-            aria-label="Search gifts"
-            placeholder="Find a gift, person, or idea"
+            aria-label={searchLabel}
+            placeholder="Search by name, person, or tag"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -649,7 +657,7 @@ function Browser({
         </div>
       ) : (
         <Empty
-          title={items.length ? "No gifts match your filters" : emptyTitle}
+          title={items.length ? "No matches found" : emptyTitle}
           action={
             items.length ? (
               <button
@@ -668,7 +676,7 @@ function Browser({
           }
         >
           {items.length
-            ? "Try a different search, or clear your filters to see all gifts."
+            ? "Try another search, or clear your filters to see everything."
             : emptyText}
         </Empty>
       )}
@@ -684,8 +692,8 @@ function Home() {
   return (
     <>
       <Header
-        title={`A little thought, ${world.me.name.split(" ")[0]}.`}
-        description="Good things for the people you know best."
+        title={`Hi, ${world.me.name.split(" ")[0]}.`}
+        description="A few hints from your favorite people."
       />
       <Install />
       {incoming && <Invitations />}
@@ -695,19 +703,19 @@ function Home() {
             {!world.groups.length
               ? "Start with your people"
               : others.length
-                ? "From your circle"
-                : "Your wishes"}
+                ? "From your people"
+                : "Your wish lists"}
           </h2>
           <p>
             {!world.groups.length
               ? "Create a family group to share wishes and plan gifts together."
               : others.length
                 ? "A few things they’ve been wishing for."
-                : "Your gift ideas, ready to share with your people."}
+                : "A little hint about what you would love."}
           </p>
         </div>
         <Link className="text-button" to="/people">
-          Meet your people <ArrowRight size={16} />
+          View your people <ArrowRight size={16} />
         </Link>
       </div>
       {!world.groups.length ? (
@@ -716,7 +724,7 @@ function Home() {
           action={
             <button
               className="button"
-              onClick={() => open("Create your circle", <GroupForm />)}
+              onClick={() => open("Create a family group", <GroupForm />)}
             >
               <Plus size={17} />
               Create a family group
@@ -742,7 +750,7 @@ function People() {
     <>
       <Header
         title="Your people"
-        description="A little closer to finding their perfect gift."
+        description="Take a hint from their wish lists, or save an idea for them."
       >
         <button
           className="button secondary"
@@ -767,7 +775,7 @@ function People() {
               <h2>{p.name}</h2>
               <p>
                 {p.userId === world.me.id
-                  ? "Your wishes"
+                  ? "Your wish lists"
                   : p.guardians.includes(world.me.id)
                     ? "Managed by you"
                     : "Wishes & gift ideas"}
@@ -810,8 +818,10 @@ function PersonPage() {
         title={person.name}
         description={
           own
-            ? "Make it easier for your people to choose something you’ll love."
-            : "Thoughtful gifts begin with knowing someone."
+            ? person.userId === world.me.id
+              ? "Help your people choose something you would love."
+              : `Manage wish lists for ${person.name}.`
+            : `A few hints about what ${person.name} would love.`
         }
       >
         {own ? (
@@ -825,18 +835,21 @@ function PersonPage() {
           <button
             className="button"
             onClick={() =>
-              open(`An idea for ${person.name}`, <GiftForm recipientId={id} />)
+              open(
+                `Gift idea for ${person.name}`,
+                <GiftForm recipientId={id} />,
+              )
             }
           >
             <Plus size={17} />
-            Add an idea
+            Add gift idea
           </button>
         )}
       </Header>
       <div
         className="tabs"
         role="tablist"
-        aria-label="Gift types"
+        aria-label="Items and gift ideas"
         onKeyDown={(event) => {
           if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key))
             return;
@@ -864,10 +877,10 @@ function PersonPage() {
             onClick={() => setTab(key)}
           >
             {key === "ideas"
-              ? `Ideas for ${person.name.split(" ")[0]}`
+              ? `Gift ideas for ${person.name.split(" ")[0]}`
               : person.userId === world.me.id
-                ? "My wishes"
-                : "Their wishes"}
+                ? "On my wish lists"
+                : "On their wish lists"}
           </button>
         ))}
       </div>
@@ -879,16 +892,17 @@ function PersonPage() {
       >
         <Browser
           key={`${id}-${tab}`}
+          searchLabel={tab === "ideas" ? "Search gift ideas" : "Search items"}
           emptyTitle={
             tab === "ideas"
               ? `No gift ideas for ${person.name} yet`
-              : "No wishes shared yet"
+              : "No wish-list items shared yet"
           }
           emptyText={
             tab === "ideas"
               ? "Save an idea here and choose who can see it."
               : own
-                ? "Add a gift to a wish list to get started."
+                ? "Add an item to a wish list to get started."
                 : "Ask them to share a wish list with your family group."
           }
           emptyAction={
@@ -897,12 +911,12 @@ function PersonPage() {
                 className="button"
                 onClick={() =>
                   open(
-                    `An idea for ${person.name}`,
+                    `Gift idea for ${person.name}`,
                     <GiftForm recipientId={id} />,
                   )
                 }
               >
-                Add an idea
+                Add gift idea
               </button>
             ) : undefined
           }
@@ -960,7 +974,7 @@ function Lists() {
           {list.canEdit
             ? "My lists"
             : (world.people.find((p) => p.id === list.ownerIds[0])?.name ??
-              "Their wishes")}
+              "On their wish lists")}
         </Link>
         <Header title={list.name} description={list.description}>
           <Privacy mode={list.mode} />
@@ -992,11 +1006,11 @@ function Lists() {
                 <button
                   className="button"
                   onClick={() =>
-                    open("Drop a little hint", <GiftForm listId={list.id} />)
+                    open("Add item", <GiftForm listId={list.id} />)
                   }
                 >
                   <Plus size={17} />
-                  Add a gift
+                  Add item
                 </button>
               )}
             </>
@@ -1015,7 +1029,7 @@ function Lists() {
               aria-pressed={!showSummary}
               onClick={() => setShowSummary(false)}
             >
-              Wishes
+              Items
             </button>
             <button
               aria-pressed={showSummary}
@@ -1028,15 +1042,30 @@ function Lists() {
         {showSummary && list.canEdit && list.revealAvailable ? (
           <GiftSummaryPanel listId={list.id} />
         ) : (
-          <Browser items={world.items.filter((i) => i.listId === list.id)} />
+          <Browser
+            items={world.items.filter((i) => i.listId === list.id)}
+            searchLabel="Search items"
+            emptyTitle={
+              list.canEdit && !list.archived
+                ? "Something in mind?"
+                : "No items yet"
+            }
+            emptyText={
+              list.archived
+                ? "This archived wish list has no items."
+                : list.canEdit
+                  ? "Add your first item to this wish list."
+                  : "Check back when they have added a few hints."
+            }
+          />
         )}
       </>
     );
   return (
     <>
       <Header
-        title="Your little hints"
-        description="Things you’d love, in lists that feel like you."
+        title="Your wish lists"
+        description="A little hint about what you’d love."
       >
         {(mine.length > 0 || showArchived) && (
           <button
@@ -1068,9 +1097,9 @@ function Lists() {
         .filter((l) => l.archived === showArchived)
         .map((l) => (
           <div className="invitation" key={l.id}>
-            <p>You’re invited to co-own “{l.name}”.</p>
+            <p>You are invited to share ownership of “{l.name}”.</p>
             <Action onClick={() => mutate("lists/accept", { id: l.id })}>
-              Accept co-ownership
+              Accept shared ownership
             </Action>
           </div>
         ))}
@@ -1120,7 +1149,7 @@ function Lists() {
         </Empty>
       ) : (
         <Empty
-          title="Leave your first little hint"
+          title="Start your first wish list"
           action={
             <button
               className="button"
@@ -1130,8 +1159,7 @@ function Lists() {
             </button>
           }
         >
-          A book you’ve been meaning to read. Something for a hobby. A small
-          everyday joy.
+          Create a wish list, then add a few things you would love.
         </Empty>
       )}
     </>
@@ -1146,10 +1174,10 @@ function GiftDetail() {
   if (!gift)
     return (
       <Empty
-        title="Gift not found"
+        title="Item not found"
         action={
           <Link className="button secondary" to="/">
-            Browse gifts
+            Browse wish lists
           </Link>
         }
       >
@@ -1175,7 +1203,7 @@ function GiftDetail() {
         to={gift.listId ? `/lists/${gift.listId}` : "/"}
       >
         <ArrowLeft size={16} />
-        Back to gifts
+        {gift.listId ? "Back to wish list" : "Back to Home"}
       </Link>
       <div className="gift-detail">
         <GiftPhoto gift={gift} />
@@ -1191,7 +1219,7 @@ function GiftDetail() {
               : gift.isRecipient
                 ? gift.mode === "surprise"
                   ? "On your list · Buying plans stay a surprise"
-                  : "On your list · Purchase activity is visible"
+                  : "On your list · You can see the gift plans"
                 : gift.available
                   ? `${gift.available} available to reserve`
                   : "Taken care of"}
@@ -1229,19 +1257,28 @@ function GiftDetail() {
           {gift.canEdit && (
             <button
               className="text-button"
-              onClick={() => open("Edit this gift", <GiftForm gift={gift} />)}
+              onClick={() =>
+                open(
+                  gift.listId ? "Edit item" : "Edit gift idea",
+                  <GiftForm gift={gift} />,
+                )
+              }
             >
-              Edit gift
+              {gift.listId ? "Edit item" : "Edit gift idea"}
             </button>
           )}
           {gift.archived ? (
-            <p className="notice">This gift is archived.</p>
+            <p className="notice">
+              {gift.listId
+                ? "This item is archived."
+                : "This gift idea is archived."}
+            </p>
           ) : gift.isRecipient ? (
             <p className="privacy-note">
               <LockKeyhole size={18} />
               {gift.mode === "surprise"
                 ? "The rest is a surprise. Your people will take it from here."
-                : "You can follow purchase activity below."}
+                : "You can see who is reserving and buying this gift below."}
             </p>
           ) : (
             <div className="reserve-panel">
@@ -1254,7 +1291,7 @@ function GiftDetail() {
               <p>
                 {gift.available
                   ? `${gift.available} available to reserve. Let your people know you have this one covered.`
-                  : "Your circle has reserved the requested quantity."}
+                  : "All requested items have been reserved."}
               </p>
               {!!gift.available && (
                 <>
@@ -1274,7 +1311,7 @@ function GiftDetail() {
                           value={exchange}
                           onChange={(e) => setExchange(e.target.value)}
                         >
-                          <option value="">An ordinary gift</option>
+                          <option value="">Not part of an exchange</option>
                           {choices.map((c) => (
                             <option key={c.key} value={c.key}>
                               {c.label}
@@ -1294,12 +1331,12 @@ function GiftDetail() {
                         giverId: c?.giver,
                       });
                       toast(
-                        "Reserved. Open Buying to record your purchase or release the reservation.",
+                        "Gift reserved. Open Buying to mark it as purchased or cancel your reservation.",
                       );
                     }}
                   >
                     <ShoppingBag size={16} />
-                    I’ll get this
+                    Reserve gift
                   </Action>
                 </>
               )}
@@ -1333,7 +1370,7 @@ function GiftDetail() {
                 )}
                 {r.poolTargetCents && (
                   <p>
-                    Pool target {dollars(r.poolTargetCents)} ·{" "}
+                    Contribution goal {dollars(r.poolTargetCents)} ·{" "}
                     {dollars(
                       (r.contributions ?? [])
                         .filter((c) => c.status !== "cancelled")
@@ -1354,7 +1391,7 @@ function GiftDetail() {
                     open(
                       "Contribute to this gift",
                       <Form
-                        submit="Pledge contribution"
+                        submit="Save contribution"
                         onSubmit={async (f) => {
                           await mutate("contributions", {
                             reservationId: r.id,
@@ -1363,15 +1400,15 @@ function GiftDetail() {
                             ),
                           });
                           toast(
-                            "Contribution pledged. Arrange payment with the purchaser.",
+                            "Contribution saved. Send your payment to the person buying the gift.",
                           );
                           close();
                         }}
                       >
                         <p>
                           <strong>{gift.title}</strong> · For{" "}
-                          {gift.recipientNames.join(" & ")} · Purchased by{" "}
-                          {r.buyerName}
+                          {gift.recipientNames.join(" & ")} · Person buying the
+                          gift: {r.buyerName}
                         </p>
                         <Field label="Contribution in USD">
                           <input
@@ -1383,8 +1420,9 @@ function GiftDetail() {
                           />
                         </Field>
                         <p>
-                          Arrange payment outside Little Hint. The purchaser
-                          will confirm receipt.
+                          Little Hint does not send money. Pay the person buying
+                          the gift separately, then mark your contribution as
+                          sent.
                         </p>
                       </Form>,
                     )
@@ -1400,11 +1438,13 @@ function GiftDetail() {
       {gift.comments && (
         <section className="detail-section discussion">
           <h2>
-            <MessageCircle size={21} />A quiet word with the givers
+            <MessageCircle size={21} />
+            Private notes
           </h2>
           <p className="muted">
             The recipient cannot see this conversation. Notes from an exchange
-            giver are visible only to that giver and their guardians.
+            giver are visible only to that giver and anyone managing their
+            profile.
           </p>
           {gift.comments.length ? (
             gift.comments.map((c) => (
@@ -1448,8 +1488,8 @@ function Buying() {
   return (
     <>
       <Header
-        title="A little something for them"
-        description="Your reserved gifts and contributions, all in one place."
+        title="Your gift plans"
+        description="Keep track of gifts you’re buying and helping pay for."
       />
       {world.buying.some((r) => r.quantity > 0) ? (
         <div className="buying-list">
@@ -1497,12 +1537,12 @@ function Buying() {
                           purchased: 1,
                         });
                         toast(
-                          "Marked purchased. You can change this with Update purchase.",
+                          "Marked as purchased. Use Update purchase if your plans change.",
                         );
                       }}
-                      label={`Mark ${r.titleSnapshot} purchased`}
+                      label={`Mark ${r.titleSnapshot} as purchased`}
                     >
-                      Mark purchased
+                      Mark as purchased
                     </Action>
                   )}
                   <button
@@ -1540,9 +1580,9 @@ function Buying() {
                             />
                           </Field>
                           <p>
-                            Marking a gift purchased keeps it covered so nobody
-                            else buys it. Use Release if you are no longer
-                            getting it.
+                            Mark what you have bought so others know it is
+                            covered. If your plans change, choose Cancel
+                            reservation.
                           </p>
                         </Form>,
                       )
@@ -1557,7 +1597,7 @@ function Buying() {
                         open(
                           "Share the cost",
                           <Form
-                            submit="Open contribution pool"
+                            submit="Save contribution goal"
                             onSubmit={async (f) => {
                               await mutate("reservations/update", {
                                 id: r.id,
@@ -1592,23 +1632,26 @@ function Buying() {
                               />
                             </Field>
                             <p>
-                              You’ll purchase the gift and confirm contributions
-                              received outside Little Hint.
+                              You buy the gift and confirm when you receive each
+                              contribution. Little Hint does not collect or send
+                              money.
                             </p>
                           </Form>,
                         )
                       }
                     >
-                      {r.poolTargetCents ? "Edit pool" : "Share the cost"}
+                      {r.poolTargetCents
+                        ? "Edit contribution goal"
+                        : "Share the cost"}
                     </button>
                   )}
                   <button
                     className="text-button muted"
                     onClick={() =>
                       open(
-                        "Release reserved units",
+                        "Cancel reservation",
                         <Form
-                          submit="Release units"
+                          submit="Cancel selected quantity"
                           onSubmit={async (f) => {
                             const release = Number(value(f, "release"));
                             const qty = r.quantity - release;
@@ -1627,7 +1670,7 @@ function Buying() {
                               ? ` · For ${r.item.recipientNames.join(" & ")}`
                               : ""}
                           </p>
-                          <Field label="Units to release">
+                          <Field label="Quantity to cancel">
                             <input
                               name="release"
                               type="number"
@@ -1638,15 +1681,17 @@ function Buying() {
                             />
                           </Field>
                           <p>
-                            These units will become available to other buyers.
-                            This can also release units you previously marked
-                            purchased.
+                            The quantity you cancel becomes available for others
+                            to reserve. This also reduces the quantity marked as
+                            purchased if it is higher than your remaining
+                            reservation. It does not cancel a shop order or
+                            refund a payment.
                           </p>
                         </Form>,
                       )
                     }
                   >
-                    Release
+                    Cancel reservation
                   </button>
                 </div>
               </div>
@@ -1654,10 +1699,10 @@ function Buying() {
         </div>
       ) : (
         <Empty
-          title="Something thoughtful is waiting"
+          title="No gift plans yet"
           action={
             <Link className="button" to="/people">
-              Browse your people <ArrowRight size={16} />
+              View wish lists <ArrowRight size={16} />
             </Link>
           }
         >
@@ -1666,7 +1711,7 @@ function Buying() {
       )}
       {world.buying.some((r) => !r.quantity) && (
         <details className="detail-section">
-          <summary>Released gift history</summary>
+          <summary>Cancelled reservations</summary>
           {world.buying
             .filter((r) => !r.quantity)
             .map((r) => (
@@ -1674,7 +1719,7 @@ function Buying() {
                 <div>
                   <strong>{r.titleSnapshot}</strong>
                   <p>
-                    Released · originally reserved{" "}
+                    Cancelled · first reserved{" "}
                     {new Date(r.createdAt).toLocaleDateString()}
                   </p>
                 </div>
@@ -1700,7 +1745,7 @@ function Buying() {
                     {contributorName} contributing to {purchaserName}'s purchase
                   </p>
                   <p>
-                    {dollars(c.amountCents)} · {c.status}
+                    {dollars(c.amountCents)} · {contributionStatus[c.status]}
                     {c.userId === world.me.id ? " · Your contribution" : ""}
                   </p>
                 </div>
@@ -1715,7 +1760,7 @@ function Buying() {
                         })
                       }
                     >
-                      Mark sent
+                      Mark as sent
                     </Action>
                     <Action
                       secondary
@@ -1727,7 +1772,7 @@ function Buying() {
                         })
                       }
                     >
-                      Cancel pledge
+                      Cancel contribution
                     </Action>
                   </>
                 )}
@@ -1758,8 +1803,8 @@ function Exchanges() {
   return (
     <>
       <Header
-        title="A shared little secret"
-        description="Give thoughtfully. Keep the mystery."
+        title="Gift exchanges"
+        description="Draw names and give them something to smile about."
       >
         <button
           className="button"
@@ -1793,7 +1838,7 @@ function Exchanges() {
               </div>
               {e.myAssignments.length > 0 && (
                 <div className="assignments">
-                  <h3>Your little secret</h3>
+                  <h3>Who you’re giving to</h3>
                   {e.myAssignments.map(([g, r]) => (
                     <Link to={`/people/${r}`} key={`${g}:${r}`}>
                       <Avatar
@@ -1843,15 +1888,15 @@ function Exchanges() {
                                 });
                                 close();
                                 toast(
-                                  "Names drawn. Each giver can see their own assignments.",
+                                  "Names drawn. Each person can see who they are giving to.",
                                 );
                               }}
                             >
                               <ExchangeReview world={world} exchange={e} />
                               <p>
-                                Drawing locks these participants and rules and
-                                notifies the givers. Review them before
-                                continuing.
+                                After drawing, you cannot change the people or
+                                rules. Each giver will receive an update. Check
+                                the details before you continue.
                               </p>
                             </Form>,
                           )
@@ -1877,8 +1922,8 @@ function Exchanges() {
                             }
                             label="Cancel exchange"
                           >
-                            Assignments will stop being shown. Existing purchase
-                            history will remain.
+                            People will no longer see who they drew. Purchase
+                            history will be kept.
                           </Confirm>,
                         )
                       }
@@ -1888,8 +1933,8 @@ function Exchanges() {
                   )}
                   {e.status === "drawn" && (
                     <p className="muted">
-                      Notifications: {e.delivery.sent} completed,{" "}
-                      {e.delivery.pending} pending, {e.delivery.failed} failed.
+                      Updates: {e.delivery.sent} completed, {e.delivery.pending}{" "}
+                      waiting, {e.delivery.failed} could not be sent.
                     </p>
                   )}
                 </div>
@@ -1899,7 +1944,7 @@ function Exchanges() {
         </div>
       ) : (
         <Empty
-          title="A reason to surprise each other"
+          title="Start a little surprise"
           action={
             !world.groups.length ? (
               <Link className="button" to="/settings?section=groups">
@@ -2022,9 +2067,9 @@ function SettingsPage({
                     className="text-button"
                     onClick={() =>
                       open(
-                        "Link a profile to an account",
+                        "Let them manage their profile",
                         <Form
-                          submit="Create claim request"
+                          submit="Invite to take over"
                           onSubmit={async (f) => {
                             await mutate("people/link", {
                               id: p.id,
@@ -2032,24 +2077,24 @@ function SettingsPage({
                             });
                             close();
                             toast(
-                              "Claim request ready. They can accept it in Settings after signing in.",
+                              "Invitation ready. They can accept it in Settings after signing in.",
                             );
                           }}
                         >
-                          <Field label="Their verified account email">
+                          <Field label="Email they use to sign in">
                             <input type="email" name="email" required />
                           </Field>
                           <p>
-                            They must sign in with this email and accept. Your
-                            guardian access will end when they claim the
-                            profile. Invite them to the family group separately
+                            They must verify this email and accept in Settings.
+                            You will stop managing their profile when they
+                            accept. Invite them to the family group separately
                             if needed.
                           </p>
                         </Form>,
                       )
                     }
                   >
-                    Link account
+                    Invite to take over
                   </button>
                 )}
               </div>
@@ -2059,12 +2104,13 @@ function SettingsPage({
               .map((l) => (
                 <div className="notice" key={l.id}>
                   <p>
-                    Claim profile:{" "}
+                    Take over this profile:{" "}
                     <strong>
                       {l.targetName ?? "Profile no longer available"}
                     </strong>
-                    . Requested by {l.requesterName ?? "the profile guardian"}{" "}
-                    for {l.email}. Expires{" "}
+                    . Requested by{" "}
+                    {l.requesterName ?? "the person managing this profile"} for{" "}
+                    {l.email}. Expires{" "}
                     {new Date(l.expiresAt).toLocaleDateString()}.
                   </p>
                   {l.email === world.me.email && (
@@ -2113,8 +2159,8 @@ function SettingsPage({
               </button>
             </div>
             <p className="muted">
-              Family groups control membership, invitations, shared lists, and
-              exchanges. You can create or join more than one.
+              A family group brings friends or family together to share wish
+              lists and plan gifts. You can belong to more than one.
             </p>
             {!!world.invitations.some(
               (i) => i.email === world.me.email.toLowerCase(),
@@ -2281,9 +2327,10 @@ function SettingsPage({
                                         })
                                       }
                                     >
-                                      They will lose this family group’s access.
-                                      Unpurchased reservations with no remaining
-                                      access will be released.
+                                      They will lose access through this family
+                                      group. If they can no longer see an item,
+                                      any unpurchased quantity they reserved
+                                      will become available to others.
                                     </Confirm>,
                                   )
                                 }
@@ -2311,7 +2358,9 @@ function SettingsPage({
                                   email: value(f, "email"),
                                 });
                                 close();
-                                toast("Invitation queued for delivery.");
+                                toast(
+                                  "Your invitation is waiting to be emailed.",
+                                );
                               }}
                             >
                               <Field label="Email address">
@@ -2339,7 +2388,7 @@ function SettingsPage({
                                 mutate("invitations/revoke", { id: i.id })
                               }
                             >
-                              Revoke
+                              Cancel invitation
                             </Action>
                           </div>
                         ))}
@@ -2423,7 +2472,7 @@ function SettingsPage({
                       world.preferences.smsOptOut
                     }
                   />
-                  SMS{" "}
+                  Text messages{" "}
                   {world.preferences.phoneVerified
                     ? `· ${world.preferences.phone}`
                     : "· Not verified"}
@@ -2435,13 +2484,13 @@ function SettingsPage({
                     className="text-button"
                     onClick={() => open("Verify your phone", <SmsForm />)}
                   >
-                    Set up SMS
+                    Set up text messages
                   </button>
                 )}
                 {world.preferences.smsOptOut && (
                   <p className="muted">
-                    SMS is opted out. Reply START to the sender to resume
-                    delivery, then verify your number here.
+                    Text updates are turned off. Reply START to the sender to
+                    turn them back on, then verify your number here.
                   </p>
                 )}
               </fieldset>
@@ -2479,9 +2528,9 @@ function SettingsPage({
                             invitation: "Invitations",
                             reservation: "Reservations",
                             purchase: "Purchases",
-                            discussion: "Private discussions",
+                            discussion: "Private notes",
                             contribution: "Contributions",
-                            exchange: "Exchange assignments",
+                            exchange: "Names drawn for exchanges",
                             access: "Access changes",
                           }[
                             event as
@@ -2505,11 +2554,11 @@ function SettingsPage({
                   name="recipientUpdates"
                   defaultChecked={world.preferences.recipientUpdates ?? false}
                 />
-                Notify me about gifts for me on Transparent lists
+                Notify me about gifts for me on lists set to See the plans
               </label>
               <p className="muted">
-                Surprise gifts stay private regardless of your preferences.
-                Message previews contain a generic update and a sign-in link.
+                Buying plans stay hidden on lists set to Keep it a surprise.
+                Notifications ask you to sign in without showing gift details.
               </p>
             </Form>
           </section>
@@ -2550,7 +2599,7 @@ function SettingsPage({
                   }
                 }}
               />
-              Keep personal gift drafts on this device
+              Save wish-list drafts on this device
             </label>
             <p className="muted">
               Only your own draft titles, links, and notes are stored offline.
@@ -2583,8 +2632,8 @@ function SettingsPage({
             )}
             {draftsEnabled && !drafts.length && (
               <p className="notice">
-                No saved drafts on this device. When you’re offline, save a
-                personal gift idea here and add it to a list after reconnecting.
+                No drafts saved on this device. When you are offline, save an
+                item for your own wish list and add it after reconnecting.
               </p>
             )}
             {drafts.map((d) => (
@@ -2632,14 +2681,17 @@ function SettingsPage({
           <section className="settings-sign-out">
             <h2>Sign out</h2>
             <p>
-              Your account stays safe on the server. Local personal drafts and
-              cached screen data will be cleared.
+              Your account and saved wish lists are kept. Signing out deletes
+              personal drafts saved on this device.
             </p>
             <Action
               secondary
               onClick={async () => {
                 const result = await authClient.signOut();
-                if (result.error) throw new Error(result.error.message);
+                if (result.error)
+                  throw new Error(
+                    "We could not complete this account action. Check your connection and try again.",
+                  );
                 clearPersonalData();
                 client.clear();
                 location.assign("/");
@@ -2714,7 +2766,9 @@ function SmsForm() {
   return (
     <Form
       key={sent ? "code" : "phone"}
-      submit={sent ? "Verify & enable SMS" : "Send verification code"}
+      submit={
+        sent ? "Verify and turn on text updates" : "Send verification code"
+      }
       onSubmit={async (f) => {
         if (sent) {
           await api("channels/sms/verify", { code: value(f, "code") });
@@ -2729,7 +2783,7 @@ function SmsForm() {
             })),
           );
           close();
-          toast("Phone verified. SMS notifications enabled.");
+          toast("Phone verified. Text updates are on.");
         } else {
           await api("channels/sms/start", {
             phone: value(f, "phone"),
@@ -2800,8 +2854,8 @@ function SmsForm() {
           </Field>
           <label className="check">
             <input type="checkbox" name="consent" required />I agree to receive
-            Little Hint SMS notifications. Message/data rates may apply. Reply
-            STOP to unsubscribe.
+            Little Hint text messages. Message/data rates may apply. Reply STOP
+            to unsubscribe.
           </label>
         </>
       )}
@@ -2817,18 +2871,17 @@ function PasskeyLabelForm({
 }) {
   return (
     <Form
-      submit={passkey ? "Save label" : "Create passkey"}
+      submit={passkey ? "Save name" : "Create passkey"}
       onSubmit={async (form) => {
         const name = value(form, "name").trim();
         if (!name || name.length > 80)
-          throw new Error("Use a label between 1 and 80 characters.");
+          throw new Error("Use a name between 1 and 80 characters.");
         const result = passkey
           ? await authClient.passkey.updatePasskey({ id: passkey.id, name })
           : await authClient.passkey.addPasskey({ name });
         if (result?.error)
           throw new Error(
-            result.error.message ??
-              "Passkey setup was not completed. Try again.",
+            "We could not save this passkey. Try again, or use an email code to sign in.",
           );
         if (!result?.data)
           throw new Error("Passkey setup was not completed. Try again.");
@@ -2836,7 +2889,7 @@ function PasskeyLabelForm({
       }}
     >
       <Field
-        label="Passkey label"
+        label="Passkey name"
         hint="A name to recognize it in Little Hint, such as 1Password or Work laptop."
       >
         <input
@@ -2888,7 +2941,10 @@ function Security() {
     queryKey: ["current-session"],
     queryFn: async () => {
       const result = await authClient.getSession();
-      if (result.error) throw new Error(result.error.message);
+      if (result.error)
+        throw new Error(
+          "We could not complete this account action. Check your connection and try again.",
+        );
       return result.data;
     },
   });
@@ -2896,7 +2952,10 @@ function Security() {
     queryKey: ["sessions"],
     queryFn: async () => {
       const r = await authClient.listSessions();
-      if (r.error) throw new Error(r.error.message);
+      if (r.error)
+        throw new Error(
+          "We could not update your sign-in settings. Check your connection and try again.",
+        );
       return r.data;
     },
   });
@@ -2904,7 +2963,10 @@ function Security() {
     queryKey: ["passkeys"],
     queryFn: async () => {
       const r = await authClient.passkey.listUserPasskeys();
-      if (r.error) throw new Error(r.error.message);
+      if (r.error)
+        throw new Error(
+          "We could not update your sign-in settings. Check your connection and try again.",
+        );
       return r.data;
     },
   });
@@ -2963,7 +3025,10 @@ function Security() {
             label={`Remove passkey ${k.name || "Passkey"}`}
             onClick={async () => {
               const r = await authClient.passkey.deletePasskey({ id: k.id });
-              if (r.error) throw new Error(r.error.message);
+              if (r.error)
+                throw new Error(
+                  "We could not update your sign-in settings. Check your connection and try again.",
+                );
               await client.invalidateQueries({ queryKey: ["passkeys"] });
             }}
           >
@@ -2971,15 +3036,15 @@ function Security() {
           </Action>
         </div>
       ))}
-      <h3>Active sessions</h3>
-      {sessions.isPending && <p role="status">Loading active sessions…</p>}
+      <h3>Devices you’re signed in on</h3>
+      {sessions.isPending && <p role="status">Checking signed-in devices…</p>}
       {sessions.isSuccess && !sessions.data?.length && (
-        <p>No active sessions were returned. Refresh to check again.</p>
+        <p>No signed-in devices to show. Refresh to check again.</p>
       )}
       {current.error && (
         <p role="status">
-          We couldn’t identify this device. Session details are still available
-          below.
+          We could not identify this device. You can still see your other
+          sign-ins below.
         </p>
       )}
       {sessions.data?.map((s) => (
@@ -3002,10 +3067,13 @@ function Security() {
           </div>
           <Action
             secondary
-            label={`Revoke ${sessionName(s.userAgent)} session started ${new Date(s.createdAt).toLocaleString()}${s.id === current.data?.session.id ? " on this device" : ""}`}
+            label={`Sign out ${sessionName(s.userAgent)}, signed in ${new Date(s.createdAt).toLocaleString()}${s.id === current.data?.session.id ? " on this device" : ""}`}
             onClick={async () => {
               const r = await authClient.revokeSession({ token: s.token });
-              if (r.error) throw new Error(r.error.message);
+              if (r.error)
+                throw new Error(
+                  "We could not update your sign-in settings. Check your connection and try again.",
+                );
               await client.invalidateQueries({ queryKey: ["sessions"] });
               await client.invalidateQueries({ queryKey: ["world"] });
               await client.invalidateQueries({ queryKey: ["current-session"] });
@@ -3013,7 +3081,7 @@ function Security() {
           >
             {s.id === current.data?.session.id
               ? "Sign out this device"
-              : "Revoke"}
+              : "Sign out device"}
           </Action>
         </div>
       ))}
@@ -3038,10 +3106,10 @@ function Security() {
 function integrationGroup(key: string) {
   if (key.startsWith("SMTP_")) return "Email delivery";
   if (key.startsWith("TELEGRAM_")) return "Telegram";
-  if (key.startsWith("TWILIO_")) return "SMS";
+  if (key.startsWith("TWILIO_")) return "Text messages";
   if (key.startsWith("OPENAI_")) return "AI assistance";
-  if (key.includes("SCRAP")) return "Product import services";
-  return "Usage limits";
+  if (key.includes("SCRAP")) return "Details from shop links";
+  return "Daily limits";
 }
 function Admin() {
   const { toast } = useApp();
@@ -3084,7 +3152,7 @@ function Admin() {
       {settings.isPending && (
         <p role="status">Loading administration settings…</p>
       )}
-      <h3>Product imports</h3>
+      <h3>Details from shop links</h3>
       {photos && (
         <Form
           key={`${photos.source}-${photos.value}`}
@@ -3107,36 +3175,36 @@ function Admin() {
               disabled={photos.source === "environment"}
               aria-describedby="automatic-photos-help"
             />
-            Automatically import product photos
+            Add photos from shop links automatically
           </label>
           <p id="automatic-photos-help" className="muted">
-            Download and store product photos when getting details from a URL.
-            Turn off to reduce storage use. Manual uploads and existing photos
-            are unaffected. Changes apply when each import starts; running
-            imports may still finish with a photo.
+            Save a photo when looking up a shop link. Turn this off to save
+            storage space. You can still upload photos yourself. Existing photos
+            are kept, and lookups already running may still add a photo.
           </p>
           <p className="muted">
             {photos.source === "environment"
-              ? "Managed by AUTO_IMPORT_PRODUCT_PHOTOS in the deployment environment."
+              ? "Set on the server with AUTO_IMPORT_PRODUCT_PHOTOS. Change it there to update this choice."
               : photos.source === "default"
-                ? "Off by default. Applies to everyone on this instance."
-                : "Saved preference. Applies to everyone on this instance."}
+                ? "Off by default. This choice applies to everyone using this Little Hint app."
+                : "Saved. This choice applies to everyone using this Little Hint app."}
           </p>
         </Form>
       )}
-      <h3>Integrations</h3>
+      <h3>Connected services</h3>
       <p>
-        Secrets are encrypted on the server. Environment variables take
-        precedence. A blank saved value removes the UI override.
+        Connect services for email, text messages, and shop details. Secret keys
+        are stored encrypted. Values set on the server must be changed there.
+        Saving a blank value removes the value saved here.
       </p>
       <div className="integration-settings">
         {[
           "Email delivery",
           "Telegram",
-          "SMS",
-          "Product import services",
+          "Text messages",
+          "Details from shop links",
           "AI assistance",
-          "Usage limits",
+          "Daily limits",
         ].map((group) => {
           const entries =
             settings.data?.filter(
@@ -3157,16 +3225,19 @@ function Admin() {
                     <summary>
                       <span>
                         {s.key === "SCRAPING_PROVIDER"
-                          ? "Product import provider"
+                          ? "Service for shop details"
                           : scrapingProviders.find((p) => p.key === s.key)?.name
                             ? `${scrapingProviders.find((p) => p.key === s.key)!.name} API key`
-                            : s.key.replaceAll("_", " ").toLowerCase()}
+                            : (settingLabels[s.key] ?? "Service setting")}
                       </span>
                       <small>
-                        {s.configured ? "Configured" : "Not configured"} ·{" "}
-                        {s.source}
+                        {s.configured ? "Set up" : "Not set up"} ·{" "}
+                        {settingSources[s.source] ?? "Setting unavailable"}
                       </small>
                     </summary>
+                    <p className="muted">
+                      Setup key: <code>{s.key}</code>
+                    </p>
                     <Form
                       submit="Save setting"
                       disabled={s.source === "environment"}
@@ -3184,8 +3255,8 @@ function Admin() {
                       {s.key === "SCRAPING_PROVIDER" ? (
                         <>
                           <Field
-                            label="Paid import provider"
-                            hint="Try a free direct import first, then at most one paid provider. Automatic selection prefers Scraping Fish."
+                            label="Paid service for shop details"
+                            hint="Little Hint tries the shop directly for free, then one paid service if needed. Automatic selection prefers Scraping Fish."
                           >
                             <select
                               name="value"
@@ -3193,7 +3264,7 @@ function Admin() {
                               disabled={s.source === "environment"}
                             >
                               <option value="auto">Automatic selection</option>
-                              <option value="none">Direct import only</option>
+                              <option value="none">Shop website only</option>
                               {scrapingProviders.map((p) => (
                                 <option key={p.id} value={p.id}>
                                   {p.name}
@@ -3202,13 +3273,13 @@ function Admin() {
                             </select>
                           </Field>
                           <p className="muted">
-                            Current paid provider:{" "}
+                            Current paid service:{" "}
                             {scrapingProviders.find(
                               (p) => p.id === s.effectiveProvider,
-                            )?.name ?? "None configured"}
-                            . Requests count toward the integration daily limit.
-                            Failed imports never switch to another paid
-                            provider.
+                            )?.name ?? "None set up"}
+                            . Requests count toward the daily limit. If this
+                            service fails, Little Hint does not try another paid
+                            service.
                           </p>
                         </>
                       ) : (
@@ -3225,7 +3296,7 @@ function Admin() {
                             disabled={s.source === "environment"}
                             placeholder={
                               s.source === "environment"
-                                ? "Managed through deployment environment"
+                                ? "Change this value on the server"
                                 : "Enter a replacement value"
                             }
                           />
@@ -3239,40 +3310,40 @@ function Admin() {
           );
         })}
       </div>
-      <h3>Background delivery & backups</h3>
+      <h3>Updates & backups</h3>
       {jobs.isPending && (
-        <p role="status">Loading background delivery status…</p>
+        <p role="status">Checking updates and shop lookups…</p>
       )}
       {jobs.error && (
         <div role="alert">
           <p className="error">
-            Background delivery status is unavailable. Pending counts and worker
-            health could not be checked.
+            We could not check updates or shop lookups. Try again to see whether
+            they are running.
           </p>
           <button className="button secondary" onClick={() => jobs.refetch()}>
-            Retry delivery status
+            Check again
           </button>
         </div>
       )}
       {jobs.data && !jobs.error && (
         <>
           <p>
-            Worker:{" "}
+            Updates and shop lookups:{" "}
             {jobs.data?.workerLastSeen &&
             Date.now() - jobs.data.workerLastSeen < 60000
-              ? "Online"
-              : "Not reporting"}
-            . Backups are managed by the Housewatch Digital backup sidecar.
-            Check its health and restore status in Coolify.
+              ? "Running"
+              : "No recent activity reported"}
+            . Housewatch Digital manages backups separately. Check backups and
+            restore progress in Coolify.
           </p>
           <p>
             {jobs.data?.imports.filter(
               (j) => j.status === "pending" || j.status === "running",
             ).length ?? 0}{" "}
-            imports pending ·{" "}
+            shop lookups waiting ·{" "}
             {jobs.data?.notifications.filter((j) => j.status === "pending")
               .length ?? 0}{" "}
-            notifications pending
+            updates waiting
           </p>
         </>
       )}
@@ -3296,7 +3367,7 @@ function Admin() {
         ))}
       {settings.error && (
         <div role="alert">
-          <p className="error">Could not load administration settings.</p>
+          <p className="error">We could not load app settings. Try again.</p>
           <button
             className="button secondary"
             onClick={() => settings.refetch()}
