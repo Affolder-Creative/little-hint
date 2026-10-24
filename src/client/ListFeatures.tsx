@@ -1,3 +1,4 @@
+import { dateHasElapsed } from "../shared/list-dates";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import type { GiftSummary, List } from "../shared/model";
@@ -5,10 +6,11 @@ import { api } from "./api";
 import { useApp } from "./context";
 
 export function RevealPolicy({ list }: { list: List }) {
+  const revealed = dateHasElapsed(list.revealAfter, list.timeZone);
   return (
     <p className="privacy-note">
       {list.revealAfter
-        ? `List owners can view purchased gifts, buyers, and contributors after ${list.revealAfter} ends (${list.timeZone ?? "UTC"}), even with Keep it a surprise. ${list.revealExchangeGivers ? "Secret exchange purchases and giver names are also included." : "Secret exchange purchases and giver names stay hidden; other purchased gifts are included."}`
+        ? `${revealed ? "The gift summary is now available to list owners, including for Surprise lists. It shows purchased gifts, buyers, and contributors." : `List owners can view purchased gifts, buyers, and contributors after ${list.revealAfter} ends (${list.timeZone ?? "UTC"}), even with Keep it a surprise.`} ${list.revealExchangeGivers ? "Secret exchange purchases and giver names are also included." : "Secret exchange purchases and giver names stay hidden; other purchased gifts are included."}`
         : "No gift summary is scheduled. Secret gift exchange identities stay hidden."}{" "}
       Contribution amounts and private discussions stay private.
     </p>
