@@ -68,6 +68,11 @@ For either path:
 
 ## Coolify installation settings
 
+The settings below build from source. For published images and future staging or
+production upgrades, follow [Coolify release upgrades](COOLIFY_UPGRADES.md). That
+guide preserves the existing production Compose setup while using a verified
+organization release image.
+
 - Create a Little Hint project in your chosen Coolify team and select its production environment. Add descriptions that identify the app's purpose.
 - Connect your repository and select `main` or your intended release branch. Use the Compose build pack with `/compose.yaml`.
 - Set Custom Build Command to `docker compose --env-file /dev/null -f compose.build.yaml build`. Leave Custom Start Command empty. Build and run on the same Docker host.

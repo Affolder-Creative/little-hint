@@ -77,6 +77,26 @@ from the canonical repository's main branch. It does not deploy to Coolify or
 restart any existing installation. The local-build Compose workflow remains
 available.
 
+### Reviewing the version before merging
+
+Review the version for the changes being shipped. For v0.3.0, the move to the
+organization repository and image namespace was treated as a minor pre-1.0
+release. The number of merged PRs alone does not determine the version.
+
+If correcting an existing release PR as in that release, update all of these
+together on its branch before merging:
+
+- `.release-please-manifest.json` and `package.json`.
+- The root and `packages[""]` versions in `package-lock.json`.
+- The `CHANGELOG.md` heading and comparison URL.
+- The release PR's generated title and version references in its description.
+
+Changing only the PR title does not change the published version. Release Please
+can regenerate the PR after another main merge, so recheck the metadata and
+successful checks on its exact final head before squash-merging. Then wait for
+the merged commit's full release workflow and completed publication before
+starting deployment.
+
 ## Recovery
 
 Failures leave the release in draft. Open **Actions → Release → Run workflow**,
@@ -104,6 +124,11 @@ history and keep all tag, version, and checked-commit validation. No tag is
 accepted merely because its name looks like a release version.
 
 ## Deploying a release
+
+For existing Coolify resources, follow [Coolify release upgrades](COOLIFY_UPGRADES.md)
+for artifact verification, backups, staging acceptance and production promotion.
+Use the same public `ghcr.io/affolder-creative/little-hint` digest in both
+environments. The private `little-hint-staging` package is for feature builds.
 
 Download the deployment bundle from a completed release. Its example environment
 contains a digest-pinned `LITTLE_HINT_IMAGE` and no deployment secrets. Fill in

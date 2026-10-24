@@ -67,6 +67,10 @@ Keep the existing personal packages while migrating consumers.
    deployment automation separately. Do not remove the old packages as part of
    the repository transfer.
 
+For subsequent releases, follow [Coolify release upgrades](COOLIFY_UPGRADES.md)
+to pin the organization source commit, verify the image on each host, and promote
+the same release digest from staging to production.
+
 ## Pages and custom domain
 
 1. Verify `littlehint.affoldercreative.com` for the organization in its Pages
