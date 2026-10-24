@@ -40,7 +40,11 @@ Keep the existing personal packages while migrating consumers.
    connected to that repository and its Actions workflow can write to it. Set
    the release package public and verify anonymous pulls. Public repository
    visibility alone does not make a newly created package public.
-2. If existing versions must be available in the new namespace, copy their
+2. Run **Migrate release images** from Actions on `main` to copy all tagged
+   public release images and verify their index digests. The workflow uses its
+   temporary `GITHUB_TOKEN`, rejects different existing destination bytes, and
+   shares release concurrency so it cannot race the release publisher.
+   If copying manually, copy their
    reviewed image indexes and all referenced manifests rather than rebuilding
    the same release version. For each selected version or alias, use an
    authenticated OCI copy tool that preserves all platforms, attestations and
@@ -75,10 +79,9 @@ Keep the existing personal packages while migrating consumers.
    `affolder-creative.github.io`. Preserve the custom-domain association in
    GitHub while making this change. The old default Pages URL is not redirected
    by a repository transfer.
-4. Coordinate this change with the outstanding certificate setup. Cloudflare
-   currently provides visitor HTTPS; turning its proxy off before GitHub has a
-   valid certificate can interrupt HTTPS. Check GitHub's DNS/certificate status
-   and enable GitHub HTTPS enforcement once eligible.
+4. Check GitHub's DNS/certificate status and enable GitHub HTTPS enforcement
+   once eligible. If the record uses Cloudflare proxying, turning its proxy off
+   before GitHub has a valid certificate can interrupt HTTPS.
 5. Deploy the marketing workflow and verify the custom-domain homepage, all
    assets, the sharing image, and organization source/setup/license links.
    Confirm HTTP redirects to HTTPS. Canonical and social URLs continue using
