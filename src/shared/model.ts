@@ -118,6 +118,12 @@ export interface Comment extends Base {
   itemId: string;
   authorId: string;
   body: string;
+  mentions?: Mention[];
+}
+export interface Mention {
+  userId: string;
+  start: number;
+  end: number;
 }
 export interface Exchange extends Base {
   name: string;
@@ -141,14 +147,64 @@ export interface Notice extends Base {
     | "discussion"
     | "contribution"
     | "exchange"
-    | "access";
+    | "access"
+    | "mention"
+    | "wishlist";
   itemId?: string;
   exchangeId?: string;
   invitationId?: string;
+  inbox?: boolean;
+  actorId?: string;
+  action?: string;
+  listId?: string;
+  commentId?: string;
+  reservationId?: string;
+  contributionId?: string;
+  linkId?: string;
+  readAt?: string;
+  pushDueAt?: string;
+  pushComplete?: boolean;
+  pushDeliveries?: Record<string, PushDelivery>;
   status: "pending" | "sent" | "failed";
   attempts: number;
   delivered: string[];
   error?: string;
+}
+export interface PushDelivery {
+  status: "sent" | "failed";
+  attempts: number;
+  nextAttemptAt?: string;
+}
+export interface Follow extends Base {
+  userId: string;
+  target: "person" | "list";
+  targetId: string;
+}
+export interface DiscussionWatch extends Base {
+  userId: string;
+  itemId: string;
+  watching: boolean;
+}
+export interface PushDevice extends Base {
+  userId: string;
+  sessionId: string;
+  endpoint: string;
+  keys: { p256dh: string; auth: string };
+  label: string;
+}
+export interface NotificationView {
+  id: string;
+  event: Notice["event"];
+  message: string;
+  context?: string;
+  href: string;
+  createdAt: string;
+  readAt?: string;
+}
+export interface NotificationPage {
+  entries: NotificationView[];
+  unreadCount: number;
+  nextCursor?: string;
 }
 export interface Preferences extends Base {
   recipientUpdates: boolean;
@@ -157,6 +213,8 @@ export interface Preferences extends Base {
   telegram: boolean;
   sms: boolean;
   events: string[];
+  pushEvents?: string[];
+  channelEvents?: Partial<Record<"email" | "telegram" | "sms", string[]>>;
   phone?: string;
   phoneVerified?: boolean;
   chatId?: string;
@@ -212,6 +270,9 @@ export interface Records {
   comments: Comment;
   exchanges: Exchange;
   notices: Notice;
+  follows: Follow;
+  watches: DiscussionWatch;
+  pushDevices: PushDevice;
   preferences: Preferences;
   imports: ImportJob;
   settings: Setting;
@@ -236,6 +297,9 @@ export const kinds: Kind[] = [
   "comments",
   "exchanges",
   "notices",
+  "follows",
+  "watches",
+  "pushDevices",
   "preferences",
   "imports",
   "settings",
@@ -276,6 +340,7 @@ export interface GiftView extends Omit<Item, "creatorId"> {
     id: string;
     author: string;
     body: string;
+    mentions?: Mention[];
     createdAt: string;
   }>;
 }
@@ -312,6 +377,10 @@ export interface World {
     }
   >;
   preferences: Preferences;
+  notificationCount?: number;
+  notificationAsOf?: number;
+  follows?: Follow[];
+  watches?: DiscussionWatch[];
   imports: ImportJob[];
   links: Array<Link & { targetName?: string; requesterName?: string }>;
 }

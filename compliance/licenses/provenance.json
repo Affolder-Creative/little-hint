@@ -27,5 +27,9 @@
   },
   "docker-node": {
     "url": "https://github.com/nodejs/docker-node/blob/02641286c1f5041d9025d3cf6d38a64b84cd72e5/LICENSE"
+  },
+  "http-ece": {
+    "url": "https://github.com/martinthomson/encrypted-content-encoding/blob/0562510a30819f52424724a6fd5504becacd98a1/LICENSE",
+    "evidence": "MIT license from the exact gitHead published as http_ece 1.2.0; its npm archive omits the root license."
   }
 }

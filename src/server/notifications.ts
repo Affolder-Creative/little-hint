@@ -1,3 +1,4 @@
+import { topicEnabled } from "./activity";
 import { parsePhoneNumberFromString } from "libphonenumber-js/min";
 import nodemailer from "nodemailer";
 import { existsSync } from "node:fs";
@@ -138,7 +139,7 @@ export async function deliverNotice(id: string) {
         smsOptOut: false,
       }
     : preferences(s, { id: n.userId, email: user.email, name: user.name });
-  if (!prefs.events.includes(n.event)) {
+  if (!n.inbox && !prefs.events.includes(n.event)) {
     await transact((s) => {
       s.notices.find((n) => n.id === id)!.status = "sent";
     });
@@ -156,6 +157,7 @@ export async function deliverNotice(id: string) {
     ? `A little hint: you're invited. Sign in to Little Hint with this email address to accept: ${link}`
     : `A little update is waiting in Little Hint. Sign in to see it: ${link}`;
   try {
+    let failures = 0;
     for (const channel of ["email", "telegram", "sms"] as const) {
       s = await readState();
       n = s.notices.find((n) => n.id === id)!;
@@ -165,47 +167,54 @@ export async function deliverNotice(id: string) {
         : preferences(s, { id: n.userId, email: user.email, name: user.name });
       if (
         !current[channel] ||
-        !current.events.includes(n.event) ||
+        !(n.inbox
+          ? topicEnabled(s, n, channel)
+          : current.events.includes(n.event)) ||
         n.delivered.includes(channel)
       )
         continue;
-      if (channel === "email")
-        await sendEmail(user.email, {
-          kind: inv ? "invitation" : "update",
-          text: inv
-            ? "You're invited to Little Hint. Sign in with this email address to accept, then start sharing wish lists with your people."
-            : "A little update is waiting for you. Sign in to Little Hint to see it.",
-          actionPath,
+      try {
+        if (channel === "email")
+          await sendEmail(user.email, {
+            kind: inv ? "invitation" : "update",
+            text: inv
+              ? "You're invited to Little Hint. Sign in with this email address to accept, then start sharing wish lists with your people."
+              : "A little update is waiting for you. Sign in to Little Hint to see it.",
+            actionPath,
+          });
+        if (channel === "telegram" && current.chatId)
+          await telegramCall("sendMessage", {
+            chat_id: current.chatId,
+            text: message,
+            disable_web_page_preview: true,
+          });
+        if (
+          channel === "sms" &&
+          current.phoneVerified &&
+          !current.smsOptOut &&
+          current.phone
+        ) {
+          const c = await config();
+          await twilioCall(
+            `/2010-04-01/Accounts/${c.TWILIO_ACCOUNT_SID}/Messages.json`,
+            {
+              To: current.phone,
+              From: c.TWILIO_FROM,
+              Body: `${message} Reply STOP to unsubscribe.`,
+              StatusCallback: `${origin()}/api/hooks/twilio/status?notice=${id}`,
+            },
+          );
+        }
+        await transact((s) => {
+          const n = s.notices.find((n) => n.id === id)!;
+          n.delivered = [...new Set([...n.delivered, channel])];
+          n.revision++;
         });
-      if (channel === "telegram" && current.chatId)
-        await telegramCall("sendMessage", {
-          chat_id: current.chatId,
-          text: message,
-          disable_web_page_preview: true,
-        });
-      if (
-        channel === "sms" &&
-        current.phoneVerified &&
-        !current.smsOptOut &&
-        current.phone
-      ) {
-        const c = await config();
-        await twilioCall(
-          `/2010-04-01/Accounts/${c.TWILIO_ACCOUNT_SID}/Messages.json`,
-          {
-            To: current.phone,
-            From: c.TWILIO_FROM,
-            Body: `${message} Reply STOP to unsubscribe.`,
-            StatusCallback: `${origin()}/api/hooks/twilio/status?notice=${id}`,
-          },
-        );
+      } catch {
+        failures++;
       }
-      await transact((s) => {
-        const n = s.notices.find((n) => n.id === id)!;
-        n.delivered = [...new Set([...n.delivered, channel])];
-        n.revision++;
-      });
     }
+    if (failures) throw new Error("Notification provider unavailable.");
     await transact((s) => {
       const n = s.notices.find((n) => n.id === id)!;
       n.status = "sent";

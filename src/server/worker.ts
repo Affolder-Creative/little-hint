@@ -1,3 +1,8 @@
+import {
+  deliverPushBatch,
+  pendingPushBatches,
+  pushConfiguration,
+} from "./push";
 import "dotenv/config";
 import { writeFile } from "node:fs/promises";
 import { stamp, archiveDueLists } from "./domain";
@@ -23,6 +28,19 @@ await boss.createQueue("notification", {
   retryBackoff: true,
   expireInSeconds: 120,
 });
+await boss.createQueue("web-push", {
+  policy: "exclusive",
+  retryLimit: 2,
+  retryDelay: 60,
+  expireInSeconds: 300,
+});
+await boss.work<{ ids: string[] }>(
+  "web-push",
+  { batchSize: 1 },
+  async (jobs) => {
+    for (const job of jobs) await deliverPushBatch(job.data.ids);
+  },
+);
 await boss.work<{ id: string }>(
   "product-import",
   { batchSize: 1 },
@@ -83,6 +101,12 @@ async function dispatch() {
       await boss.send("product-import", { id: j.id }, { singletonKey: j.id });
     for (const n of s.notices.filter((n) => n.status === "pending"))
       await boss.send("notification", { id: n.id }, { singletonKey: n.id });
+    for (const batch of pushConfiguration() ? pendingPushBatches(s) : [])
+      await boss.send(
+        "web-push",
+        { ids: batch.map((n) => n.id) },
+        { singletonKey: batch[0].id },
+      );
     await pollTelegram();
   } catch {
     console.error("Background dispatch unavailable; will retry.");

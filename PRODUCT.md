@@ -20,7 +20,7 @@ Create wishes, suggest gifts for others, coordinate purchases without duplicates
 
 ## Capabilities and constraints
 
-Invite-only. Surprise and Transparent lists. Scoped suggestions, quantities, contributions without money transfer, private discussions, imports, SMTP/Telegram/US SMS, and balanced secret gift exchanges. Group events create one wish list per selected account or managed profile, shared with the entire group. Group owners and appointed event leaders manage event settings and participants; recipients manage their gifts. New members require explicit enrollment. Removed participants retain archived lists and history. Manual and scheduled list/event archiving. Optional dated gift summaries with a reveal policy locked at first sharing; amounts and private discussions stay hidden. Optional AI. No guest registries. Local personal drafts only while offline.
+Invite-only. Surprise and Transparent lists. Scoped suggestions, quantities, contributions without money transfer, private discussions, imports, SMTP/Telegram/US SMS, and balanced secret gift exchanges. Group events create one wish list per selected account or managed profile, shared with the entire group. Group owners and appointed event leaders manage event settings and participants; recipients manage their gifts. New members require explicit enrollment. Removed participants retain archived lists and history. Manual and scheduled list/event archiving. Optional dated gift summaries with a reveal policy locked at first sharing; amounts and private discussions stay hidden. Notification center with unread counts, opt-in browser push and supported app badges. Follow people or wish lists for new items; push summaries batch for 15 minutes. Private notes support scoped @mentions and watching. Optional AI. No guest registries. Local personal drafts only while offline.
 
 ## Brand commitments
 
@@ -46,7 +46,7 @@ wordplay sparingly. Instructions, privacy choices, errors, and purchases stay pl
   enabled. Keep those concepts distinct. Shared ownership is different from viewing.
 - Never imply that a reservation buys something, a contribution sends money, or
   cancelling a reservation cancels a shop order. Invitations waiting for delivery
-  are not yet sent. Notifications never include private gift details.
+  are not yet sent. External notification previews never include private gift details. The signed-in notification center shows only context the viewer can currently access.
 - Keep the approved tagline, Gift ideas, shared thoughtfully. Technical names belong
   in setup instructions only where they help someone configure the app.
 

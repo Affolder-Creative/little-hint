@@ -240,3 +240,9 @@ Browser favicons use the approved micro tag without a surrounding tile. The tag 
 - Don't rely on color alone to explain availability or list privacy.
 
 Optional gift notes, price, quantity, tags and photos share a disclosure below the gift name and destination. Upload progress is announced and saving waits for the photo. On phones, missing-photo placeholders stay compact. Notification topics and administration integrations use labeled task groups; channel setup stays next to its checkbox. Session rows identify this device where available, with readable browser names and expandable details. Loading and failure states never stand in for empty data.
+
+### Notifications and mentions
+
+The header bell opens a full notification page without adding a sixth mobile navigation item. Flat divided rows show readable activity, optional authorized context, a timestamp, and explicit read controls. Unread rows use the soft theme color plus weight and text controls. All and Unread filters precede the history.
+
+Person and list headers offer follow controls. Private notes offer watching and a keyboard-accessible name picker that only lists accounts allowed to read the note. Notification settings keep channel setup beside controls and provide topic-by-channel choices. Push permission is requested only from the enable button; unsupported devices retain the inbox.

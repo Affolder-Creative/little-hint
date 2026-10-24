@@ -1,4 +1,16 @@
 import {
+  NotificationBell,
+  NotificationCenter,
+  NotificationOpen,
+  FollowButton,
+  WatchButton,
+  NotificationTopics,
+  PushSetup,
+  PushLifecycle,
+  clearPushBinding,
+} from "./Notifications";
+import { MentionNote, MentionText } from "./MentionNote";
+import {
   actionError,
   contributionStatus,
   settingLabels,
@@ -159,6 +171,7 @@ export function App() {
     return () => clearTimeout(timer);
   }, [message]);
   useEffect(() => {
+    if (query.data === null) void clearPushBinding().catch(() => {});
     if (query.data)
       localStorage.setItem("little-hint:last-account", query.data.me.id);
   }, [query.data?.me.id]);
@@ -168,14 +181,27 @@ export function App() {
     const heading = main?.querySelector<HTMLElement>("h1");
     document.title = `${heading?.textContent ?? "Little Hint"} · Little Hint`;
     main?.focus({ preventScroll: true });
-  }, [location.pathname, location.search, !!query.data]);
+    if (
+      location.hash.startsWith("#note-") ||
+      location.hash.startsWith("#exchange-")
+    ) {
+      requestAnimationFrame(() => {
+        const target = document.getElementById(location.hash.slice(1));
+        target?.scrollIntoView({ block: "center" });
+        target?.focus({ preventScroll: true });
+      });
+    }
+  }, [location.pathname, location.search, location.hash, !!query.data]);
   const mutate = async <T = any,>(path: string, body: unknown): Promise<T> => {
     if (!navigator.onLine)
       throw new Error("Go online to complete this action.");
     const result = await api<T>(path, body);
     if (["items", "reservations"].includes(path) && !(result as any)?.duplicate)
       localStorage.setItem("little-hint:engaged", "yes");
-    await client.invalidateQueries({ queryKey: ["world"] });
+    await Promise.all([
+      client.invalidateQueries({ queryKey: ["world"] }),
+      client.invalidateQueries({ queryKey: ["notifications"] }),
+    ]);
     return result;
   };
   if (!online && query.data === undefined)
@@ -230,6 +256,7 @@ export function App() {
         dark,
       }}
     >
+      <PushLifecycle />
       <a className="skip-link" href="#main">
         Skip to content
       </a>
@@ -286,6 +313,7 @@ export function App() {
               Gift ideas, shared thoughtfully.
             </span>
             <div className="actions">
+              <NotificationBell />
               <button
                 className="icon-button"
                 aria-label={
@@ -331,7 +359,11 @@ export function App() {
           )}
           {(world.environment === "staging" ||
             world.me.email.endsWith("@example.test")) && (
-            <div className="demo-banner">
+            <div
+              className="demo-banner"
+              role="region"
+              aria-label="Test environment"
+            >
               {world.environment === "staging"
                 ? "Test version · Sample data · Emails go to a test inbox"
                 : "Demo version · Sample data"}
@@ -340,6 +372,8 @@ export function App() {
           <main id="main" tabIndex={-1}>
             <Routes>
               <Route path="/" element={<Home />} />
+              <Route path="/notifications" element={<NotificationCenter />} />
+              <Route path="/notifications/:id" element={<NotificationOpen />} />
               <Route path="/people" element={<People />} />
               <Route path="/people/:id" element={<PersonPage />} />
               <Route path="/lists" element={<Lists />} />
@@ -824,6 +858,7 @@ function PersonPage() {
             : `A few hints about what ${person.name} would love.`
         }
       >
+        <FollowButton target="person" targetId={person.id} />
         {own ? (
           <button
             className="button secondary"
@@ -977,6 +1012,7 @@ function Lists() {
               "On their wish lists")}
         </Link>
         <Header title={list.name} description={list.description}>
+          <FollowButton target="list" targetId={list.id} />
           <Privacy mode={list.mode} />
           {list.canManageSettings && (
             <>
@@ -1166,6 +1202,7 @@ function Lists() {
   );
 }
 function GiftDetail() {
+  const noteLocation = useLocation();
   const { id } = useParams();
   const { world, open, mutate, toast, close } = useApp();
   const gift = world.items.find((i) => i.id === id);
@@ -1448,35 +1485,27 @@ function GiftDetail() {
           </p>
           {gift.comments.length ? (
             gift.comments.map((c) => (
-              <div className="comment" key={c.id}>
+              <div
+                className={`comment${noteLocation.hash === `#note-${c.id}` ? " targeted-note" : ""}`}
+                key={c.id}
+                id={`note-${c.id}`}
+                tabIndex={-1}
+              >
                 <Avatar name={c.author} small />
                 <div>
                   <strong>{c.author}</strong>
                   <small>{new Date(c.createdAt).toLocaleDateString()}</small>
-                  <p>{c.body}</p>
+                  <p>
+                    <MentionText body={c.body} mentions={c.mentions} />
+                  </p>
                 </div>
               </div>
             ))
           ) : (
             <p>No notes yet. Sizes, plans, and helpful details go here.</p>
           )}
-          {!gift.archived && (
-            <Form
-              submit="Add private note"
-              resetOnSuccess
-              onSubmit={async (f) => {
-                await mutate("comments", {
-                  itemId: gift.id,
-                  body: value(f, "body"),
-                });
-                toast("Private note added.");
-              }}
-            >
-              <Field label="Your note">
-                <textarea name="body" required maxLength={4000} rows={2} />
-              </Field>
-            </Form>
-          )}
+          <WatchButton itemId={gift.id} />
+          {!gift.archived && <MentionNote itemId={gift.id} />}
         </section>
       )}
     </>
@@ -1818,7 +1847,11 @@ function Exchanges() {
       {world.exchanges.length ? (
         <div className="exchange-list">
           {world.exchanges.map((e) => (
-            <section className="exchange-panel" key={e.id}>
+            <section
+              className="exchange-panel"
+              key={e.id}
+              id={`exchange-${e.id}`}
+            >
               <div className="section-heading">
                 <div>
                   <h2>{e.name}</h2>
@@ -2435,7 +2468,19 @@ function SettingsPage({
                   email: f.get("email") === "on",
                   telegram: f.get("telegram") === "on",
                   sms: f.get("sms") === "on",
-                  events: f.getAll("events"),
+                  events: [
+                    ...new Set(
+                      ["email", "telegram", "sms"].flatMap((channel) =>
+                        f.getAll(`${channel}Events`),
+                      ),
+                    ),
+                  ],
+                  pushEvents: f.getAll("pushEvents"),
+                  channelEvents: {
+                    email: f.getAll("emailEvents"),
+                    telegram: f.getAll("telegramEvents"),
+                    sms: f.getAll("smsEvents"),
+                  },
                   recipientUpdates: f.get("recipientUpdates") === "on",
                 });
                 toast("Notification preferences saved.");
@@ -2494,60 +2539,7 @@ function SettingsPage({
                   </p>
                 )}
               </fieldset>
-              <div className="notification-topics">
-                {[
-                  {
-                    title: "People & access",
-                    events: ["invitation", "access"],
-                  },
-                  {
-                    title: "Gift coordination",
-                    events: [
-                      "reservation",
-                      "purchase",
-                      "discussion",
-                      "contribution",
-                    ],
-                  },
-                  { title: "Exchanges", events: ["exchange"] },
-                ].map((group) => (
-                  <fieldset className="choice-group" key={group.title}>
-                    <legend>{group.title}</legend>
-                    {group.events.map((event) => (
-                      <label className="check" key={event}>
-                        <input
-                          type="checkbox"
-                          name="events"
-                          value={event}
-                          defaultChecked={world.preferences.events.includes(
-                            event,
-                          )}
-                        />
-                        {
-                          {
-                            invitation: "Invitations",
-                            reservation: "Reservations",
-                            purchase: "Purchases",
-                            discussion: "Private notes",
-                            contribution: "Contributions",
-                            exchange: "Names drawn for exchanges",
-                            access: "Access changes",
-                          }[
-                            event as
-                              | "invitation"
-                              | "reservation"
-                              | "purchase"
-                              | "discussion"
-                              | "contribution"
-                              | "exchange"
-                              | "access"
-                          ]
-                        }
-                      </label>
-                    ))}
-                  </fieldset>
-                ))}
-              </div>
+              <NotificationTopics />
               <label className="check">
                 <input
                   type="checkbox"
@@ -2558,9 +2550,11 @@ function SettingsPage({
               </label>
               <p className="muted">
                 Buying plans stay hidden on lists set to Keep it a surprise.
-                Notifications ask you to sign in without showing gift details.
+                External alerts keep gift details private. Your inbox shows only
+                updates you can access.
               </p>
             </Form>
+            <PushSetup />
           </section>
           <section
             className="settings-section"
@@ -2692,6 +2686,7 @@ function SettingsPage({
                   throw new Error(
                     "We could not complete this account action. Check your connection and try again.",
                   );
+                await clearPushBinding().catch(() => {});
                 clearPersonalData();
                 client.clear();
                 location.assign("/");

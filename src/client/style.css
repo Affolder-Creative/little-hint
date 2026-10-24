@@ -2431,3 +2431,209 @@ main {
 .choice-group > .action-wrap {
   justify-self: start;
 }
+
+/* Notification history follows the same flat rows as gift plans and settings. */
+.notification-bell {
+  position: relative;
+  flex-shrink: 0;
+}
+.notification-count {
+  position: absolute;
+  right: -3px;
+  top: -3px;
+  min-width: 18px;
+  padding: 1px 4px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+}
+.notification-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.notification-list,
+.push-devices {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 24px;
+}
+.notification-list > li {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 20px 8px;
+  border-bottom: 1px solid var(--border);
+}
+.notification-list > li.unread {
+  background: var(--soft);
+}
+.notification-symbol {
+  color: var(--accent);
+  padding-top: 12px;
+  flex-shrink: 0;
+}
+.notification-content {
+  flex: 1;
+  min-width: 0;
+}
+.notification-open {
+  appearance: none;
+  display: grid;
+  gap: 6px;
+  min-height: 44px;
+  padding: 8px 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  width: 100%;
+  overflow-wrap: anywhere;
+}
+.notification-open:hover > span:first-child {
+  text-decoration: underline;
+}
+.notification-list .unread .notification-open > span:first-child {
+  font-weight: 600;
+}
+.notification-content time {
+  color: var(--muted);
+  font-size: 13px;
+}
+.async-control {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.async-control .button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.async-control .error {
+  font-size: 13px;
+  max-width: 35ch;
+}
+.notification-content .async-control {
+  display: flex;
+}
+.push-setup {
+  border-top: 1px solid var(--border);
+  margin-top: 32px;
+  padding-top: 24px;
+}
+.push-setup p {
+  max-width: 65ch;
+}
+.push-devices li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.channel-topics {
+  display: block;
+}
+.channel-topics > fieldset {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 16px;
+  margin-bottom: 20px;
+}
+.topic-channels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+}
+.topic-channels .check {
+  min-height: 44px;
+}
+.mention-composer {
+  position: relative;
+}
+.mention-composer textarea {
+  width: 100%;
+}
+.mention-menu {
+  margin-top: 4px;
+  border: 1px solid var(--border);
+  background: var(--paper);
+  border-radius: 8px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+.mention-menu ul {
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+}
+.mention-menu li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 44px;
+  align-items: center;
+  padding: 10px 12px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+.mention-menu li.selected {
+  background: var(--soft);
+}
+.mention-menu small {
+  color: var(--muted);
+}
+.mention-menu p {
+  margin: 12px;
+}
+.note-mention {
+  color: var(--accent);
+  font-weight: 600;
+}
+.comment {
+  scroll-margin-top: 110px;
+}
+.comment:target,
+.comment.targeted-note {
+  background: var(--soft);
+  border-radius: 8px;
+}
+.discussion > .async-control {
+  margin-bottom: 20px;
+}
+@media (max-width: 650px) {
+  .notification-list > li {
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .notification-list > li > .async-control {
+    margin-left: 29px;
+  }
+  .notification-content {
+    flex-basis: calc(100% - 40px);
+  }
+  .topbar .actions {
+    gap: 6px;
+  }
+  .topic-channels {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.notification-list .text-button {
+  color: var(--text);
+}

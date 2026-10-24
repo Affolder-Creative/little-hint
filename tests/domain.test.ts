@@ -161,6 +161,10 @@ describe("surprise privacy", () => {
   });
   it("rechecks authorization when a queued notification is delivered", () => {
     const f = fixture();
+    command(f.s, f.actors[2], "watches.update", {
+      itemId: f.item.id,
+      watching: true,
+    });
     reserve(f);
     const n = f.s.notices.find((n) => n.userId === f.actors[2].id)!;
     expect(noticeAllowed(f.s, n)).toBe(true);

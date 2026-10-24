@@ -80,6 +80,8 @@ docker compose --env-file .env.production exec app \
 
 Configure the SMTP sender independently from the app URL. An alias on an existing verified email domain is sufficient, for example `Little Hint <littlehint@example.com>`. All `example.com` addresses in this repository are placeholders. Keep real domains, administrator emails, resource IDs, credentials, and deployment records in ignored `.env.production` or `.local/deployment/` files, or your deployment platform's settings. Use the [deployment checklist](docs/DEPLOYMENT.md) for each installation.
 
+See [notification setup and behavior](docs/NOTIFICATIONS.md) for browser push, inbox preferences, mentions, following, and device badges.
+
 ## Development checks
 
 ```sh

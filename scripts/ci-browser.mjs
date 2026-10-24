@@ -14,6 +14,7 @@ if (
     "polish",
     "critique",
     "pwa",
+    "notifications",
   ].includes(suite)
 )
   throw new Error("Supply one known browser suite.");

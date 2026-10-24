@@ -121,7 +121,7 @@ describe("notification privacy and recovery", () => {
     expect(f.notice.status).toBe("pending");
     await deliverNotice(f.notice.id);
     expect(f.notice.status).toBe("sent");
-    expect(f.notice.delivered).toEqual(["email", "telegram"]);
+    expect([...f.notice.delivered].sort()).toEqual(["email", "telegram"]);
     const mail = mock.sendMail.mock.calls[1][0];
     expect(mail.text).not.toContain("Private gift");
     expect(mail.html).not.toContain("Private gift");
