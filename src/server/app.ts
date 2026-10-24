@@ -1,3 +1,16 @@
+import {
+  inbox,
+  mentionCandidates,
+  emitActivity,
+  notificationEntry,
+} from "./activity";
+import {
+  pushConfiguration,
+  subscribePush,
+  removePushDevice,
+  activePushDevice,
+  sendPush,
+} from "./push";
 import Fastify, { LogController } from "fastify";
 import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
@@ -179,8 +192,10 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
   }
   app.get("/api/v1/world", async (req) => {
     const a = await actor(req);
+    const notificationAsOf = Date.now();
     return {
       ...world(await readState(), a),
+      notificationAsOf,
       environment: deploymentEnvironment(),
     };
   });
@@ -189,6 +204,100 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
     async (req) => {
       const a = await actor(req);
       return giftSummary(await readState(), a, req.params.id);
+    },
+  );
+  app.get("/api/v1/notifications", async (req) => {
+    const a = await actor(req);
+    const q = z
+      .object({
+        unread: z.enum(["true", "false"]).optional(),
+        cursor: z.string().max(200).optional(),
+      })
+      .parse(req.query);
+    const asOf = new Date().toISOString();
+    return {
+      ...inbox(await readState(), a, {
+        unread: q.unread === "true",
+        cursor: q.cursor,
+      }),
+      asOf,
+    };
+  });
+  app.get<{ Params: { id: string } }>(
+    "/api/v1/notifications/:id",
+    async (req) =>
+      notificationEntry(await readState(), await actor(req), req.params.id),
+  );
+  app.get<{ Params: { id: string } }>(
+    "/api/v1/items/:id/mention-candidates",
+    async (req) => {
+      const a = await actor(req);
+      const q = z
+        .object({ q: z.string().max(160).default("") })
+        .parse(req.query);
+      return mentionCandidates(await readState(), a, req.params.id, q.q);
+    },
+  );
+  app.get("/api/v1/push", async (req) => {
+    const a = await actor(req);
+    const session = (await auth.api.getSession({
+      headers: fromNodeHeaders(req.headers),
+    }))!;
+    const s = await readState();
+    const devices = [];
+    for (const d of s.pushDevices.filter((d) => d.userId === a.id)) {
+      if (await activePushDevice(d))
+        devices.push({
+          id: d.id,
+          label: d.label,
+          current: d.sessionId === session.session.id,
+        });
+    }
+    return { publicKey: pushConfiguration()?.publicKey ?? null, devices };
+  });
+  app.post("/api/v1/push/subscribe", async (req) => {
+    const a = await actor(req);
+    const session = (await auth.api.getSession({
+      headers: fromNodeHeaders(req.headers),
+    }))!;
+    return subscribePush(
+      a,
+      session.session.id,
+      req.body,
+      req.headers["user-agent"],
+    );
+  });
+  app.post("/api/v1/push/unsubscribe", async (req) => {
+    const a = await actor(req);
+    const { id } = z.object({ id: z.string().uuid() }).parse(req.body);
+    await removePushDevice(id, a.id);
+    return { ok: true };
+  });
+  app.post(
+    "/api/v1/push/test",
+    { config: { rateLimit: { max: 3, timeWindow: "1 minute" } } },
+    async (req) => {
+      const a = await actor(req);
+      const { id } = z.object({ id: z.string().uuid() }).parse(req.body);
+      const timestamp = Date.now();
+      const s = await readState();
+      const device =
+        s.pushDevices.find((d) => d.id === id && d.userId === a.id) ??
+        fail(404, "Device not found.");
+      if (!(await activePushDevice(device)))
+        fail(409, "Sign in again to enable notifications on this device.");
+      await sendPush(
+        device,
+        {
+          deviceId: id,
+          test: true,
+          unreadCount: inbox(s, a).unreadCount,
+          timestamp,
+          tag: "test",
+        },
+        "test",
+      );
+      return { ok: true };
     },
   );
   const routes: Record<string, string> = {
@@ -219,6 +328,9 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
     contributions: "contributions.create",
     "contributions/update": "contributions.update",
     comments: "comments.create",
+    "notifications/read": "notifications.read",
+    follows: "follows.update",
+    watches: "watches.update",
     exchanges: "exchanges.create",
     "exchanges/update": "exchanges.update",
     "exchanges/draw": "exchanges.draw",
@@ -229,15 +341,41 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
   for (const [url, action] of Object.entries(routes))
     app.post(`/api/v1/${url}`, async (req) => {
       const a = await actor(req);
-      return transact((s) =>
-        idempotent(
+      const invited =
+        action === "groups.invite" &&
+        typeof (req.body as any)?.email === "string"
+          ? (
+              await pool.query(
+                'SELECT id FROM "user" WHERE lower(email)=lower($1)',
+                [(req.body as any).email.trim()],
+              )
+            ).rows[0]?.id
+          : undefined;
+      return transact((s) => {
+        const result = idempotent(
           s,
           a,
           String(req.headers["idempotency-key"] ?? ""),
           action,
           req.body,
-        ),
-      );
+        );
+        if (
+          invited &&
+          typeof (result as { id?: string }).id === "string" &&
+          !s.notices.some(
+            (n) =>
+              n.inbox &&
+              n.invitationId === (result as any).id &&
+              n.userId === invited,
+          )
+        )
+          emitActivity(s, "invitation", [invited], {
+            invitationId: (result as any).id,
+            actorId: a.id,
+            status: "sent",
+          });
+        return result;
+      });
     });
   app.post("/api/v1/media", async (req) => {
     const a = await actor(req);
@@ -292,12 +430,24 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
         status,
         error,
       })),
-      notifications: s.notices.map(({ id, status, error, attempts }) => ({
-        id,
-        status,
-        error,
-        attempts,
-      })),
+      notifications: s.notices.map((n) => {
+        const failedPush = Object.values(n.pushDeliveries ?? {}).filter(
+          (d) => d.status === "failed",
+        );
+        const terminal = failedPush.some((d) => d.attempts >= 5);
+        return {
+          id: n.id,
+          status: terminal
+            ? "failed"
+            : failedPush.length && !n.pushComplete
+              ? "pending"
+              : n.status,
+          error: terminal
+            ? "Push delivery failed. Check push configuration and retry."
+            : n.error,
+          attempts: Math.max(n.attempts, ...failedPush.map((d) => d.attempts)),
+        };
+      }),
     };
   });
   app.post("/api/v1/admin/jobs/retry", async (req) => {
@@ -305,9 +455,35 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
     const b = z.object({ id: z.string().uuid() }).parse(req.body);
     return transact((s) => {
       if (!isAdmin(s, a)) fail(403, "Administrator access required.");
-      const j = s.notices.find((n) => n.id === b.id && n.status === "failed");
+      const j = s.notices.find(
+        (n) =>
+          n.id === b.id &&
+          (n.status === "failed" ||
+            Object.values(n.pushDeliveries ?? {}).some(
+              (d) => d.status === "failed" && d.attempts >= 5,
+            )),
+      );
       if (!j) fail(404, "Failed job not found.");
-      j.status = "pending";
+      if (j.status === "failed") j.status = "pending";
+      let retryPush = false;
+      for (const delivery of Object.values(j.pushDeliveries ?? {})) {
+        if (delivery.status === "failed") {
+          delivery.attempts = 0;
+          delete delivery.nextAttemptAt;
+          retryPush = true;
+        }
+      }
+      if (retryPush)
+        for (const n of s.notices)
+          if (
+            n.id === j.id ||
+            (j.event === "wishlist" &&
+              n.event === "wishlist" &&
+              n.userId === j.userId &&
+              n.listId === j.listId &&
+              n.pushDueAt === j.pushDueAt)
+          )
+            n.pushComplete = false;
       j.attempts = 0;
       j.error = undefined;
       return { ok: true };

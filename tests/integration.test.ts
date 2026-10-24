@@ -345,6 +345,54 @@ describe.skipIf(!url)("PostgreSQL transaction integrity", () => {
       after.householdMemberships.some((m) => m.householdId === household.id),
     ).toBe(false);
   });
+  it("commits followed-item notifications atomically and deduplicates replayed actions", async () => {
+    // Create a dedicated list so earlier tests' sharing changes do not affect this case.
+    const person = (await storage.readState()).people.find(
+      (p) => p.userId === a.id,
+    )!;
+    const fresh = (await storage.transact((s) =>
+      command(s, a, "lists.create", {
+        name: "Notification integrity",
+        ownerIds: [person.id],
+        groupIds: [groupId],
+        mode: "surprise",
+      }),
+    )) as { id: string };
+    await storage.transact((s) => {
+      const group = s.groups.find((g) => g.id === groupId)!;
+      group.memberIds = [...new Set([...group.memberIds, b.id])];
+      command(s, b, "follows.update", {
+        target: "list",
+        targetId: fresh.id,
+        following: true,
+      });
+    });
+    const body = { listId: fresh.id, title: "Atomic wish" };
+    const first = (await storage.transact((s) =>
+      idempotent(s, a, "notification_integrity_0001", "items.create", body),
+    )) as { id: string };
+    const replay = (await storage.transact((s) =>
+      idempotent(s, a, "notification_integrity_0001", "items.create", body),
+    )) as { id: string };
+    expect(replay).toMatchObject({ ok: true, replayed: true });
+    expect(
+      (await storage.readState()).notices.filter(
+        (n) => n.itemId === first.id && n.userId === b.id,
+      ),
+    ).toHaveLength(1);
+    await expect(
+      storage.transact((s) => {
+        command(s, a, "items.create", {
+          listId: fresh.id,
+          title: "Rolled back wish",
+        });
+        throw new Error("Abort notification");
+      }),
+    ).rejects.toThrow("Abort notification");
+    const after = await storage.readState();
+    expect(after.items.some((i) => i.title === "Rolled back wish")).toBe(false);
+    expect(after.notices.filter((n) => n.listId === fresh.id)).toHaveLength(1);
+  });
   it("persists a failed job across worker restart and completes its retry", async () => {
     const { PgBoss } = await import("pg-boss");
     const name = `retry-proof-${Date.now()}`;

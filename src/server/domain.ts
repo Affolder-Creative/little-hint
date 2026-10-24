@@ -1,3 +1,15 @@
+import {
+  activityAllowed,
+  activityCommand,
+  emitActivity,
+  emitGiftActivity,
+  followsItem,
+  inbox,
+  accountIds,
+  watchesItem,
+  validateMentions,
+  topicIds,
+} from "./activity";
 import { randomUUID, createHash } from "node:crypto";
 import { z } from "zod";
 import {
@@ -406,6 +418,7 @@ export function giftView(s: State, a: Actor, i: Item): GiftView {
         id: c.id,
         author: name(s, c.authorId),
         body: c.body,
+        mentions: c.mentions,
         createdAt: c.createdAt,
       }));
   return view;
@@ -431,6 +444,7 @@ export function preferences(s: State, a: Actor): Preferences {
   );
 }
 export function noticeAllowed(s: State, n: Notice): boolean {
+  if (n.inbox) return activityAllowed(s, n);
   if (n.invitationId) {
     const inv = s.invitations.find((i) => i.id === n.invitationId);
     return (
@@ -484,25 +498,12 @@ function notify(
   userIds: string[],
   refs: Partial<Notice> = {},
 ) {
-  for (const userId of new Set(userIds)) {
-    const n: Notice = {
-      ...stamp(),
-      userId,
-      event,
-      status: "pending",
-      attempts: 0,
-      delivered: [],
-      ...refs,
-    };
-    if (noticeAllowed(s, n)) s.notices.push(n);
-  }
+  emitActivity(s, event, userIds, refs);
 }
 function notifyGift(s: State, a: Actor, i: Item, event: Notice["event"]) {
-  const users = s.people
-    .filter((p) => p.userId && p.userId !== a.id)
-    .map((p) => p.userId!);
-  notify(s, event, users, { itemId: i.id });
+  emitGiftActivity(s, a, i, event);
 }
+
 export function world(s: State, a: Actor): World {
   const people = s.people.filter((p) => personVisible(s, a, p));
   const ps = ownIds(s, a);
@@ -621,6 +622,24 @@ export function world(s: State, a: Actor): World {
         },
       })),
     preferences: preferences(s, a),
+    notificationCount: inbox(s, a).unreadCount,
+    follows: s.follows.filter(
+      (f) =>
+        f.userId === a.id &&
+        (f.target === "list"
+          ? s.lists.some((l) => l.id === f.targetId && listVisible(s, a, l))
+          : s.people.some(
+              (p) => p.id === f.targetId && personVisible(s, a, p),
+            )),
+    ),
+    watches: s.items
+      .filter((i) => itemVisible(s, a, i) && !recipient(s, a, i))
+      .map((i) => ({
+        ...stamp(),
+        userId: a.id,
+        itemId: i.id,
+        watching: watchesItem(s, a.id, i.id),
+      })),
     imports: s.imports.filter((j) => j.userId === a.id),
     links: s.links
       .filter(
@@ -742,6 +761,10 @@ export function command(
   raw: unknown,
 ): unknown {
   const b = raw as Record<string, unknown>;
+  if (
+    ["notifications.read", "follows.update", "watches.update"].includes(action)
+  )
+    return activityCommand(s, a, action, raw);
   switch (action) {
     case "households.create": {
       const p = z.object({ groupId: id, name: text }).parse(b);
@@ -977,6 +1000,11 @@ export function command(
         expiresAt: new Date(Date.now() + 86400000).toISOString(),
         consumed: false,
       });
+      emitActivity(s, "invitation", [p.userId], {
+        linkId: s.links.at(-1)!.id,
+        action: "ownership-request",
+        actorId: a.id,
+      });
       return { ok: true };
     }
     case "links.accept": {
@@ -1087,6 +1115,14 @@ export function command(
         revealExchangeGivers: p.revealExchangeGivers ?? false,
       };
       s.lists.push(l);
+      emitActivity(
+        s,
+        "invitation",
+        pending.flatMap((id) =>
+          controllers(s.people.find((p) => p.id === id)!),
+        ),
+        { listId: l.id, action: "ownership-request", actorId: a.id },
+      );
       return l;
     }
     case "lists.accept": {
@@ -1206,6 +1242,13 @@ export function command(
           : {}),
       };
       s.items.push(i);
+      if (i.listId)
+        emitActivity(
+          s,
+          "wishlist",
+          accountIds(s).filter((userId) => followsItem(s, userId, i)),
+          { itemId: i.id, listId: i.listId, actorId: a.id },
+        );
       return giftView(s, a, i);
     }
     case "items.update": {
@@ -1334,10 +1377,49 @@ export function command(
           409,
           "The contribution goal must cover the contributions already promised.",
         );
+      const wasFunded = !!r.poolTargetCents && pledged >= r.poolTargetCents;
       const increased = p.purchased > r.purchased;
       if (increased) r.purchasedAt = new Date().toISOString();
       Object.assign(r, p);
       touch(r);
+      if (
+        !wasFunded &&
+        r.poolTargetCents &&
+        pledged >= r.poolTargetCents &&
+        r.quantity > 0
+      )
+        emitActivity(
+          s,
+          "contribution",
+          [
+            r.buyerId,
+            ...s.contributions
+              .filter(
+                (c) => c.reservationId === r.id && c.status !== "cancelled",
+              )
+              .map((c) => c.userId),
+          ],
+          { itemId: r.itemId, reservationId: r.id, action: "funded" },
+        );
+      if (!r.quantity && r.poolTargetCents)
+        emitActivity(
+          s,
+          "contribution",
+          [
+            r.buyerId,
+            ...s.contributions
+              .filter(
+                (c) => c.reservationId === r.id && c.status !== "cancelled",
+              )
+              .map((c) => c.userId),
+          ],
+          {
+            itemId: r.itemId,
+            reservationId: r.id,
+            actorId: a.id,
+            action: "pool-cancelled",
+          },
+        );
       if (!r.quantity)
         for (const c of s.contributions.filter(
           (c) => c.reservationId === r.id && c.status === "pledged",
@@ -1346,7 +1428,10 @@ export function command(
           touch(c);
         }
       if (!r.exchangeId)
-        notifyGift(s, a, i, increased ? "purchase" : "reservation");
+        emitGiftActivity(s, a, i, increased ? "purchase" : "reservation", {
+          reservationId: r.id,
+          action: !r.quantity ? "released" : undefined,
+        });
       return r;
     }
     case "contributions.create": {
@@ -1377,7 +1462,27 @@ export function command(
         );
       const c = { ...stamp(), ...p, userId: a.id, status: "pledged" as const };
       s.contributions.push(c);
-      notify(s, "contribution", [r.buyerId], { itemId: i.id });
+      notify(s, "contribution", [r.buyerId], {
+        itemId: i.id,
+        reservationId: r.id,
+        contributionId: c.id,
+        action: "pledged",
+        actorId: a.id,
+      });
+      if (total + p.amountCents === r.poolTargetCents)
+        notify(
+          s,
+          "contribution",
+          [
+            r.buyerId,
+            ...s.contributions
+              .filter(
+                (c) => c.reservationId === r.id && c.status !== "cancelled",
+              )
+              .map((c) => c.userId),
+          ],
+          { itemId: i.id, reservationId: r.id, action: "funded" },
+        );
       return c;
     }
     case "contributions.update": {
@@ -1406,12 +1511,35 @@ export function command(
         );
       c.status = p.status;
       touch(c);
-      notify(s, "contribution", [r.buyerId, c.userId], { itemId: r.itemId });
+      notify(s, "contribution", [r.buyerId, c.userId], {
+        itemId: r.itemId,
+        reservationId: r.id,
+        contributionId: c.id,
+        action: p.status,
+        actorId: a.id,
+      });
       return c;
     }
     case "comments.create": {
       const p = z
-        .object({ itemId: id, body: z.string().trim().min(1).max(4000) })
+        .object({
+          itemId: id,
+          body: z
+            .string()
+            .min(1)
+            .max(4000)
+            .refine((v) => !!v.trim(), "Write a note."),
+          mentions: z
+            .array(
+              z.object({
+                userId: z.string().min(1).max(200),
+                start: z.number().int().min(0),
+                end: z.number().int().positive(),
+              }),
+            )
+            .max(20)
+            .default([]),
+        })
         .parse(b);
       const i = getItem(s, a, p.itemId);
       if (recipient(s, a, i) || archived(s, i))
@@ -1423,13 +1551,26 @@ export function command(
           r.exchangeId &&
           r.quantity > 0,
       );
-      s.comments.push({
+      validateMentions(s, a, i, p.body, p.mentions);
+      const comment = {
         ...stamp(),
         ...p,
         authorId: a.id,
         giverId: exchangeReservation?.giverId,
-      });
-      if (!exchangeReservation) notifyGift(s, a, i, "discussion");
+      };
+      s.comments.push(comment);
+      const mentioned = [...new Set(p.mentions.map((m) => m.userId))];
+      const refs = { itemId: i.id, commentId: comment.id, actorId: a.id };
+      emitActivity(s, "mention", mentioned, refs);
+      emitActivity(
+        s,
+        "discussion",
+        accountIds(s).filter(
+          (userId) =>
+            !mentioned.includes(userId) && watchesItem(s, userId, i.id),
+        ),
+        refs,
+      );
       return { ok: true };
     }
     case "exchanges.create":
@@ -1589,8 +1730,18 @@ export function command(
             groupAccess(s, a, e.groupId),
         ) ?? fail(404, "Exchange not found.");
       checkRevision(e, p.revision);
+      const wasDrawn = e.status === "drawn";
       e.status = "cancelled";
       touch(e);
+      if (wasDrawn)
+        notify(
+          s,
+          "exchange",
+          e.participantIds.flatMap((id) =>
+            controllers(s.people.find((p) => p.id === id)!),
+          ),
+          { exchangeId: e.id, action: "cancelled", actorId: a.id },
+        );
       return { ok: true };
     }
     case "preferences.update": {
@@ -1610,9 +1761,28 @@ export function command(
                 "contribution",
                 "exchange",
                 "access",
+                "mention",
+                "wishlist",
               ]),
             )
-            .max(7),
+            .max(9),
+          pushEvents: z
+            .array(z.string().refine((v) => topicIds.includes(v as any)))
+            .max(9)
+            .optional(),
+          channelEvents: z
+            .object({
+              email: z
+                .array(z.string().refine((v) => topicIds.includes(v as any)))
+                .max(9),
+              telegram: z
+                .array(z.string().refine((v) => topicIds.includes(v as any)))
+                .max(9),
+              sms: z
+                .array(z.string().refine((v) => topicIds.includes(v as any)))
+                .max(9),
+            })
+            .optional(),
         })
         .parse(b);
       const prefs = preferences(s, a);

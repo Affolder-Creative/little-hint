@@ -62,8 +62,8 @@ dependency or its version changes.
 ## Reviewed corresponding-source bundles
 
 The current AMD64 and ARM64 image inventories are covered. Together they require
-47 exact package/version/source-revision identifiers, 45 per architecture. The
-three bundles are assembled from 641 downloaded inputs and checked-in build
+48 exact package/version/source-revision identifiers, 46 per architecture. The
+four bundles are assembled from 642 downloaded inputs and checked-in build
 instructions. Every downloaded byte is SHA-256 pinned; the final archive hashes
 are recorded in `compliance/source-bundles.lock.json`.
 
@@ -153,3 +153,7 @@ References: [PolyForm Perimeter](https://github.com/polyformproject/polyform-lic
 [MPL 2.0](https://www.mozilla.org/en-US/MPL/2.0/),
 [font licensing FAQ](https://openfontlicense.org/ofl-faq/),
 and [Sharp's native build sources](https://github.com/lovell/sharp-libvips/tree/ebb95f8add54eee8bed840e3fb587e4cbec857d7).
+
+## Web Push addition
+
+`web-push@3.6.7` is an unmodified MPL-2.0 runtime dependency. The exact npm gitHead source tree is included in `web-push-3.6.7-sources.tar.gz`, with its checksum pinned in the source manifests. Its JavaScript stays external to the application bundle and retains its own license. `http_ece@1.2.0` omits its MIT license from the npm package; the fallback notice comes from its exact published gitHead and is recorded in the notice provenance.
