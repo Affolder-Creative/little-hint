@@ -8,6 +8,7 @@ x-app: &app
   environment:
     NODE_ENV: production
     APP_ENV: staging
+    CLOUDFLARE_WEB_ANALYTICS: ${CLOUDFLARE_WEB_ANALYTICS:-false}
     APP_URL: ${STAGING_APP_URL:?Set STAGING_APP_URL to the staging HTTPS origin}
     DATABASE_URL: postgresql://little_hint_staging:${STAGING_POSTGRES_PASSWORD:?Set STAGING_POSTGRES_PASSWORD}@db:5432/little_hint_staging
     BETTER_AUTH_SECRET: ${STAGING_AUTH_SECRET:?Set STAGING_AUTH_SECRET}

@@ -32,6 +32,33 @@ node dist/server/cli.js bootstrap admin@example.com
 
 This creates a 24-hour invitation; it does not email a code until the administrator signs in. The command refuses a second active bootstrap. Ordinary registration requires an invitation. Do not seed demo data in production.
 
+## Optional Cloudflare Web Analytics
+
+Cloudflare can inject its Web Analytics beacon into proxied HTML. Little Hint
+blocks external scripts and connections by default, so an injected beacon will
+produce a browser CSP warning until the operator chooses to allow it.
+
+To use analytics, set `CLOUDFLARE_WEB_ANALYTICS=true` as a Runtime-only variable
+in Coolify and redeploy the app. This permits scripts from
+`https://static.cloudflareinsights.com` and connections to
+`https://cloudflareinsights.com`. Same-origin `/cdn-cgi/rum` reports are already
+covered by `'self'`. This setting permits the beacon; it does not inject a script,
+configure a Cloudflare site token, or enable analytics in Cloudflare.
+
+Leave the variable empty, unset, or `false` to keep the original policy. Other
+values fail startup. If analytics is unwanted, also disable Web Analytics beacon
+injection for this hostname in Cloudflare to remove the browser warning. Do not
+enable it for private app pages unless sending their page URLs and performance
+metrics to Cloudflare is intended. See Cloudflare's
+[data collection documentation](https://developers.cloudflare.com/web-analytics/data-metrics/data-origin-and-collection/)
+and [CSP guidance](https://developers.cloudflare.com/fundamentals/reference/policies-compliances/content-security-policies/).
+
+After an approved deployment, check the HTML response's CSP and the browser
+Network panel: the beacon script should load and its `/cdn-cgi/rum` request should
+succeed without a CSP violation. An ad blocker may still block analytics. Keep
+inline scripts, eval, unrelated script hosts, and unrelated connection hosts
+blocked. No Cloudflare dashboard change is needed when injection is already on.
+
 ## Email and optional providers
 
 Any compatible SMTP provider can send application email. For Forward Email, use `smtp.forwardemail.net`, port 465 with TLS, and an alias on a domain with verified, approved outbound SMTP. For example, use `littlehint@example.com` as `SMTP_USER`, its generated alias password as `SMTP_PASS`, and `Little Hint <littlehint@example.com>` as `SMTP_FROM`. Replace these example addresses before deployment.

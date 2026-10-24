@@ -29,6 +29,7 @@ export function assertStagingSeed(env = process.env) {
 
 export function validateDeployment(env = process.env) {
   productPhotoOverride(env);
+  cloudflareWebAnalyticsEnabled(env);
   if (deploymentEnvironment(env) !== "staging") return;
   assertStagingDatabase(env);
   if (env.NODE_ENV !== "production")
@@ -37,6 +38,14 @@ export function validateDeployment(env = process.env) {
     throw new Error("Staging requires an HTTPS APP_URL.");
   if (!env.NODE_EXTRA_CA_CERTS)
     throw new Error("Staging requires NODE_EXTRA_CA_CERTS for Mailpit TLS.");
+}
+
+export function cloudflareWebAnalyticsEnabled(env = process.env): boolean {
+  const value = env.CLOUDFLARE_WEB_ANALYTICS;
+  if (value === undefined || value === "" || value === "false") return false;
+  if (value !== "true")
+    throw new Error("CLOUDFLARE_WEB_ANALYTICS must be true, false, or empty.");
+  return true;
 }
 
 // Empty Compose values leave the administrator preference editable.
