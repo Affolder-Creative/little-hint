@@ -244,6 +244,7 @@ export function NotificationOpen() {
   }, [query.data?.id]);
   return query.isError || error ? (
     <Empty
+      page
       title="This update is no longer available"
       action={
         <Link className="button secondary" to="/notifications">

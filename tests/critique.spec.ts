@@ -1228,6 +1228,230 @@ test("exchange rules fit phones and enlarged text in both themes", async ({
   }
 });
 
+test("family-group navigation keeps context and reaches members sooner on phones", async ({
+  page,
+}, testInfo) => {
+  const { state } = await preview(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`/settings?section=groups&group=${state.groups[0].id}`);
+  const group = page.locator(`[data-group-id="${state.groups[0].id}"]`);
+  await expect(
+    group.getByRole("heading", { name: "Morgan family", exact: true }),
+  ).toBeVisible();
+  await expect(
+    group.getByText("You own this group", { exact: true }),
+  ).toBeVisible();
+  expect(
+    (await group.locator(".member-list > div").first().boundingBox())!.y,
+  ).toBeLessThan(650);
+  await page.screenshot({
+    path: testInfo.outputPath("groups-390-light.png"),
+    fullPage: true,
+  });
+  const nav = page.getByRole("navigation", {
+    name: "Family group settings",
+    exact: true,
+  });
+  await nav.getByRole("link", { name: "Households", exact: true }).focus();
+  await page.keyboard.press("Enter");
+  await expect(
+    nav.getByRole("link", { name: "Households", exact: true }),
+  ).toHaveAttribute("aria-current", "page");
+  await page
+    .getByLabel("Family group", { exact: true })
+    .selectOption(state.groups[1].id);
+  await expect(
+    page.locator(`[data-group-id="${state.groups[1].id}"]`),
+  ).toBeVisible();
+  await expect(
+    nav.getByRole("link", { name: "Households", exact: true }),
+  ).toHaveAttribute("aria-current", "page");
+  await page
+    .getByLabel("Settings section", { exact: true })
+    .selectOption("profile");
+  await page
+    .getByLabel("Settings section", { exact: true })
+    .selectOption("groups");
+  await expect(page.getByLabel("Family group", { exact: true })).toHaveValue(
+    state.groups[1].id,
+  );
+  await page.reload();
+  await expect(
+    nav.getByRole("link", { name: "Households", exact: true }),
+  ).toHaveAttribute("aria-current", "page");
+  state.groups[0].name =
+    "The Morgan and Chen family, close friends, and weekend adventurers";
+  for (const [width, theme] of [
+    [1440, "light"],
+    [768, "dark"],
+    [320, "dark"],
+  ] as const) {
+    await page.setViewportSize({ width, height: 1000 });
+    await page.evaluate(
+      (theme) => localStorage.setItem("little-hint:theme", theme),
+      theme,
+    );
+    await page.goto(
+      `/settings?section=groups&group=${state.groups[0].id}&view=members`,
+    );
+    await page.reload();
+    const name = group.getByRole("heading", {
+      name: state.groups[0].name,
+      exact: true,
+    });
+    await expect(name).toBeVisible();
+    for (const enlarged of [false, true]) {
+      if (enlarged)
+        await page.evaluate(() => {
+          const sizes = Array.from(
+            document.querySelectorAll<HTMLElement>("body *"),
+          ).map(
+            (el) => [el, parseFloat(getComputedStyle(el).fontSize)] as const,
+          );
+          for (const [el, size] of sizes) el.style.fontSize = `${size * 2}px`;
+        });
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth - innerWidth,
+        ),
+      ).toBeLessThanOrEqual(1);
+      expect(
+        await name.evaluate((el) => el.scrollWidth - el.clientWidth),
+      ).toBeLessThanOrEqual(1);
+      for (const link of await nav.getByRole("link").all()) {
+        expect((await link.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+      }
+      if (!enlarged || width === 320)
+        await page.screenshot({
+          path: testInfo.outputPath(
+            `groups-${width}-${theme}${enlarged ? "-200" : ""}.png`,
+          ),
+          fullPage: true,
+        });
+    }
+  }
+});
+
+test("single-group members retain requests and first-time group guidance", async ({
+  page,
+}, testInfo) => {
+  const { state, actors } = await preview(page, 1);
+  command(state, actors[2], "groups.invite", {
+    groupId: state.groups[1].id,
+    email: actors[1].email,
+  });
+  command(state, actors[0], "groups.transfer", {
+    groupId: state.groups[0].id,
+    userId: actors[1].id,
+    email: actors[1].email,
+  });
+  await page.setViewportSize({ width: 390, height: 1000 });
+  await page.goto("/settings?section=groups");
+  await expect(page.getByLabel("Family group", { exact: true })).toHaveCount(0);
+  const group = page.locator(`[data-group-id="${state.groups[0].id}"]`);
+  await expect(
+    group.getByRole("heading", { name: state.groups[0].name, exact: true }),
+  ).toBeVisible();
+  await expect(
+    group.getByText("You’re a member", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    group.getByRole("button", { name: "Leave family group", exact: true }),
+  ).toBeVisible();
+  await expect(
+    group.getByRole("button", { name: /Transfer ownership/ }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Accept invitation", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Accept request", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Create family group", exact: true }),
+  ).toBeVisible();
+  await page.screenshot({
+    path: testInfo.outputPath("groups-member-requests.png"),
+    fullPage: true,
+  });
+  state.groups[0].memberIds = state.groups[0].memberIds.filter(
+    (id) => id !== actors[1].id,
+  );
+  state.links = [];
+  await page.reload();
+  await expect(
+    page.getByText(
+      "No family groups yet. Create one or accept an invitation to get started.",
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByText(/A family group brings friends or family together/),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Accept invitation", exact: true }),
+  ).toBeVisible();
+});
+
+test("missing pages have descriptive headings and titles while empty sections keep their hierarchy", async ({
+  page,
+}, testInfo) => {
+  await preview(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  for (const theme of ["light", "dark"] as const) {
+    await page.goto("/");
+    await page.evaluate(
+      (theme) => localStorage.setItem("little-hint:theme", theme),
+      theme,
+    );
+    await page.reload();
+    for (const [route, title] of [
+      ["/not-a-route", "This page isn’t here"],
+      ["/people/missing", "Person not found"],
+      ["/lists/missing", "List not found"],
+      ["/events/missing", "Event not found"],
+      ["/gift/missing", "Item not found"],
+      ["/notifications/missing", "This update is no longer available"],
+    ]) {
+      await page.goto(route);
+      await expect(page.locator("main h1")).toHaveText(title);
+      await expect(page).toHaveTitle(`${title} · Little Hint`);
+      await expect(page.locator("main h1")).toHaveCount(1);
+      await expect(page.locator(".empty > img")).toHaveAttribute(
+        "src",
+        `/brand/little-hint/symbols/little-hint-tag-${theme === "dark" ? "dark" : "color"}.svg`,
+      );
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth - innerWidth,
+        ),
+      ).toBeLessThanOrEqual(1);
+    }
+    await page.screenshot({
+      path: testInfo.outputPath(`missing-page-${theme}.png`),
+      fullPage: true,
+    });
+    await page.goto("/");
+    await page
+      .getByRole("textbox", { name: "Search items and gift ideas" })
+      .fill("no-such-gift-000");
+    await expect(
+      page.getByRole("heading", { name: "No matches found", level: 2 }),
+    ).toBeVisible();
+    await expect(page.locator("main h1")).toHaveText("Hi, Alex.");
+    await expect(page).toHaveTitle("Hi, Alex. · Little Hint");
+    await page
+      .getByRole("button", {
+        name:
+          theme === "dark" ? "Switch to light theme" : "Switch to dark theme",
+      })
+      .click();
+    await expect(page.locator(".empty > img")).toHaveAttribute(
+      "src",
+      `/brand/little-hint/symbols/little-hint-tag-${theme === "dark" ? "color" : "dark"}.svg`,
+    );
+  }
+});
+
 test("creating a group leads directly to invitations", async ({ page }) => {
   await preview(page);
   await page.goto("/settings?section=groups");

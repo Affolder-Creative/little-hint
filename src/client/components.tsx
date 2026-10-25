@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useOnline } from "./pwa";
+import { useApp } from "./context";
 import type { GiftView } from "../shared/model";
 import { dollars, initials } from "./api";
 
@@ -345,20 +346,27 @@ export function Empty({
   title,
   children,
   action,
+  page = false,
 }: {
   title: string;
   children: ReactNode;
   action?: ReactNode;
+  page?: boolean;
 }) {
+  const { dark } = useApp();
+  const Heading = page ? "h1" : "h2";
+  useEffect(() => {
+    if (page) document.title = `${title} · Little Hint`;
+  }, [page, title]);
   return (
     <div className="empty">
       <img
-        src="/brand/little-hint/symbols/little-hint-tag-color.svg"
+        src={`/brand/little-hint/symbols/little-hint-tag-${dark ? "dark" : "color"}.svg`}
         width="56"
         height="64"
         alt=""
       />
-      <h2>{title}</h2>
+      <Heading>{title}</Heading>
       <p>{children}</p>
       {action}
     </div>
