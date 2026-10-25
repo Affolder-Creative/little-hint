@@ -124,9 +124,9 @@ longer. The October 24 baseline was 47 seconds for docs, 5m 6s for a full run,
 and 11m 35s when Ubuntu dependency downloads stalled. A normal browser e2e step
 took about 224 seconds with pacing. These are samples, not percentile estimates.
 
-A future Blacksmith benchmark should start with container builds after measuring
-these changes. It is not required for this workflow, and no runner migration or
-recurring monitoring is configured.
+The October 24 [runner benchmark](RUNNER_BENCHMARK.md) measured a 35-second
+improvement in warm median completion on Blacksmith. We retained GitHub-hosted
+runners and removed the temporary benchmark. No recurring monitoring is configured.
 
 ## Recovery
 
