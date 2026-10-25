@@ -1,7 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { stagingFixtures } from "../src/server/staging-fixtures";
 import { command, world } from "../src/server/domain";
-import { emptyState } from "../src/shared/model";
+import { emptyState, type List } from "../src/shared/model";
 
 async function preview(page: Page, actorIndex = 0, solo = false) {
   const fixture = stagingFixtures();
@@ -626,6 +626,269 @@ test("search recovery and person tabs work with a keyboard", async ({
   await expect(
     page.getByRole("tab", { name: "On their wish lists" }),
   ).toBeFocused();
+});
+
+test("person pages link accessible wish lists and keep all items with their source", async ({
+  page,
+}) => {
+  const { state, actor, actors } = await preview(page);
+  const person = state.people.find((person) => person.userId === actors[2].id)!;
+  const viewer = state.people.find((person) => person.userId === actor.id)!;
+  const createList = (
+    name: string,
+    groupIds: string[],
+    ownerIds = [person.id],
+  ) =>
+    command(state, actors[2], "lists.create", {
+      name,
+      ownerIds,
+      groupIds,
+      mode: "surprise",
+      description: "Please choose something we can enjoy together.",
+    }) as List;
+  const empty = createList("Birthday plans", [state.groups[0].id]);
+  const privateList = createList("Private plans", []);
+  const pending = createList(
+    "Pending shared ownership",
+    [],
+    [person.id, viewer.id],
+  );
+  const archived = createList("Past celebration", [state.groups[0].id]);
+  archived.archived = true;
+  // Pending invitations are present in the response but do not grant list access.
+  expect(world(state, actor).lists.some((list) => list.id === pending.id)).toBe(
+    true,
+  );
+  command(state, actor, "items.create", {
+    title: "A private idea for Jamie",
+    recipientIds: [person.id],
+    visibility: "private",
+  });
+  await page.goto(`/people/${person.id}`);
+  const links = page.getByRole("navigation", {
+    name: "Wish lists for Jamie Chen",
+  });
+  await expect(links.getByRole("link")).toHaveCount(3);
+  await expect(
+    links.getByRole("link", { name: "Birthday plans", exact: true }),
+  ).toHaveAttribute("href", `/lists/${empty.id}`);
+  for (const list of [privateList, pending, archived])
+    await expect(
+      links.getByRole("link", { name: list.name, exact: true }),
+    ).toHaveCount(0);
+  const card = (title: string) =>
+    page
+      .locator(".gift-card")
+      .filter({ has: page.getByRole("heading", { name: title, exact: true }) });
+  await expect(card("Trail daypack")).toContainText("From Jamie's wishes");
+  await expect(card("Celebration puzzle")).toContainText(
+    "From Family celebration",
+  );
+  await expect(page.locator(".gift-card")).toHaveCount(2);
+  await expect(page.locator(".gift-card a")).toHaveCount(0);
+  await page
+    .getByRole("textbox", { name: "Search items", exact: true })
+    .fill("Trail");
+  await expect(page.locator(".gift-card")).toHaveCount(1);
+  await expect(links.getByRole("link")).toHaveCount(3);
+  await page
+    .getByRole("textbox", { name: "Search items", exact: true })
+    .fill("");
+  await expect(page.locator(".gift-card")).toHaveCount(2);
+  await links
+    .getByRole("link", { name: "Birthday plans", exact: true })
+    .press("Enter");
+  await expect(
+    page.getByRole("heading", { name: "Birthday plans", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText(empty.description, { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "No items yet", exact: true }),
+  ).toBeVisible();
+  await page.goBack();
+  await expect(links).toBeVisible();
+  await card("Trail daypack").click();
+  await expect(
+    page.getByRole("heading", { name: "Trail daypack", exact: true }),
+  ).toBeVisible();
+  await page.goBack();
+  await page
+    .getByRole("tab", { name: "Gift ideas for Jamie", exact: true })
+    .click();
+  await expect(links).toHaveCount(0);
+  await expect(page.locator(".gift-source-list")).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", {
+      name: "A private idea for Jamie",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await page.goto("/");
+  await expect(page.locator(".gift-card").first()).toBeVisible();
+  await expect(page.locator(".gift-source-list")).toHaveCount(0);
+});
+
+test("person lists include private owned and managed lists and explain empty lists", async ({
+  page,
+}) => {
+  const { state, actor } = await preview(page);
+  const me = state.people.find((person) => person.userId === actor.id)!;
+  const managed = command(state, actor, "people.create", { name: "Casey" }) as {
+    id: string;
+  };
+  for (const person of [me, { ...managed, name: "Casey" }]) {
+    const list = command(state, actor, "lists.create", {
+      name: `${person.name}'s private list`,
+      ownerIds: [person.id],
+      groupIds: [],
+      mode: "surprise",
+    }) as List;
+    await page.goto(`/people/${person.id}`);
+    const nav = page.getByRole("navigation", {
+      name: `Wish lists for ${person.name}`,
+    });
+    await expect(
+      nav.getByRole("link", { name: list.name, exact: true }),
+    ).toHaveAttribute("href", `/lists/${list.id}`);
+    if (person.id === managed.id) {
+      await expect(
+        page.getByRole("heading", {
+          name: "No items on these wish lists yet",
+          exact: true,
+        }),
+      ).toBeVisible();
+      await expect(
+        page.getByText(
+          "Open a wish list above to add an item or read its notes.",
+          { exact: true },
+        ),
+      ).toBeVisible();
+    }
+  }
+  const other = state.people.find((person) => person.name === "Riley Morgan")!;
+  state.items
+    .filter((item) => item.recipientIds.includes(other.id))
+    .forEach((item) => {
+      item.archived = true;
+    });
+  await page.goto(`/people/${other.id}`);
+  await expect(
+    page.getByRole("navigation", { name: "Wish lists for Riley Morgan" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Open a wish list above to read its notes.", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  state.lists
+    .filter((list) => list.ownerIds.includes(other.id))
+    .forEach((list) => {
+      list.archived = true;
+    });
+  await page.reload();
+  await expect(
+    page.getByRole("navigation", { name: "Wish lists for Riley Morgan" }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", {
+      name: "No wish-list items shared yet",
+      exact: true,
+    }),
+  ).toBeVisible();
+});
+
+test("person list links and source names wrap across viewports and enlarged text", async ({
+  page,
+}, testInfo) => {
+  const { state, actors } = await preview(page);
+  const person = state.people.find((person) => person.userId === actors[2].id)!;
+  const list = state.lists.find((list) => list.name === "Jamie's wishes")!;
+  list.name = "Birthday wishes for our next adventure together";
+  for (const name of [
+    "Holiday plans",
+    "A celebration with friends",
+    "Holiday plans",
+    "Weekend wishes",
+    "Things for home",
+    "Summer adventures",
+    "A".repeat(100),
+  ]) {
+    command(state, actors[2], "lists.create", {
+      name,
+      ownerIds: [person.id],
+      groupIds: [state.groups[0].id],
+      mode: "surprise",
+    });
+  }
+  for (const [width, theme] of [
+    [1440, "light"],
+    [768, "dark"],
+    [390, "light"],
+    [320, "dark"],
+  ] as const) {
+    await page.setViewportSize({ width, height: 1000 });
+    await page.goto(`/people/${person.id}`);
+    await page.evaluate(
+      (theme) => localStorage.setItem("little-hint:theme", theme),
+      theme,
+    );
+    await page.reload();
+    const nav = page.getByRole("navigation", {
+      name: "Wish lists for Jamie Chen",
+    });
+    await expect(nav.getByRole("link")).toHaveCount(9);
+    await expect(page.locator(".gift-source-list").first()).toHaveText(
+      `From ${list.name}`,
+    );
+    for (const enlarged of [false, true]) {
+      if (enlarged)
+        await page.evaluate(() => {
+          const sizes = Array.from(
+            document.querySelectorAll<HTMLElement>("body *"),
+          ).map(
+            (element) =>
+              [
+                element,
+                parseFloat(getComputedStyle(element).fontSize),
+              ] as const,
+          );
+          for (const [element, size] of sizes)
+            element.style.fontSize = `${size * 2}px`;
+        });
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth - innerWidth,
+        ),
+      ).toBeLessThanOrEqual(1);
+      for (const link of await nav.getByRole("link").all()) {
+        const bounds = await link.boundingBox();
+        expect(bounds!.width).toBeGreaterThanOrEqual(44);
+        expect(bounds!.height).toBeGreaterThanOrEqual(44);
+        expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width);
+        expect(
+          await link.evaluate(
+            (element) => element.scrollWidth - element.clientWidth,
+          ),
+        ).toBeLessThanOrEqual(1);
+      }
+      for (const source of await page.locator(".gift-source-list").all()) {
+        expect(
+          await source.evaluate(
+            (element) => element.scrollWidth - element.clientWidth,
+          ),
+        ).toBeLessThanOrEqual(1);
+      }
+      if (!enlarged || width === 320)
+        await page.screenshot({
+          path: testInfo.outputPath(
+            `person-lists-${width}-${theme}${enlarged ? "-200" : ""}.png`,
+          ),
+          fullPage: true,
+        });
+    }
+  }
 });
 
 test("creating a group leads directly to invitations", async ({ page }) => {
