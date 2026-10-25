@@ -464,12 +464,14 @@ main {
 }
 .gift-grid {
   display: grid;
-  align-items: start;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 28px 22px;
 }
 .gift-card {
-  display: block;
+  display: grid;
+  grid-template-rows: subgrid;
+  grid-row: span 2;
+  row-gap: 0;
   min-width: 0;
 }
 .gift-card:hover h3 {

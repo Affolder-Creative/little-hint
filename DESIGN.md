@@ -168,7 +168,7 @@ The shell reserves the measured navigation height plus 16px below the footer. A 
 
 Home, People, My lists, Buying, and Exchanges are the persistent navigation destinations. Settings and private groups remain together. The first home view pairs the logo and clear navigation with welcome copy and gift browsing controls.
 
-Gift browsing uses three equal columns, then two at 650px and below. Cards align at the start of each row so compact cards do not stretch their clickable area. Mixed photo and no-photo rows retain reading order; actual photos can determine the row height. Desktop gaps are 28px vertically and 22px horizontally; narrow-screen gaps are 28px and 15px. People use two columns before becoming a single list. Gift details use two columns before stacking on narrow screens. Recurring gaps and padding use the spacing steps in frontmatter, alongside local layout measurements.
+Gift browsing uses three equal columns, then two at 650px and below. Cards share image and content row heights so mixed photo and no-photo rows align. A row with a real photo keeps its full image area; rows containing only missing photos stay compact. Reading and keyboard order remain unchanged. Desktop gaps are 28px vertically and 22px horizontally; narrow-screen gaps are 28px and 15px. People use two columns before becoming a single list. Gift details use two columns before stacking on narrow screens. Recurring gaps and padding use the spacing steps in frontmatter, alongside local layout measurements.
 
 Search, tag filtering, and the availability checkbox can wrap. At 1200px and below, availability occupies a full row and remains visible on phones. Profile avatars keep their fixed size while adjacent settings copy can grow.
 

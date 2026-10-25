@@ -1482,8 +1482,6 @@ test("compact missing photos preserve mixed grids, real photos, and reading orde
         ),
       ).toBeLessThanOrEqual(1);
       for (const area of await cards.locator(".without-photo").all()) {
-        const bounds = await area.boundingBox();
-        expect(bounds!.height).toBeLessThanOrEqual(enlarged ? 120 : 96);
         expect(
           await area.evaluate((el) => el.scrollHeight - el.clientHeight),
         ).toBeLessThanOrEqual(1);
@@ -1491,16 +1489,21 @@ test("compact missing photos preserve mixed grids, real photos, and reading orde
           await area.evaluate((el) => el.scrollWidth - el.clientWidth),
         ).toBeLessThanOrEqual(1);
       }
-      // Row-major order must agree with keyboard order, with no stretched empty hit area.
+      // Shared media/content tracks keep mixed rows aligned without changing reading order.
       const bounds = await cards.evaluateAll((elements) =>
         elements.map((el) => {
           const r = el.getBoundingClientRect();
           const content = el.lastElementChild!.getBoundingClientRect();
+          const media = el.firstElementChild!.getBoundingClientRect();
           return {
             x: r.x,
             y: r.y,
             bottom: r.bottom,
             contentBottom: content.bottom,
+            contentTop: content.y,
+            mediaHeight: media.height,
+            realPhoto:
+              !el.firstElementChild!.classList.contains("without-photo"),
           };
         }),
       );
@@ -1509,6 +1512,18 @@ test("compact missing photos preserve mixed grids, real photos, and reading orde
           1,
         );
         if (i) expect(bounds[i].y >= bounds[i - 1].y).toBe(true);
+        const row = bounds.filter(
+          (other) => Math.abs(other.y - bounds[i].y) < 1,
+        );
+        for (const other of row) {
+          expect(other.mediaHeight).toBeCloseTo(bounds[i].mediaHeight, 0);
+          expect(other.contentTop).toBeCloseTo(bounds[i].contentTop, 0);
+          expect(other.bottom).toBeCloseTo(bounds[i].bottom, 0);
+        }
+        if (row.every((other) => !other.realPhoto))
+          expect(bounds[i].mediaHeight).toBeLessThanOrEqual(
+            enlarged ? 120 : 96,
+          );
       }
       await missing.focus();
       await expect(missing).toBeFocused();
