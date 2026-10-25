@@ -89,7 +89,11 @@ export function Login({
     setPending(next);
     setCode("");
     setExpired(false);
-    setNotice(sent ? "A new code is on its way. Use the latest email." : "");
+    setNotice(
+      sent
+        ? "If this address has an account or active invitation, we’ll email a new code. Use the latest code you receive."
+        : "",
+    );
   }
   async function run(
     action: "send" | "verify" | "passkey",
@@ -165,12 +169,19 @@ export function Login({
           </div>
         </section>
         <section className="login-form-panel">
-          <h2>{sent ? "Check your inbox" : "Come on in"}</h2>
+          <h2>{sent ? "Check for a sign-in code" : "Come on in"}</h2>
           <p>
             {sent
-              ? `Enter the code sent to ${email}.`
-              : "Sign in with the email address on your invitation."}
+              ? `If ${email} has an account or active invitation, we’ll email a sign-in code. Enter it below.`
+              : "Use your account email or the address on your invitation."}
           </p>
+          {sent && (
+            <p>
+              No email? Check your spam folder and the address above. If you’re
+              new, ask someone who uses Little Hint for an invitation. If your
+              invitation has expired, ask them to send a new one.
+            </p>
+          )}
           {!online && (
             <p className="notice" role="status">
               You're offline. Reconnect to send or check a code.
