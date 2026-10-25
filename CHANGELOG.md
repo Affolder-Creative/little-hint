@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.5.0](https://github.com/Affolder-Creative/little-hint/compare/v0.4.0...v0.5.0) (2026-10-25)
+
+
+### Features
+
+* add optional Blacksmith runner benchmark ([#50](https://github.com/Affolder-Creative/little-hint/issues/50)) ([dad78eb](https://github.com/Affolder-Creative/little-hint/commit/dad78eb7c311199fb2c70d9be44ab7a6e30730dc))
+* add standalone account invitations ([#48](https://github.com/Affolder-Creative/little-hint/issues/48)) ([55e7c42](https://github.com/Affolder-Creative/little-hint/commit/55e7c42703912bb77ea70771c2e93b9112e0df0e))
+* clarify gift audiences, reservations, and backup guidance ([#53](https://github.com/Affolder-Creative/little-hint/issues/53)) ([83f5f27](https://github.com/Affolder-Creative/little-hint/commit/83f5f27b445da3038d7d7d18e07109fd63647d94))
+* compact missing-photo gift layouts ([#56](https://github.com/Affolder-Creative/little-hint/issues/56)) ([66af939](https://github.com/Affolder-Creative/little-hint/commit/66af9393b42db9db8f90c492a7502a51e4ce6164))
+* connect person pages to their wish lists ([#54](https://github.com/Affolder-Creative/little-hint/issues/54)) ([f096373](https://github.com/Affolder-Creative/little-hint/commit/f0963732ddbf1376c12196b758d76d1adb087a46))
+* improve field contrast, dialog focus, and touch accessibility ([#52](https://github.com/Affolder-Creative/little-hint/issues/52)) ([b9856f1](https://github.com/Affolder-Creative/little-hint/commit/b9856f1c56a57102d81f787bacdb38c534ff4a23))
+* simplify exchange matching rules ([#55](https://github.com/Affolder-Creative/little-hint/issues/55)) ([d073c32](https://github.com/Affolder-Creative/little-hint/commit/d073c3234a2b8e98a2b117799eef7e44ed4d3f6f))
+
+
+### Fixes
+
+* retire the Blacksmith benchmark ([#51](https://github.com/Affolder-Creative/little-hint/issues/51)) ([ec0a667](https://github.com/Affolder-Creative/little-hint/commit/ec0a6676bfc80d7cc6be0a176469fd56063e2612))
+
 ## [0.4.0](https://github.com/Affolder-Creative/little-hint/compare/v0.3.1...v0.4.0) (2026-10-24)
 
 
