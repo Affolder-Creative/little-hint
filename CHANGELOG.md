@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.6.1](https://github.com/Affolder-Creative/little-hint/compare/v0.6.0...v0.6.1) (2026-10-25)
+
+
+### Features
+
+* explain when security settings need a fresh sign-in ([#62](https://github.com/Affolder-Creative/little-hint/issues/62)) ([c2bb13c](https://github.com/Affolder-Creative/little-hint/commit/c2bb13c2a114a87bd57f8e23401fb105148066e2))
+* reduce marketing font transfer without visual changes ([#61](https://github.com/Affolder-Creative/little-hint/issues/61)) ([ce13d20](https://github.com/Affolder-Creative/little-hint/commit/ce13d202d1c7afd489ca9eb6c1913e9ce46c514b))
+* refresh marketing app screenshots ([#59](https://github.com/Affolder-Creative/little-hint/issues/59)) ([fca4c7c](https://github.com/Affolder-Creative/little-hint/commit/fca4c7cc6200becc0d2c571056e367a1f9e52cca))
+
 ## [0.6.0](https://github.com/Affolder-Creative/little-hint/compare/v0.5.0...v0.6.0) (2026-10-25)
 
 
