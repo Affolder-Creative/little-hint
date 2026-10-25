@@ -41,6 +41,8 @@ Navigation: **Home, People, My lists, Buying, Exchanges**. Settings contains gro
 ## Accounts and groups
 
 - Registration requires an active email-bound invitation and verified email. A one-time CLI bootstraps the administrator.
+- Any signed-in account can send a standalone invitation from Settings → Invitations. It expires after seven days and grants account access only, without family-group membership, household membership, or access to the inviter's lists. Verified sign-in consumes matching standalone invitations. Senders can cancel their pending invitations; an existing account is never disabled by cancellation.
+- People without groups can start with a private wish list. They can later accept separate invitations to multiple family groups using the same account; existing private lists stay private until explicitly shared.
 - Multiple family/friend groups, membership removal/leave, explicit accepted ownership transfers, and session revocation.
 - Accounts and recipient profiles are separate. Profiles may be guardian-managed; joint lists require other owners to accept before sharing.
 - Linking a managed profile requires the guardian's request and confirmation by the verified target account. No automatic merge by name or email.

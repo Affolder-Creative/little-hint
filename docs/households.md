@@ -1,5 +1,23 @@
 # Family groups and households
 
+## Accounts without a family group
+
+People can use Little Hint for private wish lists without a family group or
+household. To invite someone this way, open **Settings → Invitations**, choose
+**Invite someone to Little Hint**, and enter their email address. Any signed-in
+user can send these invitations. The recipient has seven days to sign in with
+that address and verify their email code. Invitations are queued for email
+delivery; pending invitations can be cancelled from the same Settings section.
+
+Signing in uses the account invitation without sharing profiles or lists with
+the sender. Home offers a private wish list as the first step. A group owner can
+later invite the same account to one or more family groups through
+**Settings → Family groups → Members & invitations**. Each group invitation
+requires acceptance. Joining a group gives access to its shared lists but does
+not share the new member's existing private lists automatically.
+
+## Groups and household membership
+
 Family groups own invitations, membership, shared-list access, and exchanges.
 An account may own or join multiple family groups. Households are optional
 records inside one family group. They organize people and supply exchange

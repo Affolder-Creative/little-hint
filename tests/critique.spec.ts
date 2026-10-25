@@ -1,11 +1,19 @@
 import { test, expect, type Page } from "@playwright/test";
 import { stagingFixtures } from "../src/server/staging-fixtures";
 import { command, world } from "../src/server/domain";
+import { emptyState } from "../src/shared/model";
 
-async function preview(page: Page, actorIndex = 0) {
+async function preview(page: Page, actorIndex = 0, solo = false) {
   const fixture = stagingFixtures();
   const actor = fixture.actors[actorIndex];
+  if (solo) {
+    const person = fixture.state.people.find((p) => p.userId === actor.id)!;
+    Object.assign(fixture.state, emptyState());
+    fixture.state.people.push(person);
+  }
   const paths: Record<string, string> = {
+    invitations: "invitations.create",
+    "invitations/revoke": "invitations.revoke",
     groups: "groups.create",
     items: "items.create",
     "items/update": "items.update",
@@ -58,6 +66,129 @@ async function preview(page: Page, actorIndex = 0) {
     });
   });
   return { ...fixture, actor };
+}
+
+for (const viewport of [
+  { width: 1440, height: 1000 },
+  { width: 390, height: 844 },
+]) {
+  const size = viewport.width === 390 ? "mobile" : "desktop";
+  test(`standalone invitations and solo Home on ${size}`, async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize(viewport);
+    const { state } = await preview(page, 1, true);
+    await page.goto("/");
+    await expect(
+      page.getByRole("button", {
+        name: "Create your first wish list",
+        exact: true,
+      }),
+    ).toBeVisible();
+    await page.screenshot({
+      path: testInfo.outputPath(`${size}-solo-home.png`),
+      fullPage: true,
+    });
+    await page.goto("/settings?section=invitations");
+    await expect(
+      page.getByRole("heading", { name: "Invitations", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("You have no pending invitations to Little Hint."),
+    ).toBeVisible();
+    await page
+      .getByRole("button", {
+        name: "Invite someone to Little Hint",
+        exact: true,
+      })
+      .click();
+    await page
+      .getByRole("dialog")
+      .getByLabel("Email address", { exact: true })
+      .fill("friend@example.test");
+    await page.screenshot({
+      path: testInfo.outputPath(`${size}-invite-form.png`),
+      fullPage: true,
+    });
+    await page
+      .getByRole("button", { name: "Send invitation", exact: true })
+      .click();
+    await expect(page.getByRole("dialog")).not.toBeVisible();
+    await expect(
+      page.getByText("friend@example.test", { exact: true }),
+    ).toBeVisible();
+    await expect(page.getByText(/pending family-group/)).toHaveCount(0);
+    await page.screenshot({
+      path: testInfo.outputPath(`${size}-invitations.png`),
+      fullPage: true,
+    });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    await page
+      .getByRole("button", {
+        name: "Invite someone to Little Hint",
+        exact: true,
+      })
+      .click();
+    await page
+      .getByRole("dialog")
+      .getByLabel("Email address", { exact: true })
+      .fill("friend@example.test");
+    await page
+      .getByRole("button", { name: "Send invitation", exact: true })
+      .click();
+    await expect(
+      page.getByText(
+        "You already have a pending invitation for this address.",
+        { exact: true },
+      ),
+    ).toBeVisible();
+    expect(state.invitations).toHaveLength(1);
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: "Close dialog", exact: true })
+      .click();
+    // Discard the duplicate form if its dirty-form guard is shown.
+    const discard = page.getByRole("button", {
+      name: "Discard changes",
+      exact: true,
+    });
+    if (await discard.isVisible()) await discard.click();
+    await page
+      .getByRole("button", {
+        name: "Cancel invitation to friend@example.test",
+        exact: true,
+      })
+      .click();
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: "Cancel invitation", exact: true })
+      .click();
+    await expect(
+      page.getByText("You have no pending invitations to Little Hint."),
+    ).toBeVisible();
+    expect(state.invitations[0].revoked).toBe(true);
+    await page.goto("/");
+    await page
+      .getByRole("button", { name: "Create your first wish list", exact: true })
+      .click();
+    await page.getByLabel("List name", { exact: true }).fill("Private wishes");
+    await page.getByRole("radio", { name: /Keep it a surprise/ }).check();
+    await page
+      .getByRole("button", { name: "Create list", exact: true })
+      .click();
+    await expect(page.getByRole("dialog")).not.toBeVisible();
+    expect(state.lists[0].groupIds).toEqual([]);
+    await expect(
+      page.getByRole("heading", {
+        name: "Add a few things you would love",
+        exact: true,
+      }),
+    ).toBeVisible();
+  });
 }
 
 test("new shared lists require deliberate privacy and a review before saving", async ({

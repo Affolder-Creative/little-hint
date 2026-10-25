@@ -44,6 +44,7 @@ wordplay sparingly. Instructions, privacy choices, errors, and purchases stay pl
   restrictions without promising permanent secrecy when a reveal is scheduled.
 - Family groups share lists. Households prevent exchange matches when that rule is
   enabled. Keep those concepts distinct. Shared ownership is different from viewing.
+- Settings → Invitations lets any signed-in user invite someone to their own account without a family group. Solo users start with private wish lists and can accept separate group invitations later. An account invitation does not connect profiles or share lists.
 - Never imply that a reservation buys something, a contribution sends money, or
   cancelling a reservation cancels a shop order. Invitations waiting for delivery
   are not yet sent. External notification previews never include private gift details. The signed-in notification center shows only context the viewer can currently access.

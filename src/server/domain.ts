@@ -36,6 +36,10 @@ import type {
   GiftSummary,
 } from "../shared/model";
 import { canManageGroupEvents, peopleForGroup } from "../shared/group-events";
+import {
+  isAccountInvitation,
+  invitationIsPending,
+} from "../shared/invitations";
 import { matchExchange as solveExchange } from "./exchange";
 function matchExchange(...args: Parameters<typeof solveExchange>) {
   try {
@@ -449,10 +453,8 @@ export function noticeAllowed(s: State, n: Notice): boolean {
     const inv = s.invitations.find((i) => i.id === n.invitationId);
     return (
       !!inv &&
-      !inv.revoked &&
-      !inv.acceptedBy &&
-      Date.parse(inv.expiresAt) > Date.now() &&
-      !!s.groups.find((g) => g.id === inv.groupId)
+      invitationIsPending(inv) &&
+      (isAccountInvitation(inv) || !!s.groups.find((g) => g.id === inv.groupId))
     );
   }
   const p = s.people.find((p) => p.userId === n.userId);
@@ -534,10 +536,9 @@ export function world(s: State, a: Actor): World {
     invitations: s.invitations
       .filter(
         (i) =>
-          !i.revoked &&
-          !i.acceptedBy &&
-          Date.parse(i.expiresAt) > Date.now() &&
+          invitationIsPending(i) &&
           (normalizedEmail(i.email) === normalizedEmail(a.email) ||
+            (isAccountInvitation(i) && i.invitedById === a.id) ||
             !!s.groups.find((g) => g.id === i.groupId && g.ownerId === a.id)),
       )
       .map((i) => ({
@@ -668,26 +669,31 @@ function checkRevision(r: Base, v: number) {
 }
 export function activateAccount(s: State, a: Actor) {
   let p = s.people.find((p) => p.userId === a.id);
-  if (p) return p;
-  const grant = s.invitations.find(
+  const grants = s.invitations.filter(
     (i) =>
       normalizedEmail(i.email) === normalizedEmail(a.email) &&
-      !i.revoked &&
-      !i.acceptedBy &&
-      Date.parse(i.expiresAt) > Date.now(),
+      invitationIsPending(i),
   );
-  if (!grant) fail(403, "An active invitation is required.");
-  p = {
-    ...stamp(),
-    name: a.name || a.email.split("@")[0],
-    userId: a.id,
-    guardians: [],
-    admin: !!grant.bootstrap,
-  };
-  s.people.push(p);
-  if (grant.bootstrap) {
-    grant.acceptedBy = a.id;
-    touch(grant);
+  if (!p) {
+    const grant = grants[0];
+    if (!grant) fail(403, "An active invitation is required.");
+    p = {
+      ...stamp(),
+      name: a.name || a.email.split("@")[0],
+      userId: a.id,
+      guardians: [],
+      admin: !!grant.bootstrap,
+    };
+    s.people.push(p);
+    if (grant.bootstrap) {
+      grant.acceptedBy = a.id;
+      touch(grant);
+    }
+  }
+  // Verified sign-in uses account invitations, never family-group membership.
+  for (const invitation of grants.filter(isAccountInvitation)) {
+    invitation.acceptedBy = a.id;
+    touch(invitation);
   }
   return p;
 }
@@ -695,9 +701,7 @@ export function signupAllowed(s: State, email: string) {
   return s.invitations.some(
     (i) =>
       normalizedEmail(i.email) === normalizedEmail(email) &&
-      !i.revoked &&
-      !i.acceptedBy &&
-      Date.parse(i.expiresAt) > Date.now(),
+      invitationIsPending(i),
   );
 }
 function reconcileAccess(s: State) {
@@ -914,13 +918,33 @@ export function command(
       syncEventLists(s, event);
       return { id: event.id };
     }
+    case "invitations.create":
     case "groups.invite": {
-      const p = z.object({ groupId: id, email: z.email() }).parse(b);
-      ownedGroup(s, a, p.groupId);
+      const p: { email: string; groupId?: string } = (
+        action === "groups.invite"
+          ? z.object({ groupId: id, email: z.string().trim().pipe(z.email()) })
+          : z.object({ email: z.string().trim().pipe(z.email()) }).strict()
+      ).parse(b);
+      const groupId = p.groupId;
+      if (groupId) ownedGroup(s, a, groupId);
+      else {
+        if (!s.people.some((person) => person.userId === a.id))
+          fail(403, "Sign in to invite someone.");
+        if (
+          s.invitations.some(
+            (i) =>
+              isAccountInvitation(i) &&
+              invitationIsPending(i) &&
+              i.invitedById === a.id &&
+              i.email === normalizedEmail(p.email),
+          )
+        )
+          fail(409, "You already have a pending invitation for this address.");
+      }
       const inv = {
         ...stamp(),
         email: normalizedEmail(p.email),
-        groupId: p.groupId,
+        ...(groupId ? { groupId } : {}),
         invitedById: a.id,
         expiresAt: new Date(Date.now() + 7 * 86400000).toISOString(),
       };
@@ -961,7 +985,11 @@ export function command(
       const inv =
         s.invitations.find((i) => i.id === p.id) ??
         fail(404, "Invitation not found.");
-      ownedGroup(s, a, inv.groupId!);
+      if (isAccountInvitation(inv)) {
+        if (inv.invitedById !== a.id) fail(404, "Invitation not found.");
+        if (!invitationIsPending(inv))
+          fail(409, "This invitation is no longer pending.");
+      } else ownedGroup(s, a, inv.groupId!);
       inv.revoked = true;
       touch(inv);
       return { ok: true };

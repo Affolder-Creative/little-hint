@@ -18,7 +18,7 @@ describe("transactional email templates", () => {
       "012345",
     );
   });
-  it.each(["invitation", "update"] as const)(
+  it.each(["invitation", "account-invitation", "update"] as const)(
     "escapes %s text and keeps the action on the configured origin",
     (kind) => {
       const mail = renderEmail(
@@ -44,6 +44,22 @@ describe("transactional email templates", () => {
       );
     },
   );
+  it("gives account invitations a solo welcome without a group-acceptance action", () => {
+    const mail = renderEmail(
+      {
+        kind: "account-invitation",
+        text: "Start your own wish list.",
+        actionPath: "/",
+      },
+      "https://hint.example.test",
+    );
+    expect(mail.subject).toBe("You're invited to Little Hint");
+    expect(mail.html).toContain("Open Little Hint");
+    expect(mail.html).toContain("You can choose who to share it with later.");
+    expect(mail.html).not.toContain("Your people are waiting");
+    expect(mail.html).not.toContain("View invitation");
+    expect(mail.text).toContain("https://hint.example.test/");
+  });
   it("rejects external and unsafe action URLs", () => {
     for (const actionPath of [
       "https://evil.example",

@@ -7,6 +7,7 @@ import {
   command,
   archiveDueLists,
   world,
+  activateAccount,
 } from "../src/server/domain";
 const url = process.env.TEST_DATABASE_URL;
 describe.skipIf(!url)("PostgreSQL transaction integrity", () => {
@@ -423,4 +424,36 @@ describe.skipIf(!url)("PostgreSQL transaction integrity", () => {
       await second.stop();
     }
   }, 20000);
+  it("serializes simultaneous standalone invitations and rejects cancellation after activation", async () => {
+    const friend = {
+      id: "integration-friend",
+      name: "Friend",
+      email: "friend@example.test",
+    };
+    const results = await Promise.allSettled(
+      [1, 2].map(() =>
+        storage.transact((s) =>
+          command(s, a, "invitations.create", { email: friend.email }),
+        ),
+      ),
+    );
+    expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+    let s = await storage.readState();
+    const invitation = s.invitations.find((i) => i.email === friend.email)!;
+    expect(
+      s.notices.filter((n) => n.invitationId === invitation.id),
+    ).toHaveLength(1);
+    await storage.transact((s) => activateAccount(s, friend));
+    await expect(
+      storage.transact((s) =>
+        command(s, a, "invitations.revoke", { id: invitation.id }),
+      ),
+    ).rejects.toThrow("no longer pending");
+    s = await storage.readState();
+    expect(s.invitations.find((i) => i.id === invitation.id)?.acceptedBy).toBe(
+      friend.id,
+    );
+    expect(world(s, friend).groups).toEqual([]);
+    expect(world(s, friend).me.admin).toBe(false);
+  });
 });
