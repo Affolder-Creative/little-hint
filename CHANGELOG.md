@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.7.0](https://github.com/Affolder-Creative/little-hint/compare/v0.6.0...v0.7.0) (2026-10-25)
+## [0.6.1](https://github.com/Affolder-Creative/little-hint/compare/v0.6.0...v0.6.1) (2026-10-25)
 
 
 ### Features
