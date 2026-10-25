@@ -11,6 +11,7 @@ const mime = {
   ".png": "image/png",
   ".webp": "image/webp",
   ".ttf": "font/ttf",
+  ".woff2": "font/woff2",
   ".json": "application/json",
 };
 export function marketingServer() {
