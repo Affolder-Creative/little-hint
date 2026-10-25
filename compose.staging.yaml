@@ -44,7 +44,7 @@ services:
       timeout: 5s
       retries: 15
   mailpit:
-    image: axllent/mailpit:v1.31.6
+    image: axllent/mailpit:v1.32.0
     restart: unless-stopped
     mem_limit: 128m
     environment:
