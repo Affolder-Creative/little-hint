@@ -665,7 +665,7 @@ test("private note success clears the composer and offline actions are disabled"
   await expect(page.getByLabel("Your note")).toHaveValue("");
   await context.setOffline(true);
   await expect(
-    page.getByRole("button", { name: "Reserve gift" }),
+    page.getByRole("button", { name: "Reserve more", exact: true }),
   ).toBeDisabled();
   await expect(
     page.getByRole("button", { name: "Add private note" }),
@@ -861,6 +861,269 @@ test("a single reserved gift can be marked purchased from Buying", async ({
     state.reservations.find((r) => r.id === reservation.id)?.purchased,
   ).toBe(1);
 });
+
+test("idea audience controls match the saved privacy choice", async ({
+  page,
+}) => {
+  const { state, actors } = await preview(page);
+  const recipient = state.people.find(
+    (person) => person.userId === actors[1].id,
+  )!;
+  await page.goto(`/people/${recipient.id}`);
+  await page
+    .getByRole("button", { name: "Add gift idea", exact: true })
+    .first()
+    .click();
+  const audience = page.getByLabel("Who can see this idea?");
+  const groups = page.getByRole("group", {
+    name: "Share with these family groups",
+  });
+  await page
+    .getByLabel("Gift idea name", { exact: true })
+    .fill("A thoughtful idea");
+  await expect(groups).toBeHidden();
+  await expect(
+    page.getByText("Only you can see this idea.", { exact: true }),
+  ).toBeVisible();
+  await audience.selectOption("hidden");
+  const save = page.getByRole("button", {
+    name: "Save gift idea",
+    exact: true,
+  });
+  await expect(save).toBeDisabled();
+  await expect(
+    page.getByText("Choose at least one family group to share this idea."),
+  ).toBeVisible();
+  await groups.getByLabel("Morgan family", { exact: true }).check();
+  await expect(
+    page
+      .getByRole("status")
+      .filter({ hasText: "Visible to you and members of Morgan family." }),
+  ).toContainText(
+    "Hidden from the recipient and anyone managing their profile.",
+  );
+  await expect(save).toBeEnabled();
+  await audience.selectOption("private");
+  await expect(groups).toBeHidden();
+  await audience.selectOption("hidden");
+  await expect(
+    groups.getByLabel("Morgan family", { exact: true }),
+  ).toBeChecked();
+  await audience.selectOption("private");
+  await save.click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  const idea = state.items.find((item) => item.title === "A thoughtful idea")!;
+  expect(idea).toMatchObject({ visibility: "private", groupIds: [] });
+  expect(
+    world(state, actors[1]).items.some((item) => item.id === idea.id),
+  ).toBe(false);
+  expect(
+    world(state, actors[2]).items.some((item) => item.id === idea.id),
+  ).toBe(false);
+
+  await page.goto(`/gift/${idea.id}`);
+  await page
+    .getByRole("button", { name: "Edit gift idea", exact: true })
+    .click();
+  await audience.selectOption("hidden");
+  await groups.getByLabel("Morgan family", { exact: true }).check();
+  await page.getByRole("button", { name: "Save changes", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  expect(idea.visibility).toBe("hidden");
+  expect(
+    world(state, actors[1]).items.some((item) => item.id === idea.id),
+  ).toBe(false);
+  expect(
+    world(state, actors[2]).items.some((item) => item.id === idea.id),
+  ).toBe(true);
+
+  await page
+    .getByRole("button", { name: "Edit gift idea", exact: true })
+    .click();
+  await expect(audience).toHaveValue("hidden");
+  await expect(
+    groups.getByLabel("Morgan family", { exact: true }),
+  ).toBeChecked();
+  await audience.selectOption("visible");
+  await expect(
+    page.getByText(
+      "Visible to you, members of Morgan family, the recipient and anyone managing their profile.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Save changes", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  expect(
+    world(state, actors[1]).items.some((item) => item.id === idea.id),
+  ).toBe(true);
+  await page
+    .getByRole("button", { name: "Edit gift idea", exact: true })
+    .click();
+  await audience.selectOption("private");
+  await expect(groups).toBeHidden();
+  await page.getByRole("button", { name: "Save changes", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  expect(idea).toMatchObject({ visibility: "private", groupIds: [] });
+  expect(
+    world(state, actors[1]).items.some((item) => item.id === idea.id),
+  ).toBe(false);
+  expect(
+    world(state, actors[2]).items.some((item) => item.id === idea.id),
+  ).toBe(false);
+});
+
+test("gift availability keeps personal reservations and their next action in view", async ({
+  page,
+}) => {
+  const { state, actor } = await preview(page, 1);
+  const gift = state.items.find(
+    (item) => item.title === "Ceramic pour-over set",
+  )!;
+  await page.goto(`/gift/${gift.id}`);
+  const status = page.locator(".gift-detail .status");
+  await expect(status).toHaveText(
+    "1 available to reserve · You reserved 1 · 0 purchased",
+  );
+  await page
+    .getByRole("link", { name: "Manage reservation", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/buying$/);
+  await expect(
+    page.getByRole("heading", { name: gift.title, exact: true }),
+  ).toBeVisible();
+  await page.goto(`/gift/${gift.id}`);
+  await expect(
+    page.getByLabel("Additional quantity", { exact: true }),
+  ).toHaveValue("1");
+  await page.getByRole("button", { name: "Reserve more", exact: true }).click();
+  await expect(status).toHaveText(
+    "Taken care of · You reserved 2 · 0 purchased",
+  );
+  await expect(
+    page.getByRole("button", { name: "Reserve more", exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("link", { name: "Manage reservations", exact: true }),
+  ).toBeVisible();
+  const mine = state.reservations.filter(
+    (reservation) =>
+      reservation.itemId === gift.id && reservation.buyerId === actor.id,
+  );
+  command(state, actor, "reservations.update", { ...mine[0], purchased: 1 });
+  await page.reload();
+  await expect(status).toHaveText(
+    "Taken care of · You reserved 2 · 1 purchased",
+  );
+  gift.archived = true;
+  await page.reload();
+  await expect(status).toHaveText("Archived · You reserved 2 · 1 purchased");
+  await expect(
+    page.getByRole("link", { name: "Manage reservations", exact: true }),
+  ).toBeVisible();
+  gift.archived = false;
+  for (const reservation of mine)
+    command(state, actor, "reservations.update", {
+      ...reservation,
+      quantity: 0,
+      purchased: 0,
+    });
+  await page.reload();
+  await expect(status).toHaveText("2 available to reserve");
+  await expect(
+    page.getByRole("link", { name: /^Manage reservations?$/ }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Reserve gift", exact: true }),
+  ).toBeVisible();
+
+  const recipientFixture = await preview(page);
+  const ownGift = recipientFixture.state.items.find(
+    (item) => item.title === "Ceramic pour-over set",
+  )!;
+  await page.goto(`/gift/${ownGift.id}`);
+  await expect(status).toHaveText(
+    "On your list · Buying plans stay a surprise",
+  );
+  await expect(page.getByText(/You reserved/)).toHaveCount(0);
+  await expect(
+    page.getByRole("link", { name: /^Manage reservations?$/ }),
+  ).toHaveCount(0);
+});
+
+for (const viewport of [
+  { width: 1440, height: 1000, theme: "light" },
+  { width: 390, height: 844, theme: "dark" },
+]) {
+  test(`clarified guidance fits ${viewport.width}px ${viewport.theme} views`, async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize(viewport);
+    const { state, actor, actors } = await preview(page);
+    const gift = state.items.find((item) => item.title === "Picnic blanket")!;
+    await page.goto(`/gift/${gift.id}`);
+    await page.evaluate(
+      (theme) => localStorage.setItem("little-hint:theme", theme),
+      viewport.theme,
+    );
+    await page.reload();
+    await expect(
+      page.getByRole("link", { name: "Manage reservation", exact: true }),
+    ).toBeVisible();
+    await page.screenshot({
+      path: testInfo.outputPath("reservation.png"),
+      fullPage: true,
+    });
+    const person = state.people.find(
+      (person) => person.userId === actors[1].id,
+    )!;
+    const idea = command(state, actor, "items.create", {
+      title: "A gift idea",
+      recipientIds: [person.id],
+      visibility: "hidden",
+      groupIds: state.groups.map((group) => group.id),
+    }) as { id: string };
+    await page.goto(`/gift/${idea.id}`);
+    await page
+      .getByRole("button", { name: "Edit gift idea", exact: true })
+      .click();
+    await expect(
+      page.getByText(
+        /Visible to you and members of Morgan family, Weekend friends/,
+      ),
+    ).toBeVisible();
+    await page
+      .getByRole("status")
+      .filter({ hasText: "Visible to you" })
+      .scrollIntoViewIfNeeded();
+    await page.screenshot({ path: testInfo.outputPath("audience.png") });
+    await page.goto("/settings?section=admin");
+    const guidance = page.getByText(/Backups are managed outside Little Hint/);
+    await expect(guidance).toBeVisible();
+    await expect(
+      page.getByText(/Updates and shop lookups: Running/),
+    ).toBeVisible();
+    await expect(
+      page.getByText(
+        /Housewatch Digital manages backups|restore progress in Coolify/,
+      ),
+    ).toHaveCount(0);
+    await guidance.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: testInfo.outputPath("backups.png") });
+    await page.route("**/api/v1/admin/jobs", (route) =>
+      route.fulfill({ status: 503, json: { error: "Unavailable" } }),
+    );
+    await page.reload();
+    await expect(
+      page.getByRole("button", { name: "Check again", exact: true }),
+    ).toBeVisible();
+    await expect(guidance).toBeVisible();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth - innerWidth,
+      ),
+    ).toBeLessThanOrEqual(1);
+  });
+}
 
 test("wish-list items and ideas for others keep distinct names through saving and editing", async ({
   page,
