@@ -239,10 +239,11 @@ test("Escape preserves dirty gift fields until the user chooses to discard", asy
   await preview(page);
   await page.goto("/lists");
   await page.getByRole("link", { name: /Alex's wishes/ }).click();
-  await page
-    .getByRole("button", { name: "Add item", exact: true })
-    .last()
-    .click();
+  const main = page.getByRole("main");
+  const add = main.getByRole("button", { name: "Add item", exact: true });
+  await expect(add).toBeVisible();
+  await expect(main).toBeFocused();
+  await add.click();
   await page.getByLabel("Item name", { exact: true }).fill("Do not lose this");
   await page.keyboard.press("Escape");
   await expect(
@@ -256,9 +257,7 @@ test("Escape preserves dirty gift fields until the user chooses to discard", asy
   await page.getByRole("button", { name: "Close dialog" }).click();
   await page.getByRole("button", { name: "Discard changes" }).click();
   await expect(page.getByRole("dialog")).not.toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "Add item", exact: true }).last(),
-  ).toBeFocused();
+  await expect(add).toBeFocused();
 });
 
 test("dialogs return focus after Escape, close, save and removal of their opener", async ({
@@ -267,11 +266,17 @@ test("dialogs return focus after Escape, close, save and removal of their opener
   await preview(page);
   await page.goto("/lists");
   await page.getByRole("link", { name: /Alex's wishes/ }).click();
-  const add = page
-    .getByRole("button", { name: "Add item", exact: true })
-    .last();
+  const main = page.getByRole("main");
+  await expect(
+    main.getByRole("heading", { name: "Alex's wishes", exact: true }),
+  ).toBeVisible();
+  // Navigation focuses main after rendering. Wait for that handoff before
+  // exercising keyboard focus, and exclude the always-present header action.
+  await expect(main).toBeFocused();
+  const add = main.getByRole("button", { name: "Add item", exact: true });
   for (const method of ["Escape", "Close dialog"]) {
     await add.focus();
+    await expect(add).toBeFocused();
     await page.keyboard.press("Enter");
     await expect(page.getByRole("dialog")).toBeVisible();
     if (method === "Escape") await page.keyboard.press("Escape");
