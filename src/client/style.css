@@ -532,6 +532,7 @@ main {
   line-height: 1.4;
   margin-bottom: 9px;
   font-weight: 550;
+  overflow-wrap: anywhere;
 }
 .gift-meta {
   display: flex;

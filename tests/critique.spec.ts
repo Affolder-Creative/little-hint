@@ -838,6 +838,11 @@ test("person list links and source names wrap across viewports and enlarged text
     const nav = page.getByRole("navigation", {
       name: "Wish lists for Jamie Chen",
     });
+    // Exercise wider fallback-font metrics on macOS as well as Linux CI.
+    if (width === 320)
+      await page.addStyleTag({
+        content: "body { font-family: Arial, sans-serif; }",
+      });
     await expect(nav.getByRole("link")).toHaveCount(9);
     await expect(page.locator(".gift-source-list").first()).toHaveText(
       `From ${list.name}`,
