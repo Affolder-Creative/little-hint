@@ -131,11 +131,24 @@ export function Modal({
     if (discarding) keepEditing.current?.focus();
     else previousFocus.current?.focus();
   }, [discarding]);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const el = ref.current!;
+    const opener = document.activeElement as HTMLElement | null;
     el.showModal();
     return () => {
       el.close();
+      // Close before React removes the dialog so native focus restoration can
+      // run. Explicitly restore the opener for browsers that lose it on removal.
+      if (opener?.isConnected) opener.focus({ preventScroll: true });
+      queueMicrotask(() => {
+        // A successful action may also remove the opener or change routes.
+        // Keep any focus chosen by that next view or a replacement dialog.
+        if (
+          document.activeElement === document.body &&
+          !document.querySelector("dialog[open]")
+        )
+          document.getElementById("main")?.focus({ preventScroll: true });
+      });
     };
   }, []);
   return (
@@ -211,8 +224,21 @@ export function Form({
   } | null>(null);
   const online = useOnline();
   const reviewRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (pending) reviewRef.current?.focus();
+  const fieldsRef = useRef<HTMLFieldSetElement>(null);
+  const wasReviewing = useRef(false);
+  useLayoutEffect(() => {
+    if (pending) {
+      reviewRef.current?.focus();
+      wasReviewing.current = true;
+    } else if (wasReviewing.current) {
+      wasReviewing.current = false;
+      const field = Array.from(
+        fieldsRef.current?.querySelectorAll<HTMLElement>(
+          'input:not([type="hidden"]):not(:disabled), select:not(:disabled), textarea:not(:disabled), button:not(:disabled)',
+        ) ?? [],
+      ).find((element) => element.getClientRects().length > 0);
+      field?.focus();
+    }
   }, [pending]);
   useEffect(() => {
     if (!dirty) return;
@@ -259,7 +285,7 @@ export function Form({
           setDirty(true);
       }}
     >
-      <fieldset disabled={busy} hidden={!!pending}>
+      <fieldset ref={fieldsRef} disabled={busy} hidden={!!pending}>
         {children}
       </fieldset>
       {pending && (

@@ -8,6 +8,7 @@
   --text: #2b201d;
   --muted: #746057;
   --border: #e6d9cf;
+  --control-border: #93796c;
   --accent: #aa4d37;
   --on-accent: #fff8f0;
   --soft: #f4e4da;
@@ -65,7 +66,7 @@ textarea {
   width: 100%;
   min-width: 0;
   max-width: 100%;
-  border: 1px solid var(--border);
+  border: 1px solid var(--control-border);
   border-radius: 8px;
   background: var(--paper);
   color: var(--text);
@@ -195,7 +196,11 @@ main:focus {
   font-weight: 600;
   line-height: 1.25;
   min-height: 44px;
-  white-space: nowrap;
+  min-width: 44px;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: center;
 }
 .button:hover {
   filter: brightness(0.94);
@@ -216,7 +221,10 @@ main:focus {
   background: transparent;
   border: 0;
   padding: 8px 0;
-  min-height: 40px;
+  min-height: 44px;
+  min-width: 44px;
+  max-width: 100%;
+  overflow-wrap: anywhere;
   font-size: 13px;
   font-weight: 550;
   color: var(--accent);
@@ -664,7 +672,8 @@ main {
   color: var(--muted);
   font-size: 12px;
   margin-bottom: 24px;
-  min-height: 30px;
+  min-height: 44px;
+  min-width: 44px;
 }
 .tabs {
   display: flex;
@@ -909,6 +918,7 @@ main {
 }
 .assignments a {
   display: flex;
+  min-height: 44px;
   gap: 10px;
   align-items: center;
   font-size: 14px;
@@ -1423,7 +1433,8 @@ main {
   border: 0;
   color: inherit;
   text-decoration: underline;
-  min-height: 36px;
+  min-height: 44px;
+  min-width: 44px;
 }
 .offline-banner,
 .demo-banner {
@@ -1595,6 +1606,7 @@ main {
   --text: #fff8f0;
   --muted: #cbb6aa;
   --border: #59453b;
+  --control-border: #a28677;
   --accent: #f1bead;
   --on-accent: #2b201d;
   --soft: #49332b;
