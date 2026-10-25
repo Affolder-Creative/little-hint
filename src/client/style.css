@@ -532,6 +532,7 @@ main {
   line-height: 1.4;
   margin-bottom: 9px;
   font-weight: 550;
+  overflow-wrap: anywhere;
 }
 .gift-meta {
   display: flex;
@@ -539,6 +540,12 @@ main {
   align-items: center;
   gap: 6px;
   font-size: 14px;
+}
+.gift-source-list {
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 13px;
+  overflow-wrap: anywhere;
 }
 .status {
   font-size: 11px;
@@ -697,6 +704,32 @@ main {
 .gift-summary > p {
   max-width: 65ch;
   color: var(--muted);
+}
+.person-lists {
+  margin-bottom: 24px;
+}
+.person-lists h2,
+.person-items-heading {
+  font-size: 16px;
+  margin: 0 0 12px;
+}
+.person-lists ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 24px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.person-lists li {
+  min-width: 0;
+  max-width: 100%;
+}
+.person-lists a {
+  text-align: left;
+}
+.person-lists svg {
+  flex-shrink: 0;
 }
 .summary-gift {
   padding: 24px 0;

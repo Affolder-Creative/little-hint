@@ -632,12 +632,14 @@ function Browser({
   emptyText = "Add an item to your wish list, or ask your people to share theirs.",
   emptyAction,
   searchLabel = "Search items and gift ideas",
+  listNames,
 }: {
   items: GiftView[];
   emptyTitle?: string;
   emptyText?: string;
   emptyAction?: ReactNode;
   searchLabel?: string;
+  listNames?: ReadonlyMap<string, string>;
 }) {
   const [search, setSearch] = useState(""),
     [tag, setTag] = useState(""),
@@ -690,7 +692,11 @@ function Browser({
       {filtered.length ? (
         <div className="gift-grid">
           {filtered.map((i) => (
-            <GiftCard key={i.id} gift={i} />
+            <GiftCard
+              key={i.id}
+              gift={i}
+              sourceListName={i.listId ? listNames?.get(i.listId) : undefined}
+            />
           ))}
         </div>
       ) : (
@@ -866,6 +872,15 @@ function PersonPage() {
     );
   const own =
     person.userId === world.me.id || person.guardians.includes(world.me.id);
+  const lists = world.lists.filter(
+    (list) =>
+      !list.archived &&
+      list.ownerIds.includes(person.id) &&
+      // Pending ownership invitations also appear in world.lists, but do not
+      // grant access to the list's contents until accepted.
+      (list.canEdit ||
+        world.groups.some((group) => list.groupIds.includes(group.id))),
+  );
   return (
     <>
       <Link className="back-link" to="/people">
@@ -949,20 +964,51 @@ function PersonPage() {
         aria-labelledby={`person-tab-${tab}`}
         tabIndex={0}
       >
+        {tab === "wishes" && lists.length > 0 && (
+          <>
+            <nav
+              className="person-lists"
+              aria-label={`Wish lists for ${person.name}`}
+            >
+              <h2>Wish lists</h2>
+              <ul>
+                {lists.map((list) => (
+                  <li key={list.id}>
+                    <Link className="text-button" to={`/lists/${list.id}`}>
+                      {list.name} <ArrowRight size={16} aria-hidden="true" />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+            <h2 className="person-items-heading">All wish-list items</h2>
+          </>
+        )}
         <Browser
           key={`${id}-${tab}`}
           searchLabel={tab === "ideas" ? "Search gift ideas" : "Search items"}
+          listNames={
+            tab === "wishes"
+              ? new Map(lists.map((list) => [list.id, list.name]))
+              : undefined
+          }
           emptyTitle={
             tab === "ideas"
               ? `No gift ideas for ${person.name} yet`
-              : "No wish-list items shared yet"
+              : lists.length
+                ? "No items on these wish lists yet"
+                : "No wish-list items shared yet"
           }
           emptyText={
             tab === "ideas"
               ? "Save an idea here and choose who can see it."
-              : own
-                ? "Add an item to a wish list to get started."
-                : "Ask them to share a wish list with your family group."
+              : lists.length
+                ? own
+                  ? "Open a wish list above to add an item or read its notes."
+                  : "Open a wish list above to read its notes."
+                : own
+                  ? "Add an item to a wish list to get started."
+                  : "Ask them to share a wish list with your family group."
           }
           emptyAction={
             tab === "ideas" && !own ? (

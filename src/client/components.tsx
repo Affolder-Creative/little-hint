@@ -396,7 +396,13 @@ export function GiftPhoto({ gift }: { gift: GiftView }) {
     </div>
   );
 }
-export function GiftCard({ gift }: { gift: GiftView }) {
+export function GiftCard({
+  gift,
+  sourceListName,
+}: {
+  gift: GiftView;
+  sourceListName?: string;
+}) {
   return (
     <Link className="gift-card" to={`/gift/${gift.id}`}>
       <GiftPhoto gift={gift} />
@@ -407,6 +413,9 @@ export function GiftCard({ gift }: { gift: GiftView }) {
           <ArrowUpRight size={15} />
         </div>
         <h3>{gift.title}</h3>
+        {sourceListName && (
+          <p className="gift-source-list">From {sourceListName}</p>
+        )}
         <div className="gift-meta">
           <span>{dollars(gift.priceCents)}</span>
           {gift.isRecipient ? (
