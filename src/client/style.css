@@ -574,7 +574,7 @@ main {
   margin-top: 12px;
 }
 .tags span {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--muted);
   border: 1px solid var(--border);
   padding: 4px 7px;
@@ -616,7 +616,7 @@ main {
   gap: 5px;
   padding: 6px 8px;
   border: 1px solid var(--border);
-  border-radius: 5px;
+  border-radius: 4px;
   font-size: 11px;
   white-space: nowrap;
   color: var(--muted);
@@ -639,6 +639,7 @@ main {
   margin-bottom: 20px;
   opacity: 0.85;
 }
+.empty h1,
 .empty h2 {
   font-size: 25px;
 }
@@ -2029,6 +2030,7 @@ main {
   .empty {
     padding: 48px 10px;
   }
+  .empty h1,
   .empty h2 {
     font-size: 23px;
   }
@@ -2457,15 +2459,6 @@ main {
   overflow-wrap: anywhere;
 }
 @media (max-width: 700px) {
-  .selected-group-heading {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-  }
   .topbar .icon-button,
   .topbar .button {
     min-width: 44px;
@@ -2748,5 +2741,43 @@ main {
 @media (max-width: 650px) {
   .gift-detail:has(> .gift-photo.without-photo) {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Keep the active family group and its navigation together. */
+.selected-group-heading {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+.selected-group-heading h3 {
+  min-width: 0;
+  margin: 0;
+}
+.selected-group-heading > span {
+  color: var(--muted);
+  font-size: 13px;
+}
+@media (max-width: 700px) {
+  .page-heading:has(+ .settings-layout[data-section="groups"]) > div > p {
+    display: none;
+  }
+  .settings-layout[data-section="groups"] .settings-navigation {
+    margin-bottom: 16px;
+  }
+  .family-groups-section > .section-heading {
+    margin-bottom: 12px;
+  }
+  .family-groups-section > .field {
+    margin-top: 0;
+    max-width: 100%;
+  }
+  .family-groups-section .group-settings {
+    padding-block: 12px;
+  }
+  .family-groups-section .group-settings-nav {
+    margin-block: 12px 16px;
+    gap: 8px 16px;
   }
 }

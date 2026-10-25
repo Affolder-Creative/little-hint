@@ -180,7 +180,9 @@ export function App() {
     if (!query.data) return;
     const main = document.getElementById("main");
     const heading = main?.querySelector<HTMLElement>("h1");
-    document.title = `${heading?.textContent ?? "Little Hint"} · Little Hint`;
+    document.title = heading?.textContent
+      ? `${heading.textContent} · Little Hint`
+      : "Little Hint";
     main?.focus({ preventScroll: true });
     if (
       location.hash.startsWith("#note-") ||
@@ -392,6 +394,7 @@ export function App() {
                 path="*"
                 element={
                   <Empty
+                    page
                     title="This page isn’t here"
                     action={
                       <Link className="button" to="/">
@@ -860,6 +863,7 @@ function PersonPage() {
   if (!person)
     return (
       <Empty
+        page
         title="Person not found"
         action={
           <Link className="button secondary" to="/people">
@@ -1058,6 +1062,7 @@ function Lists() {
   if (id && !list)
     return (
       <Empty
+        page
         title="List not found"
         action={
           <Link className="button secondary" to="/lists">
@@ -1281,6 +1286,7 @@ function GiftDetail() {
   if (!gift)
     return (
       <Empty
+        page
         title="Item not found"
         action={
           <Link className="button secondary" to="/">
@@ -2152,7 +2158,7 @@ function SettingsPage({
         title="Settings"
         description="Manage your account, family groups, and preferences."
       />
-      <div className="settings-layout">
+      <div className="settings-layout" data-section={section}>
         <SettingsNavigation
           section={section}
           admin={world.me.admin}
@@ -2265,7 +2271,7 @@ function SettingsPage({
             </Field>
           </section>
           <section
-            className="settings-section"
+            className="settings-section family-groups-section"
             hidden={section !== "groups"}
             aria-labelledby="settings-groups-title"
           >
@@ -2292,10 +2298,12 @@ function SettingsPage({
                 Create family group
               </button>
             </div>
-            <p className="muted">
-              A family group brings friends or family together to share wish
-              lists and plan gifts. You can belong to more than one.
-            </p>
+            {!selectedGroup && (
+              <p className="muted">
+                A family group brings friends or family together to share wish
+                lists and plan gifts. You can belong to more than one.
+              </p>
+            )}
             {!!world.invitations.some(
               (i) => !!i.groupId && i.email === world.me.email.toLowerCase(),
             ) && <Invitations />}
@@ -2321,7 +2329,7 @@ function SettingsPage({
                   )}
                 </div>
               ))}
-            {selectedGroup ? (
+            {selectedGroup && world.groups.length > 1 && (
               <Field label="Family group">
                 <select
                   value={selectedGroup.id}
@@ -2339,7 +2347,8 @@ function SettingsPage({
                   ))}
                 </select>
               </Field>
-            ) : (
+            )}
+            {!selectedGroup && (
               <p>
                 No family groups yet. Create one or accept an invitation to get
                 started.
@@ -2352,14 +2361,14 @@ function SettingsPage({
                 data-group-id={g.id}
                 hidden={g.id !== selectedGroup?.id}
               >
-                <h3 className="selected-group-heading">
-                  {familyGroupLabel(g, world)}
-                </h3>
-                <p>
-                  {g.ownerId === world.me.id
-                    ? "You own this family group."
-                    : "You’re a member of this family group."}
-                </p>
+                <div className="selected-group-heading">
+                  <h3>{familyGroupLabel(g, world)}</h3>
+                  <span>
+                    {g.ownerId === world.me.id
+                      ? "You own this group"
+                      : "You’re a member"}
+                  </span>
+                </div>
                 <nav
                   className="group-settings-nav"
                   aria-label="Family group settings"

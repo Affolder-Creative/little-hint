@@ -392,7 +392,7 @@ export function EventPage() {
   const event = world.groupEvents.find((event) => event.id === id);
   if (!event)
     return (
-      <Empty title="Event not found">
+      <Empty page title="Event not found">
         This event may no longer be shared with you.{" "}
         <Link to="/lists">Return to My lists</Link>.
       </Empty>
