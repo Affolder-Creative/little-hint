@@ -25,6 +25,7 @@ async function preview(page: Page, actorIndex = 0, solo = false) {
     "group-events": "group-events.create",
     exchanges: "exchanges.create",
     "exchanges/update": "exchanges.update",
+    "exchanges/draw": "exchanges.draw",
   };
   await page.route("**/api/**", async (route) => {
     const path = new URL(route.request().url()).pathname;
@@ -549,6 +550,7 @@ test("exchange exclusions use IDs and drafts can be reviewed and edited", async 
     .getByRole("button", { name: "Create exchange", exact: true })
     .click();
   await page.getByLabel("Exchange name").fill("A reviewed draw");
+  await page.locator(".exchange-matching > summary").click();
   await page
     .getByLabel("Giver", { exact: true })
     .selectOption(state.people[1].id);
@@ -891,6 +893,336 @@ test("person list links and source names wrap across viewports and enlarged text
             `person-lists-${width}-${theme}${enlarged ? "-200" : ""}.png`,
           ),
           fullPage: true,
+        });
+    }
+  }
+});
+
+test("basic exchanges keep matching rules collapsed and preserve defaults", async ({
+  page,
+}) => {
+  const { state } = await preview(page);
+  await page.goto("/exchanges");
+  await page
+    .getByRole("button", { name: "Create exchange", exact: true })
+    .click();
+  const dialog = page.getByRole("dialog");
+  const details = dialog.locator(".exchange-matching");
+  const summary = details.locator("summary");
+  await expect(details).not.toHaveAttribute("open");
+  await expect(summary).toContainText(
+    "Avoid same-household matches · No individual matches blocked",
+  );
+  await expect(dialog.getByLabel("Giver", { exact: true })).not.toBeVisible();
+  await summary.focus();
+  await page.keyboard.press("Enter");
+  await expect(details).toHaveAttribute("open", "");
+  await page.keyboard.press("Space");
+  await expect(details).not.toHaveAttribute("open");
+  // Inspecting rules alone must not trigger the unsaved-changes guard.
+  await expect(dialog.locator("form")).toHaveAttribute("data-dirty", "false");
+  await dialog.getByLabel("Exchange name").fill("A simple exchange");
+  await dialog
+    .getByRole("button", { name: "Create exchange", exact: true })
+    .click();
+  await expect(
+    dialog.getByRole("region", { name: "Exchange review" }),
+  ).toContainText("People sharing a household will not be matched.");
+  await dialog.getByRole("button", { name: "Confirm and save" }).click();
+  await expect(dialog).not.toBeVisible();
+  expect(
+    state.exchanges.find((e) => e.name === "A simple exchange"),
+  ).toMatchObject({
+    excludeHousehold: true,
+    exclusions: [],
+    count: 1,
+  });
+});
+
+test("both-direction rules avoid duplicates and survive review, editing, and drawing", async ({
+  page,
+}) => {
+  const { state } = await preview(page);
+  const [first, second] = state.people.slice(1, 3);
+  const previous = state.exchanges[0];
+  await page.goto("/exchanges");
+  await page
+    .getByRole("button", { name: "Create exchange", exact: true })
+    .click();
+  const dialog = page.getByRole("dialog");
+  const details = dialog.locator(".exchange-matching");
+  const summary = details.locator("summary");
+  await dialog.getByLabel("Exchange name").fill("Pair rules");
+  await summary.click();
+  await expect(
+    dialog.getByRole("button", { name: "Add rule", exact: true }),
+  ).toBeDisabled();
+  const choose = async () => {
+    await dialog.getByLabel("Giver", { exact: true }).selectOption(first.id);
+    await dialog.getByLabel("Will not give to").selectOption(second.id);
+  };
+  await choose();
+  await expect(dialog.getByLabel("Both directions")).not.toBeChecked();
+  await dialog.getByRole("button", { name: "Add rule", exact: true }).click();
+  await expect(summary).toContainText("1 match blocked");
+  await choose();
+  await expect(
+    dialog.getByRole("button", { name: "Add rule", exact: true }),
+  ).toBeDisabled();
+  await dialog.getByLabel("Both directions").check();
+  await dialog.getByRole("button", { name: "Add rule", exact: true }).click();
+  await expect(details.locator(".setting-row")).toHaveCount(2);
+  await expect(summary).toContainText("2 matches blocked");
+  await choose();
+  await expect(
+    dialog.getByRole("button", { name: "Add rule", exact: true }),
+  ).toBeDisabled();
+  await dialog
+    .getByLabel("Avoid matching people in the same household")
+    .uncheck();
+  await dialog
+    .getByLabel("Prefer different matches from")
+    .selectOption(previous.id);
+  await summary.click();
+  await expect(summary).toContainText(
+    `Allow same-household matches · 2 matches blocked · Prefer different matches from ${previous.name}`,
+  );
+  await dialog
+    .getByRole("button", { name: "Create exchange", exact: true })
+    .click();
+  const review = dialog.getByRole("region", { name: "Exchange review" });
+  await expect(review).toContainText(
+    `${first.name} will not give to ${second.name}.`,
+  );
+  await expect(review).toContainText(
+    `${second.name} will not give to ${first.name}.`,
+  );
+  await dialog.getByRole("button", { name: "Back to editing" }).click();
+  await expect(dialog.getByLabel("Exchange name")).toBeFocused();
+  await expect(summary).toContainText("2 matches blocked");
+  await dialog
+    .getByRole("button", { name: "Create exchange", exact: true })
+    .click();
+  await dialog.getByRole("button", { name: "Confirm and save" }).click();
+  await expect(dialog).not.toBeVisible();
+  const saved = state.exchanges.find((e) => e.name === "Pair rules")!;
+  expect(saved).toMatchObject({
+    excludeHousehold: false,
+    previousId: previous.id,
+    exclusions: [
+      [first.id, second.id],
+      [second.id, first.id],
+    ],
+  });
+  await page
+    .getByRole("button", { name: "Edit exchange", exact: true })
+    .click();
+  await expect(details).toHaveAttribute("open", "");
+  await expect(dialog.getByLabel("Prefer different matches from")).toHaveValue(
+    previous.id,
+  );
+  await expect(
+    dialog.getByLabel("Avoid matching people in the same household"),
+  ).not.toBeChecked();
+  await expect(details.locator(".setting-row")).toHaveCount(2);
+  // Each direction stays independently editable, including older one-way rules.
+  await dialog
+    .getByRole("button", {
+      name: `Remove rule: ${second.name} to ${first.name}`,
+      exact: true,
+    })
+    .click();
+  await expect(summary).toContainText("1 match blocked");
+  await choose();
+  await dialog.getByLabel("Both directions").check();
+  await dialog.getByRole("button", { name: "Add rule", exact: true }).click();
+  await summary.click();
+  await dialog
+    .getByRole("button", { name: "Save exchange", exact: true })
+    .click();
+  await dialog.getByRole("button", { name: "Confirm and save" }).click();
+  await expect(dialog).not.toBeVisible();
+  expect(saved.exclusions).toEqual([
+    [first.id, second.id],
+    [second.id, first.id],
+  ]);
+  await page.getByRole("button", { name: "Draw names", exact: true }).click();
+  await expect(dialog).toContainText(
+    `${first.name} will not give to ${second.name}.`,
+  );
+  await expect(dialog).toContainText(
+    `${second.name} will not give to ${first.name}.`,
+  );
+  await dialog.getByRole("button", { name: "Draw names", exact: true }).click();
+  await expect(dialog).not.toBeVisible();
+  expect(saved.status).toBe("drawn");
+  expect(
+    saved.assignments.some(
+      ([from, to]) =>
+        (from === first.id && to === second.id) ||
+        (from === second.id && to === first.id),
+    ),
+  ).toBe(false);
+});
+
+test("exchange rules reset when their participants or family group change", async ({
+  page,
+}) => {
+  const { state } = await preview(page);
+  const [first, second] = state.people.slice(1, 3);
+  await page.goto("/exchanges");
+  await page
+    .getByRole("button", { name: "Create exchange", exact: true })
+    .click();
+  const dialog = page.getByRole("dialog");
+  const summary = dialog.locator(".exchange-matching > summary");
+  await summary.click();
+  const addPair = async () => {
+    await dialog.getByLabel("Giver", { exact: true }).selectOption(first.id);
+    await dialog.getByLabel("Will not give to").selectOption(second.id);
+    await dialog.getByLabel("Both directions").check();
+    await dialog.getByRole("button", { name: "Add rule", exact: true }).click();
+  };
+  await addPair();
+  await dialog
+    .getByRole("group", { name: "Participants", exact: true })
+    .getByLabel(first.name, { exact: true })
+    .uncheck();
+  await expect(summary).toContainText("No individual matches blocked");
+  await expect(
+    dialog
+      .getByLabel("Giver", { exact: true })
+      .locator(`option[value="${first.id}"]`),
+  ).toHaveCount(0);
+  await dialog
+    .getByRole("group", { name: "Participants", exact: true })
+    .getByLabel(first.name, { exact: true })
+    .check();
+  await addPair();
+  await dialog
+    .getByLabel("Prefer different matches from")
+    .selectOption(state.exchanges[0].id);
+  await dialog
+    .getByLabel("Family group", { exact: true })
+    .selectOption(state.groups[1].id);
+  await expect(summary).toContainText("No individual matches blocked");
+  await expect(summary).not.toContainText("Prefer different matches from");
+  await expect(dialog.getByLabel("Prefer different matches from")).toHaveValue(
+    "",
+  );
+  await expect(dialog.getByLabel("Giver", { exact: true })).toHaveValue("");
+  await expect(dialog.getByLabel("Will not give to")).toHaveValue("");
+  await expect(
+    dialog.getByRole("button", { name: "Add rule", exact: true }),
+  ).toBeDisabled();
+});
+
+test("exchange rules fit phones and enlarged text in both themes", async ({
+  page,
+}, testInfo) => {
+  const { state } = await preview(page);
+  state.people[1].name = "Alexandria Morgan-Wellington";
+  state.people[2].name = "Jamie Chen-Rodriguez";
+  for (const [width, theme] of [
+    [1440, "light"],
+    [390, "light"],
+    [320, "dark"],
+  ] as const) {
+    await page.setViewportSize({ width, height: 1000 });
+    await page.goto("/exchanges");
+    await page.evaluate(
+      (theme) => localStorage.setItem("little-hint:theme", theme),
+      theme,
+    );
+    await page.reload();
+    await page
+      .getByRole("button", { name: "Create exchange", exact: true })
+      .click();
+    if (width === 320)
+      await page.addStyleTag({
+        content: "body { font-family: Arial, sans-serif; }",
+      });
+    const dialog = page.getByRole("dialog");
+    const summary = dialog.locator(".exchange-matching > summary");
+    await summary.scrollIntoViewIfNeeded();
+    await page.screenshot({
+      path: testInfo.outputPath(`exchange-${width}-${theme}-collapsed.png`),
+    });
+    await summary.click();
+    await dialog
+      .getByLabel("Giver", { exact: true })
+      .selectOption(state.people[1].id);
+    await dialog
+      .getByLabel("Will not give to")
+      .selectOption(state.people[2].id);
+    await dialog.getByLabel("Both directions").check();
+    await dialog.getByRole("button", { name: "Add rule", exact: true }).click();
+    await dialog
+      .getByLabel("Giver", { exact: true })
+      .selectOption(state.people[1].id);
+    await dialog
+      .getByLabel("Will not give to")
+      .selectOption(state.people[2].id);
+    for (const enlarged of [false, true]) {
+      if (enlarged)
+        await page.evaluate(() => {
+          const sizes = Array.from(
+            document.querySelectorAll<HTMLElement>("body *"),
+          ).map(
+            (element) =>
+              [
+                element,
+                parseFloat(getComputedStyle(element).fontSize),
+              ] as const,
+          );
+          for (const [element, size] of sizes)
+            element.style.fontSize = `${size * 2}px`;
+        });
+      for (const element of [
+        dialog,
+        dialog.locator(".exchange-matching"),
+        dialog.locator(".exchange-matching-fields"),
+      ]) {
+        const overflow = await element.evaluate((el) => ({
+          width: el.scrollWidth - el.clientWidth,
+          elements: Array.from(el.querySelectorAll<HTMLElement>("*"))
+            .filter((child) => child.scrollWidth > child.clientWidth + 1)
+            .map((child) => ({
+              tag: child.tagName,
+              class: child.className,
+              text: child.textContent?.slice(0, 80),
+              overflow: child.scrollWidth - child.clientWidth,
+            })),
+        }));
+        expect(
+          overflow.width,
+          JSON.stringify(overflow.elements),
+        ).toBeLessThanOrEqual(1);
+      }
+      const giver = await dialog
+        .getByLabel("Giver", { exact: true })
+        .boundingBox();
+      const recipient = await dialog
+        .getByLabel("Will not give to")
+        .boundingBox();
+      if (width <= 650) {
+        expect(recipient!.y).toBeGreaterThanOrEqual(giver!.y + giver!.height);
+        expect(recipient!.width).toBeCloseTo(giver!.width, 0);
+      }
+      for (const control of await dialog
+        .locator(
+          ".exchange-matching summary, .exchange-matching select, .exchange-matching button, .exchange-matching .check",
+        )
+        .all()) {
+        const bounds = await control.boundingBox();
+        expect(bounds!.height).toBeGreaterThanOrEqual(44);
+      }
+      await dialog.getByLabel("Both directions").scrollIntoViewIfNeeded();
+      if (!enlarged || width === 320)
+        await page.screenshot({
+          path: testInfo.outputPath(
+            `exchange-${width}-${theme}${enlarged ? "-200" : ""}.png`,
+          ),
         });
     }
   }

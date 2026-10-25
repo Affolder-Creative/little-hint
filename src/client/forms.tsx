@@ -670,14 +670,42 @@ export function ExchangeForm({
   );
   const [giver, setGiver] = useState("");
   const [recipient, setRecipient] = useState("");
+  const [bothDirections, setBothDirections] = useState(false);
+  const [excludeHousehold, setExcludeHousehold] = useState(
+    exchange?.excludeHousehold ?? true,
+  );
+  const [previousId, setPreviousId] = useState(exchange?.previousId ?? "");
+  const requestedExclusions: [string, string][] = bothDirections
+    ? [
+        [giver, recipient],
+        [recipient, giver],
+      ]
+    : [[giver, recipient]];
+  const newExclusions = requestedExclusions.filter(
+    ([from, to]) =>
+      from && to && !exclusions.some(([a, b]) => a === from && b === to),
+  );
+  const rulesSummary = [
+    excludeHousehold
+      ? "Avoid same-household matches"
+      : "Allow same-household matches",
+    exclusions.length
+      ? `${exclusions.length} ${exclusions.length === 1 ? "match" : "matches"} blocked`
+      : "No individual matches blocked",
+    previousId
+      ? `Prefer different matches from ${world.exchanges.find((e) => e.id === previousId)?.name ?? "the previous exchange"}`
+      : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
   const plan = (f: FormData) => ({
     name: value(f, "name"),
     groupId,
     participantIds: participants,
     count: Number(value(f, "count")) as 1 | 2 | 3,
-    excludeHousehold: f.has("households"),
+    excludeHousehold,
     exclusions,
-    previousId: value(f, "previousId") || undefined,
+    previousId: previousId || undefined,
   });
   return (
     <Form
@@ -724,6 +752,7 @@ export function ExchangeForm({
                 .map((p) => p.id),
             );
             setExclusions([]);
+            setPreviousId("");
             setGiver("");
             setRecipient("");
           }}
@@ -774,119 +803,136 @@ export function ExchangeForm({
         ))}
         {participants.length < 2 && <p>Select at least two people.</p>}
       </fieldset>
-      <label className="check">
-        <input
-          name="households"
-          type="checkbox"
-          defaultChecked={exchange?.excludeHousehold ?? true}
-        />
-        Avoid matching people in the same household
-      </label>
-      <p className="muted">
-        Households are optional and managed in family-group Settings. Matching
-        names alone do not exclude anyone.
-      </p>
-      <fieldset className="choice-group">
-        <legend>Matches to avoid</legend>
-        <div className="form-row">
-          <Field label="Giver">
-            <select
-              value={giver}
-              onChange={(e) => {
-                setGiver(e.target.value);
-                if (recipient === e.target.value) setRecipient("");
+      <details className="optional-fields exchange-matching" open={!!exchange}>
+        <summary>
+          Matching rules
+          <span className="matching-rules-summary">{rulesSummary}</span>
+        </summary>
+        <div className="exchange-matching-fields">
+          <label className="check">
+            <input
+              name="households"
+              type="checkbox"
+              checked={excludeHousehold}
+              onChange={(e) => setExcludeHousehold(e.target.checked)}
+            />
+            Avoid matching people in the same household
+          </label>
+          <p className="muted">
+            Households are optional and managed in family-group Settings.
+            Matching names alone do not exclude anyone.
+          </p>
+          <fieldset className="choice-group">
+            <legend>Matches to avoid</legend>
+            <div className="form-row exchange-rule-people">
+              <Field label="Giver">
+                <select
+                  value={giver}
+                  onChange={(e) => {
+                    setGiver(e.target.value);
+                    if (recipient === e.target.value) setRecipient("");
+                  }}
+                >
+                  <option value="">Choose a person</option>
+                  {people
+                    .filter((p) => participants.includes(p.id))
+                    .map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {participantLabel(world, p.id)}
+                      </option>
+                    ))}
+                </select>
+              </Field>
+              <Field label="Will not give to">
+                <select
+                  value={recipient}
+                  onChange={(e) => setRecipient(e.target.value)}
+                >
+                  <option value="">Choose a person</option>
+                  {people
+                    .filter(
+                      (p) => participants.includes(p.id) && p.id !== giver,
+                    )
+                    .map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {participantLabel(world, p.id)}
+                      </option>
+                    ))}
+                </select>
+              </Field>
+            </div>
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={bothDirections}
+                onChange={(e) => setBothDirections(e.target.checked)}
+              />
+              Both directions
+            </label>
+            <small>
+              Also stop the second person from drawing the first. Leave
+              unchecked to block only the direction shown above.
+            </small>
+            <button
+              type="button"
+              className="button secondary"
+              data-form-change
+              disabled={newExclusions.length === 0}
+              onClick={() => {
+                setExclusions([...exclusions, ...newExclusions]);
+                setGiver("");
+                setRecipient("");
               }}
             >
-              <option value="">Choose a person</option>
-              {people
-                .filter((p) => participants.includes(p.id))
-                .map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {participantLabel(world, p.id)}
-                  </option>
-                ))}
-            </select>
-          </Field>
-          <Field label="Will not give to">
+              Add rule
+            </button>
+            {exclusions.map(([a, b]) => (
+              <div className="setting-row" key={`${a}:${b}`}>
+                <span>
+                  {participantLabel(world, a)} will not give to{" "}
+                  {participantLabel(world, b)}
+                </span>
+                <button
+                  type="button"
+                  className="text-button"
+                  data-form-change
+                  aria-label={`Remove rule: ${participantLabel(world, a)} to ${participantLabel(world, b)}`}
+                  onClick={() =>
+                    setExclusions(
+                      exclusions.filter(
+                        (pair) => pair[0] !== a || pair[1] !== b,
+                      ),
+                    )
+                  }
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+          </fieldset>
+          <Field label="Prefer different matches from">
             <select
-              value={recipient}
-              onChange={(e) => setRecipient(e.target.value)}
+              name="previousId"
+              value={previousId}
+              onChange={(e) => setPreviousId(e.target.value)}
             >
-              <option value="">Choose a person</option>
-              {people
-                .filter((p) => participants.includes(p.id) && p.id !== giver)
-                .map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {participantLabel(world, p.id)}
+              <option value="">Do not use a previous exchange</option>
+              {world.exchanges
+                .filter(
+                  (e) =>
+                    e.groupId === groupId &&
+                    e.status !== "draft" &&
+                    e.id !== exchange?.id,
+                )
+                .map((e) => (
+                  <option key={e.id} value={e.id}>
+                    {e.name}
                   </option>
                 ))}
             </select>
           </Field>
         </div>
-        <button
-          type="button"
-          className="button secondary"
-          data-form-change
-          disabled={
-            !giver ||
-            !recipient ||
-            exclusions.some(([a, b]) => a === giver && b === recipient)
-          }
-          onClick={() => {
-            setExclusions([...exclusions, [giver, recipient]]);
-            setGiver("");
-            setRecipient("");
-          }}
-        >
-          Add rule
-        </button>
-        {exclusions.map(([a, b]) => (
-          <div className="setting-row" key={`${a}:${b}`}>
-            <span>
-              {participantLabel(world, a)} will not give to{" "}
-              {participantLabel(world, b)}
-            </span>
-            <button
-              type="button"
-              className="text-button"
-              data-form-change
-              aria-label={`Remove rule: ${participantLabel(world, a)} to ${participantLabel(world, b)}`}
-              onClick={() =>
-                setExclusions(
-                  exclusions.filter((pair) => pair[0] !== a || pair[1] !== b),
-                )
-              }
-            >
-              Remove
-            </button>
-          </div>
-        ))}
-        <small>
-          This stops the giver from drawing the selected person. Add another
-          rule with their names swapped to prevent the match both ways.
-        </small>
-      </fieldset>
-      <Field label="Prefer different matches from">
-        <select
-          name="previousId"
-          key={groupId}
-          defaultValue={exchange?.previousId ?? ""}
-        >
-          <option value="">Do not use a previous exchange</option>
-          {world.exchanges
-            .filter(
-              (e) =>
-                e.groupId === groupId &&
-                e.status !== "draft" &&
-                e.id !== exchange?.id,
-            )
-            .map((e) => (
-              <option key={e.id} value={e.id}>
-                {e.name}
-              </option>
-            ))}
-        </select>
-      </Field>
+      </details>
       <p className="muted">
         Before drawing names, everyone needs a wish list set to Keep it a
         surprise and shared with this group. Each person can only see who they

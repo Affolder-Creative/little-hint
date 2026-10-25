@@ -1129,6 +1129,8 @@ main {
 .dialog-heading h2 {
   font-size: 22px;
   margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .dialog-body {
   padding: 24px;
@@ -2684,4 +2686,34 @@ main {
 
 .notification-list .text-button {
   color: var(--text);
+}
+
+/* Keep exchange setup brief while making active matching rules visible. */
+.exchange-matching > summary {
+  min-height: 44px;
+  overflow-wrap: anywhere;
+}
+.matching-rules-summary {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 400;
+}
+.exchange-matching-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 18px;
+}
+.exchange-matching .check {
+  min-height: 44px;
+}
+.exchange-matching .setting-row > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 650px) {
+  .exchange-rule-people {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
