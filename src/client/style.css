@@ -399,6 +399,9 @@ main {
 .home-intro {
   margin-top: 0;
 }
+.home-intro > .text-button {
+  flex-shrink: 0;
+}
 .home-intro h2 {
   font-size: 22px;
 }

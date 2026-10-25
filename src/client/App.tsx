@@ -19,6 +19,7 @@ import {
 import { SettingsNavigation, settingsSections } from "./SettingsNavigation";
 import { Confirm } from "./Confirm";
 import { familyGroupLabel } from "../shared/households";
+import { AccountInvitations } from "./AccountInvitations";
 import { HouseholdSettings } from "./Households";
 /* Little Hint operates as a quiet, practical gift notebook. Approved heart-tag artwork anchors the shell; product content leads. */
 import { useEffect, useState, type ReactNode } from "react";
@@ -531,7 +532,10 @@ function Invitations() {
   const { world, mutate, toast } = useApp();
   const { id } = useParams();
   const mine = world.invitations.filter(
-    (i) => i.email === world.me.email.toLowerCase() && (!id || i.id === id),
+    (i) =>
+      !!i.groupId &&
+      i.email === world.me.email.toLowerCase() &&
+      (!id || i.id === id),
   );
   return (
     <section className="invitations">
@@ -720,60 +724,77 @@ function Browser({
 function Home() {
   const { world, open } = useApp();
   const incoming = world.invitations.some(
-    (i) => i.email === world.me.email.toLowerCase(),
+    (i) => !!i.groupId && i.email === world.me.email.toLowerCase(),
   );
   const others = world.items.filter((i) => !i.archived && !i.isRecipient);
+  const items = others.length ? others : world.items.filter((i) => !i.archived);
+  const solo = !world.groups.length;
+  const hasLists = world.lists.some((list) => list.canEdit && !list.archived);
   return (
     <>
       <Header
         title={`Hi, ${world.me.name.split(" ")[0]}.`}
-        description="A few hints from your favorite people."
+        description={
+          solo
+            ? "A place for the things you would love."
+            : "A few hints from your favorite people."
+        }
       />
       <Install />
       {incoming && <Invitations />}
       <div className="home-intro">
         <div>
-          <h2>
-            {!world.groups.length
-              ? "Start with your people"
-              : others.length
-                ? "From your people"
-                : "Your wish lists"}
-          </h2>
+          <h2>{others.length ? "From your people" : "Your wish lists"}</h2>
           <p>
-            {!world.groups.length
-              ? "Create a family group to share wishes and plan gifts together."
+            {solo
+              ? "Save your wishes here. Choose who to share them with when you're ready."
               : others.length
                 ? "A few things they’ve been wishing for."
                 : "A little hint about what you would love."}
           </p>
         </div>
-        <Link className="text-button" to="/people">
-          View your people <ArrowRight size={16} />
+        <Link className="text-button" to={solo ? "/lists" : "/people"}>
+          {solo ? "My lists" : "View your people"} <ArrowRight size={16} />
         </Link>
       </div>
-      {!world.groups.length ? (
+      {solo && !items.length ? (
         <Empty
-          title="Good gifts start with your people"
+          title={
+            hasLists
+              ? "Add a few things you would love"
+              : "Start with a wish list"
+          }
           action={
             <button
               className="button"
-              onClick={() => open("Create a family group", <GroupForm />)}
+              onClick={() =>
+                hasLists
+                  ? open("Add item", <GiftForm />)
+                  : open("Your first wish list", <ListForm />)
+              }
             >
               <Plus size={17} />
-              Create a family group
+              {hasLists ? "Add item" : "Create your first wish list"}
             </button>
           }
         >
-          Bring your family or friends together in a private family group, then
-          share your first wish list.
+          Your wish list stays private until you choose to share it with a
+          family group.
         </Empty>
       ) : (
-        <Browser
-          items={
-            others.length ? others : world.items.filter((i) => !i.archived)
-          }
-        />
+        <Browser items={items} />
+      )}
+      {solo && (
+        <p>
+          Ready to share?{" "}
+          <button
+            className="text-button"
+            onClick={() => open("Create a family group", <GroupForm />)}
+          >
+            Create a family group
+          </button>{" "}
+          or accept an invitation from someone you know.
+        </p>
       )}
     </>
   );
@@ -795,9 +816,12 @@ function People() {
         </button>
       </Header>
       <p className="notice">
-        Invite adults who manage their own wishes from{" "}
+        <Link to="/settings?section=invitations">
+          Invite someone to Little Hint
+        </Link>{" "}
+        so they can manage their own wishes. To share lists, send a separate{" "}
         <Link to="/settings?section=groups&view=members">
-          family-group invitations
+          family-group invitation
         </Link>
         . Create a managed profile for someone whose wishes you’ll look after.
       </p>
@@ -2027,8 +2051,9 @@ function SettingsPage({
     return `?${next}`;
   };
   const pendingGroupRequests =
-    world.invitations.filter((i) => i.email === world.me.email.toLowerCase())
-      .length + world.links.filter((l) => l.kind === "ownership").length;
+    world.invitations.filter(
+      (i) => !!i.groupId && i.email === world.me.email.toLowerCase(),
+    ).length + world.links.filter((l) => l.kind === "ownership").length;
   const [draftsEnabled, setDraftsEnabled] = useState(
     !!localStorage.getItem(`little-hint:draft-optin:${world.me.id}`),
   );
@@ -2074,6 +2099,13 @@ function SettingsPage({
               </Link>
             </p>
           )}
+          <section
+            hidden={section !== "invitations"}
+            className="settings-section"
+            aria-labelledby="settings-invitations-title"
+          >
+            <AccountInvitations />
+          </section>
           <section
             className="settings-section"
             hidden={section !== "profile"}
@@ -2196,7 +2228,7 @@ function SettingsPage({
               lists and plan gifts. You can belong to more than one.
             </p>
             {!!world.invitations.some(
-              (i) => i.email === world.me.email.toLowerCase(),
+              (i) => !!i.groupId && i.email === world.me.email.toLowerCase(),
             ) && <Invitations />}
             {world.links
               .filter((l) => l.kind === "ownership")

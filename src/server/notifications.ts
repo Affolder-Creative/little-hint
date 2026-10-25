@@ -15,6 +15,7 @@ import { config, spend } from "./settings";
 import { pool, readState, transact } from "./db";
 import { noticeAllowed, preferences, stamp, fail } from "./domain";
 import type { Actor } from "../shared/model";
+import { isAccountInvitation } from "../shared/invitations";
 import { renderEmail, type EmailMessage } from "./email";
 const origin = () => process.env.APP_URL ?? "http://localhost:5173";
 export async function sendEmail(to: string, message: EmailMessage) {
@@ -145,8 +146,11 @@ export async function deliverNotice(id: string) {
     });
     return;
   }
+  const accountInvitation = inv && isAccountInvitation(inv);
   const actionPath = inv
-    ? `/invite/${inv.id}`
+    ? accountInvitation
+      ? "/"
+      : `/invite/${inv.id}`
     : n.exchangeId
       ? "/exchanges"
       : n.itemId
@@ -176,10 +180,16 @@ export async function deliverNotice(id: string) {
       try {
         if (channel === "email")
           await sendEmail(user.email, {
-            kind: inv ? "invitation" : "update",
-            text: inv
-              ? "You're invited to Little Hint. Sign in with this email address to accept, then start sharing wish lists with your people."
-              : "A little update is waiting for you. Sign in to Little Hint to see it.",
+            kind: accountInvitation
+              ? "account-invitation"
+              : inv
+                ? "invitation"
+                : "update",
+            text: accountInvitation
+              ? "You're invited to Little Hint. Sign in with this email address to start your own wish list. This invitation does not add you to a family group or share anyone's lists. You can choose who to share with later. Your invitation expires in seven days."
+              : inv
+                ? "You're invited to Little Hint. Sign in with this email address to accept, then start sharing wish lists with your people."
+                : "A little update is waiting for you. Sign in to Little Hint to see it.",
             actionPath,
           });
         if (channel === "telegram" && current.chatId)

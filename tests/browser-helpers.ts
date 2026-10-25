@@ -101,7 +101,10 @@ export async function login(page: Page, email: string) {
             const mail = JSON.parse(
               await readFile(`.local/mail/${file}`, "utf8"),
             );
-            if (mail.to === email)
+            if (
+              mail.to === email &&
+              mail.subject === "Your Little Hint sign-in code"
+            )
               code = mail.text.match(/\b\d{6}\b/)?.[0] ?? "";
           }
         return code;

@@ -3,6 +3,190 @@ import AxeBuilder from "@axe-core/playwright";
 import { test, expect, type Page, type BrowserContext } from "@playwright/test";
 import { readdir, readFile, mkdir } from "node:fs/promises";
 import { login, post } from "./browser-helpers";
+test("standalone invitation creates a private account that can later join two groups", async ({
+  browser,
+}) => {
+  test.setTimeout(120000);
+  const senderContext = await browser.newContext();
+  const friendContext = await browser.newContext();
+  try {
+    const sender = await senderContext.newPage();
+    const friend = await friendContext.newPage();
+    await login(sender, "sam@example.test");
+    const email = `standalone-${Date.now()}@example.test`;
+    const beforeMail = new Set(await readdir(".local/mail"));
+    await sender.goto("/settings?section=invitations");
+    await sender
+      .getByRole("button", {
+        name: "Invite someone to Little Hint",
+        exact: true,
+      })
+      .click();
+    await sender
+      .getByRole("dialog")
+      .getByLabel("Email address", { exact: true })
+      .fill(email);
+    await sender
+      .getByRole("button", { name: "Send invitation", exact: true })
+      .click();
+    await expect(sender.getByRole("dialog")).not.toBeVisible();
+    await expect(sender.getByText(email, { exact: true })).toBeVisible();
+    let invitationMail: { text: string; html: string } | undefined;
+    await expect
+      .poll(
+        async () => {
+          for (const file of await readdir(".local/mail")) {
+            if (beforeMail.has(file)) continue;
+            const mail = JSON.parse(
+              await readFile(`.local/mail/${file}`, "utf8"),
+            );
+            if (
+              mail.to === email &&
+              mail.subject === "You're invited to Little Hint"
+            )
+              invitationMail = mail;
+          }
+          return !!invitationMail;
+        },
+        { timeout: 30000 },
+      )
+      .toBe(true);
+    expect(invitationMail!.text).toContain(
+      "does not add you to a family group",
+    );
+    expect(invitationMail!.html).toContain("Open Little Hint");
+    expect(invitationMail!.html).not.toContain("/invite/");
+
+    await login(friend, email);
+    let fw = await (await friend.request.get("/api/v1/world")).json();
+    expect(fw.groups).toEqual([]);
+    expect(fw.households).toEqual([]);
+    expect(fw.people).toHaveLength(1);
+    expect(fw.me.admin).toBe(false);
+    expect(fw.invitations).toEqual([]);
+    const accountId = fw.me.id;
+    await friend
+      .getByRole("button", { name: "Create your first wish list", exact: true })
+      .click();
+    await friend
+      .getByLabel("List name", { exact: true })
+      .fill("Only my wishes");
+    await friend.getByRole("radio", { name: /Keep it a surprise/ }).check();
+    await friend
+      .getByRole("button", { name: "Create list", exact: true })
+      .click();
+    await expect(friend.getByRole("dialog")).not.toBeVisible();
+    fw = await (await friend.request.get("/api/v1/world")).json();
+    const privateList = fw.lists.find((l: any) => l.name === "Only my wishes");
+    expect(privateList.groupIds).toEqual([]);
+    await post(friend, "items", {
+      listId: privateList.id,
+      title: "Private notebook",
+    });
+    await friend.reload();
+    await expect(
+      friend.getByRole("heading", { name: "Private notebook", exact: true }),
+    ).toBeVisible();
+    await expect(
+      friend.getByRole("heading", { name: "Start with a wish list" }),
+    ).toHaveCount(0);
+
+    let sw = await (await sender.request.get("/api/v1/world")).json();
+    expect(sw.invitations.some((i: any) => i.email === email)).toBe(false);
+    expect(sw.people.some((p: any) => p.userId === accountId)).toBe(false);
+    expect(sw.lists.some((l: any) => l.id === privateList.id)).toBe(false);
+    for (const name of ["Friends", "Birthday circle"]) {
+      const group = await post(sender, "groups", { name });
+      const shared = await post(sender, "lists", {
+        name: `${name} wishes`,
+        ownerIds: [sw.people.find((p: any) => p.userId === sw.me.id).id],
+        groupIds: [group.id],
+        mode: "surprise",
+      });
+      const invite = await post(sender, "groups/invite", {
+        groupId: group.id,
+        email,
+      });
+      fw = await (await friend.request.get("/api/v1/world")).json();
+      expect(fw.lists.some((l: any) => l.id === shared.id)).toBe(false);
+      await friend.goto(`/invite/${invite.id}`);
+      await friend
+        .getByRole("button", { name: "Accept invitation", exact: true })
+        .click();
+      await expect(
+        friend.getByRole("button", { name: "Accept invitation", exact: true }),
+      ).toHaveCount(0);
+      fw = await (await friend.request.get("/api/v1/world")).json();
+      expect(fw.lists.some((l: any) => l.id === shared.id)).toBe(true);
+    }
+    expect(fw.me.id).toBe(accountId);
+    expect(fw.groups).toHaveLength(2);
+    expect(fw.lists.find((l: any) => l.id === privateList.id).groupIds).toEqual(
+      [],
+    );
+    sw = await (await sender.request.get("/api/v1/world")).json();
+    expect(sw.lists.some((l: any) => l.id === privateList.id)).toBe(false);
+    expect(sw.items.some((i: any) => i.title === "Private notebook")).toBe(
+      false,
+    );
+  } finally {
+    await senderContext.close();
+    await friendContext.close();
+  }
+});
+
+test("cancelling a standalone invitation after a code was issued blocks signup", async ({
+  browser,
+}) => {
+  const ownerContext = await browser.newContext();
+  const guestContext = await browser.newContext();
+  try {
+    const owner = await ownerContext.newPage();
+    const guest = await guestContext.newPage();
+    await login(owner, "sam@example.test");
+    const email = `cancel-invite-${Date.now()}@example.test`;
+    const invitation = await post(owner, "invitations", { email });
+    await guest.goto("/");
+    const before = new Set(await readdir(".local/mail"));
+    await guest.getByLabel("Email address", { exact: true }).fill(email);
+    await guest
+      .getByRole("button", { name: "Send me a code", exact: true })
+      .click();
+    await expect(guest.getByLabel("Six-digit code")).toBeVisible();
+    let code = "";
+    await expect
+      .poll(async () => {
+        for (const file of await readdir(".local/mail")) {
+          if (before.has(file)) continue;
+          const mail = JSON.parse(
+            await readFile(`.local/mail/${file}`, "utf8"),
+          );
+          if (
+            mail.to === email &&
+            mail.subject === "Your Little Hint sign-in code"
+          )
+            code = mail.text.match(/\b\d{6}\b/)?.[0] ?? "";
+        }
+        return code;
+      })
+      .toHaveLength(6);
+    await post(owner, "invitations/revoke", { id: invitation.id });
+    await guest.getByLabel("Six-digit code").fill(code);
+    const [response] = await Promise.all([
+      guest.waitForResponse(
+        (r) => new URL(r.url()).pathname === "/api/auth/sign-in/email-otp",
+      ),
+      guest.getByRole("button", { name: "Sign in", exact: true }).click(),
+    ]);
+    expect(response.ok()).toBe(false);
+    expect((await guest.request.get("/api/v1/world")).status()).toBe(401);
+    await expect(guest.getByRole("heading", { name: /Hi,/ })).toHaveCount(0);
+  } finally {
+    await ownerContext.close();
+    await guestContext.close();
+  }
+});
+
 test("real email-code sign-in, gift creation, buyer reservation, and surprise privacy", async ({
   browser,
 }) => {

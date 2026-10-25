@@ -310,6 +310,7 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
     "group-events": "group-events.create",
     "group-events/update": "group-events.update",
     "groups/invite": "groups.invite",
+    invitations: "invitations.create",
     "groups/remove": "groups.remove",
     "groups/transfer": "groups.transfer",
     "invitations/accept": "invitations.accept",
