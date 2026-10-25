@@ -168,7 +168,7 @@ The shell reserves the measured navigation height plus 16px below the footer. A 
 
 Home, People, My lists, Buying, and Exchanges are the persistent navigation destinations. Settings and private groups remain together. The first home view pairs the logo and clear navigation with welcome copy and gift browsing controls.
 
-Gift browsing uses three equal columns, then two at 650px and below. Desktop gaps are 28px vertically and 22px horizontally; narrow-screen gaps are 28px and 15px. People use two columns before becoming a single list. Gift details use two columns before stacking on narrow screens. Recurring gaps and padding use the spacing steps in frontmatter, alongside local layout measurements.
+Gift browsing uses three equal columns, then two at 650px and below. Cards align at the start of each row so compact cards do not stretch their clickable area. Mixed photo and no-photo rows retain reading order; actual photos can determine the row height. Desktop gaps are 28px vertically and 22px horizontally; narrow-screen gaps are 28px and 15px. People use two columns before becoming a single list. Gift details use two columns before stacking on narrow screens. Recurring gaps and padding use the spacing steps in frontmatter, alongside local layout measurements.
 
 Search, tag filtering, and the availability checkbox can wrap. At 1200px and below, availability occupies a full row and remains visible on phones. Profile avatars keep their fixed size while adjacent settings copy can grow.
 
@@ -200,7 +200,7 @@ Availability labels use text as well as color. Available gifts use a muted green
 
 ### Cards / Containers
 
-Gift cards are unboxed links. A contained image or labeled fallback leads, followed by recipient, title, price, availability, and up to two tags. The title underlines on hover. Images use a 1.13 aspect ratio on desktop and become square on narrow screens. People, lists, purchases, and settings use open rows with bottom dividers. Invitations and installation prompts use soft rounded panels.
+Gift cards are unboxed links. A contained image or labeled fallback leads, followed by recipient, title, price, availability, and up to two tags. The title underlines on hover. Actual images use a 1.13 aspect ratio on desktop and become square on narrow screens. Missing or failed photos use a compact 32px icon and in-flow label with an 80px minimum area that grows for enlarged text. Desktop gift details give the no-photo area a narrow 144px column beside the gift information; phones stack it above the information with a 96px minimum height. Actual photos retain their full detail layout. Replacing a failed image URL restores the photo. People, lists, purchases, and settings use open rows with bottom dividers. Invitations and installation prompts use soft rounded panels.
 
 ### Inputs / Fields
 
@@ -247,7 +247,7 @@ Browser favicons use the approved micro tag without a surrounding tile. The tag 
 - Don't use invented product photography or present demonstration fixtures as real gifts.
 - Don't rely on color alone to explain availability or list privacy.
 
-Optional gift notes, price, quantity, tags and photos share a disclosure below the gift name and destination. Upload progress is announced and saving waits for the photo. On phones, missing-photo placeholders stay compact. Notification topics and administration integrations use labeled task groups; channel setup stays next to its checkbox. Session rows identify this device where available, with readable browser names and expandable details. Loading and failure states never stand in for empty data.
+Optional gift notes, price, quantity, tags and photos share a disclosure below the gift name and destination. Upload progress is announced and saving waits for the photo. Missing-photo placeholders stay compact across screen sizes. Notification topics and administration integrations use labeled task groups; channel setup stays next to its checkbox. Session rows identify this device where available, with readable browser names and expandable details. Loading and failure states never stand in for empty data.
 
 ### Notifications and mentions
 

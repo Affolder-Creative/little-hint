@@ -464,6 +464,7 @@ main {
 }
 .gift-grid {
   display: grid;
+  align-items: start;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 28px 22px;
 }
@@ -2454,14 +2455,6 @@ main {
   overflow-wrap: anywhere;
 }
 @media (max-width: 700px) {
-  .gift-detail > .gift-photo.without-photo {
-    aspect-ratio: auto;
-    height: 96px;
-  }
-  .gift-detail > .gift-photo.without-photo svg {
-    width: 32px;
-    height: 32px;
-  }
   .selected-group-heading {
     position: absolute;
     width: 1px;
@@ -2714,6 +2707,44 @@ main {
 }
 @media (max-width: 650px) {
   .exchange-rule-people {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Missing photos support the gift information without reserving a full image area. */
+.gift-card > .gift-photo.without-photo,
+.gift-detail > .gift-photo.without-photo {
+  aspect-ratio: auto;
+  min-height: 80px;
+  padding: 12px;
+  flex-direction: column;
+  gap: 8px;
+}
+.gift-card > .gift-photo.without-photo > svg,
+.gift-detail > .gift-photo.without-photo > svg {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+}
+.gift-card > .gift-photo.without-photo > span,
+.gift-detail > .gift-photo.without-photo > span {
+  position: static;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.gift-detail:has(> .gift-photo.without-photo) {
+  grid-template-columns: 144px minmax(0, 1fr);
+  gap: 24px;
+}
+.gift-detail > .gift-photo.without-photo {
+  position: static;
+  min-height: 96px;
+}
+.gift-detail:has(> .gift-photo.without-photo) .description {
+  max-width: 65ch;
+}
+@media (max-width: 650px) {
+  .gift-detail:has(> .gift-photo.without-photo) {
     grid-template-columns: minmax(0, 1fr);
   }
 }

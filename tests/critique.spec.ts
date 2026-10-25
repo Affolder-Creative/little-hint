@@ -1403,6 +1403,277 @@ test("adding a saved draft refreshes the device list", async ({ page }) => {
   );
 });
 
+test("compact missing photos preserve mixed grids, real photos, and reading order", async ({
+  page,
+}, testInfo) => {
+  const { state, actor } = await preview(page);
+  const visible = world(state, actor).items.filter(
+    (item) => !item.isRecipient && !item.archived,
+  );
+  const [photoGift, missingGift, brokenGift] = visible
+    .slice(0, 3)
+    .map((view) => state.items.find((item) => item.id === view.id)!);
+  for (const item of state.items) item.image = "";
+  photoGift.image = "/api/v1/media/photo-fixture";
+  brokenGift.image = "/api/v1/media/broken-fixture";
+  missingGift.title =
+    "A thoughtful gift for long weekends and family adventures";
+  await page.route("**/api/v1/media/photo-fixture", (route) =>
+    route.fulfill({
+      contentType: "image/svg+xml",
+      body: '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"><rect width="400" height="300" fill="#e8eadd"/><rect x="120" y="45" width="160" height="180" rx="8" fill="#486348"/><text x="200" y="265" text-anchor="middle" font-family="sans-serif" font-size="20" fill="#2b201d">Sample photo</text></svg>',
+    }),
+  );
+  await page.route("**/api/v1/media/broken-fixture", (route) =>
+    route.fulfill({ status: 404, body: "Missing photo fixture" }),
+  );
+  let cardOrder: string[] | undefined;
+  for (const [width, theme] of [
+    [1440, "light"],
+    [768, "dark"],
+    [390, "light"],
+    [320, "dark"],
+  ] as const) {
+    await page.setViewportSize({ width, height: 1000 });
+    await page.goto("/");
+    await page.evaluate(
+      (theme) => localStorage.setItem("little-hint:theme", theme),
+      theme,
+    );
+    await page.reload();
+    if (width === 320)
+      await page.addStyleTag({
+        content: "body { font-family: Arial, sans-serif; }",
+      });
+    const cards = page.locator(".gift-card");
+    const missing = page.locator(`.gift-card[href="/gift/${missingGift.id}"]`);
+    const realPhoto = page.locator(
+      `.gift-card[href="/gift/${photoGift.id}"] > .gift-photo`,
+    );
+    await expect(realPhoto.locator("img")).toBeVisible();
+    await expect(
+      page.locator(
+        `.gift-card[href="/gift/${brokenGift.id}"] > .without-photo`,
+      ),
+    ).toBeVisible();
+    const order = await cards.evaluateAll((elements) =>
+      elements.map((el) => el.getAttribute("href")!),
+    );
+    if (cardOrder) expect(order).toEqual(cardOrder);
+    else cardOrder = order;
+    const realBounds = await realPhoto.boundingBox();
+    expect(realBounds!.width / realBounds!.height).toBeCloseTo(
+      width <= 650 ? 1 : 1.13,
+      1,
+    );
+    for (const enlarged of [false, true]) {
+      if (enlarged)
+        await page.evaluate(() => {
+          const sizes = Array.from(
+            document.querySelectorAll<HTMLElement>("body *"),
+          ).map(
+            (el) => [el, parseFloat(getComputedStyle(el).fontSize)] as const,
+          );
+          for (const [el, size] of sizes) el.style.fontSize = `${size * 2}px`;
+        });
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth - innerWidth,
+        ),
+      ).toBeLessThanOrEqual(1);
+      for (const area of await cards.locator(".without-photo").all()) {
+        const bounds = await area.boundingBox();
+        expect(bounds!.height).toBeLessThanOrEqual(enlarged ? 120 : 96);
+        expect(
+          await area.evaluate((el) => el.scrollHeight - el.clientHeight),
+        ).toBeLessThanOrEqual(1);
+        expect(
+          await area.evaluate((el) => el.scrollWidth - el.clientWidth),
+        ).toBeLessThanOrEqual(1);
+      }
+      // Row-major order must agree with keyboard order, with no stretched empty hit area.
+      const bounds = await cards.evaluateAll((elements) =>
+        elements.map((el) => {
+          const r = el.getBoundingClientRect();
+          const content = el.lastElementChild!.getBoundingClientRect();
+          return {
+            x: r.x,
+            y: r.y,
+            bottom: r.bottom,
+            contentBottom: content.bottom,
+          };
+        }),
+      );
+      for (let i = 0; i < bounds.length; i++) {
+        expect(bounds[i].bottom - bounds[i].contentBottom).toBeLessThanOrEqual(
+          1,
+        );
+        if (i) expect(bounds[i].y >= bounds[i - 1].y).toBe(true);
+      }
+      await missing.focus();
+      await expect(missing).toBeFocused();
+      await page.evaluate(() => scrollTo(0, 0));
+      if (!enlarged || width === 320)
+        await page.screenshot({
+          path: testInfo.outputPath(
+            `photo-grid-${width}-${theme}${enlarged ? "-200" : ""}.png`,
+          ),
+          fullPage: true,
+        });
+    }
+  }
+  // Every card is compact when a list has no photos, and shared surfaces use the same treatment.
+  photoGift.image = "";
+  for (const route of [
+    "/",
+    `/lists/${missingGift.listId}`,
+    `/people/${state.lists.find((l) => l.id === missingGift.listId)!.ownerIds[0]}`,
+  ]) {
+    await page.goto(route);
+    const cards = page.locator(".gift-card");
+    expect(await cards.count()).toBeGreaterThan(0);
+    await expect(cards.locator("img")).toHaveCount(0);
+    for (const area of await cards.locator(".without-photo").all())
+      expect((await area.boundingBox())!.height).toBeLessThanOrEqual(96);
+  }
+});
+
+test("no-photo details keep gift actions prominent and retain full real-photo layouts", async ({
+  page,
+}, testInfo) => {
+  const { state, actor } = await preview(page);
+  const gift = state.items.find((item) =>
+    world(state, actor).items.some(
+      (view) =>
+        view.id === item.id && !view.isRecipient && (view.available ?? 0) > 0,
+    ),
+  )!;
+  gift.image = "";
+  gift.description =
+    "A useful gift for everyday adventures. Choose a favorite color and check the notes before buying.";
+  for (const [width, theme] of [
+    [1440, "light"],
+    [768, "dark"],
+    [390, "light"],
+    [320, "dark"],
+  ] as const) {
+    await page.setViewportSize({ width, height: 1000 });
+    await page.goto(`/gift/${gift.id}`);
+    await page.evaluate(
+      (theme) => localStorage.setItem("little-hint:theme", theme),
+      theme,
+    );
+    await page.reload();
+    const area = page.locator(".gift-detail > .gift-photo");
+    const info = page.locator(".gift-detail > section");
+    const photoBounds = (await area.boundingBox())!;
+    const infoBounds = (await info.boundingBox())!;
+    expect(photoBounds.height).toBeLessThanOrEqual(100);
+    if (width > 650) {
+      expect(photoBounds.width).toBe(144);
+      expect(infoBounds.width).toBeGreaterThan(photoBounds.width);
+      expect(infoBounds.y).toBeCloseTo(photoBounds.y, 0);
+    } else
+      expect(infoBounds.y).toBeGreaterThan(photoBounds.y + photoBounds.height);
+    await expect(
+      page.getByRole("button", { name: /Reserve (gift|more)/ }),
+    ).toBeVisible();
+    for (const enlarged of [false, true]) {
+      if (enlarged)
+        await page.evaluate(() => {
+          const sizes = Array.from(
+            document.querySelectorAll<HTMLElement>("body *"),
+          ).map(
+            (el) => [el, parseFloat(getComputedStyle(el).fontSize)] as const,
+          );
+          for (const [el, size] of sizes) el.style.fontSize = `${size * 2}px`;
+        });
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth - innerWidth,
+        ),
+      ).toBeLessThanOrEqual(1);
+      expect(
+        await area.evaluate((el) => el.scrollHeight - el.clientHeight),
+      ).toBeLessThanOrEqual(1);
+      await page.screenshot({
+        path: testInfo.outputPath(
+          `photo-detail-${width}-${theme}${enlarged ? "-200" : ""}.png`,
+        ),
+        fullPage: true,
+      });
+    }
+  }
+  gift.image = "/brand/little-hint/icons/little-hint-app-color-512.png";
+  for (const width of [1440, 390]) {
+    await page.setViewportSize({ width, height: 1000 });
+    await page.goto(`/gift/${gift.id}`);
+    const photo = page.locator(".gift-detail > .gift-photo");
+    await expect(photo.locator("img")).toBeVisible();
+    await expect(photo).not.toHaveClass(/without-photo/);
+    const bounds = (await photo.boundingBox())!;
+    expect(bounds.width / bounds.height).toBeCloseTo(
+      width === 1440 ? 1 : 1.2,
+      1,
+    );
+  }
+});
+
+test("replacing a failed photo restores the image without reloading the gift", async ({
+  page,
+}) => {
+  const { state, actor } = await preview(page);
+  const gift = state.items.find((item) =>
+    world(state, actor).items.some(
+      (view) => view.id === item.id && view.isRecipient,
+    ),
+  )!;
+  gift.image = "/api/v1/media/broken-fixture";
+  const replacement = "/api/v1/media/replacement-fixture";
+  state.media.push({
+    id: "replacement-fixture",
+    revision: 1,
+    createdAt: new Date().toISOString(),
+    userId: actor.id,
+    file: "fixture.png",
+  });
+  await page.route("**/api/v1/media/broken-fixture", (route) =>
+    route.fulfill({ status: 404, body: "Missing photo fixture" }),
+  );
+  await page.route("**/api/v1/media/replacement-fixture", (route) =>
+    route.fulfill({
+      path: "public/brand/little-hint/icons/little-hint-app-color-512.png",
+    }),
+  );
+  await page.route("**/api/v1/media", (route) =>
+    route.fulfill({ json: { url: replacement } }),
+  );
+  await page.goto(`/gift/${gift.id}`);
+  await expect(page.locator(".gift-detail > .without-photo")).toBeVisible();
+  await page.getByRole("button", { name: "Edit item", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByLabel("Price in USD")).toBeVisible();
+  await dialog.locator('input[type="file"]').setInputFiles({
+    name: "gift.png",
+    mimeType: "image/png",
+    buffer: Buffer.from("fixture"),
+  });
+  await expect(dialog.getByRole("status")).toHaveText("Photo uploaded.");
+  await dialog
+    .getByRole("button", { name: "Save changes", exact: true })
+    .click();
+  await expect(dialog).not.toBeVisible();
+  expect(gift.image).toBe(replacement);
+  const photo = page.locator(".gift-detail > .gift-photo");
+  await expect(photo).not.toHaveClass(/without-photo/);
+  await expect(photo.locator("img")).toHaveAttribute("src", replacement);
+  await expect
+    .poll(() =>
+      photo.locator("img").evaluate((el: HTMLImageElement) => el.naturalWidth),
+    )
+    .toBeGreaterThan(0);
+});
+
 test("P2 mobile and desktop surfaces retain layout and accessible names", async ({
   page,
 }) => {
