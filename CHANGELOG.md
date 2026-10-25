@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/Affolder-Creative/little-hint/compare/v0.5.0...v0.6.0) (2026-10-25)
+
+
+### Features
+
+* streamline family-group settings and polish empty states ([#57](https://github.com/Affolder-Creative/little-hint/issues/57)) ([9e87ef7](https://github.com/Affolder-Creative/little-hint/commit/9e87ef71271e008914bdee0b1102d542d586ecb0))
+
 ## [0.5.0](https://github.com/Affolder-Creative/little-hint/compare/v0.4.0...v0.5.0) (2026-10-25)
 
 
