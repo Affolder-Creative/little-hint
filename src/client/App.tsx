@@ -2782,7 +2782,11 @@ function SettingsPage({
               <Admin />
             </div>
           )}
-          <section className="settings-sign-out">
+          <section
+            className="settings-sign-out"
+            id="settings-sign-out"
+            tabIndex={-1}
+          >
             <h2>Sign out</h2>
             <p>
               Your account and saved wish lists are kept. Signing out deletes
@@ -3039,6 +3043,7 @@ function sessionName(agent?: string | null) {
               : "unknown device";
   return `${browser} on ${device}`;
 }
+class FreshSignInRequiredError extends Error {}
 function Security() {
   const { open, close, toast } = useApp();
   const client = useQueryClient();
@@ -3055,8 +3060,12 @@ function Security() {
   });
   const sessions = useQuery({
     queryKey: ["sessions"],
+    retry: (failureCount, error) =>
+      !(error instanceof FreshSignInRequiredError) && failureCount < 3,
     queryFn: async () => {
       const r = await authClient.listSessions();
+      if (r.error?.code === "SESSION_NOT_FRESH")
+        throw new FreshSignInRequiredError("Sign in again to manage devices.");
       if (r.error)
         throw new Error(
           "We could not update your sign-in settings. Check your connection and try again.",
@@ -3142,11 +3151,23 @@ function Security() {
         </div>
       ))}
       <h3>Devices you’re signed in on</h3>
+      {sessions.error instanceof FreshSignInRequiredError && (
+        <div role="alert" className="error">
+          <p>
+            Sign in again to view or manage your signed-in devices. Add any
+            personal drafts you want to keep first, then sign out below and sign
+            back in.
+          </p>
+          <a className="button secondary" href="#settings-sign-out">
+            Go to sign out
+          </a>
+        </div>
+      )}
       {sessions.isPending && <p role="status">Checking signed-in devices…</p>}
       {sessions.isSuccess && !sessions.data?.length && (
         <p>No signed-in devices to show. Refresh to check again.</p>
       )}
-      {current.error && (
+      {current.error && !!sessions.data?.length && (
         <p role="status">
           We could not identify this device. You can still see your other
           sign-ins below.
@@ -3190,7 +3211,9 @@ function Security() {
           </Action>
         </div>
       ))}
-      {(keys.error || sessions.error) && (
+      {(keys.error ||
+        (sessions.error &&
+          !(sessions.error instanceof FreshSignInRequiredError))) && (
         <div role="alert" className="error">
           <p>Some security settings could not be loaded.</p>
           <button

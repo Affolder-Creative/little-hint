@@ -1576,6 +1576,91 @@ test("security identifies this device and admin failures never show zero pending
   ).toHaveCount(0);
 });
 
+test("older sign-ins explain device reauthentication without retrying", async ({
+  page,
+}, testInfo) => {
+  await preview(page);
+  let sessionRequests = 0;
+  await page.route("**/api/auth/list-sessions", (route) => {
+    sessionRequests++;
+    return route.fulfill({
+      status: 403,
+      json: { code: "SESSION_NOT_FRESH", message: "Session is not fresh" },
+    });
+  });
+  await page.goto("/settings?section=security");
+  await expect(
+    page.getByRole("alert").filter({ hasText: "Sign in again to view" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText(/Add any personal drafts you want to keep/),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Retry security settings" }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByText("No passkeys yet. Add one on a trusted device."),
+  ).toBeVisible();
+  await page.getByRole("link", { name: "Go to sign out" }).click();
+  await expect(page).toHaveURL(/#settings-sign-out$/);
+  await expect(page.locator("#settings-sign-out")).toBeFocused();
+  await expect(
+    page.getByRole("button", { name: "Sign out", exact: true }),
+  ).toBeVisible();
+  expect(sessionRequests).toBe(1);
+  await expect(
+    page.getByText(/You can still see your other sign-ins below/),
+  ).toHaveCount(0);
+  await page
+    .getByRole("heading", { name: "Sign-in & security", exact: true })
+    .click();
+  await page.evaluate(() => scrollTo(0, 0));
+  await page.screenshot({
+    path: testInfo.outputPath("security-reauth-desktop.png"),
+    fullPage: true,
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.evaluate(() => scrollTo(0, 0));
+  await expect(
+    page.getByRole("link", { name: "Go to sign out" }),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: testInfo.outputPath("security-reauth-mobile.png"),
+    fullPage: true,
+  });
+});
+
+test("temporary security failures retain retry and recover", async ({
+  page,
+}) => {
+  await preview(page);
+  let unavailable = true;
+  await page.route("**/api/auth/list-sessions", (route) =>
+    route.fulfill(
+      unavailable
+        ? { status: 503, json: { code: "UNAVAILABLE", message: "Unavailable" } }
+        : { json: [] },
+    ),
+  );
+  await page.goto("/settings?section=security");
+  const retry = page.getByRole("button", { name: "Retry security settings" });
+  await expect(retry).toBeVisible({ timeout: 15000 });
+  await expect(page.getByRole("link", { name: "Go to sign out" })).toHaveCount(
+    0,
+  );
+  unavailable = false;
+  await retry.click();
+  await expect(
+    page.getByText("No signed-in devices to show. Refresh to check again."),
+  ).toBeVisible();
+  await expect(retry).toHaveCount(0);
+});
+
 test("SMS verification offers resend and number correction", async ({
   page,
 }) => {
