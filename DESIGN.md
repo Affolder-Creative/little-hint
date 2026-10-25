@@ -7,6 +7,7 @@ colors:
   text: "#2b201d"
   muted: "#746057"
   border: "#e6d9cf"
+  control-border: "#93796c"
   accent: "#aa4d37"
   on-accent: "#fff8f0"
   soft: "#f4e4da"
@@ -17,6 +18,7 @@ colors:
   dark-text: "#fff8f0"
   dark-muted: "#cbb6aa"
   dark-border: "#59453b"
+  dark-control-border: "#a28677"
   dark-accent: "#f1bead"
   dark-on-accent: "#2b201d"
   dark-soft: "#49332b"
@@ -144,6 +146,8 @@ Blush `soft` supports active navigation, notices, invitations, and installation 
 
 Ivory `bg` is the page background; `paper` is the slightly lighter sidebar, input, and dialog background. Umber `text` carries the reading hierarchy. `muted` handles supporting copy and `border` separates rows and controls. Dark mode uses umber backgrounds, ivory text, and lighter muted text.
 
+Editable fields use `control-border`, a stronger warm neutral with at least 3:1 contrast against paper, page, and soft backgrounds in both themes. Decorative dividers retain `border`.
+
 **The semantic color rule.** Use the theme variables for interface text, controls, and backgrounds so light and dark modes preserve their roles.
 
 ## Typography
@@ -186,9 +190,9 @@ Borders are generally a single pixel in the theme border color. The gift-image c
 
 ### Buttons
 
-Primary buttons use the accent pair, medium-bold 14px text, and 12px by 18px padding. Secondary buttons use paper, text, and a border. Both have a 44px minimum height and a slight brightness reduction on hover. Text buttons use accent text and underline on hover; install-panel text actions use the main text color. Icon buttons use a soft fill on hover.
+Primary buttons use the accent pair, medium-bold 14px text, and 12px by 18px padding. Secondary buttons use paper, text, and a border. Both have 44px minimum hit dimensions and allow long labels to wrap within the available width. Text actions, back links, exchange assignment links, and update actions also retain at least 44px hit dimensions. Primary and secondary buttons dim slightly on hover. Text buttons use accent text and underline on hover; install-panel text actions use the main text color. Icon buttons use a soft fill on hover.
 
-Keyboard focus is a 3px accent outline with a 3px offset. Disabled buttons reduce opacity and use the unavailable cursor. Small button variants keep the 44px minimum height. Some compact mobile header and update controls use local sizing; do not apply those exceptions to general form controls.
+Keyboard focus is a 3px accent outline with a 3px offset. Disabled buttons reduce opacity and use the unavailable cursor. Small button variants keep the 44px minimum height. Compact mobile header and update controls retain the same 44px minimum hit dimensions.
 
 ### Chips
 
@@ -208,7 +212,7 @@ Desktop navigation combines outlined SVG icons with labels. Muted inactive links
 
 ### Privacy and feedback
 
-Privacy badges combine a lock or eye SVG with Keep it a surprise or See the plans. Native modal dialogs have a sticky title and close control. New lists and events require an explicit Keep it a surprise or See the plans choice. Optional archive and reveal dates are collapsed until needed. Reveal-date guidance applies to all lists; the exchange checkbox clearly adds secret exchange purchases and giver names to the summary. Labels keep their help text accessible through described-by relationships. Empty states reuse the approved heart tag with a heading, explanation, and optional action. Installation guidance uses the approved app icon and normal action controls. Reduced-motion preference disables animations and transitions; normal motion is limited to a loading spinner and a brief toast arrival.
+Privacy badges combine a lock or eye SVG with Keep it a surprise or See the plans. Native modal dialogs have a sticky title and close control. Closing restores keyboard focus to the invoking control; if that control disappears, focus moves to the main content unless the next view has already chosen a focus target. Returning from a sharing review focuses the first visible editable field and preserves the entered values. New lists and events require an explicit Keep it a surprise or See the plans choice. Optional archive and reveal dates are collapsed until needed. Reveal-date guidance applies to all lists; the exchange checkbox clearly adds secret exchange purchases and giver names to the summary. Labels keep their help text accessible through described-by relationships. Empty states reuse the approved heart tag with a heading, explanation, and optional action. Installation guidance uses the approved app icon and normal action controls. Reduced-motion preference disables animations and transitions; normal motion is limited to a loading spinner and a brief toast arrival.
 
 ### Sign-in
 

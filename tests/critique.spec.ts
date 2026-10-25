@@ -219,6 +219,13 @@ test("new shared lists require deliberate privacy and a review before saving", a
   ).toBeVisible();
   await expect(page.getByLabel("List name", { exact: true })).not.toBeVisible();
   expect(state.lists.some((l) => l.name === "Birthday thoughts")).toBe(false);
+  await page.getByRole("button", { name: "Back to editing" }).click();
+  await expect(page.getByLabel("List name", { exact: true })).toBeFocused();
+  await expect(page.getByLabel("List name", { exact: true })).toHaveValue(
+    "Birthday thoughts",
+  );
+  await expect(page.getByLabel("Morgan family", { exact: true })).toBeChecked();
+  await page.getByRole("button", { name: "Create list", exact: true }).click();
   await page.getByRole("button", { name: "Confirm and save" }).click();
   await expect(page.getByRole("dialog")).not.toBeVisible();
   expect(state.lists.find((l) => l.name === "Birthday thoughts")).toMatchObject(
@@ -245,9 +252,207 @@ test("Escape preserves dirty gift fields until the user chooses to discard", asy
   await expect(page.getByLabel("Item name", { exact: true })).toHaveValue(
     "Do not lose this",
   );
+  await expect(page.getByLabel("Item name", { exact: true })).toBeFocused();
   await page.getByRole("button", { name: "Close dialog" }).click();
   await page.getByRole("button", { name: "Discard changes" }).click();
   await expect(page.getByRole("dialog")).not.toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Add item", exact: true }).last(),
+  ).toBeFocused();
+});
+
+test("dialogs return focus after Escape, close, save and removal of their opener", async ({
+  page,
+}) => {
+  await preview(page);
+  await page.goto("/lists");
+  await page.getByRole("link", { name: /Alex's wishes/ }).click();
+  const add = page
+    .getByRole("button", { name: "Add item", exact: true })
+    .last();
+  for (const method of ["Escape", "Close dialog"]) {
+    await add.focus();
+    await page.keyboard.press("Enter");
+    await expect(page.getByRole("dialog")).toBeVisible();
+    if (method === "Escape") await page.keyboard.press("Escape");
+    else await page.getByRole("button", { name: method }).click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(add).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(
+      page.getByRole("link", { name: "Skip to content" }),
+    ).not.toBeFocused();
+  }
+  await add.click();
+  await page.getByLabel("Item name", { exact: true }).fill("Keyboard wish");
+  await page
+    .getByRole("button", { name: "Add to wish list", exact: true })
+    .click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(add).toBeFocused();
+
+  // Saving a device draft removes its invoking Review & add button.
+  const { actor } = await preview(page);
+  await page.evaluate((id) => {
+    localStorage.setItem(`little-hint:draft-optin:${id}`, "yes");
+    localStorage.setItem(
+      `little-hint:drafts:${id}`,
+      JSON.stringify([
+        {
+          id: "focus-draft",
+          title: "Saved wish",
+          url: "",
+          description: "",
+          savedAt: new Date().toISOString(),
+        },
+      ]),
+    );
+  }, actor.id);
+  await page.goto("/settings?section=device");
+  await page.getByRole("button", { name: "Review & add" }).click();
+  await page.getByRole("button", { name: "Add to wish list" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Review & add" })).toHaveCount(
+    0,
+  );
+  await expect(page.locator("main")).toBeFocused();
+});
+
+test("editable field boundaries contrast with both themes without strengthening dividers", async ({
+  page,
+}) => {
+  await preview(page);
+  for (const theme of ["light", "dark"]) {
+    await page.goto("/lists");
+    await page.evaluate(
+      (value) => localStorage.setItem("little-hint:theme", value),
+      theme,
+    );
+    await page.reload();
+    await page
+      .getByRole("button", { name: "Create a list", exact: true })
+      .click();
+    const ratios = await page
+      .getByLabel("List name", { exact: true })
+      .evaluate((input) => {
+        const root = getComputedStyle(document.documentElement);
+        const rgb = (color: string) =>
+          color.startsWith("#")
+            ? color
+                .slice(1)
+                .match(/../g)!
+                .map((hex) => parseInt(hex, 16))
+            : color
+                .match(/[\d.]+/g)!
+                .slice(0, 3)
+                .map(Number);
+        const luminance = (color: string) =>
+          rgb(color)
+            .map((v) => v / 255)
+            .map((v) =>
+              v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4,
+            )
+            .reduce((sum, v, i) => sum + v * [0.2126, 0.7152, 0.0722][i], 0);
+        const border = getComputedStyle(input).borderTopColor;
+        return {
+          control: border,
+          divider: root.getPropertyValue("--border").trim(),
+          ratios: ["--paper", "--bg", "--soft"].map((name) => {
+            const values = [
+              luminance(border),
+              luminance(root.getPropertyValue(name).trim()),
+            ].sort((a, b) => b - a);
+            return (values[0] + 0.05) / (values[1] + 0.05);
+          }),
+        };
+      });
+    expect(Math.min(...ratios.ratios)).toBeGreaterThanOrEqual(3);
+    expect(ratios.divider).toBe(theme === "light" ? "#e6d9cf" : "#59453b");
+    await page.keyboard.press("Escape");
+  }
+});
+
+test("notification actions wrap with doubled text at phone widths", async ({
+  page,
+}, testInfo) => {
+  await preview(page);
+  for (const width of [320, 390])
+    for (const theme of ["light", "dark"]) {
+      await page.setViewportSize({ width, height: 844 });
+      await page.goto("/settings?section=notifications");
+      await page.evaluate(
+        (value) => localStorage.setItem("little-hint:theme", value),
+        theme,
+      );
+      await page.reload();
+      const save = page.getByRole("button", {
+        name: "Save notification preferences",
+      });
+      await expect(save).toBeVisible();
+      await page.evaluate(() => {
+        const sizes = Array.from(
+          document.querySelectorAll<HTMLElement>("body *"),
+        ).map(
+          (element) =>
+            [element, parseFloat(getComputedStyle(element).fontSize)] as const,
+        );
+        for (const [element, size] of sizes)
+          element.style.fontSize = `${size * 2}px`;
+      });
+      await save.scrollIntoViewIfNeeded();
+      const bounds = await save.boundingBox();
+      expect(bounds!.x).toBeGreaterThanOrEqual(0);
+      expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width);
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth - innerWidth,
+        ),
+      ).toBeLessThanOrEqual(1);
+      expect(
+        await save.evaluate((el) => el.scrollWidth - el.clientWidth),
+      ).toBeLessThanOrEqual(1);
+      await page.screenshot({
+        path: testInfo.outputPath(`notifications-200-${width}-${theme}.png`),
+      });
+    }
+});
+
+test("secondary actions retain 44px touch targets on phones and desktop", async ({
+  page,
+}, testInfo) => {
+  const { state, actor } = await preview(page, 1);
+  const gift = world(state, actor).items.find(
+    (item) => !item.isRecipient && !item.archived,
+  )!;
+  for (const width of [390, 1280]) {
+    await page.setViewportSize({ width, height: 844 });
+    for (const [route, selector] of [
+      ["/buying", ".text-button"],
+      [`/gift/${gift.id}`, ".back-link"],
+      ["/exchanges", ".assignments a"],
+      ["/settings?section=profile", 'button[aria-label^="Edit profile"]'],
+    ]) {
+      await page.goto(route);
+      await expect(page.locator("main h1")).toBeVisible();
+      const targets = page.locator(selector).filter({ visible: true });
+      expect(await targets.count()).toBeGreaterThan(0);
+      for (const target of await targets.all()) {
+        const box = await target.boundingBox();
+        expect(box!.height).toBeGreaterThanOrEqual(44);
+        expect(box!.width).toBeGreaterThanOrEqual(44);
+      }
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth - innerWidth,
+        ),
+      ).toBeLessThanOrEqual(1);
+      await page.screenshot({
+        path: testInfo.outputPath(
+          `targets-${width}-${new URL(route, "http://local").pathname.replaceAll("/", "_")}.png`,
+        ),
+      });
+    }
+  }
 });
 
 test("contribution rows identify the payer and purchaser", async ({ page }) => {
