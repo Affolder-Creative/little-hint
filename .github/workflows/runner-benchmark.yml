@@ -1,0 +1,231 @@
+# Keep benchmark workloads aligned with ci.yml; normal PR/release CI stays on GitHub.
+name: Runner benchmark
+run-name: Runner benchmark / ${{ inputs.providers }} / ${{ inputs.cache_key }} / layer-cache=${{ inputs.docker_layer_cache }}
+on:
+  workflow_dispatch:
+    inputs:
+      commit:
+        description: Full commit SHA to test; blank uses this workflow's commit
+        type: string
+        default: ""
+      providers:
+        description: Runner providers to compare
+        type: choice
+        options: [github, both, blacksmith]
+        default: github
+      cache_key:
+        description: Experiment ID; reuse for warm Docker builds, change for a fresh build cache
+        type: string
+        default: pilot-1
+      docker_layer_cache:
+        description: Opt into paid Blacksmith Docker build-layer storage
+        type: boolean
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: runner-benchmark-${{ inputs.cache_key }}
+  cancel-in-progress: false
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      sha: ${{ steps.plan.outputs.sha }}
+      browser-runners: ${{ steps.plan.outputs.browser-runners }}
+      docker-runners: ${{ steps.plan.outputs.docker-runners }}
+      browser-image: ${{ steps.image.outputs.image }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Validate benchmark configuration
+        id: plan
+        env:
+          BENCHMARK_SHA: ${{ inputs.commit || github.sha }}
+          BENCHMARK_PROVIDERS: ${{ inputs.providers }}
+          BENCHMARK_CACHE_KEY: ${{ inputs.cache_key }}
+          BLACKSMITH_ENABLED: ${{ vars.BLACKSMITH_ENABLED }}
+        run: node scripts/runner-benchmark.mjs plan
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ steps.plan.outputs.sha }}
+          persist-credentials: false
+          path: benchmark-source
+      - name: Select the locked Playwright image
+        id: image
+        working-directory: benchmark-source
+        run: node scripts/ci-browser-image.mjs >> "$GITHUB_OUTPUT"
+  browser:
+    name: browser / ${{ matrix.provider.name }} / ${{ matrix.suite }}
+    needs: prepare
+    runs-on: ${{ matrix.provider.runner }}
+    container:
+      image: ${{ needs.prepare.outputs.browser-image }}
+      options: --ipc=host
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        provider: ${{ fromJSON(needs.prepare.outputs.browser-runners) }}
+        suite:
+          [
+            e2e,
+            sign-in,
+            list-features,
+            group-events,
+            polish,
+            pwa,
+            critique,
+            notifications,
+          ]
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: little_hint
+          POSTGRES_PASSWORD: ci-only
+          POSTGRES_DB: little_hint_e2e
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U little_hint -d little_hint_e2e"
+          --health-interval 5s --health-timeout 5s --health-retries 15
+    env:
+      DATABASE_URL: postgres://little_hint:ci-only@postgres:5432/little_hint_e2e
+      PLAYWRIGHT_DOCKER_IMAGE: ${{ needs.prepare.outputs.browser-image }}
+      BETTER_AUTH_SECRET: ci-browser-only-secret-at-least-32-characters
+      SETTINGS_ENCRYPTION_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+      UPLOAD_DIR: .local/uploads
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.prepare.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      - run: node scripts/ci-browser-image.mjs verify
+      - run: npm run build
+      - name: Browser suite with isolated fixtures
+        env:
+          SUITE: ${{ matrix.suite }}
+        run: npm run test:browser:ci -- "$SUITE"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: failure()
+        with:
+          name: benchmark-browser-${{ matrix.provider.name }}-${{ matrix.suite }}
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+  containers:
+    name: docker / ${{ matrix.name }} / ${{ matrix.arch }}
+    needs: prepare
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.prepare.outputs.docker-runners) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.prepare.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .local/source-cache
+          key: sources-${{ hashFiles('compliance/source-materials.json') }}
+          restore-keys: sources-
+      - name: Set up standard Docker builder
+        if: matrix.name == 'github' || !inputs.docker_layer_cache
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Build Docker image with exported cache
+        if: matrix.name == 'github' || !inputs.docker_layer_cache
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          platforms: linux/${{ matrix.arch }}
+          load: true
+          push: false
+          tags: little-hint:ci
+          cache-from: type=gha,scope=benchmark-${{ inputs.cache_key }}-${{ matrix.name }}-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=benchmark-${{ inputs.cache_key }}-${{ matrix.name }}-${{ matrix.arch }}
+      - name: Set up persistent Docker builder
+        if: matrix.name == 'blacksmith' && inputs.docker_layer_cache
+        uses: useblacksmith/setup-docker-builder@19215110ab936351210feebdfa5b440b4493e184 # v2
+        with:
+          cache-key: benchmark-${{ inputs.cache_key }}-${{ matrix.arch }}
+          nofallback: true
+      - name: Build Docker image with persistent cache
+        if: matrix.name == 'blacksmith' && inputs.docker_layer_cache
+        uses: useblacksmith/build-push-action@9b0579bbec7a6cad2f171596c57e7ac1e7658850 # v2
+        with:
+          context: .
+          platforms: linux/${{ matrix.arch }}
+          load: true
+          push: false
+          tags: little-hint:ci
+      - name: Verify image architecture
+        env:
+          EXPECTED_ARCH: ${{ matrix.arch }}
+        run: test "$(docker image inspect little-hint:ci --format '{{.Architecture}}')" = "$EXPECTED_ARCH"
+      - name: Container smoke test
+        env:
+          LITTLE_HINT_IMAGE: little-hint:ci
+        run: bash scripts/smoke-image.sh
+      - name: Staging stack smoke test
+        if: matrix.arch == 'amd64'
+        env:
+          LITTLE_HINT_STAGING_IMAGE: little-hint:ci
+        run: bash scripts/smoke-staging.sh
+      - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: little-hint:ci
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+      - name: Verify corresponding-source bundles against the actual image
+        run: |
+          mkdir -p .local/ci-compliance
+          container=$(docker create little-hint:ci)
+          trap 'docker rm "$container" >/dev/null' EXIT
+          docker cp "$container:/app/compliance-report/." .local/ci-compliance/
+          node scripts/release-sources.mjs .local/ci-compliance
+  report:
+    if: always() && needs.prepare.result == 'success'
+    needs: [prepare, browser, containers]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Collect job and step timings
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BENCHMARK_SHA: ${{ needs.prepare.outputs.sha }}
+          BENCHMARK_PROVIDERS: ${{ inputs.providers }}
+          BENCHMARK_CACHE_KEY: ${{ inputs.cache_key }}
+          BENCHMARK_LAYER_CACHE: ${{ inputs.docker_layer_cache }}
+        run: |
+          mkdir -p .local/benchmark
+          gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/attempts/$GITHUB_RUN_ATTEMPT/jobs?per_page=100" > .local/benchmark/jobs.json
+          node scripts/runner-benchmark.mjs report .local/benchmark/jobs.json > .local/benchmark/report.md
+          cat .local/benchmark/report.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: runner-benchmark-${{ github.run_attempt }}
+          path: .local/benchmark/
+          retention-days: 14
+      - name: Require benchmark workloads to pass
+        env:
+          BROWSER_RESULT: ${{ needs.browser.result }}
+          DOCKER_RESULT: ${{ needs.containers.result }}
+        run: test "$BROWSER_RESULT" = success && test "$DOCKER_RESULT" = success
