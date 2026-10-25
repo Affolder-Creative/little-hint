@@ -365,7 +365,8 @@ export function Empty({
   );
 }
 export function GiftPhoto({ gift }: { gift: GiftView }) {
-  const [failed, setFailed] = useState(false);
+  const [failedImage, setFailedImage] = useState<string>();
+  const failed = gift.image === failedImage;
   const t = gift.tags.join(" ").toLowerCase();
   const Icon = /book|journal|creative/.test(t)
     ? BookOpen
@@ -385,7 +386,7 @@ export function GiftPhoto({ gift }: { gift: GiftView }) {
           src={gift.image}
           alt={gift.title}
           loading="lazy"
-          onError={() => setFailed(true)}
+          onError={() => setFailedImage(gift.image)}
         />
       ) : (
         <>
