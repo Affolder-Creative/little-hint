@@ -50,7 +50,9 @@ test("code entry survives polling intervals, tab switches and a same-tab reload"
   await page.reload();
   await expect(page.getByLabel("Six-digit code")).toHaveValue("");
   await expect(
-    page.getByText("Enter the code sent to alex@example.test."),
+    page.getByText(
+      "If alex@example.test has an account or active invitation, we’ll email a sign-in code. Enter it below.",
+    ),
   ).toBeVisible();
   const stored = await page.evaluate(
     (key) => JSON.parse(sessionStorage.getItem(key)!),
@@ -86,7 +88,7 @@ test("failed resend preserves code, successful resend clears it, and changing em
   );
   await page.getByRole("button", { name: "Resend code", exact: true }).click();
   await expect(page.getByRole("status")).toContainText(
-    "A new code is on its way",
+    "If this address has an account or active invitation, we’ll email a new code.",
   );
   await expect(page.getByLabel("Six-digit code")).toHaveValue("");
   await page.getByRole("button", { name: "Change email", exact: true }).click();
