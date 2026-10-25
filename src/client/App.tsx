@@ -1245,6 +1245,16 @@ function GiftDetail() {
         It may no longer be shared with you.
       </Empty>
     );
+  const myReservations =
+    gift.reservations?.filter((reservation) => reservation.mine) ?? [];
+  const myReserved = myReservations.reduce(
+    (total, reservation) => total + reservation.quantity,
+    0,
+  );
+  const myPurchased = myReservations.reduce(
+    (total, reservation) => total + (reservation.purchased ?? 0),
+    0,
+  );
   const choices = world.exchanges.flatMap((e) =>
     e.status === "drawn"
       ? e.myAssignments
@@ -1284,7 +1294,16 @@ function GiftDetail() {
                 : gift.available
                   ? `${gift.available} available to reserve`
                   : "Taken care of"}
+            {myReserved > 0 &&
+              ` · You reserved ${myReserved} · ${myPurchased} purchased`}
           </p>
+          {myReserved > 0 && (
+            <Link className="text-button" to="/buying">
+              {myReservations.length === 1
+                ? "Manage reservation"
+                : "Manage reservations"}
+            </Link>
+          )}
           <p className="detail-price">{dollars(gift.priceCents)}</p>
           {gift.description && (
             <p className="description">{gift.description}</p>
@@ -1357,7 +1376,11 @@ function GiftDetail() {
               {!!gift.available && (
                 <>
                   <div className="form-row">
-                    <Field label="Quantity">
+                    <Field
+                      label={
+                        myReserved > 0 ? "Additional quantity" : "Quantity"
+                      }
+                    >
                       <input
                         type="number"
                         min="1"
@@ -1397,7 +1420,7 @@ function GiftDetail() {
                     }}
                   >
                     <ShoppingBag size={16} />
-                    Reserve gift
+                    {myReserved > 0 ? "Reserve more" : "Reserve gift"}
                   </Action>
                 </>
               )}
@@ -3338,6 +3361,11 @@ function Admin() {
         })}
       </div>
       <h3>Updates & backups</h3>
+      <p>
+        Backups are managed outside Little Hint. Check your hosting or backup
+        system for the latest database and uploaded-file backups, and test a
+        restore. Backup status is not reported here.
+      </p>
       {jobs.isPending && (
         <p role="status">Checking updates and shop lookups…</p>
       )}
@@ -3360,8 +3388,7 @@ function Admin() {
             Date.now() - jobs.data.workerLastSeen < 60000
               ? "Running"
               : "No recent activity reported"}
-            . Housewatch Digital manages backups separately. Check backups and
-            restore progress in Coolify.
+            .
           </p>
           <p>
             {jobs.data?.imports.filter(

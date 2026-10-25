@@ -250,6 +250,12 @@ export function GiftForm({
   const job = world.imports.find((j) => j.id === jobId);
   const applied = useRef("");
   const idea = !!recipientId || (!!gift && !gift.listId);
+  const [visibility, setVisibility] = useState(gift?.visibility ?? "private");
+  const [groupIds, setGroupIds] = useState(gift?.groupIds ?? []);
+  const audienceGroups = world.groups.filter((group) =>
+    groupIds.includes(group.id),
+  );
+  const sharingIdea = idea && visibility !== "private";
   const change = (key: keyof typeof data, v: string | number) => {
     touched.current.add(key);
     setData((d) => ({ ...d, [key]: v }));
@@ -323,7 +329,11 @@ export function GiftForm({
       submit={
         gift ? "Save changes" : idea ? "Save gift idea" : "Add to wish list"
       }
-      disabled={uploading || (!!duplicate && !allowDuplicate)}
+      disabled={
+        uploading ||
+        (!!duplicate && !allowDuplicate) ||
+        (sharingIdea && !audienceGroups.length)
+      }
       allowOffline={
         !idea &&
         !!localStorage.getItem(`little-hint:draft-optin:${world.me.id}`)
@@ -349,8 +359,8 @@ export function GiftForm({
                 recipientIds: idea ? [recipientId] : [],
                 allowDuplicate,
               }),
-          visibility: value(f, "visibility") || gift?.visibility || "private",
-          groupIds: selected(f, "groupIds"),
+          visibility,
+          groupIds: sharingIdea ? audienceGroups.map((group) => group.id) : [],
           importId: job?.status === "complete" ? job.id : undefined,
         };
         if (!navigator.onLine) {
@@ -548,7 +558,10 @@ export function GiftForm({
           <Field label="Who can see this idea?">
             <select
               name="visibility"
-              defaultValue={gift?.visibility ?? "private"}
+              value={visibility}
+              onChange={(e) =>
+                setVisibility(e.target.value as typeof visibility)
+              }
             >
               <option value="private">Only me</option>
               <option value="hidden">
@@ -559,7 +572,11 @@ export function GiftForm({
               </option>
             </select>
           </Field>
-          <fieldset className="choice-group">
+          <fieldset
+            className="choice-group"
+            hidden={!sharingIdea}
+            disabled={!sharingIdea}
+          >
             <legend>Share with these family groups</legend>
             {world.groups.map((g) => (
               <label className="check" key={g.id}>
@@ -567,12 +584,30 @@ export function GiftForm({
                   name="groupIds"
                   type="checkbox"
                   value={g.id}
-                  defaultChecked={gift?.groupIds.includes(g.id)}
+                  checked={groupIds.includes(g.id)}
+                  onChange={(e) =>
+                    setGroupIds((ids) =>
+                      e.target.checked
+                        ? [...ids, g.id]
+                        : ids.filter((id) => id !== g.id),
+                    )
+                  }
                 />
                 {familyGroupLabel(g, world)}
               </label>
             ))}
           </fieldset>
+          <p className="muted" role="status">
+            {!sharingIdea
+              ? "Only you can see this idea."
+              : !audienceGroups.length
+                ? world.groups.length
+                  ? "Choose at least one family group to share this idea."
+                  : "Join a family group to share this idea, or choose Only me."
+                : visibility === "hidden"
+                  ? `Visible to you and members of ${audienceGroups.map((g) => familyGroupLabel(g, world)).join(", ")}. Hidden from the recipient and anyone managing their profile.`
+                  : `Visible to you, members of ${audienceGroups.map((g) => familyGroupLabel(g, world)).join(", ")}, the recipient and anyone managing their profile.`}
+          </p>
           <p className="muted">
             Who reserves or buys this gift stays hidden from the recipient, even
             if they can see the idea.
