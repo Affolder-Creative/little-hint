@@ -216,6 +216,258 @@ test("new users can skip preferences without sharing unfinished edits", async ({
     groupIds: [],
   });
 });
+
+test("discovery departure preserves item edits until discard is confirmed", async ({
+  page,
+}) => {
+  const f = await preview(page, true);
+  f.cfg.mode = "both";
+  await page.goto(`/lists/${f.list.id}`);
+  const add = page
+    .getByRole("main")
+    .getByRole("button", { name: "Add item", exact: true });
+  await add.click();
+  const name = page.getByLabel("Item name", { exact: true });
+  await name.fill("Keep this unfinished wish");
+  const discovery = page
+    .getByRole("dialog")
+    .getByRole("link", { name: "Find gift ideas" });
+  await discovery.click();
+  await expect(
+    page.getByRole("button", { name: "Keep editing" }),
+  ).toBeFocused();
+  await expect(page).toHaveURL(new RegExp(`/lists/${f.list.id}$`));
+  await page.getByRole("button", { name: "Keep editing" }).click();
+  await expect(name).toHaveValue("Keep this unfinished wish");
+  await expect(discovery).toBeFocused();
+
+  // Cancelling the navigation must also clear its pending destination.
+  await discovery.click();
+  await page.keyboard.press("Escape");
+  await expect(name).toHaveValue("Keep this unfinished wish");
+  await page.getByRole("button", { name: "Close dialog" }).click();
+  await page.getByRole("button", { name: "Discard changes" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page).toHaveURL(new RegExp(`/lists/${f.list.id}$`));
+  await expect(add).toBeFocused();
+
+  await add.click();
+  await name.fill("Discard only after asking");
+  await discovery.click();
+  await page.getByRole("button", { name: "Discard changes" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page).toHaveURL(
+    new RegExp(`/people/${f.people[0].id}/gift-ideas\\?list=${f.list.id}$`),
+  );
+  expect(f.state.items).toHaveLength(1);
+
+  // A clean form still follows the link immediately.
+  await page.goto(`/lists/${f.list.id}`);
+  await add.click();
+  await discovery.click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", { name: "Find gift ideas for Receiver" }),
+  ).toBeVisible();
+});
+
+test("discovery cannot interrupt a gift idea while it is saving", async ({
+  page,
+}) => {
+  const f = await preview(page);
+  await page.goto(`/people/${f.people[0].id}`);
+  await page
+    .getByRole("button", { name: "Add gift idea", exact: true })
+    .click();
+  await page
+    .getByLabel("Gift idea name", { exact: true })
+    .fill("Save this idea");
+  const discovery = page
+    .getByRole("dialog")
+    .getByRole("link", { name: "Find gift ideas" });
+  await discovery.click();
+  await page.getByRole("button", { name: "Keep editing" }).click();
+  let release!: () => void;
+  const pending = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/api/v1/items", async (route) => {
+    await pending;
+    await route.fulfill({
+      json: command(
+        f.state,
+        f.actors[1],
+        "items.create",
+        route.request().postDataJSON(),
+      ),
+    });
+  });
+  try {
+    await page
+      .getByRole("button", { name: "Save gift idea", exact: true })
+      .click();
+    await expect(
+      page.getByRole("button", { name: "Saving…", exact: true }),
+    ).toBeVisible();
+    await discovery.click();
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog")).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Discard your changes?" }),
+    ).toHaveCount(0);
+    await expect(page).toHaveURL(new RegExp(`/people/${f.people[0].id}$`));
+  } finally {
+    release();
+  }
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  expect(
+    f.state.items.find((item) => item.title === "Save this idea"),
+  ).toBeDefined();
+});
+
+for (const width of [1280, 390]) {
+  test(`optional onboarding keeps Skip visible and navigation usable at ${width}px`, async ({
+    page,
+  }, info) => {
+    const f = await preview(page, true);
+    f.state.giftPreferences.push(newPreference(f.people[0].id));
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 720 });
+    await page.emulateMedia({ colorScheme: width === 390 ? "dark" : "light" });
+    await page.goto("/");
+    const skip = page.getByRole("button", { name: "Skip for now" });
+    await expect(skip).toBeInViewport();
+    await page.screenshot({
+      path: info.outputPath(`onboarding-${width}.png`),
+      fullPage: false,
+    });
+    await page.getByRole("checkbox", { name: "Coffee & tea" }).check();
+    await page
+      .getByLabel("Specific interests", { exact: true })
+      .fill("Unpublished interests");
+    await page.getByRole("checkbox", { name: "Family", exact: true }).check();
+    const nav = page.getByRole("navigation", {
+      name: width === 390 ? "Mobile navigation" : "Main navigation",
+      exact: true,
+    });
+    await nav.getByRole("link", { name: "My lists", exact: true }).click();
+    await expect(page).toHaveURL(/\/lists$/);
+    await expect(
+      page.getByRole("heading", { name: "Your wish lists", exact: true }),
+    ).toBeVisible();
+    await page.goBack();
+    await expect(
+      page.getByRole("heading", { name: "Hi, Receiver." }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "What would you love?" }),
+    ).toHaveCount(0);
+    expect(f.state.giftPreferences[0]).toMatchObject({
+      setup: "new",
+      categoryIds: [],
+      interests: "",
+      groupIds: [],
+    });
+    await nav.getByRole("link", { name: "My lists", exact: true }).click();
+    await expect(
+      page.getByRole("heading", { name: "Your wish lists", exact: true }),
+    ).toBeVisible();
+  });
+}
+
+test("new-account deep links open directly and preference setup remains available", async ({
+  page,
+}) => {
+  const f = await preview(page, true);
+  f.state.giftPreferences.push(newPreference(f.people[0].id));
+  await page.goto(`/lists/${f.list.id}`);
+  await expect(
+    page.getByRole("heading", { name: "Wishes", exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("navigation", { name: "Main navigation", exact: true })
+    .getByRole("link", { name: "Home", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Hi, Receiver." }),
+  ).toBeVisible();
+  await page.goto("/settings?section=profile");
+  await page
+    .getByRole("button", { name: "Gift preferences", exact: true })
+    .click();
+  await expect(
+    page.getByRole("dialog").getByLabel("Specific interests", { exact: true }),
+  ).toHaveValue("");
+});
+
+test("failed onboarding skip keeps edits and retry never shares them", async ({
+  page,
+}) => {
+  const f = await preview(page, true);
+  f.state.giftPreferences.push(newPreference(f.people[0].id));
+  await page.goto("/");
+  await page
+    .getByLabel("Specific interests", { exact: true })
+    .fill("Keep until I choose to leave");
+  await page.getByRole("checkbox", { name: "Family", exact: true }).check();
+  await page.route(
+    "**/api/v1/gift-preferences",
+    (route) =>
+      route.fulfill({ status: 503, json: { error: "Please try again." } }),
+    { times: 1 },
+  );
+  await page.getByRole("button", { name: "Skip for now" }).click();
+  await expect(page.getByRole("alert")).toContainText("Please try again.");
+  await expect(
+    page.getByLabel("Specific interests", { exact: true }),
+  ).toHaveValue("Keep until I choose to leave");
+  await page.getByRole("button", { name: "Skip for now" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Hi, Receiver." }),
+  ).toBeVisible();
+  await expect(page).toHaveTitle("Hi, Receiver. · Little Hint");
+  await expect(page.getByRole("main")).toBeFocused();
+  expect(f.state.giftPreferences[0]).toMatchObject({
+    setup: "skipped",
+    interests: "",
+    groupIds: [],
+  });
+});
+
+test("onboarding still reviews sharing and completes after saving preferences", async ({
+  page,
+}) => {
+  const f = await preview(page, true);
+  f.state.giftPreferences.push(newPreference(f.people[0].id));
+  await page.goto("/");
+  await page.getByRole("checkbox", { name: "Coffee & tea" }).check();
+  await page.getByRole("checkbox", { name: "Family", exact: true }).check();
+  await page
+    .getByRole("button", { name: "Save gift preferences", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Share these gift preferences?" }),
+  ).toBeVisible();
+  expect(f.state.giftPreferences[0].groupIds).toEqual([]);
+  await page.getByRole("button", { name: "Back to editing" }).click();
+  await expect(
+    page.getByRole("checkbox", { name: "Coffee & tea" }),
+  ).toBeChecked();
+  await page
+    .getByRole("button", { name: "Save gift preferences", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Confirm and save", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Hi, Receiver." }),
+  ).toBeVisible();
+  await expect(page).toHaveTitle("Hi, Receiver. · Little Hint");
+  expect(f.state.giftPreferences[0]).toMatchObject({
+    setup: "done",
+    categoryIds: ["coffee"],
+    groupIds: [f.group.id],
+  });
+});
 test("own-list discovery confirms each destination and saves the batch together", async ({
   page,
 }) => {

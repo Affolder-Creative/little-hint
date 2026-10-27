@@ -1,8 +1,8 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { giftCategories, discoveryAllowed } from "../shared/gift-discovery";
 import { useApp } from "./context";
-import { Field, Form } from "./components";
+import { Field, Form, useModalDismiss } from "./components";
 
 export function InterestFields({
   value,
@@ -127,6 +127,7 @@ export function GiftPreferencesForm({
     <>
       <Form
         submit="Save gift preferences"
+        disabled={skipping}
         review={() =>
           newlyShared ? (
             <>
@@ -144,6 +145,41 @@ export function GiftPreferencesForm({
         }
         onSubmit={() => save("done")}
       >
+        {onboarding && (
+          <button
+            type="button"
+            className="text-button"
+            disabled={skipping}
+            onClick={async () => {
+              setSkipping(true);
+              setSkipError("");
+              try {
+                // Skipping never publishes edits made during this optional step.
+                await mutate("gift-preferences", {
+                  personId,
+                  revision: existing?.revision,
+                  categoryIds: existing?.categoryIds ?? [],
+                  interests: existing?.interests ?? "",
+                  likes: existing?.likes ?? "",
+                  avoid: existing?.avoid ?? "",
+                  groupIds: existing?.groupIds ?? [],
+                  setup: "skipped",
+                });
+              } catch (e) {
+                setSkipError((e as Error).message);
+              } finally {
+                setSkipping(false);
+              }
+            }}
+          >
+            {skipping ? "Skipping…" : "Skip for now"}
+          </button>
+        )}
+        {skipError && (
+          <p className="error" role="alert">
+            {skipError}
+          </p>
+        )}
         <InterestFields value={data} onChange={setData} />
         <fieldset className="gift-interests">
           <legend>Who can see these preferences?</legend>
@@ -172,45 +208,44 @@ export function GiftPreferencesForm({
           )}
         </fieldset>
       </Form>
-      {onboarding && (
-        <button
-          type="button"
-          className="text-button"
-          disabled={skipping}
-          onClick={async () => {
-            setSkipping(true);
-            setSkipError("");
-            try {
-              // Skipping never publishes edits made during this optional step.
-              await mutate("gift-preferences", {
-                personId,
-                revision: existing?.revision,
-                categoryIds: existing?.categoryIds ?? [],
-                interests: existing?.interests ?? "",
-                likes: existing?.likes ?? "",
-                avoid: existing?.avoid ?? "",
-                groupIds: existing?.groupIds ?? [],
-                setup: "skipped",
-              });
-            } catch (e) {
-              setSkipError((e as Error).message);
-            } finally {
-              setSkipping(false);
-            }
-          }}
-        >
-          Skip for now
-        </button>
-      )}
-      {skipError && (
-        <p className="error" role="alert">
-          {skipError}
-        </p>
-      )}
     </>
   );
 }
-export function GiftPreferenceOnboarding({ personId }: { personId: string }) {
+export function GiftPreferenceOnboarding({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  const { world } = useApp();
+  const location = useLocation();
+  const [entryKey] = useState(location.key);
+  const [deferred, setDeferred] = useState(location.pathname !== "/");
+  const preference = world.giftPreferences?.find(
+    (p) =>
+      p.setup === "new" &&
+      world.people.some(
+        (person) => person.id === p.personId && person.userId === world.me.id,
+      ),
+  );
+  const showing = !!preference && !deferred && location.key === entryKey;
+  const wasShowing = useRef(showing);
+  useEffect(() => {
+    // Navigation defers optional setup for this signed-in visit. Never save
+    // unfinished preference fields or interrupt an incoming deep link.
+    if (location.key !== entryKey) setDeferred(true);
+  }, [location.key, entryKey]);
+  useEffect(() => {
+    if (wasShowing.current && !showing) {
+      const main = document.getElementById("main");
+      const heading = main?.querySelector("h1");
+      document.title = heading?.textContent
+        ? `${heading.textContent} · Little Hint`
+        : "Little Hint";
+      main?.focus({ preventScroll: true });
+    }
+    wasShowing.current = showing;
+  }, [showing]);
+  if (!showing) return children;
   return (
     <section className="gift-discovery-page">
       <h1>What would you love?</h1>
@@ -218,7 +253,7 @@ export function GiftPreferenceOnboarding({ personId }: { personId: string }) {
         Choose a few interests to help your people find gifts. You can skip this
         and come back in profile settings.
       </p>
-      <GiftPreferencesForm personId={personId} onboarding />
+      <GiftPreferencesForm personId={preference.personId} onboarding />
     </section>
   );
 }
@@ -278,7 +313,9 @@ export function DiscoveryLink({
   personId: string;
   listId?: string;
 }) {
-  const { world, close } = useApp();
+  const { world } = useApp();
+  const dismiss = useModalDismiss();
+  const navigate = useNavigate();
   const p = world.people.find((p) => p.id === personId);
   if (
     !p ||
@@ -289,11 +326,24 @@ export function DiscoveryLink({
     )
   )
     return null;
+  const destination = `/people/${personId}/gift-ideas${listId ? `?list=${listId}` : ""}`;
   return (
     <Link
       className="button secondary"
-      onClick={close}
-      to={`/people/${personId}/gift-ideas${listId ? `?list=${listId}` : ""}`}
+      onClick={(event) => {
+        if (
+          !dismiss ||
+          event.button !== 0 ||
+          event.metaKey ||
+          event.ctrlKey ||
+          event.shiftKey ||
+          event.altKey
+        )
+          return;
+        event.preventDefault();
+        dismiss(() => navigate(destination));
+      }}
+      to={destination}
     >
       Find gift ideas
     </Link>

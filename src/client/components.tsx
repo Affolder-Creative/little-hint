@@ -7,6 +7,8 @@ import {
   useState,
   useId,
   cloneElement,
+  createContext,
+  useContext,
   type ReactElement,
   type ReactNode,
   type FormEvent,
@@ -109,6 +111,11 @@ export function Privacy({ mode }: { mode: "surprise" | "transparent" }) {
     </span>
   );
 }
+const ModalDismissContext = createContext<
+  ((afterClose?: () => void) => void) | null
+>(null);
+export const useModalDismiss = () => useContext(ModalDismissContext);
+
 export function Modal({
   title,
   children,
@@ -122,12 +129,24 @@ export function Modal({
   const [discarding, setDiscarding] = useState(false);
   const keepEditing = useRef<HTMLButtonElement>(null);
   const previousFocus = useRef<HTMLElement | null>(null);
-  const requestClose = () => {
+  const afterDismiss = useRef<(() => void) | undefined>(undefined);
+  const finishClose = () => {
+    const afterClose = afterDismiss.current;
+    afterDismiss.current = undefined;
+    onClose();
+    afterClose?.();
+  };
+  const keepChanges = () => {
+    afterDismiss.current = undefined;
+    setDiscarding(false);
+  };
+  const requestClose = (afterClose?: () => void) => {
     if (ref.current?.querySelector('form[data-busy="true"]')) return;
+    afterDismiss.current = afterClose;
     if (ref.current?.querySelector('form[data-dirty="true"]')) {
       previousFocus.current = document.activeElement as HTMLElement;
       setDiscarding(true);
-    } else onClose();
+    } else finishClose();
   };
   useEffect(() => {
     if (discarding) keepEditing.current?.focus();
@@ -160,7 +179,7 @@ export function Modal({
       aria-labelledby="dialog-title"
       onCancel={(event) => {
         event.preventDefault();
-        if (discarding) setDiscarding(false);
+        if (discarding) keepChanges();
         else requestClose();
       }}
     >
@@ -169,7 +188,7 @@ export function Modal({
         <button
           className="icon-button"
           aria-label="Close dialog"
-          onClick={requestClose}
+          onClick={() => requestClose()}
         >
           <X />
         </button>
@@ -179,21 +198,19 @@ export function Modal({
           <h3>Discard your changes?</h3>
           <p>Your unfinished changes have not been saved.</p>
           <div className="actions">
-            <button
-              ref={keepEditing}
-              className="button"
-              onClick={() => setDiscarding(false)}
-            >
+            <button ref={keepEditing} className="button" onClick={keepChanges}>
               Keep editing
             </button>
-            <button className="button secondary" onClick={onClose}>
+            <button className="button secondary" onClick={finishClose}>
               Discard changes
             </button>
           </div>
         </div>
       )}
       <div className="dialog-body" hidden={discarding}>
-        {children}
+        <ModalDismissContext.Provider value={requestClose}>
+          {children}
+        </ModalDismissContext.Provider>
       </div>
     </dialog>
   );
@@ -207,6 +224,7 @@ export function Form({
   review,
   resetOnSuccess = false,
   allowOffline = false,
+  dirty: controlledDirty,
 }: {
   onSubmit: (data: FormData) => Promise<unknown>;
   children: ReactNode;
@@ -216,10 +234,13 @@ export function Form({
   review?: (data: FormData) => ReactNode | null;
   resetOnSuccess?: boolean;
   allowOffline?: boolean;
+  // Non-field editors can supply their actual unsaved state, including resets.
+  dirty?: boolean;
 }) {
   const [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
-    [dirty, setDirty] = useState(false);
+    [changed, setDirty] = useState(false);
+  const dirty = controlledDirty ?? changed;
   const [pending, setPending] = useState<{
     data: FormData;
     content: ReactNode;

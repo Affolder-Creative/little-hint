@@ -22,6 +22,8 @@ async function preview(page: Page, actorIndex = 0, solo = false) {
     "reservations/update": "reservations.update",
     lists: "lists.create",
     "lists/update": "lists.update",
+    "lists/reorder": "lists.reorder",
+    "organization/update": "organization.update",
     "group-events": "group-events.create",
     exchanges: "exchanges.create",
     "exchanges/update": "exchanges.update",
@@ -260,6 +262,77 @@ test("Escape preserves dirty gift fields until the user chooses to discard", asy
   await expect(page.getByRole("dialog")).not.toBeVisible();
   await expect(add).toBeFocused();
 });
+
+for (const method of ["arrows", "drag"] as const) {
+  test(`reordering with ${method} protects changes on Escape, close and Cancel`, async ({
+    page,
+  }) => {
+    const { state, actor } = await preview(page);
+    const list = state.lists.find((l) => l.name === "Alex's wishes")!;
+    command(state, actor, "items.create", {
+      listId: list.id,
+      title: "Second wish",
+    });
+    await page.goto(`/lists/${list.id}`);
+    const original = await page.locator(".gift-card h3").allTextContents();
+    const open = page.getByRole("button", {
+      name: "Reorder items",
+      exact: true,
+    });
+    const dialog = page.getByRole("dialog");
+    const names = dialog.locator(".reorder-list > li > span:not(.drag-handle)");
+    const move = async () => {
+      if (method === "arrows")
+        await page
+          .getByRole("button", { name: "Move Second wish up", exact: true })
+          .click();
+      else
+        await dialog
+          .locator(".drag-handle")
+          .last()
+          .dragTo(dialog.locator(".reorder-list > li").first());
+    };
+    await open.click();
+    await move();
+    await expect(names).toHaveText([...original].reverse());
+    await page.keyboard.press("Escape");
+    await expect(
+      page.getByRole("button", { name: "Keep editing" }),
+    ).toBeFocused();
+    await page.getByRole("button", { name: "Keep editing" }).click();
+    await expect(names).toHaveText([...original].reverse());
+    // Returning to the original order should make dismissal safe again.
+    await page
+      .getByRole("button", { name: "Move Second wish down", exact: true })
+      .click();
+    await page.keyboard.press("Escape");
+    await expect(dialog).toHaveCount(0);
+    await expect(open).toBeFocused();
+
+    for (const dismissal of ["Cancel", "Close dialog"]) {
+      await open.click();
+      await move();
+      await page.getByRole("button", { name: dismissal, exact: true }).click();
+      await expect(
+        page.getByRole("heading", { name: "Discard your changes?" }),
+      ).toBeVisible();
+      await page.getByRole("button", { name: "Discard changes" }).click();
+      await expect(dialog).toHaveCount(0);
+      await expect(page.locator(".gift-card h3")).toHaveText(original);
+    }
+    await open.click();
+    await move();
+    await page.getByRole("button", { name: "Save order", exact: true }).click();
+    await expect(dialog).toHaveCount(0);
+    await expect(page.locator(".gift-card h3")).toHaveText(
+      [...original].reverse(),
+    );
+    await page.reload();
+    await expect(page.locator(".gift-card h3")).toHaveText(
+      [...original].reverse(),
+    );
+  });
+}
 
 test("dialogs return focus after Escape, close, save and removal of their opener", async ({
   page,
