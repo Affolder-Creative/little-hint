@@ -26,6 +26,8 @@ its musl-utils subpackage carries additional copyleft code even though the
 primary libc is MIT. Alpine's distfiles mirror copies were verified against the
 original recipe hashes; MANIFEST.json also preserves the original source URLs.
 
-The container base is digest-pinned, and ca-certificates is version-pinned.
+The Node 24.22.1 container base pins Alpine 3.24.3 by digest, including
+ca-certificates 20261020-r0 and musl 1.2.6-r3. The musl recipe includes
+its updated regex overflow patch; all recipe inputs match their SHA-512 entries.
 A changed installed package version or aports commit requires a fresh review;
 the release gate does not accept merely matching package names.
