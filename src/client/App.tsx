@@ -57,6 +57,7 @@ import {
 import { SettingsNavigation, settingsSections } from "./SettingsNavigation";
 import { Confirm } from "./Confirm";
 import { familyGroupLabel } from "../shared/households";
+import { canManageGroupEvents } from "../shared/group-events";
 import { AccountInvitations } from "./AccountInvitations";
 import { HouseholdSettings } from "./Households";
 /* Little Hint operates as a quiet, practical gift notebook. Approved heart-tag artwork anchors the shell; product content leads. */
@@ -1956,6 +1957,9 @@ function Exchanges() {
     [group, setGroup] = useState(""),
     [status, setStatus] = useState("");
   const settings = useOrganization("exchanges");
+  const canCreate = world.groups.some((g) =>
+    canManageGroupEvents(g, world.me.id),
+  );
   const location = useLocation();
   useEffect(() => {
     const target = world.exchanges.find(
@@ -1978,14 +1982,15 @@ function Exchanges() {
         title="Gift exchanges"
         description="Draw names and give them something to smile about."
       >
-        <button
-          className="button"
-          disabled={!world.groups.length}
-          onClick={() => open("Secret gift exchange", <ExchangeForm />)}
-        >
-          <Plus size={17} />
-          Create exchange
-        </button>
+        {canCreate && (
+          <button
+            className="button"
+            onClick={() => open("Secret gift exchange", <ExchangeForm />)}
+          >
+            <Plus size={17} />
+            Create exchange
+          </button>
+        )}
       </Header>
       <div className="tabs" role="group" aria-label="Exchange view">
         {["active", "archived", "trash"].map((value) => (
@@ -2219,7 +2224,11 @@ function Exchanges() {
         >
           {world.exchanges.length
             ? "Try another search, view, or status."
-            : "Create a family group, choose participants, and let Little Hint draw the names."}
+            : canCreate
+              ? "Choose participants and let Little Hint draw the names."
+              : world.groups.length
+                ? "A family-group owner or event leader can create a gift exchange for your group."
+                : "Create or join a family group to take part in gift exchanges."}
         </Empty>
       )}
     </>

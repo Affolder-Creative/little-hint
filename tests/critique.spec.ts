@@ -1,7 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { stagingFixtures } from "../src/server/staging-fixtures";
 import { command, world } from "../src/server/domain";
-import { emptyState, type List } from "../src/shared/model";
+import { emptyState, type List, type Group } from "../src/shared/model";
 
 async function preview(page: Page, actorIndex = 0, solo = false) {
   const fixture = stagingFixtures();
@@ -898,6 +898,108 @@ test("person list links and source names wrap across viewports and enlarged text
   }
 });
 
+test("event leaders create exchanges only in eligible groups and edit another organizer's draft", async ({
+  page,
+}) => {
+  const { state, actors, actor } = await preview(page, 1);
+  const otherGroup = command(state, actors[2], "groups.create", {
+    name: "Members only group",
+  }) as Group;
+  otherGroup.memberIds.push(actor.id);
+  await page.goto("/exchanges");
+  await page
+    .getByRole("button", { name: "Create exchange", exact: true })
+    .click();
+  const dialog = page.getByRole("dialog");
+  const options = dialog
+    .getByLabel("Family group", { exact: true })
+    .locator("option");
+  await expect(options).toHaveCount(1);
+  await expect(options).toHaveAttribute("value", state.groups[0].id);
+  await dialog.getByLabel("Exchange name").fill("Leader-created exchange");
+  await dialog
+    .getByRole("button", { name: "Create exchange", exact: true })
+    .click();
+  await dialog.getByRole("button", { name: "Confirm and save" }).click();
+  await expect(dialog).not.toBeVisible();
+  const exchange = state.exchanges.find(
+    (e) => e.name === "Leader-created exchange",
+  )!;
+  expect(exchange.organizerId).toBe(actor.id);
+  exchange.organizerId = actors[0].id;
+  const panel = page.locator(`#exchange-${exchange.id}`);
+  await panel
+    .getByRole("button", { name: "Edit exchange", exact: true })
+    .click();
+  await dialog.getByLabel("Exchange name").fill("Leader-updated exchange");
+  await dialog
+    .getByRole("button", { name: "Save exchange", exact: true })
+    .click();
+  await dialog.getByRole("button", { name: "Confirm and save" }).click();
+  await expect(dialog).not.toBeVisible();
+  expect(exchange.name).toBe("Leader-updated exchange");
+  expect(exchange.organizerId).toBe(actors[0].id);
+});
+
+test("ordinary members see exchange guidance without creation or management controls", async ({
+  page,
+}) => {
+  const { state, actor } = await preview(page, 3);
+  state.exchanges[0].organizerId = actor.id;
+  await page.goto("/exchanges");
+  await expect(
+    page.getByRole("heading", { name: "Family gift exchange", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Create exchange", exact: true }),
+  ).toHaveCount(0);
+  await expect(page.locator(".exchange-panel .actions")).toHaveCount(0);
+  await expect(page.locator(".exchange-notifications")).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", { name: "Who you’re giving to" }),
+  ).toBeVisible();
+  state.exchanges = [];
+  await page.reload();
+  await expect(
+    page.getByText(
+      "A family-group owner or event leader can create a gift exchange for your group.",
+    ),
+  ).toBeVisible();
+});
+
+test("revoked event leaders cannot submit a stale exchange form", async ({
+  page,
+}) => {
+  const { state } = await preview(page, 1);
+  await page.goto("/exchanges");
+  await page
+    .getByRole("button", { name: "Create exchange", exact: true })
+    .click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Exchange name").fill("Revoked leader exchange");
+  await dialog
+    .getByRole("button", { name: "Create exchange", exact: true })
+    .click();
+  state.groups[0].eventLeaderIds = [];
+  await dialog.getByRole("button", { name: "Confirm and save" }).click();
+  await expect(
+    dialog.getByText(
+      "Exchange management is not available for this family group.",
+    ),
+  ).toBeVisible();
+  expect(
+    state.exchanges.some((e) => e.name === "Revoked leader exchange"),
+  ).toBe(false);
+  await expect(
+    dialog.getByText(
+      "You can no longer manage exchanges in this family group. Close this form and refresh the page.",
+    ),
+  ).toBeVisible({ timeout: 25000 });
+  await expect(
+    dialog.getByRole("button", { name: "Confirm and save" }),
+  ).toHaveCount(0);
+});
+
 test("basic exchanges keep matching rules collapsed and preserve defaults", async ({
   page,
 }) => {
@@ -1068,7 +1170,8 @@ test("both-direction rules avoid duplicates and survive review, editing, and dra
 test("exchange rules reset when their participants or family group change", async ({
   page,
 }) => {
-  const { state } = await preview(page);
+  const { state, actor } = await preview(page);
+  state.groups[1].eventLeaderIds = [actor.id];
   const [first, second] = state.people.slice(1, 3);
   await page.goto("/exchanges");
   await page

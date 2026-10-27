@@ -260,6 +260,8 @@ const ownIds = (s: State, a: Actor) =>
 const member = (g: Group, a: Actor) => g.memberIds.includes(a.id);
 const groupAccess = (s: State, a: Actor, groupId: string) =>
   !!s.groups.find((g) => g.id === groupId && member(g, a));
+const managesGroupExchanges = (s: State, a: Actor, groupId: string) =>
+  s.groups.some((g) => g.id === groupId && canManageGroupEvents(g, a.id));
 export const isAdmin = (s: State, a: Actor) =>
   s.people.some((p) => p.userId === a.id && p.admin);
 const ownedGroup = (s: State, a: Actor, id: string) =>
@@ -615,34 +617,30 @@ export function world(s: State, a: Actor): World {
       })),
     exchanges: s.exchanges
       .filter((e) => !e.deletedAt && groupAccess(s, a, e.groupId))
-      .map(({ assignments, ...e }) => ({
-        ...e,
-        canManage: e.organizerId === a.id,
-        myAssignments:
-          e.status === "drawn"
-            ? assignments.filter(([giver]) => ps.includes(giver))
-            : [],
-        delivery: {
-          sent: s.notices.filter(
-            (n) =>
-              e.organizerId === a.id &&
-              n.exchangeId === e.id &&
-              n.status === "sent",
-          ).length,
-          pending: s.notices.filter(
-            (n) =>
-              e.organizerId === a.id &&
-              n.exchangeId === e.id &&
-              n.status === "pending",
-          ).length,
-          failed: s.notices.filter(
-            (n) =>
-              e.organizerId === a.id &&
-              n.exchangeId === e.id &&
-              n.status === "failed",
-          ).length,
-        },
-      })),
+      .map(({ assignments, ...e }) => {
+        const canManage = managesGroupExchanges(s, a, e.groupId);
+        return {
+          ...e,
+          canManage,
+          myAssignments:
+            e.status === "drawn"
+              ? assignments.filter(([giver]) => ps.includes(giver))
+              : [],
+          delivery: {
+            sent: s.notices.filter(
+              (n) => canManage && n.exchangeId === e.id && n.status === "sent",
+            ).length,
+            pending: s.notices.filter(
+              (n) =>
+                canManage && n.exchangeId === e.id && n.status === "pending",
+            ).length,
+            failed: s.notices.filter(
+              (n) =>
+                canManage && n.exchangeId === e.id && n.status === "failed",
+            ).length,
+          },
+        };
+      }),
     preferences: preferences(s, a),
     notificationCount: inbox(s, a).unreadCount,
     follows: s.follows.filter(
@@ -1700,8 +1698,7 @@ export function command(
               e.id === edit.id &&
               !e.deletedAt &&
               !e.archived &&
-              e.organizerId === a.id &&
-              groupAccess(s, a, e.groupId),
+              managesGroupExchanges(s, a, e.groupId),
           )
         : undefined;
       if (edit) {
@@ -1728,7 +1725,11 @@ export function command(
           previousId: id.optional(),
         })
         .parse(b);
-      if (!groupAccess(s, a, p.groupId)) fail(404, "Family group not found.");
+      if (!managesGroupExchanges(s, a, p.groupId))
+        fail(
+          404,
+          "Exchange management is not available for this family group.",
+        );
       if (existing && p.groupId !== existing.groupId)
         fail(400, "An exchange cannot move to another family group.");
       if (
@@ -1768,7 +1769,7 @@ export function command(
       const e: Exchange = {
         ...(existing ?? stamp()),
         ...p,
-        organizerId: a.id,
+        organizerId: existing?.organizerId ?? a.id,
         status: "draft",
         assignments: [],
       };
@@ -1789,8 +1790,7 @@ export function command(
           (e) =>
             e.id === p.id &&
             !e.deletedAt &&
-            e.organizerId === a.id &&
-            groupAccess(s, a, e.groupId),
+            managesGroupExchanges(s, a, e.groupId),
         ) ?? fail(404, "Exchange not found.");
       checkRevision(e, p.revision);
       if (e.archived || e.status === "cancelled")
@@ -1821,8 +1821,7 @@ export function command(
           (e) =>
             e.id === p.id &&
             !e.deletedAt &&
-            e.organizerId === a.id &&
-            groupAccess(s, a, e.groupId),
+            managesGroupExchanges(s, a, e.groupId),
         ) ?? fail(404, "Exchange not found.");
       checkRevision(e, p.revision);
       if (e.archived || e.status !== "draft")
@@ -1885,8 +1884,7 @@ export function command(
           (e) =>
             e.id === p.id &&
             !e.deletedAt &&
-            e.organizerId === a.id &&
-            groupAccess(s, a, e.groupId),
+            managesGroupExchanges(s, a, e.groupId),
         ) ?? fail(404, "Exchange not found.");
       checkRevision(e, p.revision);
       const wasDrawn = e.status === "drawn";

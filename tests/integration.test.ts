@@ -737,6 +737,72 @@ describe.skipIf(!url)("PostgreSQL transaction integrity", () => {
     expect(after.lists.some((l) => l.id === list.id)).toBe(false);
     expect(after.items.some((i) => i.listId === list.id)).toBe(false);
   });
+  it("rechecks exchange leadership after revocation and preserves the creator across edits", async () => {
+    const input = await storage.transact((s) => {
+      const group = s.groups.find((g) => g.id === groupId)!;
+      command(s, a, "groups.event-leaders", {
+        groupId,
+        revision: group.revision,
+        userIds: [b.id],
+      });
+      return {
+        name: "Leadership transaction",
+        groupId,
+        participantIds: s.people
+          .filter(
+            (p) =>
+              [a.id, b.id, c.id].includes(p.userId!) &&
+              group.memberIds.includes(p.userId!),
+          )
+          .map((p) => p.id),
+        count: 1,
+        excludeHousehold: false,
+      };
+    });
+    const { id } = (await storage.transact((s) =>
+      command(s, b, "exchanges.create", input),
+    )) as { id: string };
+    const before = (await storage.readState()).exchanges.find(
+      (e) => e.id === id,
+    )!;
+    await storage.transact((s) => {
+      const group = s.groups.find((g) => g.id === groupId)!;
+      command(s, a, "groups.event-leaders", {
+        groupId,
+        revision: group.revision,
+        userIds: [],
+      });
+    });
+    await expect(
+      storage.transact((s) =>
+        command(s, b, "exchanges.update", {
+          ...input,
+          id,
+          revision: before.revision,
+          name: "Stale edit",
+        }),
+      ),
+    ).rejects.toThrow("Exchange not found");
+    expect(
+      (await storage.readState()).exchanges.find((e) => e.id === id),
+    ).toEqual(before);
+    await storage.transact((s) =>
+      command(s, a, "exchanges.update", {
+        ...input,
+        id,
+        revision: before.revision,
+        name: "Owner edit",
+      }),
+    );
+    expect(
+      (await storage.readState()).exchanges.find((e) => e.id === id),
+    ).toMatchObject({
+      name: "Owner edit",
+      organizerId: b.id,
+      revision: before.revision + 1,
+    });
+  });
+
   it("commits a confirmed discovery batch once and rolls back all items on a failed transaction", async () => {
     const {
       createDiscovery,

@@ -5,6 +5,7 @@ import type { ItemPriority } from "../shared/model";
 import { actionError } from "./copy";
 import { useNavigate } from "react-router-dom";
 import { familyGroupLabel } from "../shared/households";
+import { canManageGroupEvents } from "../shared/group-events";
 import { useEffect, useRef, useState } from "react";
 import {
   Link as LinkIcon,
@@ -703,10 +704,13 @@ export function ExchangeForm({
   exchange?: World["exchanges"][number];
 }) {
   const { world, mutate, close } = useApp();
-  const [groupId, setGroupId] = useState(
-    exchange?.groupId ?? world.groups[0]?.id ?? "",
+  const groups = world.groups.filter((g) =>
+    canManageGroupEvents(g, world.me.id),
   );
-  const group = world.groups.find((g) => g.id === groupId);
+  const [groupId, setGroupId] = useState(
+    exchange?.groupId ?? groups[0]?.id ?? "",
+  );
+  const group = groups.find((g) => g.id === groupId);
   const people = world.people.filter((p) =>
     [p.userId, ...p.guardians].some((u) => u && group?.memberIds.includes(u)),
   );
@@ -756,6 +760,13 @@ export function ExchangeForm({
     exclusions,
     previousId: previousId || undefined,
   });
+  if (!group)
+    return (
+      <p>
+        You can no longer manage exchanges in this family group. Close this form
+        and refresh the page.
+      </p>
+    );
   return (
     <Form
       submit={exchange ? "Save exchange" : "Create exchange"}
@@ -789,7 +800,7 @@ export function ExchangeForm({
           value={groupId}
           disabled={!!exchange}
           onChange={(e) => {
-            const next = world.groups.find((g) => g.id === e.target.value)!;
+            const next = groups.find((g) => g.id === e.target.value)!;
             setGroupId(next.id);
             setParticipants(
               world.people
@@ -806,7 +817,7 @@ export function ExchangeForm({
             setRecipient("");
           }}
         >
-          {world.groups.map((g) => (
+          {groups.map((g) => (
             <option key={g.id} value={g.id}>
               {familyGroupLabel(g, world)}
             </option>
