@@ -12,7 +12,7 @@ import {
 const url = process.env.TEST_DATABASE_URL;
 describe.skipIf(!url)("PostgreSQL transaction integrity", () => {
   let storage: typeof import("../src/server/db");
-  let groupId: string, itemId: string;
+  let groupId: string, listId: string, itemId: string;
   const a = {
       id: "integration-recipient",
       email: "recipient@example.test",
@@ -60,6 +60,7 @@ describe.skipIf(!url)("PostgreSQL transaction integrity", () => {
         groupIds: [g.id],
         mode: "surprise",
       }) as any;
+      listId = l.id;
       const i = command(s, a, "items.create", {
         title: "One gift",
         listId: l.id,
@@ -166,7 +167,7 @@ describe.skipIf(!url)("PostgreSQL transaction integrity", () => {
     const gift = (await storage.transact((s) =>
       command(s, a, "items.create", {
         title: "Retry race",
-        listId: s.lists[0].id,
+        listId,
         quantity: 2,
       }),
     )) as any;
