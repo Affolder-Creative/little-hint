@@ -2229,7 +2229,9 @@ function SettingsPage({
       <Header
         title="Settings"
         description="Manage your account, family groups, and preferences."
-      />
+      >
+        <span className="settings-version">Version {__APP_VERSION__}</span>
+      </Header>
       <div className="settings-layout" data-section={section}>
         <SettingsNavigation
           section={section}
