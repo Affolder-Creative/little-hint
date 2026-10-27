@@ -1,4 +1,8 @@
-import { batchJob, retryWishlistBatch } from "./wishlist-delivery";
+import {
+  batchJob,
+  retryWishlistBatch,
+  recordWishlistSmsFailure,
+} from "./wishlist-delivery";
 import { registerGiftDiscovery } from "./gift-discovery-routes";
 import { discoveryJob } from "./gift-discovery";
 import { managementActions, trash } from "./management";
@@ -614,13 +618,11 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
         }
       const batchId = new URL(req.url, appUrl).searchParams.get("batch");
       if (batchId && ["failed", "undelivered"].includes(body.MessageStatus)) {
-        const b = s.notificationBatches.find((b) => b.id === batchId);
-        if (b) {
-          // Provider-confirmed failure is terminal until an administrator retries.
-          b.deliveries.sms = { status: "failed", attempts: 5 };
-          if (b.status === "sent") b.status = "failed";
-          b.revision++;
-        }
+        recordWishlistSmsFailure(
+          s,
+          batchId,
+          new URL(req.url, appUrl).searchParams.get("attempt"),
+        );
       }
       const id = new URL(req.url, appUrl).searchParams.get("notice");
       if (id && ["failed", "undelivered"].includes(body.MessageStatus)) {

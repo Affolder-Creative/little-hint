@@ -95,6 +95,27 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllGlobals());
 describe("notification privacy and recovery", () => {
+  it.each([false, true])(
+    "uses custom follow channels for legacy notices when the default topic is off, inbox=%s",
+    async (inbox) => {
+      const f = fixture();
+      const list = f.s.lists[0];
+      Object.assign(f.notice, {
+        event: "wishlist",
+        listId: list.id,
+        inbox,
+      });
+      command(f.s, f.actors[1], "follows.update", {
+        target: "list",
+        targetId: list.id,
+        following: true,
+        channels: ["email"],
+      });
+      await deliverNotice(f.notice.id);
+      expect(mock.sendMail).toHaveBeenCalledOnce();
+      expect(mock.fetch).not.toHaveBeenCalled();
+    },
+  );
   it("finishes legacy wish-list notices with generic copy even after preview opt-in", async () => {
     const f = fixture();
     const list = f.s.lists[0];

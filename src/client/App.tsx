@@ -2505,7 +2505,6 @@ function SettingsPage({
                       : "You’re a member"}
                   </span>
                 </div>
-                <FollowButton target="group" targetId={g.id} />
                 <nav
                   className="group-settings-nav"
                   aria-label="Family group settings"
@@ -2523,6 +2522,7 @@ function SettingsPage({
                       {label}
                     </Link>
                   ))}
+                  <FollowButton target="group" targetId={g.id} compact />
                 </nav>
                 <div hidden={groupView !== "households"}>
                   <HouseholdSettings group={g} />

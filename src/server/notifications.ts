@@ -141,7 +141,7 @@ export async function deliverNotice(id: string) {
         smsOptOut: false,
       }
     : preferences(s, { id: n.userId, email: user.email, name: user.name });
-  if (!n.inbox && !prefs.events.includes(n.event)) {
+  if (!n.inbox && n.event !== "wishlist" && !prefs.events.includes(n.event)) {
     await transact((s) => {
       const notice = s.notices.find((n) => n.id === id);
       if (notice) notice.status = "sent";
@@ -175,11 +175,12 @@ export async function deliverNotice(id: string) {
         ? prefs
         : preferences(s, { id: n.userId, email: user.email, name: user.name });
       if (
-        (n.event === "wishlist" && !wishlistEligible(s, n, channel)) ||
         !current[channel] ||
-        !(n.inbox
-          ? topicEnabled(s, n, channel)
-          : current.events.includes(n.event)) ||
+        !(n.event === "wishlist"
+          ? wishlistEligible(s, n, channel)
+          : n.inbox
+            ? topicEnabled(s, n, channel)
+            : current.events.includes(n.event)) ||
         n.delivered.includes(channel)
       )
         continue;

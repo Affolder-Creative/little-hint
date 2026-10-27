@@ -182,9 +182,9 @@ export async function sendPush(
   if (!response.ok) throw new PushResponseError(response.status);
 }
 function eligible(s: State, n: Notice) {
+  if (n.event === "wishlist") return wishlistEligible(s, n, "push");
   if (n.readAt || !activityAllowed(s, n) || !topicEnabled(s, n, "push"))
     return false;
-  if (n.event === "wishlist") return wishlistEligible(s, n, "push");
   if (n.event === "discussion" && n.itemId)
     return watchesItem(s, n.userId, n.itemId);
   return true;

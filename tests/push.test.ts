@@ -12,6 +12,7 @@ import {
 } from "../src/shared/model";
 import { stamp, command } from "../src/server/domain";
 import webPush from "web-push";
+import { wishlistFixture } from "./wishlist-fixture";
 const mock = vi.hoisted(() => ({
   state: null as State | null,
   fetch: vi.fn(),
@@ -92,6 +93,19 @@ afterEach(() => {
   vi.useRealTimers();
 });
 describe("web push delivery", () => {
+  it("honors custom push follows for legacy notices when the default topic is off", async () => {
+    const { d } = fixture();
+    const f = wishlistFixture();
+    mock.state = f.s;
+    f.prefs.pushEvents = [];
+    f.follow("list", f.list.id, { channels: ["push"] });
+    f.add();
+    const n = f.s.notices[0];
+    delete n.batchId;
+    f.s.pushDevices.push({ ...d, userId: f.reader.id });
+    await deliverPushBatch([n.id]);
+    expect(mock.fetch).toHaveBeenCalledOnce();
+  });
   it("sends a category and delivery metadata without private content", async () => {
     const f = fixture();
     f.person.name = "PRIVATE PERSON";

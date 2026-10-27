@@ -282,12 +282,29 @@ export function NotificationOpen({ batch = false }: { batch?: boolean }) {
     <p role="status">Opening your update…</p>
   );
 }
-export function FollowButton({ target, targetId }: FollowTarget) {
+export function FollowButton({
+  target,
+  targetId,
+  compact = false,
+}: FollowTarget & { compact?: boolean }) {
   const { mutate, toast, open } = useApp();
   const { direct, effective } = useFollowSettings({ target, targetId });
   const following = effective.following;
+  const label = direct?.muted
+    ? "List muted"
+    : following
+      ? "Following"
+      : target === "person"
+        ? "Follow person"
+        : target === "group"
+          ? "Follow family group"
+          : target === "household"
+            ? "Follow household"
+            : "Follow wish list";
   return (
     <AsyncButton
+      className={compact ? "text-button" : undefined}
+      label={label}
       action={async () => {
         if (direct || following) {
           open(
@@ -307,17 +324,7 @@ export function FollowButton({ target, targetId }: FollowTarget) {
       ) : (
         <Bell size={17} />
       )}
-      {direct?.muted
-        ? "List muted"
-        : following
-          ? "Following"
-          : target === "person"
-            ? "Follow person"
-            : target === "group"
-              ? "Follow family group"
-              : target === "household"
-                ? "Follow household"
-                : "Follow wish list"}
+      {compact && !following && !direct?.muted ? "Follow" : label}
     </AsyncButton>
   );
 }

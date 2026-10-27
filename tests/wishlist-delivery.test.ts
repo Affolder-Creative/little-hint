@@ -50,6 +50,7 @@ import {
   deliverWishlistBatch,
   pendingWishlistBatches,
   retryWishlistBatch,
+  recordWishlistSmsFailure,
 } from "../src/server/wishlist-delivery";
 import { PushResponseError } from "../src/server/push";
 
@@ -290,6 +291,68 @@ describe("cross-channel wish-list summary delivery", () => {
     expect(f.batch.status).toBe("sent");
     expect(mock.email).toHaveBeenCalledOnce();
     expect(mock.push).toHaveBeenCalledOnce();
+  });
+  it("preserves an SMS failure callback received before submission returns", async () => {
+    const f = fixture();
+    mock.sms.mockImplementation(async (_route, body) => {
+      // Twilio can call the status endpoint before the worker writes its receipt.
+      const callback = new URL(body.StatusCallback);
+      recordWishlistSmsFailure(
+        f.s,
+        callback.searchParams.get("batch")!,
+        callback.searchParams.get("attempt"),
+      );
+    });
+    closeWindow();
+    await deliverWishlistBatch(f.batch.id);
+    expect(f.batch.deliveries.sms).toMatchObject({
+      status: "failed",
+      attempts: 5,
+    });
+    expect(f.batch.status).toBe("failed");
+  });
+  it("ignores old SMS failure callbacks after an administrator retry", async () => {
+    const f = fixture();
+    closeWindow();
+    await deliverWishlistBatch(f.batch.id);
+    const oldAttempt = new URL(
+      mock.sms.mock.calls[0][1].StatusCallback,
+    ).searchParams.get("attempt");
+    recordWishlistSmsFailure(f.s, f.batch.id, null);
+    recordWishlistSmsFailure(f.s, f.batch.id, "unrelated-attempt");
+    expect(f.batch.status).toBe("sent");
+    recordWishlistSmsFailure(f.s, f.batch.id, oldAttempt);
+    expect(f.batch.status).toBe("failed");
+    expect(f.s.notices[0].status).toBe("failed");
+    expect(retryWishlistBatch(f.s, f.batch.id)).toBe(true);
+    recordWishlistSmsFailure(f.s, f.batch.id, oldAttempt);
+    expect(f.batch.deliveries.sms.attempts).toBe(0);
+    await deliverWishlistBatch(f.batch.id);
+    recordWishlistSmsFailure(f.s, f.batch.id, oldAttempt);
+    expect(f.batch.status).toBe("sent");
+    expect(f.batch.deliveries.sms).toMatchObject({
+      status: "sent",
+      attempts: 1,
+    });
+    expect(mock.sms).toHaveBeenCalledTimes(2);
+    for (const fn of [mock.email, mock.telegram, mock.push])
+      expect(fn).toHaveBeenCalledOnce();
+  });
+  it("retains the accepted SMS attempt when retrying another channel", async () => {
+    const f = fixture();
+    mock.email.mockRejectedValue(new Error("offline"));
+    closeWindow();
+    for (let i = 0; i < 5; i++) {
+      await deliverWishlistBatch(f.batch.id);
+      vi.advanceTimersByTime(3600_000);
+    }
+    const attempt = f.batch.smsAttemptId!;
+    expect(retryWishlistBatch(f.s, f.batch.id)).toBe(true);
+    recordWishlistSmsFailure(f.s, f.batch.id, attempt);
+    expect(f.batch.deliveries.sms).toMatchObject({
+      status: "failed",
+      attempts: 5,
+    });
   });
   it("removes expired devices and suppresses revoked sessions", async () => {
     const f = fixture();

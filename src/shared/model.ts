@@ -241,6 +241,7 @@ export interface NotificationBatch extends Base {
   dueAt: string;
   status: "pending" | "sent" | "failed";
   destinations?: string[];
+  smsAttemptId?: string;
   deliveries: Record<string, BatchDelivery>;
 }
 export interface NotificationBatchView {
