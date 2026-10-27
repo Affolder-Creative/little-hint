@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.7.0](https://github.com/Affolder-Creative/little-hint/compare/v0.6.2...v0.7.0) (2026-10-27)
+
+
+### Features
+
+* add optional spending guidelines for exchanges and events ([#73](https://github.com/Affolder-Creative/little-hint/issues/73)) ([fce2d4a](https://github.com/Affolder-Creative/little-hint/commit/fce2d4a3fbab6f0bb4a122d733b83389f1f727cb))
+* cache product imports and optimize app data loading ([#69](https://github.com/Affolder-Creative/little-hint/issues/69)) ([c2e3402](https://github.com/Affolder-Creative/little-hint/commit/c2e3402237901d9895eaba6d0601908cf5dd2f55))
+* clarify lists and add priorities, sorting, and Trash ([#71](https://github.com/Affolder-Creative/little-hint/issues/71)) ([394efd0](https://github.com/Affolder-Creative/little-hint/commit/394efd00b103027c5243a2a4323e00f7ee0cba7a))
+* show dynamic app version in Settings ([#72](https://github.com/Affolder-Creative/little-hint/issues/72)) ([f87c86c](https://github.com/Affolder-Creative/little-hint/commit/f87c86c6629ac9e24619739dea56a802de38d788))
+
+
+### Fixes
+
+* clarify push notification titles ([#74](https://github.com/Affolder-Creative/little-hint/issues/74)) ([a1eebbc](https://github.com/Affolder-Creative/little-hint/commit/a1eebbc2646944405b5ae10b6d7f4d520296019e))
+
 ## [0.6.2](https://github.com/Affolder-Creative/little-hint/compare/v0.6.1...v0.6.2) (2026-10-27)
 
 
