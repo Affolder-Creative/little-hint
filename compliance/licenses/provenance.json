@@ -22,8 +22,8 @@
   "GPL-3.0": {
     "url": "https://www.gnu.org/licenses/gpl-3.0.txt"
   },
-  "node-v24.22.0": {
-    "url": "https://github.com/nodejs/node/blob/v24.22.0/LICENSE"
+  "node-v24.22.1": {
+    "url": "https://github.com/nodejs/node/blob/v24.22.1/LICENSE"
   },
   "docker-node": {
     "url": "https://github.com/nodejs/docker-node/blob/02641286c1f5041d9025d3cf6d38a64b84cd72e5/LICENSE"

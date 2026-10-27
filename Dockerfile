@@ -1,4 +1,4 @@
-FROM node:24-alpine@sha256:44fce696f38ba8c987c4db89954051000bbd05ffd8d8659ba15ed4a8602e937f AS build
+FROM node:24-alpine@sha256:06d7adf3e0ef61a13f1d28682726366f97a15aa1888c934d3ecec86c33918b53 AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
@@ -9,7 +9,7 @@ COPY compliance ./compliance
 COPY public ./public
 RUN npm run build
 
-FROM node:24-alpine@sha256:44fce696f38ba8c987c4db89954051000bbd05ffd8d8659ba15ed4a8602e937f AS runtime-files
+FROM node:24-alpine@sha256:06d7adf3e0ef61a13f1d28682726366f97a15aa1888c934d3ecec86c33918b53 AS runtime-files
 # The pinned base already includes the reviewed CA bundle. Avoid fetching
 # packages from a moving Alpine index when building the same pinned image.
 RUN test -s /etc/ssl/certs/ca-certificates.crt
@@ -22,8 +22,8 @@ COPY compliance ./compliance
 COPY scripts/licenses.mjs ./scripts/licenses.mjs
 RUN node scripts/licenses.mjs /app/compliance-report \
     && cp /lib/apk/db/installed /app/compliance-report/apk-installed.txt \
-    && test "$(node --version)" = "v24.22.0" \
-    && cp compliance/licenses/node-v24.22.0.txt /app/compliance-report/node-notices.txt \
+    && test "$(node --version)" = "v24.22.1" \
+    && cp compliance/licenses/node-v24.22.1.txt /app/compliance-report/node-notices.txt \
     && rm -rf /usr/local/lib/node_modules /opt/yarn-* \
     && rm -f /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack /usr/local/bin/yarn /usr/local/bin/yarnpkg
 COPY --from=build /app/dist ./dist
