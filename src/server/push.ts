@@ -1,4 +1,3 @@
-import { listIsArchived } from "../shared/list-dates";
 import { createECDH } from "node:crypto";
 import webPush from "web-push";
 import { Agent, fetch as request } from "undici";
@@ -10,10 +9,10 @@ import { publicAddress, validateUrl } from "./imports";
 import { stamp, fail } from "./domain";
 import {
   activityAllowed,
-  followsItem,
   inbox,
   topicEnabled,
   watchesItem,
+  wishlistEligible,
 } from "./activity";
 import type { Actor, Notice, PushDevice, State } from "../shared/model";
 
@@ -145,6 +144,8 @@ export class PushResponseError extends Error {
 type PushPayload = {
   deviceId: string;
   notificationId?: string;
+  batchId?: string;
+  wishlistPreview?: { version: 1; body: string };
   category?: Notice["event"] | "ownership-request";
   test?: boolean;
   unreadCount: number;
@@ -181,17 +182,9 @@ export async function sendPush(
   if (!response.ok) throw new PushResponseError(response.status);
 }
 function eligible(s: State, n: Notice) {
+  if (n.event === "wishlist") return wishlistEligible(s, n, "push");
   if (n.readAt || !activityAllowed(s, n) || !topicEnabled(s, n, "push"))
     return false;
-  if (n.event === "wishlist") {
-    const item = s.items.find((i) => i.id === n.itemId);
-    return (
-      !!item &&
-      followsItem(s, n.userId, item) &&
-      !item.archived &&
-      !s.lists.some((l) => l.id === item.listId && listIsArchived(l))
-    );
-  }
   if (n.event === "discussion" && n.itemId)
     return watchesItem(s, n.userId, n.itemId);
   return true;
@@ -200,6 +193,7 @@ export function pendingPushBatches(s: State) {
   const groups = new Map<string, Notice[]>();
   for (const n of s.notices) {
     if (
+      n.batchId ||
       !n.inbox ||
       n.pushComplete ||
       (n.pushDueAt && Date.parse(n.pushDueAt) > Date.now())

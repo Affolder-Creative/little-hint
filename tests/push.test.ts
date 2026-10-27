@@ -1,3 +1,7 @@
+import {
+  deliverWishlistBatch,
+  pendingWishlistBatches,
+} from "../src/server/wishlist-delivery";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
   emptyState,
@@ -8,6 +12,7 @@ import {
 } from "../src/shared/model";
 import { stamp, command } from "../src/server/domain";
 import webPush from "web-push";
+import { wishlistFixture } from "./wishlist-fixture";
 const mock = vi.hoisted(() => ({
   state: null as State | null,
   fetch: vi.fn(),
@@ -88,6 +93,19 @@ afterEach(() => {
   vi.useRealTimers();
 });
 describe("web push delivery", () => {
+  it("honors custom push follows for legacy notices when the default topic is off", async () => {
+    const { d } = fixture();
+    const f = wishlistFixture();
+    mock.state = f.s;
+    f.prefs.pushEvents = [];
+    f.follow("list", f.list.id, { channels: ["push"] });
+    f.add();
+    const n = f.s.notices[0];
+    delete n.batchId;
+    f.s.pushDevices.push({ ...d, userId: f.reader.id });
+    await deliverPushBatch([n.id]);
+    expect(mock.fetch).toHaveBeenCalledOnce();
+  });
   it("sends a category and delivery metadata without private content", async () => {
     const f = fixture();
     f.person.name = "PRIVATE PERSON";
@@ -301,19 +319,19 @@ describe("web push delivery", () => {
     f.d.createdAt = "2026-10-24T12:01:00.000Z";
     vi.setSystemTime(new Date("2026-10-24T12:02:00Z"));
     command(f.s, owner, "items.create", { title: "Second", listId: list.id });
-    expect(pendingPushBatches(f.s)).toEqual([]);
+    expect(pendingWishlistBatches(f.s)).toEqual([]);
     vi.setSystemTime(new Date("2026-10-24T12:16:00Z"));
-    const batches = pendingPushBatches(f.s);
+    const batches = pendingWishlistBatches(f.s);
     expect(batches).toHaveLength(1);
-    expect(batches[0]).toHaveLength(2);
-    await deliverPushBatch(batches[0].map((n) => n.id));
-    await deliverPushBatch(batches[0].map((n) => n.id));
+    expect(batches[0].noticeIds).toHaveLength(2);
+    await deliverWishlistBatch(batches[0].id);
+    await deliverWishlistBatch(batches[0].id);
     expect(mock.fetch).toHaveBeenCalledTimes(1);
     expect(JSON.parse(String(details.mock.calls[0][1]))).toMatchObject({
       category: "wishlist",
-      notificationId: batches[0][1].id,
+      batchId: batches[0].id,
     });
-    expect(pendingPushBatches(f.s)).toEqual([]);
+    expect(pendingWishlistBatches(f.s)).toEqual([]);
     command(f.s, owner, "items.create", { title: "Third", listId: list.id });
     command(f.s, reader, "follows.update", {
       target: "list",
@@ -321,7 +339,7 @@ describe("web push delivery", () => {
       following: false,
     });
     vi.setSystemTime(new Date("2026-10-24T12:32:00Z"));
-    await deliverPushBatch(pendingPushBatches(f.s)[0].map((n) => n.id));
+    await deliverWishlistBatch(pendingWishlistBatches(f.s)[0].id);
     expect(mock.fetch).toHaveBeenCalledTimes(1);
   });
   it("groups only due wishlist events and suppresses inaccessible batches", async () => {

@@ -1,0 +1,228 @@
+import { useState } from "react";
+import type { Follow, NotificationChannel } from "../shared/model";
+import {
+  matchingFollows,
+  resolveFollows,
+  notificationChannels,
+  channelLabels,
+} from "../shared/follows";
+import { defaultPushEvents } from "../shared/notifications";
+import { familyGroupLabel, householdLabel } from "../shared/households";
+import { useApp } from "./context";
+import { Form, Field } from "./components";
+
+export type FollowTarget = Pick<Follow, "target" | "targetId">;
+export function useFollowSettings(target: FollowTarget) {
+  const { world } = useApp();
+  const follows = world.follows ?? [];
+  const direct = follows.find(
+    (f) => f.target === target.target && f.targetId === target.targetId,
+  );
+  const p = world.preferences;
+  const defaults = notificationChannels.filter((c) =>
+    c === "push"
+      ? (p.pushEvents ?? defaultPushEvents).includes("wishlist")
+      : (p.channelEvents?.[c] ?? p.events).includes("wishlist"),
+  );
+  const list = world.lists.find(
+    (l) => target.target === "list" && l.id === target.targetId,
+  );
+  const household = world.households.find(
+    (h) => target.target === "household" && h.id === target.targetId,
+  );
+  const parents = list
+    ? matchingFollows(world, follows, world.me.id, list).filter(
+        (f) => f.id !== direct?.id,
+      )
+    : household
+      ? follows.filter(
+          (f) => f.target === "group" && f.targetId === household.groupId,
+        )
+      : [];
+  const effective = resolveFollows(
+    [...parents, ...(direct ? [direct] : [])],
+    [...defaults],
+  );
+  const inherited = resolveFollows(
+    [...parents, { target: target.target }],
+    [...defaults],
+  );
+  const group = world.groups.find(
+    (g) => target.target === "group" && g.id === target.targetId,
+  );
+  const name =
+    list?.name ??
+    (household ? householdLabel(household, world) : undefined) ??
+    (group ? familyGroupLabel(group, world) : undefined) ??
+    world.people.find(
+      (p) => target.target === "person" && p.id === target.targetId,
+    )?.name ??
+    "Unavailable";
+  return { direct, effective, inherited, name };
+}
+
+export function FollowSettings({ target, targetId }: FollowTarget) {
+  const { world, mutate, close, toast } = useApp();
+  const { direct, inherited, name } = useFollowSettings({ target, targetId });
+  const [mode, setMode] = useState(
+    direct?.muted ? "mute" : direct?.channels ? "custom" : "inherit",
+  );
+  const [channels, setChannels] = useState<NotificationChannel[]>(
+    direct?.channels ?? inherited.channels,
+  );
+  const p = world.preferences;
+  return (
+    <Form
+      submit="Save follow settings"
+      onSubmit={async () => {
+        await mutate("follows", {
+          target,
+          targetId,
+          following: mode !== "mute" && mode !== "remove",
+          muted: mode === "mute",
+          channels: mode === "custom" ? channels : null,
+        });
+        toast(mode === "mute" ? "Wish list muted." : "Follow settings saved.");
+        close();
+      }}
+    >
+      <p>
+        New wish-list items from {name} appear in your inbox immediately.
+        External updates are grouped for 15 minutes per list.
+      </p>
+      <Field label="Updates for this follow">
+        <select value={mode} onChange={(e) => setMode(e.target.value)}>
+          <option value="inherit">Follow with inherited channels</option>
+          <option value="custom">Follow with custom channels</option>
+          {target === "list" && (
+            <option value="mute">Mute this list everywhere</option>
+          )}
+          <option value="remove">
+            {direct?.muted
+              ? "Remove mute and use other follows"
+              : "Stop this follow and use other follows"}
+          </option>
+        </select>
+      </Field>
+      {mode === "inherit" && (
+        <p className="muted">
+          {target === "person"
+            ? "Inherited channels depend on the list's household and family-group follows. Account defaults apply when none set custom channels."
+            : `Inherited channels: ${inherited.channels.map((c) => channelLabels[c]).join(", ") || "Inbox only"}.`}
+        </p>
+      )}
+      {mode === "custom" && (
+        <fieldset className="choice-group">
+          <legend>Send summaries through</legend>
+          {notificationChannels.map((c) => (
+            <label className="check" key={c}>
+              <input
+                type="checkbox"
+                checked={channels.includes(c)}
+                onChange={(e) =>
+                  setChannels((v) =>
+                    e.target.checked ? [...v, c] : v.filter((x) => x !== c),
+                  )
+                }
+              />
+              {channelLabels[c]}
+            </label>
+          ))}
+          <p className="muted">
+            Leave all unchecked for inbox only. Custom channels replace broader
+            follow choices. List settings win; tied choices combine.
+          </p>
+        </fieldset>
+      )}
+      {mode !== "mute" && mode !== "remove" && (
+        <p className="muted">
+          Push requires an enabled device.{" "}
+          {(!p.email || !p.telegram || !p.sms) &&
+            "Disabled or unconnected channels stay off."}{" "}
+          <a href="/settings?section=notifications">Manage delivery channels</a>
+          .
+        </p>
+      )}
+      {mode === "mute" && (
+        <p className="muted">
+          Stops new inbox entries and queued external updates for this list,
+          even when you follow its owners, household, or family group. Existing
+          history stays available.
+        </p>
+      )}
+      {mode === "remove" && (
+        <p className="muted">
+          Other follows may still send updates.{" "}
+          {target === "list" &&
+            "Choose Mute this list everywhere to stop them all."}
+        </p>
+      )}
+    </Form>
+  );
+}
+
+export function FollowingSettings() {
+  const { world, open } = useApp();
+  return (
+    <section aria-labelledby="following-settings-title">
+      <h3 id="following-settings-title">Following and muted lists</h3>
+      <p className="muted">
+        Follow people and lists from their pages, or family groups and
+        households in Family groups. Following does not change sharing.
+      </p>
+      {!world.follows?.length && <p>You are not following anyone yet.</p>}
+      {world.follows?.map((f) => (
+        <FollowingRow
+          key={f.id}
+          follow={f}
+          onOpen={() =>
+            open(
+              "Notification settings",
+              <FollowSettings target={f.target} targetId={f.targetId} />,
+            )
+          }
+        />
+      ))}
+    </section>
+  );
+}
+function FollowingRow({
+  follow,
+  onOpen,
+}: {
+  follow: Follow;
+  onOpen: () => void;
+}) {
+  const { name, effective } = useFollowSettings(follow);
+  return (
+    <div className="setting-row">
+      <div>
+        <strong>{name}</strong>
+        <p>
+          {follow.target === "group"
+            ? "Family group"
+            : follow.target === "household"
+              ? "Household"
+              : follow.target === "person"
+                ? "Person"
+                : "Wish list"}{" "}
+          ·{" "}
+          {follow.muted
+            ? "Muted"
+            : follow.channels !== undefined
+              ? effective.channels.map((c) => channelLabels[c]).join(", ") ||
+                "Inbox only"
+              : "Inherited channels"}
+        </p>
+      </div>
+      <button
+        type="button"
+        className="text-button"
+        aria-label={`Edit notifications for ${name}`}
+        onClick={onOpen}
+      >
+        Edit notifications
+      </button>
+    </div>
+  );
+}

@@ -83,7 +83,7 @@ self.addEventListener("message", (event) => {
     }),
   );
 });
-// Only fixed category labels may appear in previews. Never render payload copy.
+// Only wish-list summaries may carry an explicitly opted-in, versioned preview.
 const pushTitles = {
   invitation: "New invitation",
   "ownership-request": "Ownership request",
@@ -111,6 +111,21 @@ self.addEventListener("push", (event) => {
       const validId =
         typeof data.notificationId === "string" &&
         /^[0-9a-f-]{36}$/i.test(data.notificationId);
+      const validBatch =
+        typeof data.batchId === "string" &&
+        /^[0-9a-f-]{36}$/i.test(data.batchId);
+      const preview =
+        data.category === "wishlist" &&
+        validBatch &&
+        data.wishlistPreview?.version === 1 &&
+        typeof data.wishlistPreview.body === "string" &&
+        data.wishlistPreview.body.length > 0 &&
+        data.wishlistPreview.body.length <= 400 &&
+        !/[\u0000-\u001f\u007f\u202a-\u202e\u2066-\u2069]/.test(
+          data.wishlistPreview.body,
+        )
+          ? data.wishlistPreview.body
+          : undefined;
       const isTest = data.test === true;
       const title = isTest
         ? "Notifications are ready"
@@ -121,13 +136,15 @@ self.addEventListener("push", (event) => {
       await self.registration.showNotification(title, {
         body: isTest
           ? "This test notification reached your device."
-          : "Open Little Hint to see the details.",
+          : (preview ?? "Open Little Hint to see the details."),
         icon: "/brand/little-hint/icons/little-hint-app-color-192.png",
         tag: typeof data.tag === "string" ? data.tag : "little-hint-update",
         data: {
-          path: validId
-            ? `/notifications/${data.notificationId}`
-            : "/notifications",
+          path: validBatch
+            ? `/notifications/batches/${data.batchId}`
+            : validId
+              ? `/notifications/${data.notificationId}`
+              : "/notifications",
           deviceId: binding.deviceId,
         },
       });
@@ -157,7 +174,7 @@ self.addEventListener("notificationclick", (event) => {
       const path = event.notification.data?.path;
       const safePath =
         typeof path === "string" &&
-        /^\/notifications(?:\/[0-9a-f-]{36})?$/i.test(path)
+        /^\/notifications(?:\/(?:batches\/)?[0-9a-f-]{36})?$/i.test(path)
           ? path
           : "/notifications";
       const clients = await self.clients.matchAll({

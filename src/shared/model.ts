@@ -181,6 +181,9 @@ export interface Exchange extends Base {
   drawnAt?: string;
 }
 export interface Notice extends Base {
+  batchId?: string;
+  prioritySnapshot?: ItemPriority | null;
+  deliveryChannels?: NotificationChannel[];
   groupEventId?: string;
   userId: string;
   event:
@@ -220,8 +223,30 @@ export interface PushDelivery {
 }
 export interface Follow extends Base {
   userId: string;
-  target: "person" | "list";
+  target: "person" | "list" | "group" | "household";
   targetId: string;
+  muted?: boolean;
+  channels?: NotificationChannel[];
+}
+export type NotificationChannel = "push" | "email" | "telegram" | "sms";
+export interface BatchDelivery {
+  status: "sent" | "skipped" | "failed";
+  attempts: number;
+  nextAttemptAt?: string;
+}
+export interface NotificationBatch extends Base {
+  userId: string;
+  listId: string;
+  noticeIds: string[];
+  dueAt: string;
+  status: "pending" | "sent" | "failed";
+  destinations?: string[];
+  smsAttemptId?: string;
+  deliveries: Record<string, BatchDelivery>;
+}
+export interface NotificationBatchView {
+  ids: string[];
+  href: string;
 }
 export interface DiscussionWatch extends Base {
   userId: string;
@@ -250,6 +275,7 @@ export interface NotificationPage {
   nextCursor?: string;
 }
 export interface Preferences extends Base {
+  notificationDetails?: Partial<Record<NotificationChannel, boolean>>;
   recipientUpdates: boolean;
   userId: string;
   email: boolean;
@@ -318,6 +344,7 @@ export interface Records {
   comments: Comment;
   exchanges: Exchange;
   notices: Notice;
+  notificationBatches: NotificationBatch;
   follows: Follow;
   watches: DiscussionWatch;
   pushDevices: PushDevice;
@@ -348,6 +375,7 @@ export const kinds: Kind[] = [
   "comments",
   "exchanges",
   "notices",
+  "notificationBatches",
   "follows",
   "watches",
   "pushDevices",

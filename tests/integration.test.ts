@@ -451,7 +451,11 @@ describe.skipIf(!url)("PostgreSQL transaction integrity", () => {
         following: true,
       });
     });
-    const body = { listId: fresh.id, title: "Atomic wish" };
+    const body = {
+      listId: fresh.id,
+      title: "Atomic wish",
+      priority: "most-wanted",
+    };
     const first = (await storage.transact((s) =>
       idempotent(s, a, "notification_integrity_0001", "items.create", body),
     )) as { id: string };
@@ -475,7 +479,32 @@ describe.skipIf(!url)("PostgreSQL transaction integrity", () => {
     ).rejects.toThrow("Abort notification");
     const after = await storage.readState();
     expect(after.items.some((i) => i.title === "Rolled back wish")).toBe(false);
-    expect(after.notices.filter((n) => n.listId === fresh.id)).toHaveLength(1);
+    const notices = after.notices.filter((n) => n.listId === fresh.id);
+    expect(notices).toHaveLength(1);
+    expect(notices[0].prioritySnapshot).toBe("most-wanted");
+    const batches = after.notificationBatches.filter(
+      (b) => b.listId === fresh.id,
+    );
+    expect(batches).toHaveLength(1);
+    expect(batches[0].noticeIds).toEqual([notices[0].id]);
+    expect(notices[0].batchId).toBe(batches[0].id);
+    await storage.transact((s) => {
+      const batch = s.notificationBatches.find((b) => b.id === batches[0].id)!;
+      batch.deliveries.email = { status: "sent", attempts: 1 };
+      batch.deliveries.sms = {
+        status: "failed",
+        attempts: 1,
+        nextAttemptAt: "2026-10-27T12:16:00.000Z",
+      };
+    });
+    expect(
+      (await storage.readState()).notificationBatches.find(
+        (b) => b.id === batches[0].id,
+      )?.deliveries,
+    ).toMatchObject({
+      email: { status: "sent" },
+      sms: { status: "failed", attempts: 1 },
+    });
   });
   it("persists a failed job across worker restart and completes its retry", async () => {
     const { PgBoss } = await import("pg-boss");

@@ -2,6 +2,32 @@ import { describe, expect, it } from "vitest";
 import { renderEmail } from "../src/server/email";
 
 describe("transactional email templates", () => {
+  it("escapes opted-in wish-list summaries in subjects, previews and bodies", () => {
+    const text = 'John added something to "Birthday <script> & wishes".';
+    const mail = renderEmail(
+      {
+        kind: "update",
+        text,
+        wishlistPreview: text,
+        actionPath: "/notifications/batches/example",
+      },
+      "https://hint.example.test",
+    );
+    expect(mail.subject).toBe(text);
+    expect(mail.text).toContain(text);
+    expect(mail.html).not.toContain("<script>");
+    expect(mail.html).toContain("&lt;script&gt; &amp; wishes");
+    const generic = renderEmail(
+      {
+        kind: "update",
+        text: "Open Little Hint to see it.",
+        actionPath: "/notifications/batches/example",
+      },
+      "https://hint.example.test",
+    );
+    expect(generic.subject).toBe("A little update from Little Hint");
+    expect(generic.html).not.toContain("John");
+  });
   it("makes the code selectable and keeps it out of preview copy", () => {
     const mail = renderEmail(
       { kind: "sign-in", code: "012345" },

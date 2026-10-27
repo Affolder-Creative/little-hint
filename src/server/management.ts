@@ -294,12 +294,24 @@ function purge(s: State, kind: TrashKind, id: string) {
   s.comments = s.comments.filter((c) => !removed.has(c.itemId));
   s.follows = s.follows.filter((f) => !removed.has(f.targetId));
   s.watches = s.watches.filter((w) => !removed.has(w.itemId));
+  s.notificationBatches = s.notificationBatches.filter(
+    (b) => !removed.has(b.listId),
+  );
   s.notices = s.notices.filter(
     (n) =>
       ![n.itemId, n.listId, n.exchangeId, n.groupEventId].some(
         (ref) => ref && removed.has(ref),
       ),
   );
+  const noticeIds = new Set(s.notices.map((n) => n.id));
+  for (const batch of s.notificationBatches) {
+    const remaining = batch.noticeIds.filter((id) => noticeIds.has(id));
+    if (remaining.length !== batch.noticeIds.length) {
+      batch.noticeIds = remaining;
+      if (!remaining.length) batch.status = "sent";
+      batch.revision++;
+    }
+  }
   for (const o of s.organization) {
     const next = o.order.filter((id) => !removed.has(id));
     if (next.length !== o.order.length) {

@@ -1,3 +1,4 @@
+import { FollowButton } from "./Notifications";
 import { useState } from "react";
 import { Plus } from "lucide-react";
 import type { Group, Household } from "../shared/model";
@@ -101,9 +102,9 @@ function MembershipForm({
         ))}
       </fieldset>
       <p className="muted">
-        Choose any number, or leave all unchecked. These choices only affect
-        future drawings that avoid household matches. They do not change list
-        access.
+        Choose any number, or leave all unchecked. These choices affect future
+        drawings that avoid household matches and updates for people following a
+        household. They do not change list access.
       </p>
     </Form>
   );
@@ -135,8 +136,9 @@ export function HouseholdSettings({ group }: { group: Group }) {
       </div>
       <p className="muted">
         Households help prevent people from drawing each other in gift
-        exchanges. They do not change who can see shared wish lists. A person
-        can belong to more than one household.
+        exchanges. You can follow a household for new items on its members’
+        lists shared with this family group. Households do not change who can
+        see shared wish lists. A person can belong to more than one household.
       </p>
       {!households.length && (
         <p className="muted">
@@ -152,6 +154,7 @@ export function HouseholdSettings({ group }: { group: Group }) {
             <strong>{h.name}</strong>
             <p>{householdLabel(h, world, false)}</p>
           </div>
+          <FollowButton target="household" targetId={h.id} />
           {owner && (
             <div className="actions">
               <button

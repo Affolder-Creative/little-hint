@@ -1,4 +1,4 @@
-import { topicEnabled } from "./activity";
+import { wishlistEligible, topicEnabled } from "./activity";
 import { parsePhoneNumberFromString } from "libphonenumber-js/min";
 import nodemailer from "nodemailer";
 import { existsSync } from "node:fs";
@@ -108,7 +108,7 @@ export async function twilioCall(
 export async function deliverNotice(id: string) {
   let s = await readState();
   let n = s.notices.find((n) => n.id === id);
-  if (!n || n.status === "sent") return;
+  if (!n || n.batchId || n.status === "sent") return;
   if (!noticeAllowed(s, n)) {
     await transact((s) => {
       const n = s.notices.find((n) => n.id === id);
@@ -141,7 +141,7 @@ export async function deliverNotice(id: string) {
         smsOptOut: false,
       }
     : preferences(s, { id: n.userId, email: user.email, name: user.name });
-  if (!n.inbox && !prefs.events.includes(n.event)) {
+  if (!n.inbox && n.event !== "wishlist" && !prefs.events.includes(n.event)) {
     await transact((s) => {
       const notice = s.notices.find((n) => n.id === id);
       if (notice) notice.status = "sent";
@@ -176,9 +176,11 @@ export async function deliverNotice(id: string) {
         : preferences(s, { id: n.userId, email: user.email, name: user.name });
       if (
         !current[channel] ||
-        !(n.inbox
-          ? topicEnabled(s, n, channel)
-          : current.events.includes(n.event)) ||
+        !(n.event === "wishlist"
+          ? wishlistEligible(s, n, channel)
+          : n.inbox
+            ? topicEnabled(s, n, channel)
+            : current.events.includes(n.event)) ||
         n.delivered.includes(channel)
       )
         continue;

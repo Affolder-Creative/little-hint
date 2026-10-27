@@ -1,3 +1,7 @@
+import {
+  deliverWishlistBatch,
+  pendingWishlistBatches,
+} from "./wishlist-delivery";
 import { processDiscovery } from "./gift-discovery-worker";
 import { pruneDiscovery } from "./gift-discovery";
 import { discoveryConfigForState } from "./settings";
@@ -45,6 +49,20 @@ await boss.createQueue("notification", {
   retryBackoff: true,
   expireInSeconds: 120,
 });
+await boss.createQueue("wishlist-notification", {
+  policy: "exclusive",
+  retryLimit: 5,
+  retryDelay: 60,
+  retryBackoff: true,
+  expireInSeconds: 300,
+});
+await boss.work<{ id: string }>(
+  "wishlist-notification",
+  { batchSize: 1 },
+  async (jobs) => {
+    for (const job of jobs) await deliverWishlistBatch(job.data.id);
+  },
+);
 await boss.createQueue("web-push", {
   policy: "exclusive",
   retryLimit: 2,
@@ -127,13 +145,21 @@ async function dispatch() {
       (j) => j.status === "pending" || j.status === "running",
     ))
       await boss.send("product-import", { id: j.id }, { singletonKey: j.id });
-    for (const n of s.notices.filter((n) => n.status === "pending"))
+    for (const n of s.notices.filter(
+      (n) => !n.batchId && n.status === "pending",
+    ))
       await boss.send("notification", { id: n.id }, { singletonKey: n.id });
     for (const batch of pushConfiguration() ? pendingPushBatches(s) : [])
       await boss.send(
         "web-push",
         { ids: batch.map((n) => n.id) },
         { singletonKey: batch[0].id },
+      );
+    for (const batch of pendingWishlistBatches(s))
+      await boss.send(
+        "wishlist-notification",
+        { id: batch.id },
+        { singletonKey: batch.id },
       );
     await pollTelegram();
   } catch {

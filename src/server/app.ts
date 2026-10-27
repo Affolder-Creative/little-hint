@@ -1,3 +1,8 @@
+import {
+  batchJob,
+  retryWishlistBatch,
+  recordWishlistSmsFailure,
+} from "./wishlist-delivery";
 import { registerGiftDiscovery } from "./gift-discovery-routes";
 import { discoveryJob } from "./gift-discovery";
 import { managementActions, trash } from "./management";
@@ -6,6 +11,7 @@ import {
   mentionCandidates,
   emitActivity,
   notificationEntry,
+  notificationBatchEntry,
 } from "./activity";
 import {
   pushConfiguration,
@@ -223,6 +229,15 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
       const a = await actor(req);
       return giftSummary(await readState(), a, req.params.id);
     },
+  );
+  app.get<{ Params: { id: string } }>(
+    "/api/v1/notifications/batches/:id",
+    async (req) =>
+      notificationBatchEntry(
+        await readState(),
+        await actor(req),
+        req.params.id,
+      ),
   );
   app.get("/api/v1/notifications", async (req) => {
     const a = await actor(req);
@@ -488,24 +503,32 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
         status,
         error,
       })),
-      notifications: s.notices.map((n) => {
-        const failedPush = Object.values(n.pushDeliveries ?? {}).filter(
-          (d) => d.status === "failed",
-        );
-        const terminal = failedPush.some((d) => d.attempts >= 5);
-        return {
-          id: n.id,
-          status: terminal
-            ? "failed"
-            : failedPush.length && !n.pushComplete
-              ? "pending"
-              : n.status,
-          error: terminal
-            ? "Push delivery failed. Check push configuration and retry."
-            : n.error,
-          attempts: Math.max(n.attempts, ...failedPush.map((d) => d.attempts)),
-        };
-      }),
+      notifications: [
+        ...s.notificationBatches.map(batchJob),
+        ...s.notices
+          .filter((n) => !n.batchId)
+          .map((n) => {
+            const failedPush = Object.values(n.pushDeliveries ?? {}).filter(
+              (d) => d.status === "failed",
+            );
+            const terminal = failedPush.some((d) => d.attempts >= 5);
+            return {
+              id: n.id,
+              status: terminal
+                ? "failed"
+                : failedPush.length && !n.pushComplete
+                  ? "pending"
+                  : n.status,
+              error: terminal
+                ? "Push delivery failed. Check push configuration and retry."
+                : n.error,
+              attempts: Math.max(
+                n.attempts,
+                ...failedPush.map((d) => d.attempts),
+              ),
+            };
+          }),
+      ],
     };
   });
   app.post("/api/v1/admin/jobs/retry", async (req) => {
@@ -513,6 +536,7 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
     const b = z.object({ id: z.string().uuid() }).parse(req.body);
     return transact((s) => {
       if (!isAdmin(s, a)) fail(403, "Administrator access required.");
+      if (retryWishlistBatch(s, b.id)) return { ok: true };
       const j = s.notices.find(
         (n) =>
           n.id === b.id &&
@@ -592,6 +616,14 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
           p.smsOptOut = true;
           p.revision++;
         }
+      const batchId = new URL(req.url, appUrl).searchParams.get("batch");
+      if (batchId && ["failed", "undelivered"].includes(body.MessageStatus)) {
+        recordWishlistSmsFailure(
+          s,
+          batchId,
+          new URL(req.url, appUrl).searchParams.get("attempt"),
+        );
+      }
       const id = new URL(req.url, appUrl).searchParams.get("notice");
       if (id && ["failed", "undelivered"].includes(body.MessageStatus)) {
         const n = s.notices.find((n) => n.id === id);

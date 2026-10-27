@@ -21,7 +21,7 @@ not share the new member's existing private lists automatically.
 Family groups own invitations, membership, shared-list access, and exchanges.
 An account may own or join multiple family groups. Households are optional
 records inside one family group. They organize people and supply exchange
-exclusions; joining a household never grants access to a family group or list.
+exclusions. Members of the family group may also follow a household for new items on its members' lists shared with that group. Joining or following a household never grants access to a family group or list.
 
 Each household has an ID and display name. Each membership links a person ID
 to a household ID. Duplicate names are allowed, including within one group.

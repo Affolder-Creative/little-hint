@@ -95,6 +95,48 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllGlobals());
 describe("notification privacy and recovery", () => {
+  it.each([false, true])(
+    "uses custom follow channels for legacy notices when the default topic is off, inbox=%s",
+    async (inbox) => {
+      const f = fixture();
+      const list = f.s.lists[0];
+      Object.assign(f.notice, {
+        event: "wishlist",
+        listId: list.id,
+        inbox,
+      });
+      command(f.s, f.actors[1], "follows.update", {
+        target: "list",
+        targetId: list.id,
+        following: true,
+        channels: ["email"],
+      });
+      await deliverNotice(f.notice.id);
+      expect(mock.sendMail).toHaveBeenCalledOnce();
+      expect(mock.fetch).not.toHaveBeenCalled();
+    },
+  );
+  it("finishes legacy wish-list notices with generic copy even after preview opt-in", async () => {
+    const f = fixture();
+    const list = f.s.lists[0];
+    Object.assign(f.notice, { event: "wishlist", listId: list.id });
+    command(f.s, f.actors[1], "follows.update", {
+      target: "list",
+      targetId: list.id,
+      following: true,
+    });
+    f.s.preferences[0].events = ["wishlist"];
+    f.s.preferences[0].notificationDetails = { email: true, telegram: true };
+    await deliverNotice(f.notice.id);
+    expect(mock.sendMail).toHaveBeenCalledOnce();
+    expect(mock.sendMail.mock.calls[0][0].subject).toBe(
+      "A little update from Little Hint",
+    );
+    expect(mock.sendMail.mock.calls[0][0].text).not.toContain(
+      "Private gift description",
+    );
+    expect(f.notice.status).toBe("sent");
+  });
   it("suppresses a queued notice when its recipient cannot see the event", async () => {
     const f = fixture();
     f.notice.userId = f.actors[0].id;

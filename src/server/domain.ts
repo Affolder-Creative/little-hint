@@ -11,6 +11,7 @@ import {
   emitActivity,
   emitGiftActivity,
   followsItem,
+  followVisible,
   inbox,
   accountIds,
   watchesItem,
@@ -645,13 +646,7 @@ export function world(s: State, a: Actor): World {
     preferences: preferences(s, a),
     notificationCount: inbox(s, a).unreadCount,
     follows: s.follows.filter(
-      (f) =>
-        f.userId === a.id &&
-        (f.target === "list"
-          ? s.lists.some((l) => l.id === f.targetId && listVisible(s, a, l))
-          : s.people.some(
-              (p) => p.id === f.targetId && personVisible(s, a, p),
-            )),
+      (f) => f.userId === a.id && followVisible(s, a, f),
     ),
     watches: s.items
       .filter((i) => itemVisible(s, a, i) && !recipient(s, a, i))
@@ -835,6 +830,9 @@ export function command(
         (m) => m.householdId !== p.id,
       );
       s.households = s.households.filter((h) => h.id !== p.id);
+      s.follows = s.follows.filter(
+        (f) => f.target !== "household" || f.targetId !== p.id,
+      );
       s.people.filter((p) => affected.has(p.id)).forEach(touch);
       return { ok: true };
     }
@@ -1908,6 +1906,14 @@ export function command(
     case "preferences.update": {
       const p = z
         .object({
+          notificationDetails: z
+            .object({
+              push: z.boolean(),
+              email: z.boolean(),
+              telegram: z.boolean(),
+              sms: z.boolean(),
+            })
+            .optional(),
           email: z.boolean(),
           recipientUpdates: z.boolean().default(false),
           telegram: z.boolean(),
