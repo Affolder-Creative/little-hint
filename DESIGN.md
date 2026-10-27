@@ -226,7 +226,7 @@ The landing page keeps the approved artwork at 240px wide on desktop and 190px o
 
 ### Transactional email
 
-Transactional emails use a 560px maximum-width, table-based layout with inline styles, the embedded 180px horizontal logo, a 26px heading, and a warm paper panel. Sign-in codes are selectable 32px text. Invitations and updates use a single action; previews remain generic to preserve surprises. Plain-text alternatives carry the same information.
+Transactional emails use a 560px maximum-width, table-based layout with inline styles, the embedded 180px horizontal logo, a 26px heading, and a warm paper panel. Sign-in codes are selectable 32px text. Invitations and updates use a single action; previews remain generic unless wish-list details are explicitly enabled for email. Plain-text alternatives carry the same information.
 
 ### Brand assets
 
@@ -255,9 +255,9 @@ Optional gift notes, price, quantity, tags and photos share a disclosure below t
 
 The header bell opens a full notification page without adding a sixth mobile navigation item. Flat divided rows show readable activity, optional authorized context, a timestamp, and explicit read controls. Unread rows use the soft theme color plus weight and text controls. All and Unread filters precede the history.
 
-Person and list headers offer follow controls. Private notes offer watching and a keyboard-accessible name picker that only lists accounts allowed to read the note. Notification settings keep channel setup beside controls and provide topic-by-channel choices. Push permission is requested only from the enable button; unsupported devices retain the inbox.
+Person, list, and family-group headers and household rows offer follow controls. Following opens a compact settings dialog for inherited/custom channels and stopping the follow. Lists also offer an absolute mute. Private notes offer watching and a keyboard-accessible name picker that only lists accounts allowed to read the note. Notification settings keep channel setup beside controls and provide topic-by-channel choices. Wish-list choices are labeled default channels. A Following and muted lists section uses flat divided rows with target type, inherited/custom channels, and edit controls. Custom settings resolve list, person, household, then group; equal-level choices combine. Empty custom channels mean inbox only. Push permission is requested only from the enable button; unsupported devices retain the inbox.
 
-Push titles identify the activity category, such as New invitation, Ownership request, or Exchange update. The platform supplies the app attribution, so the title does not repeat Little Hint. Normal notification bodies say “Open Little Hint to see the details.” Test notifications use Notifications are ready with “This test notification reached your device.” Missing or unrecognized categories use New activity. Previews never include names, gift details, amounts, or private note text.
+Push titles identify the activity category, such as New invitation, Ownership request, or Exchange update. The platform supplies the app attribution, so the title does not repeat Little Hint. Normal notification bodies say “Open Little Hint to see the details.” Test notifications use Notifications are ready with “This test notification reached your device.” Missing or unrecognized categories use New activity. With the per-channel Show details in notifications option enabled, wish-list previews may show names, list names, and priorities. These options default off and include examples and a lock-screen disclosure. Item titles, amounts, buying plans, and private note text remain excluded. Other categories remain generic.
 
 ### Gift preferences and discovery
 

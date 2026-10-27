@@ -225,3 +225,77 @@ test("a malformed push cannot change the badge or expose a notification", async 
   assert.equal(h.notifications.length, 0);
   assert.deepEqual(h.badges, []);
 });
+
+test("opted-in wish-list batches show bounded previews and open authorized batch paths", async () => {
+  const h = harness();
+  const batchId = "22222222-2222-2222-2222-222222222222";
+  await h.message({ type: "BIND_PUSH", deviceId: "device" });
+  await h.push({
+    deviceId: "device",
+    category: "wishlist",
+    batchId,
+    wishlistPreview: { version: 1, body: 'John added 3 items to "Birthday".' },
+  });
+  assert.equal(h.notifications[0].title, "Wish list update");
+  assert.equal(h.notifications[0].body, 'John added 3 items to "Birthday".');
+  assert.equal(
+    h.notifications[0].data.path,
+    `/notifications/batches/${batchId}`,
+  );
+  await h.run("notificationclick", {
+    notification: { ...h.notifications[0], close() {} },
+  });
+  assert.deepEqual(h.navigations, [`/notifications/batches/${batchId}`]);
+});
+
+test("detailed previews stay generic for other categories and malformed payloads", async () => {
+  const h = harness();
+  await h.message({ type: "BIND_PUSH", deviceId: "device" });
+  const batchId = "22222222-2222-2222-2222-222222222222";
+  for (const payload of [
+    {
+      category: "purchase",
+      batchId,
+      wishlistPreview: { version: 1, body: "PRIVATE" },
+    },
+    {
+      category: "wishlist",
+      batchId: "https://evil.test",
+      wishlistPreview: { version: 1, body: "PRIVATE" },
+    },
+    {
+      category: "wishlist",
+      batchId,
+      wishlistPreview: { version: 2, body: "PRIVATE" },
+    },
+    {
+      category: "wishlist",
+      batchId,
+      wishlistPreview: { version: 1, body: "x".repeat(401) },
+    },
+    {
+      category: "wishlist",
+      batchId,
+      wishlistPreview: { version: 1, body: "PRIVATE\n" },
+    },
+    {
+      category: "wishlist",
+      batchId,
+      wishlistPreview: { version: 1, body: {} },
+    },
+    { category: "wishlist", batchId },
+  ]) {
+    await h.push({ deviceId: "device", ...payload });
+    assert.equal(
+      h.notifications.at(-1).body,
+      "Open Little Hint to see the details.",
+    );
+  }
+  await h.push({
+    deviceId: "previous-account",
+    category: "wishlist",
+    batchId,
+    wishlistPreview: { version: 1, body: "PRIVATE" },
+  });
+  assert.equal(h.notifications.length, 7);
+});

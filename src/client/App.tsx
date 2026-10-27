@@ -1,3 +1,4 @@
+import { FollowingSettings } from "./FollowSettings";
 import { GiftDiscoveryPage, OfferLinks } from "./GiftDiscovery";
 import { GiftDiscoveryAdmin } from "./GiftDiscoveryAdmin";
 import {
@@ -41,6 +42,7 @@ import {
   FollowButton,
   WatchButton,
   NotificationTopics,
+  NotificationDetails,
   PushSetup,
   PushLifecycle,
   clearPushBinding,
@@ -428,6 +430,10 @@ export function App() {
               <Routes>
                 <Route path="/" element={<Home />} />
                 <Route path="/notifications" element={<NotificationCenter />} />
+                <Route
+                  path="/notifications/batches/:id"
+                  element={<NotificationOpen batch />}
+                />
                 <Route
                   path="/notifications/:id"
                   element={<NotificationOpen />}
@@ -2499,6 +2505,7 @@ function SettingsPage({
                       : "You’re a member"}
                   </span>
                 </div>
+                <FollowButton target="group" targetId={g.id} />
                 <nav
                   className="group-settings-nav"
                   aria-label="Family group settings"
@@ -2705,6 +2712,12 @@ function SettingsPage({
               submit="Save notification preferences"
               onSubmit={async (f) => {
                 await mutate("preferences", {
+                  notificationDetails: Object.fromEntries(
+                    ["push", "email", "telegram", "sms"].map((c) => [
+                      c,
+                      f.get(`details-${c}`) === "on",
+                    ]),
+                  ),
                   email: f.get("email") === "on",
                   telegram: f.get("telegram") === "on",
                   sms: f.get("sms") === "on",
@@ -2780,6 +2793,7 @@ function SettingsPage({
                 )}
               </fieldset>
               <NotificationTopics />
+              <NotificationDetails />
               <label className="check">
                 <input
                   type="checkbox"
@@ -2790,11 +2804,12 @@ function SettingsPage({
               </label>
               <p className="muted">
                 Buying plans stay hidden on lists set to Keep it a surprise.
-                External alerts keep gift details private. Your inbox shows only
-                updates you can access.
+                External alerts show wish-list details only when you enable
+                previews. Your inbox shows only updates you can access.
               </p>
             </Form>
             <PushSetup />
+            <FollowingSettings />
           </section>
           <section
             className="settings-section"

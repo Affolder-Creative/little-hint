@@ -4,6 +4,7 @@ export type EmailMessage =
       kind: "invitation" | "account-invitation" | "update";
       text: string;
       actionPath: string;
+      wishlistPreview?: string;
     };
 
 const escapeHtml = (value: string) =>
@@ -33,23 +34,29 @@ export function renderEmail(message: EmailMessage, appUrl: string) {
   const isCode = message.kind === "sign-in";
   const invitation = message.kind === "invitation";
   const accountInvitation = message.kind === "account-invitation";
-  const subject = isCode
-    ? "Your Little Hint sign-in code"
-    : invitation || accountInvitation
-      ? "You're invited to Little Hint"
-      : "A little update from Little Hint";
+  const wishlistPreview =
+    !isCode && message.kind === "update" ? message.wishlistPreview : undefined;
+  const subject =
+    wishlistPreview ??
+    (isCode
+      ? "Your Little Hint sign-in code"
+      : invitation || accountInvitation
+        ? "You're invited to Little Hint"
+        : "A little update from Little Hint");
   const heading = isCode
     ? "Your sign-in code"
     : invitation || accountInvitation
       ? "You're invited"
       : "A little update for you";
-  const preview = isCode
-    ? "Use this code to sign in to Little Hint. It is valid for 10 minutes."
-    : accountInvitation
-      ? "Start your own wish list. You can choose who to share it with later."
-      : invitation
-        ? "Your people are waiting. Open your Little Hint invitation."
-        : "Open Little Hint to see what's new.";
+  const preview =
+    wishlistPreview ??
+    (isCode
+      ? "Use this code to sign in to Little Hint. It is valid for 10 minutes."
+      : accountInvitation
+        ? "Start your own wish list. You can choose who to share it with later."
+        : invitation
+          ? "Your people are waiting. Open your Little Hint invitation."
+          : "Open Little Hint to see what's new.");
   const text = isCode
     ? `Your Little Hint sign-in code is ${message.code}. It expires in 10 minutes. If you did not request it, ignore this email.`
     : `${message.text} ${url.href}`;

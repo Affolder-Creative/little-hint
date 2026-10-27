@@ -1,4 +1,4 @@
-import { topicEnabled } from "./activity";
+import { wishlistEligible, topicEnabled } from "./activity";
 import { parsePhoneNumberFromString } from "libphonenumber-js/min";
 import nodemailer from "nodemailer";
 import { existsSync } from "node:fs";
@@ -108,7 +108,7 @@ export async function twilioCall(
 export async function deliverNotice(id: string) {
   let s = await readState();
   let n = s.notices.find((n) => n.id === id);
-  if (!n || n.status === "sent") return;
+  if (!n || n.batchId || n.status === "sent") return;
   if (!noticeAllowed(s, n)) {
     await transact((s) => {
       const n = s.notices.find((n) => n.id === id);
@@ -175,6 +175,7 @@ export async function deliverNotice(id: string) {
         ? prefs
         : preferences(s, { id: n.userId, email: user.email, name: user.name });
       if (
+        (n.event === "wishlist" && !wishlistEligible(s, n, channel)) ||
         !current[channel] ||
         !(n.inbox
           ? topicEnabled(s, n, channel)

@@ -11,6 +11,13 @@ import { useApp } from "./context";
 import { Empty, Header } from "./components";
 import { actionError } from "./copy";
 import type { NotificationPage, NotificationView } from "../shared/model";
+import {
+  FollowSettings,
+  useFollowSettings,
+  type FollowTarget,
+} from "./FollowSettings";
+import type { NotificationBatchView } from "../shared/model";
+import { notificationChannels, channelLabels } from "../shared/follows";
 import { defaultPushEvents, notificationTopics } from "../shared/notifications";
 
 type PushInfo = {
@@ -220,20 +227,36 @@ export function NotificationCenter() {
     </>
   );
 }
-export function NotificationOpen() {
+export function NotificationOpen({ batch = false }: { batch?: boolean }) {
   const { id } = useParams();
   const { mutate } = useApp();
   const navigate = useNavigate();
   const query = useQuery({
-    queryKey: ["notification", id],
-    queryFn: () => api<NotificationView>(`notifications/${id}`),
+    queryKey: ["notification", batch, id],
+    queryFn: async () => {
+      if (batch) {
+        const value = await api<NotificationBatchView>(
+          `notifications/batches/${id}`,
+        );
+        return { id: id!, href: value.href, readIds: value.ids };
+      }
+      const value = await api<NotificationView>(`notifications/${id}`);
+      return { ...value, readIds: [value.id] };
+    },
     retry: false,
   });
   const [error, setError] = useState("");
   useEffect(() => {
     if (!query.data) return;
     let cancelled = false;
-    mutate("notifications/read", { ids: [query.data.id], read: true })
+    (async () => {
+      const ids = query.data!.readIds;
+      for (let start = 0; start < ids.length; start += 100)
+        await mutate("notifications/read", {
+          ids: ids.slice(start, start + 100),
+          read: true,
+        });
+    })()
       .then(() => {
         if (!cancelled) navigate(query.data!.href, { replace: true });
       })
@@ -241,7 +264,7 @@ export function NotificationOpen() {
     return () => {
       cancelled = true;
     };
-  }, [query.data?.id]);
+  }, [query.data?.id, batch]);
   return query.isError || error ? (
     <Empty
       page
@@ -259,36 +282,80 @@ export function NotificationOpen() {
     <p role="status">Opening your update…</p>
   );
 }
-export function FollowButton({
-  target,
-  targetId,
-}: {
-  target: "person" | "list";
-  targetId: string;
-}) {
-  const { world, mutate, toast } = useApp();
-  const following =
-    world.follows?.some(
-      (f) => f.target === target && f.targetId === targetId,
-    ) ?? false;
+export function FollowButton({ target, targetId }: FollowTarget) {
+  const { mutate, toast, open } = useApp();
+  const { direct, effective } = useFollowSettings({ target, targetId });
+  const following = effective.following;
   return (
     <AsyncButton
       action={async () => {
-        await mutate("follows", { target, targetId, following: !following });
-        toast(
-          following
-            ? "Updates turned off."
-            : "You’ll get updates when new wish-list items are added.",
-        );
+        if (direct || following) {
+          open(
+            "Notification settings",
+            <FollowSettings target={target} targetId={targetId} />,
+          );
+          return;
+        }
+        await mutate("follows", { target, targetId, following: true });
+        toast("You’ll get updates when new wish-list items are added.");
       }}
     >
-      {following ? <Check size={17} /> : <Bell size={17} />}
-      {following
-        ? "Following"
-        : target === "person"
-          ? "Follow person"
-          : "Follow wish list"}
+      {direct?.muted ? (
+        <BellOff size={17} />
+      ) : following ? (
+        <Check size={17} />
+      ) : (
+        <Bell size={17} />
+      )}
+      {direct?.muted
+        ? "List muted"
+        : following
+          ? "Following"
+          : target === "person"
+            ? "Follow person"
+            : target === "group"
+              ? "Follow family group"
+              : target === "household"
+                ? "Follow household"
+                : "Follow wish list"}
     </AsyncButton>
+  );
+}
+export function NotificationDetails() {
+  const { world } = useApp();
+  const [details, setDetails] = useState(
+    world.preferences.notificationDetails ?? {},
+  );
+  return (
+    <fieldset className="choice-group notification-details">
+      <legend>Show details in notifications</legend>
+      <p className="muted">
+        Choose where previews may show names, list names, and priorities outside
+        Little Hint, including on a lock screen. Delivered previews cannot be
+        recalled. Private gift plans and notes stay generic.
+      </p>
+      {notificationChannels.map((c) => (
+        <div key={c}>
+          <label className="check">
+            <input
+              type="checkbox"
+              name={`details-${c}`}
+              checked={details[c] ?? false}
+              onChange={(e) =>
+                setDetails((d) => ({ ...d, [c]: e.target.checked }))
+              }
+            />
+            {channelLabels[c]}
+          </label>
+          <p className="muted">
+            Example:{" "}
+            {details[c]
+              ? 'John added 3 items to "Birthday", including 1 marked Most wanted.'
+              : "Open Little Hint to see the details."}
+          </p>
+        </div>
+      ))}
+    </fieldset>
   );
 }
 export function WatchButton({ itemId }: { itemId: string }) {
@@ -310,12 +377,16 @@ export function NotificationTopics() {
   return (
     <div className="notification-topics channel-topics">
       <p className="muted">
-        Relevant updates always appear in your inbox. Choose which ones also
-        reach you elsewhere. Push applies to devices you enable below.
+        Relevant updates appear in your inbox. Choose which ones also reach you
+        elsewhere. Push applies to devices you enable below.
       </p>
       {notificationTopics.map((topic) => (
         <fieldset className="choice-group" key={topic.id}>
-          <legend>{topic.label}</legend>
+          <legend>
+            {topic.id === "wishlist"
+              ? "New wish-list items: default channels"
+              : topic.label}
+          </legend>
           <div className="topic-channels">
             {(["push", "email", "telegram", "sms"] as const).map((channel) => (
               <label className="check" key={channel}>
@@ -394,8 +465,8 @@ export function PushSetup() {
     <section className="push-setup" aria-labelledby="push-title">
       <h3 id="push-title">Push notifications</h3>
       <p>
-        Get an alert on this device when something needs your attention.
-        Previews keep gift details private.
+        Get an alert on this device when something needs your attention. Choose
+        which wish-list details appear using the preview settings above.
       </p>
       {info.isPending ? (
         <p role="status">Checking device setup…</p>

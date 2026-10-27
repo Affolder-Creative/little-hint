@@ -7,6 +7,10 @@ import type {
   NotificationView,
   NotificationPage,
   Mention,
+  Follow,
+  NotificationChannel,
+  NotificationBatch,
+  NotificationBatchView,
 } from "../shared/model";
 import {
   controls,
@@ -19,6 +23,12 @@ import {
   fail,
 } from "./domain";
 import { defaultPushEvents, notificationTopics } from "../shared/notifications";
+import {
+  matchingFollows,
+  resolveFollows,
+  notificationChannels,
+} from "../shared/follows";
+import { wishlistCopy } from "../shared/wishlist-copy";
 import { listIsArchived } from "../shared/list-dates";
 
 const actor = (s: State, id: string): Actor => ({
@@ -112,18 +122,123 @@ export function validateMentions(
     end = m.end;
   }
 }
-export function followsItem(s: State, userId: string, item: Item) {
+export function followVisible(
+  s: State,
+  a: Actor,
+  f: Pick<Follow, "target" | "targetId">,
+) {
+  if (f.target === "list")
+    return s.lists.some((l) => l.id === f.targetId && listVisible(s, a, l));
+  if (f.target === "person")
+    return s.people.some(
+      (p) =>
+        p.id === f.targetId &&
+        (controllers(p).includes(a.id) ||
+          s.groups.some(
+            (g) =>
+              g.memberIds.includes(a.id) &&
+              controllers(p).some((id) => g.memberIds.includes(id)),
+          )),
+    );
+  const groupId =
+    f.target === "group"
+      ? f.targetId
+      : s.households.find((h) => h.id === f.targetId)?.groupId;
+  return s.groups.some((g) => g.id === groupId && g.memberIds.includes(a.id));
+}
+export function wishlistFollowing(
+  s: State,
+  userId: string,
+  item: Pick<Item, "listId">,
+) {
   const list = s.lists.find((l) => l.id === item.listId);
-  return (
-    !!list &&
-    s.follows.some(
-      (f) =>
-        f.userId === userId &&
-        (f.target === "list"
-          ? f.targetId === list.id
-          : list.ownerIds.includes(f.targetId)),
-    )
+  const a = actor(s, userId);
+  const p = preferences(s, a);
+  const defaults = notificationChannels.filter((c) =>
+    c === "push"
+      ? (p.pushEvents ?? defaultPushEvents).includes("wishlist")
+      : (p.channelEvents?.[c] ?? p.events).includes("wishlist"),
   );
+  return resolveFollows(
+    list && listVisible(s, a, list)
+      ? matchingFollows(s, s.follows, userId, list)
+      : [],
+    [...defaults],
+  );
+}
+export function followsItem(s: State, userId: string, item: Item) {
+  return wishlistFollowing(s, userId, item).following;
+}
+export function wishlistChannelEnabled(
+  s: State,
+  userId: string,
+  item: Pick<Item, "listId">,
+  channel: NotificationChannel,
+) {
+  const p = preferences(s, actor(s, userId));
+  return (
+    wishlistFollowing(s, userId, item).channels.includes(channel) &&
+    (channel === "push" ||
+      (p[channel] &&
+        (channel !== "telegram" || !!p.chatId) &&
+        (channel !== "sms" || (!!p.phone && p.phoneVerified && !p.smsOptOut))))
+  );
+}
+export function wishlistEligible(
+  s: State,
+  n: Notice,
+  channel: NotificationChannel,
+) {
+  const item = s.items.find((i) => i.id === n.itemId);
+  return (
+    !n.readAt &&
+    activityAllowed(s, n) &&
+    !!item &&
+    !item.archived &&
+    !s.lists.some((l) => l.id === item.listId && listIsArchived(l)) &&
+    (!n.deliveryChannels || n.deliveryChannels.includes(channel)) &&
+    wishlistChannelEnabled(s, n.userId, item, channel)
+  );
+}
+export function wishlistMessage(s: State, notices: Notice[]) {
+  const list = s.lists.find((l) => l.id === notices[0]?.listId);
+  const owner =
+    list?.ownerIds.length === 1
+      ? s.people.find((p) => p.id === list.ownerIds[0])
+      : undefined;
+  const who =
+    owner?.userId && notices.every((n) => n.actorId === owner.userId)
+      ? owner.name
+      : undefined;
+  return wishlistCopy(
+    list?.name ?? "Wish list",
+    who,
+    notices.map((n) => n.prioritySnapshot),
+  );
+}
+export function batchNotices(s: State, batch: NotificationBatch) {
+  return s.notices.filter(
+    (n) =>
+      n.batchId === batch.id &&
+      n.userId === batch.userId &&
+      n.listId === batch.listId &&
+      batch.noticeIds.includes(n.id),
+  );
+}
+export function notificationBatchEntry(
+  s: State,
+  a: Actor,
+  id: string,
+): NotificationBatchView {
+  const batch = s.notificationBatches.find(
+    (b) => b.id === id && b.userId === a.id,
+  );
+  const notices = batch
+    ? batchNotices(s, batch).filter((n) => activityAllowed(s, n))
+    : [];
+  if (!batch || !notices.length)
+    fail(404, "This update is no longer available.");
+  return { ids: notices.map((n) => n.id), href: `/lists/${batch.listId}` };
 }
 export function watchesItem(s: State, userId: string, itemId: string) {
   const explicit = s.watches.find(
@@ -248,21 +363,39 @@ export function emitActivity(
       delivered: [],
       ...refs,
     };
-    if (event === "wishlist") {
-      const batch = s.notices.find(
-        (x) =>
-          x.inbox &&
-          x.userId === userId &&
-          x.event === "wishlist" &&
-          x.listId === n.listId &&
-          x.pushDueAt &&
-          Date.parse(x.pushDueAt) > Date.now() &&
-          !x.pushComplete,
+    if (!activityAllowed(s, n)) continue;
+    if (event === "wishlist" && n.listId) {
+      const item = s.items.find((i) => i.id === n.itemId);
+      if (!item || !followsItem(s, userId, item)) continue;
+      let batch = s.notificationBatches.find(
+        (b) =>
+          b.userId === userId &&
+          b.listId === n.listId &&
+          Date.parse(b.dueAt) > Date.now() &&
+          b.status === "pending",
       );
-      n.pushDueAt =
-        batch?.pushDueAt ?? new Date(Date.now() + 15 * 60_000).toISOString();
+      if (!batch) {
+        batch = {
+          ...stamp(),
+          userId,
+          listId: n.listId,
+          noticeIds: [],
+          dueAt: new Date(Date.now() + 15 * 60_000).toISOString(),
+          status: "pending",
+          deliveries: {},
+        };
+        s.notificationBatches.push(batch);
+      }
+      batch.noticeIds.push(n.id);
+      batch.revision++;
+      n.batchId = batch.id;
+      n.prioritySnapshot = item.priority ?? null;
+      n.deliveryChannels = notificationChannels.filter((c) =>
+        wishlistChannelEnabled(s, userId, item, c),
+      );
+      n.pushDueAt = batch.dueAt;
     }
-    if (activityAllowed(s, n)) s.notices.push(n);
+    s.notices.push(n);
   }
 }
 export function emitGiftActivity(
@@ -297,7 +430,7 @@ function renderActivity(s: State, n: Notice): NotificationView {
   const messages: Record<string, string> = {
     mention: `${who} mentioned you in a private note`,
     discussion: `${who} added a private note`,
-    wishlist: `${who} added an item to a wish list`,
+    wishlist: wishlistMessage(s, [n]),
     reservation: `${who} updated a reservation`,
     purchase: `${who} marked a gift as purchased`,
     invitation: "You have an invitation",
@@ -404,29 +537,25 @@ export function activityCommand(
   if (action === "follows.update") {
     const p = z
       .object({
-        target: z.enum(["person", "list"]),
+        target: z.enum(["person", "list", "group", "household"]),
         targetId: z.string().uuid(),
         following: z.boolean(),
+        muted: z.boolean().optional(),
+        channels: z
+          .array(z.enum(notificationChannels))
+          .max(4)
+          .nullable()
+          .optional(),
       })
       .parse(raw);
-    if (p.following) {
-      const visible =
-        p.target === "list"
-          ? s.lists.some((l) => l.id === p.targetId && listVisible(s, a, l))
-          : s.people.some(
-              (person) =>
-                person.id === p.targetId &&
-                (controls(s, a, person.id) ||
-                  s.groups.some(
-                    (g) =>
-                      g.memberIds.includes(a.id) &&
-                      controllers(person).some((id) =>
-                        g.memberIds.includes(id),
-                      ),
-                  )),
-            );
-      if (!visible) fail(404, "This profile or wish list is not available.");
-    }
+    if (p.muted && (p.target !== "list" || p.following))
+      fail(400, "Only an unfollowed list can be muted.");
+    if ((p.following || p.muted) && !followVisible(s, a, p))
+      fail(404, "This follow target is not available.");
+    const existing = s.follows.find(
+      (f) =>
+        f.userId === a.id && f.target === p.target && f.targetId === p.targetId,
+    );
     s.follows = s.follows.filter(
       (f) =>
         !(
@@ -435,9 +564,17 @@ export function activityCommand(
           f.targetId === p.targetId
         ),
     );
-    if (p.following)
+    if (p.following || p.muted)
       s.follows.push({
-        ...stamp(),
+        ...(existing ?? stamp()),
+        revision: (existing?.revision ?? 0) + 1,
+        muted: p.muted ?? false,
+        channels:
+          p.muted || p.channels === null
+            ? undefined
+            : p.channels === undefined
+              ? existing?.channels
+              : [...new Set(p.channels)],
         userId: a.id,
         target: p.target,
         targetId: p.targetId,
