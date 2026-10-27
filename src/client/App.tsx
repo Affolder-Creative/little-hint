@@ -1,3 +1,17 @@
+import { ListIndex } from "./ListIndex";
+import { priorityLabels, ordered } from "../shared/organization";
+import {
+  ActionMenu,
+  CollectionTools,
+  ItemActions,
+  ReorderForm,
+  RunButton,
+  SortSelect,
+  TrashButton,
+  TrashView,
+  useItemScope,
+  useOrganization,
+} from "./Management";
 import {
   NotificationBell,
   NotificationCenter,
@@ -93,7 +107,6 @@ import { Login } from "./Login";
 import { RevealPolicy, GiftSummaryPanel } from "./ListFeatures";
 import {
   EventPage,
-  GroupEventsSection,
   GroupEventSettings,
   ManagedEventNotice,
 } from "./GroupEvents";
@@ -197,6 +210,8 @@ export function App() {
     await Promise.all([
       client.invalidateQueries({ queryKey: ["world"] }),
       client.invalidateQueries({ queryKey: ["notifications"] }),
+      client.invalidateQueries({ queryKey: ["trash"] }),
+      client.invalidateQueries({ queryKey: ["gift-summary"] }),
     ]);
     return result;
   };
@@ -402,8 +417,7 @@ export function App() {
             </Routes>
           </main>
           <footer className="app-footer">
-            <span>Little Hint</span>
-            <span>Made for the people you know best.</span>
+            <span>Created by Affolder Creative</span>
           </footer>
         </div>
         <MobileNavigation>
@@ -629,6 +643,7 @@ function Browser({
   emptyAction,
   searchLabel = "Search items and gift ideas",
   listNames,
+  listId,
 }: {
   items: GiftView[];
   emptyTitle?: string;
@@ -636,13 +651,27 @@ function Browser({
   emptyAction?: ReactNode;
   searchLabel?: string;
   listNames?: ReadonlyMap<string, string>;
+  listId?: string;
 }) {
   const [search, setSearch] = useState(""),
     [tag, setTag] = useState(""),
     [available, setAvailable] = useState(false);
+  const { world, open, mutate } = useApp();
+  const settings = useOrganization(useItemScope(listId));
+  const parentList = world.lists.find((l) => l.id === listId);
+  const [itemStatus, setItemStatus] = useState("active");
+  useEffect(() => setItemStatus("active"), [listId]);
+  const canManage = parentList?.canEdit || items.some((i) => i.canEdit);
+  const canReorder = !!parentList?.canEdit && !parentList.archived;
+  const visibleItems = parentList?.archived
+    ? items
+    : items.filter(
+        (i) => i.archived === (canManage && itemStatus === "archived"),
+      );
+  const sorted = ordered(visibleItems, settings.sort, parentList?.itemOrder);
   const showAvailability = items.some((item) => item.available !== undefined);
   const tags = [...new Set(items.flatMap((i) => i.tags))].sort();
-  const filtered = items.filter(
+  const filtered = sorted.filter(
     (i) =>
       `${i.title} ${i.recipientNames.join(" ")} ${i.tags.join(" ")}`
         .toLowerCase()
@@ -654,6 +683,54 @@ function Browser({
   );
   return (
     <>
+      {canManage && !parentList?.archived && (
+        <div className="tabs" role="group" aria-label="Item status">
+          {["active", "archived"].map((status) => (
+            <button
+              key={status}
+              aria-pressed={itemStatus === status}
+              onClick={() => setItemStatus(status)}
+            >
+              {status === "active" ? "Active items" : "Archived items"}
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="item-organization">
+        <SortSelect
+          items
+          manualLabel={parentList ? "List order" : "Default order"}
+          sort={settings.sort}
+          change={(sort) => settings.save(sort)}
+        />
+        {canReorder && items.filter((i) => !i.archived).length > 1 && (
+          <button
+            className="button secondary small"
+            onClick={() =>
+              open(
+                "Arrange wish-list items",
+                <ReorderForm
+                  entries={ordered(
+                    items.filter((i) => !i.archived),
+                    "manual",
+                    parentList.itemOrder,
+                  ).map((i) => ({ id: i.id, name: i.title }))}
+                  save={async (order) => {
+                    await mutate("lists/reorder", {
+                      id: parentList.id,
+                      revision: parentList.revision,
+                      order,
+                    });
+                    await settings.save("manual");
+                  }}
+                />,
+              )
+            }
+          >
+            Reorder items
+          </button>
+        )}
+      </div>
       <div className="filters">
         <label className="search">
           <Search size={18} />
@@ -688,18 +765,26 @@ function Browser({
       {filtered.length ? (
         <div className="gift-grid">
           {filtered.map((i) => (
-            <GiftCard
-              key={i.id}
-              gift={i}
-              sourceListName={i.listId ? listNames?.get(i.listId) : undefined}
-            />
+            <div className="gift-card-entry" key={i.id}>
+              <GiftCard
+                gift={i}
+                sourceListName={i.listId ? listNames?.get(i.listId) : undefined}
+              />
+              <ItemActions gift={i} />
+            </div>
           ))}
         </div>
       ) : (
         <Empty
-          title={items.length ? "No matches found" : emptyTitle}
+          title={
+            visibleItems.length
+              ? "No matches found"
+              : itemStatus === "archived"
+                ? "No archived items"
+                : emptyTitle
+          }
           action={
-            items.length ? (
+            visibleItems.length ? (
               <button
                 className="button secondary"
                 onClick={() => {
@@ -710,14 +795,16 @@ function Browser({
               >
                 Clear filters
               </button>
-            ) : (
+            ) : itemStatus === "archived" ? undefined : (
               emptyAction
             )
           }
         >
-          {items.length
+          {visibleItems.length
             ? "Try another search, or clear your filters to see everything."
-            : emptyText}
+            : itemStatus === "archived"
+              ? "Items you archive will appear here. You can restore them whenever you like."
+              : emptyText}
         </Empty>
       )}
     </>
@@ -1024,7 +1111,7 @@ function PersonPage() {
           }
           items={world.items.filter(
             (i) =>
-              !i.archived &&
+              (!i.archived || i.canEdit) &&
               i.recipientIds.includes(id!) &&
               (tab === "wishes" ? !!i.listId : !i.listId),
           )}
@@ -1036,22 +1123,9 @@ function PersonPage() {
 function Lists() {
   const { id } = useParams();
   const { world, open, mutate } = useApp();
-  const [showArchived, setShowArchived] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
   useEffect(() => setShowSummary(false), [id]);
-  const mine = world.lists.filter(
-    (l) => l.canEdit && l.archived === showArchived,
-  );
   const list = world.lists.find((l) => l.id === id);
-  const pending = world.lists.filter((l) =>
-    l.pendingOwnerIds.some((id) =>
-      world.people.some(
-        (p) =>
-          p.id === id &&
-          (p.userId === world.me.id || p.guardians.includes(world.me.id)),
-      ),
-    ),
-  );
   if (id && !list)
     return (
       <Empty
@@ -1102,6 +1176,7 @@ function Lists() {
               >
                 {list.archived ? "Restore list" : "Archive list"}
               </Action>
+              <TrashButton kind="lists" entry={list} />
             </>
           )}
           {list.canEdit && (
@@ -1147,6 +1222,7 @@ function Lists() {
           <GiftSummaryPanel listId={list.id} />
         ) : (
           <Browser
+            listId={list.id}
             items={world.items.filter((i) => i.listId === list.id)}
             searchLabel="Search items"
             emptyTitle={
@@ -1165,110 +1241,9 @@ function Lists() {
         )}
       </>
     );
-  return (
-    <>
-      <Header
-        title="Your wish lists"
-        description="A little hint about what you’d love."
-      >
-        {(mine.length > 0 || showArchived) && (
-          <button
-            className="button"
-            onClick={() => open("A new wish list", <ListForm />)}
-          >
-            <Plus size={17} />
-            Create a list
-          </button>
-        )}
-      </Header>
-      <div className="tabs" role="group" aria-label="List status">
-        <button
-          aria-pressed={!showArchived}
-          onClick={() => setShowArchived(false)}
-        >
-          Active
-        </button>
-        <button
-          aria-pressed={showArchived}
-          onClick={() => setShowArchived(true)}
-        >
-          Archived
-        </button>
-      </div>
-      <GroupEventsSection archived={showArchived} />
-      {!!world.groups.length && <h2>Your lists</h2>}
-      {pending
-        .filter((l) => l.archived === showArchived)
-        .map((l) => (
-          <div className="invitation" key={l.id}>
-            <p>You are invited to share ownership of “{l.name}”.</p>
-            <Action onClick={() => mutate("lists/accept", { id: l.id })}>
-              Accept shared ownership
-            </Action>
-          </div>
-        ))}
-      {mine.length ? (
-        <div className="list-index">
-          {mine.map((l) => (
-            <Link to={`/lists/${l.id}`} key={l.id} className="list-row">
-              <span className="list-symbol">
-                <ListChecks size={24} />
-              </span>
-              <div>
-                <h2>{l.name}</h2>
-                {l.groupEventId && (
-                  <p>
-                    For{" "}
-                    {l.ownerIds
-                      .map(
-                        (id) =>
-                          world.people.find((p) => p.id === id)?.name ??
-                          "Recipient",
-                      )
-                      .join(", ")}
-                  </p>
-                )}
-                <p>
-                  {l.archived
-                    ? "Archived"
-                    : l.groupIds.length
-                      ? l.groupIds
-                          .map(
-                            (id) =>
-                              world.groups.find((g) => g.id === id)?.name ??
-                              "Shared family group",
-                          )
-                          .join(" · ")
-                      : "Only you for now"}
-                </p>
-              </div>
-              <Privacy mode={l.mode} />
-              <ArrowRight size={18} />
-            </Link>
-          ))}
-        </div>
-      ) : showArchived ? (
-        <Empty title="No archived lists">
-          Finished occasions can go here. Restore a list whenever you need it.
-        </Empty>
-      ) : (
-        <Empty
-          title="Start your first wish list"
-          action={
-            <button
-              className="button"
-              onClick={() => open("Your first wish list", <ListForm />)}
-            >
-              Create a list
-            </button>
-          }
-        >
-          Create a wish list, then add a few things you would love.
-        </Empty>
-      )}
-    </>
-  );
+  return <ListIndex />;
 }
+
 function GiftDetail() {
   const noteLocation = useLocation();
   const { id } = useParams();
@@ -1301,7 +1276,7 @@ function GiftDetail() {
     0,
   );
   const choices = world.exchanges.flatMap((e) =>
-    e.status === "drawn"
+    e.status === "drawn" && !e.archived
       ? e.myAssignments
           .filter(([, r]) => gift.recipientIds.includes(r))
           .map(([g]) => ({
@@ -1328,7 +1303,15 @@ function GiftDetail() {
             <Avatar name={gift.recipientNames[0]} small />
             <span>For {gift.recipientNames.join(" & ")}</span>
           </div>
-          <h1>{gift.title}</h1>
+          <div className="section-heading">
+            <h1>{gift.title}</h1>
+            <ItemActions gift={gift} />
+          </div>
+          {gift.listId && gift.priority && (
+            <span className={`item-priority priority-${gift.priority}`}>
+              {priorityLabels[gift.priority]}
+            </span>
+          )}
           <p className="status">
             {gift.archived
               ? "Archived"
@@ -1647,7 +1630,7 @@ function Buying() {
                   )}
                 </div>
                 <div className="actions">
-                  {r.quantity === 1 && r.purchased === 0 && (
+                  {r.item && r.quantity === 1 && r.purchased === 0 && (
                     <Action
                       secondary
                       onClick={async () => {
@@ -1921,6 +1904,27 @@ function Buying() {
 }
 function Exchanges() {
   const { world, open, mutate, toast, close } = useApp();
+  const [view, setView] = useState("active"),
+    [search, setSearch] = useState(""),
+    [group, setGroup] = useState(""),
+    [status, setStatus] = useState("");
+  const settings = useOrganization("exchanges");
+  const location = useLocation();
+  useEffect(() => {
+    const target = world.exchanges.find(
+      (e) => `#exchange-${e.id}` === location.hash,
+    );
+    if (target) setView(target.archived ? "archived" : "active");
+  }, [location.hash]);
+  const rows = world.exchanges.filter(
+    (e) => !!e.archived === (view === "archived"),
+  );
+  const exchanges = ordered(rows, settings.sort, settings.order).filter(
+    (e) =>
+      e.name.toLowerCase().includes(search.toLowerCase()) &&
+      (!group || e.groupId === group) &&
+      (!status || e.status === status),
+  );
   return (
     <>
       <Header
@@ -1936,9 +1940,47 @@ function Exchanges() {
           Create exchange
         </button>
       </Header>
-      {world.exchanges.length ? (
+      <div className="tabs" role="group" aria-label="Exchange view">
+        {["active", "archived", "trash"].map((value) => (
+          <button
+            key={value}
+            aria-pressed={view === value}
+            onClick={() => setView(value)}
+          >
+            {value === "active"
+              ? "Current"
+              : value === "archived"
+                ? "Archived"
+                : "Trash"}
+          </button>
+        ))}
+      </div>
+      {view !== "trash" && (
+        <>
+          <CollectionTools
+            scope="exchanges"
+            rows={rows}
+            search={search}
+            setSearch={setSearch}
+            group={group}
+            setGroup={setGroup}
+          />
+          <label className="exchange-status-filter">
+            Status
+            <select value={status} onChange={(e) => setStatus(e.target.value)}>
+              <option value="">All statuses</option>
+              <option value="draft">Getting ready</option>
+              <option value="drawn">Names drawn</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </label>
+        </>
+      )}
+      {view === "trash" ? (
+        <TrashView kinds={["exchanges"]} />
+      ) : exchanges.length ? (
         <div className="exchange-list">
-          {world.exchanges.map((e) => (
+          {exchanges.map((e) => (
             <section
               className="exchange-panel"
               key={e.id}
@@ -1960,7 +2002,34 @@ function Exchanges() {
                       ? "Getting ready"
                       : "Cancelled"}
                 </span>
+                {e.canManage && (
+                  <ActionMenu name={e.name}>
+                    <RunButton
+                      run={() =>
+                        mutate("exchanges/archive", {
+                          id: e.id,
+                          revision: e.revision,
+                          archived: !e.archived,
+                        })
+                      }
+                    >
+                      {e.archived ? "Restore exchange" : "Archive exchange"}
+                    </RunButton>
+                    {e.status !== "drawn" && (
+                      <TrashButton kind="exchanges" entry={e} />
+                    )}
+                    {e.status === "drawn" && (
+                      <p>Cancel the exchange before moving it to Trash.</p>
+                    )}
+                  </ActionMenu>
+                )}
               </div>
+              {e.archived && (
+                <p className="notice">
+                  This exchange is archived. Assignments and purchase history
+                  are kept.
+                </p>
+              )}
               {e.myAssignments.length > 0 && (
                 <div className="assignments">
                   <h3>Who you’re giving to</h3>
@@ -1985,9 +2054,20 @@ function Exchanges() {
                   ))}
                 </div>
               )}
+              {e.canManage && e.status === "drawn" && (
+                <div className="exchange-notifications">
+                  <p>
+                    Notifications: {e.delivery.sent} processed ·{" "}
+                    {e.delivery.pending} pending · {e.delivery.failed} failed
+                  </p>
+                  <small>
+                    Delivery follows each person’s notification settings.
+                  </small>
+                </div>
+              )}
               {e.canManage && (
                 <div className="actions">
-                  {e.status === "draft" && (
+                  {e.status === "draft" && !e.archived && (
                     <>
                       <ExchangeReview world={world} exchange={e} />
                       <button
@@ -2056,12 +2136,6 @@ function Exchanges() {
                       Cancel exchange
                     </button>
                   )}
-                  {e.status === "drawn" && (
-                    <p className="muted">
-                      Updates: {e.delivery.sent} completed, {e.delivery.pending}{" "}
-                      waiting, {e.delivery.failed} could not be sent.
-                    </p>
-                  )}
                 </div>
               )}
             </section>
@@ -2069,7 +2143,11 @@ function Exchanges() {
         </div>
       ) : (
         <Empty
-          title="Start a little surprise"
+          title={
+            world.exchanges.length
+              ? "No matching exchanges"
+              : "Start a little surprise"
+          }
           action={
             !world.groups.length ? (
               <Link className="button" to="/settings?section=groups">
@@ -2078,8 +2156,9 @@ function Exchanges() {
             ) : undefined
           }
         >
-          Create a family group, choose participants, and let Little Hint draw
-          the names. It works any time of year.
+          {world.exchanges.length
+            ? "Try another search, view, or status."
+            : "Create a family group, choose participants, and let Little Hint draw the names."}
         </Empty>
       )}
     </>

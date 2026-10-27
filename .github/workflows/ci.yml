@@ -138,6 +138,7 @@ jobs:
             sign-in,
             list-features,
             group-events,
+            management,
             polish,
             pwa,
             critique,

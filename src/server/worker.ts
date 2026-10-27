@@ -1,3 +1,4 @@
+import { removeDeletedMedia } from "./media";
 import {
   deliverPushBatch,
   pendingPushBatches,
@@ -88,6 +89,7 @@ async function dispatch() {
   try {
     if (Date.now() - lastCachePrune >= 3600000) {
       await pruneImportCache();
+      await removeDeletedMedia();
       lastCachePrune = Date.now();
     }
     await writeFile("/tmp/little-hint-worker-heartbeat", String(Date.now()));

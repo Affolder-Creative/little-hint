@@ -5,6 +5,28 @@ export interface Base {
   revision: number;
   createdAt: string;
 }
+export type ItemPriority = "most-wanted" | "would-love" | "nice-to-have";
+export type SortOrder =
+  | "manual"
+  | "priority"
+  | "name-asc"
+  | "name-desc"
+  | "price-asc"
+  | "price-desc"
+  | "newest"
+  | "oldest";
+export interface Organization extends Base {
+  userId: string;
+  scope: string;
+  sort: SortOrder;
+  order: string[];
+}
+export type TrashKind = "items" | "lists" | "group-events" | "exchanges";
+export interface TrashEntry extends Base {
+  kind: TrashKind;
+  name: string;
+  deletedAt: string;
+}
 export interface Person extends Base {
   name: string;
   userId?: string;
@@ -35,6 +57,8 @@ export interface Invitation extends Base {
   revoked?: boolean;
 }
 export interface List extends Base {
+  deletedAt?: string;
+  itemOrder?: string[];
   groupEventId?: string;
   name: string;
   ownerIds: string[];
@@ -50,6 +74,7 @@ export interface List extends Base {
   revealExchangeGivers?: boolean;
 }
 export interface GroupEvent extends Base {
+  deletedAt?: string;
   groupId: string;
   participantIds: string[];
   name: string;
@@ -78,6 +103,8 @@ export interface GiftSummary {
   }>;
 }
 export interface Item extends Base {
+  deletedAt?: string;
+  priority?: ItemPriority | null;
   title: string;
   description: string;
   url: string;
@@ -126,6 +153,8 @@ export interface Mention {
   end: number;
 }
 export interface Exchange extends Base {
+  deletedAt?: string;
+  archived?: boolean;
   name: string;
   groupId: string;
   organizerId: string;
@@ -253,10 +282,12 @@ export interface Usage extends Base {
   count: number;
 }
 export interface Media extends Base {
+  deletedAt?: string;
   userId: string;
   file: string;
 }
 export interface Records {
+  organization: Organization;
   media: Media;
   people: Person;
   groups: Group;
@@ -284,6 +315,7 @@ export interface Records {
 export type Kind = keyof Records;
 export type State = { [K in Kind]: Records[K][] };
 export const kinds: Kind[] = [
+  "organization",
   "media",
   "people",
   "groups",
@@ -346,6 +378,7 @@ export interface GiftView extends Omit<Item, "creatorId"> {
   }>;
 }
 export interface World {
+  organization?: Organization[];
   environment?: "production" | "staging" | "development" | "test";
   me: Actor & { admin: boolean };
   contributionHistory: Array<{
