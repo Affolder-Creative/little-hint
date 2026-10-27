@@ -12,7 +12,7 @@ import {
 const url = process.env.TEST_DATABASE_URL;
 describe.skipIf(!url)("PostgreSQL transaction integrity", () => {
   let storage: typeof import("../src/server/db");
-  let groupId: string, itemId: string;
+  let groupId: string, listId: string, itemId: string;
   const a = {
       id: "integration-recipient",
       email: "recipient@example.test",
@@ -37,6 +37,7 @@ describe.skipIf(!url)("PostgreSQL transaction integrity", () => {
     storage = await import("../src/server/db");
     await storage.migrate();
     await storage.pool.query("DELETE FROM app_record");
+    await storage.pool.query("DELETE FROM product_import_cache");
     await storage.transact((s) => {
       const people = [a, b, c].map((a) => ({
         ...stamp(),
@@ -59,6 +60,7 @@ describe.skipIf(!url)("PostgreSQL transaction integrity", () => {
         groupIds: [g.id],
         mode: "surprise",
       }) as any;
+      listId = l.id;
       const i = command(s, a, "items.create", {
         title: "One gift",
         listId: l.id,
@@ -165,7 +167,7 @@ describe.skipIf(!url)("PostgreSQL transaction integrity", () => {
     const gift = (await storage.transact((s) =>
       command(s, a, "items.create", {
         title: "Retry race",
-        listId: s.lists[0].id,
+        listId,
         quantity: 2,
       }),
     )) as any;
@@ -455,5 +457,96 @@ describe.skipIf(!url)("PostgreSQL transaction integrity", () => {
     );
     expect(world(s, friend).groups).toEqual([]);
     expect(world(s, friend).me.admin).toBe(false);
+  });
+  it("reads import jobs by owner and keeps refresh compatible with old jobs", async () => {
+    const job = (await storage.transact((s) =>
+      command(s, a, "imports.create", {
+        url: "https://example.com/product",
+        forceRefresh: true,
+      }),
+    )) as { id: string };
+    expect(await storage.readImport(job.id, a.id)).toMatchObject({
+      forceRefresh: true,
+      status: "pending",
+    });
+    expect(await storage.readImport(job.id, b.id)).toBeUndefined();
+    expect(await storage.readImport("missing", a.id)).toBeUndefined();
+    const legacy = (await storage.transact((s) =>
+      command(s, a, "imports.create", { url: "https://example.com/legacy" }),
+    )) as { id: string };
+    expect(await storage.readImport(legacy.id, a.id)).toMatchObject({
+      forceRefresh: false,
+    });
+  });
+  it("observes settings changed by another database client without a cache TTL", async () => {
+    const oldKey = process.env.SETTINGS_ENCRYPTION_KEY;
+    process.env.SETTINGS_ENCRYPTION_KEY = Buffer.alloc(32, 9).toString(
+      "base64",
+    );
+    const other = new Pool({ connectionString: url });
+    try {
+      const settings = await import("../src/server/settings");
+      await settings.saveSetting("SCRAPING_PROVIDER", "none");
+      expect((await settings.config()).SCRAPING_PROVIDER).toBe("none");
+      await other.query(
+        "UPDATE app_record SET data = jsonb_set(data, '{encrypted}', to_jsonb($1::text)) WHERE kind='settings' AND data->>'key'='SCRAPING_PROVIDER'",
+        [settings.encrypt("auto")],
+      );
+      expect((await settings.config()).SCRAPING_PROVIDER).toBe("auto");
+      await other.query(
+        "DELETE FROM app_record WHERE kind='settings' AND data->>'key'='SCRAPING_PROVIDER'",
+      );
+      expect(
+        (await storage.readSettings()).some(
+          (s) => s.key === "SCRAPING_PROVIDER",
+        ),
+      ).toBe(false);
+    } finally {
+      await other.end();
+      if (oldKey === undefined) delete process.env.SETTINGS_ENCRYPTION_KEY;
+      else process.env.SETTINGS_ENCRYPTION_KEY = oldKey;
+    }
+  });
+  it("persists disposable cache entries, expires them and enforces storage bounds", async () => {
+    const { cachedImport, importCacheLimit, pruneImportCache } =
+      await import("../src/server/import-cache");
+    const { z } = await import("zod");
+    const schema = z.object({ title: z.string() });
+    let calls = 0;
+    const compute = async () => ({ value: { title: `Product ${++calls}` } });
+    expect(await cachedImport("integration-cache", schema, compute)).toEqual({
+      title: "Product 1",
+    });
+    expect(await cachedImport("integration-cache", schema, compute)).toEqual({
+      title: "Product 1",
+    });
+    expect(
+      await cachedImport("integration-cache", schema, compute, true),
+    ).toEqual({ title: "Product 2" });
+    await storage.pool.query(
+      "UPDATE product_import_cache SET expires_at = now() - interval '1 second'",
+    );
+    expect(await cachedImport("integration-cache", schema, compute)).toEqual({
+      title: "Product 3",
+    });
+    await storage.pool.query(
+      "INSERT INTO product_import_cache SELECT 'bulk-' || n, '{}'::jsonb, now() - interval '1 hour', now() + interval '1 hour' FROM generate_series(1, 1010) n",
+    );
+    await pruneImportCache();
+    const { rows } = await storage.pool.query(
+      "SELECT count(*)::int AS count FROM product_import_cache",
+    );
+    expect(rows[0].count).toBe(importCacheLimit);
+    await expect(
+      storage.pool.query(
+        "INSERT INTO product_import_cache VALUES ('oversized', to_jsonb($1::text), now(), now())",
+        ["x".repeat(65537)],
+      ),
+    ).rejects.toMatchObject({ code: "23514" });
+    const state = await storage.readState();
+    expect(JSON.stringify(state)).not.toContain("integration-cache");
+    await storage.pool.query("DELETE FROM product_import_cache");
+    // Additive migration is safe to rerun after populating the database.
+    await storage.migrate();
   });
 });

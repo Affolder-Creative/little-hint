@@ -2,6 +2,24 @@
 
 Status on 2026-10-19: implementation and local validation are complete except the checks explicitly pending below. Deployment-specific activation status belongs in each operator's private record. Do not treat automated local checks as physical-device or live-provider certification.
 
+## Caching and performance checks, 2026-10-27
+
+- Type checking, production build, Compose validation, and 84 tooling tests passed.
+- 231 unit tests passed. The 19 database tests skipped by the ordinary unit run
+  passed separately: 14 PostgreSQL integration tests and five staging-fixture tests.
+- Fifteen browser workflows passed against isolated local PostgreSQL: nine
+  existing end-to-end tests, two built-PWA tests, and four caching tests. Coverage
+  includes targeted polling, explicit refresh, manual-edit protection, late
+  responses, retry/reconnect, cancellation, thumbnail/original selection, private
+  cache exclusion, authentication, and gift privacy. The changed form was also
+  inspected in a browser screenshot.
+- A synthetic 1,000-gift benchmark compared the old full-snapshot read path with
+  the targeted queries on the same database. Setup, measured results, and limits
+  are recorded in [caching measurements](PERFORMANCE.md).
+- Cache/provider tests use controlled responses. These checks do not represent
+  live retailer availability, production cache-hit rates, or a deployment to the
+  persistent staging server.
+
 ## Evidence
 
 - 53 unit tests passed. They cover recipient/buyer/guardian privacy, joint owners, overlapping groups, access removal, archive behavior, quantity reductions, partial purchases, financial reconciliation, duplicates, idempotency, exchange feasibility/exclusions/balancing/anonymity, and notification permission checks.

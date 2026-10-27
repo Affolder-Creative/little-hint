@@ -9,6 +9,7 @@ import { stamp, archiveDueLists } from "./domain";
 import { PgBoss } from "pg-boss";
 import { readState, transact, pool } from "./db";
 import { importProduct } from "./imports";
+import { pruneImportCache } from "./import-cache";
 import { deliverNotice, pollTelegram } from "./notifications";
 import { validateDeployment } from "./deployment";
 validateDeployment();
@@ -53,7 +54,7 @@ await boss.work<{ id: string }>(
         s.imports.find((i) => i.id === j.id)!.status = "running";
       });
       try {
-        const result = await importProduct(j.url, j.userId);
+        const result = await importProduct(j.url, j.userId, j.forceRefresh);
         await transact((s) => {
           const row = s.imports.find((i) => i.id === j.id)!;
           row.status = "complete";
@@ -80,10 +81,15 @@ await boss.work<{ id: string }>(
   },
 );
 let busy = false;
+let lastCachePrune = 0;
 async function dispatch() {
   if (busy) return;
   busy = true;
   try {
+    if (Date.now() - lastCachePrune >= 3600000) {
+      await pruneImportCache();
+      lastCachePrune = Date.now();
+    }
     await writeFile("/tmp/little-hint-worker-heartbeat", String(Date.now()));
     await transact((s) => {
       archiveDueLists(s);

@@ -4,7 +4,7 @@
 
 One TypeScript codebase produces a static React/Vite application and Fastify/worker/CLI entrypoints. Fastify serves the frontend and `/api/v1` on the same origin; Better Auth uses `/api/auth`. React Router handles deep links; TanStack Query keeps authorized state in memory. All writes require an exact configured Origin and authenticated session, except signed provider webhooks.
 
-The browser receives `/api/v1/world`, an authorization-filtered snapshot for this small private installation. It never receives the complete database state. Mutations use resource endpoints listed in `src/server/app.ts`, UUID idempotency keys, and record revisions where edits can conflict. The app re-fetches after writes. Uploaded and imported images remain authenticated API resources.
+The browser receives `/api/v1/world`, an authorization-filtered snapshot for this small private installation. It never receives the complete database state. Mutations use resource endpoints listed in `src/server/app.ts`, UUID idempotency keys, and record revisions where edits can conflict. The app re-fetches after ordinary writes. Import creation instead seeds an account-scoped query for `/api/v1/imports/:id`; only that job polls every two seconds while active. The world stays on its normal twenty-second interval, and retains `imports` for older clients. Uploaded and imported images remain authenticated API resources.
 
 ## Storage and transaction choice
 
@@ -49,6 +49,40 @@ PostgreSQL stores both an application outbox and pg-boss jobs. The worker dispat
 Import failures become editable manual-entry states. An import that dies mid-flight is picked up from the durable running record. Expensive provider calls have UTC daily request caps; they are request counts, not dollar guarantees. Admin entered integration values use AES-256-GCM with random IVs. Nonempty ENV values override encrypted UI values; empty ENV entries are treated as unset. Browser responses include configuration source/presence only, never decrypted values.
 
 Email uses SMTP/TLS with the approved PNG logo and text fallback. Telegram links expire and are single-use; polling checkpoints reside in PostgreSQL. US numbers are parsed and verified with Twilio Verify before SMS opt-in. Signed inbound STOP/status callbacks update preferences/delivery failure state. Integration logs contain generic codes, not secrets or message contents.
+
+## Import cache and media renditions
+
+A separate `product_import_cache` table stores successful public retailer metadata
+and AI enrichment for six hours. It is disposable and never enters `State` or a
+world response. Entries contain no account IDs, user edits, import jobs, or
+protected media URLs. Import jobs and media records remain account-owned on cache
+hits. Parser version, relevant provider configuration, photo policy, and model
+participate in hashed cache keys. The original checked time survives reuse.
+
+Sharing requires a conservative URL key that preserves markets and variants.
+Unknown query parameters, sensitive paths, and signed image URLs bypass sharing;
+redirects participate in the same eligibility check. SSRF validation still runs
+on hits, and every actual fetch retains DNS/redirect checks. Provider failures
+are not cached. Enrichment failures preserve retailer metadata and can retry
+independently. Explicit refresh bypasses stored and in-flight cached work.
+
+Each process deduplicates matching in-flight metadata work; across processes,
+concurrent cold misses can repeat provider calls. Cache writes and pruning use
+a separate short PostgreSQL advisory transaction lock, never the domain lock or
+a lock held during network calls. Storage is bounded to 1,000 entries and 64 KiB
+per entry. Cache errors fall back to normal importing.
+
+Settings reads select only settings rows. Each process reuses decoded values
+only when the current encrypted value still matches, so there is no TTL delay
+for setting changes. Summaries use one database read; staging restrictions and
+environment precedence still apply.
+
+Media keeps its canonical URL and full-size WebP. Cards request `?size=card`, a
+480-pixel WebP rendition. Both routes recheck the same permissions and send
+`Cache-Control: no-store`. New media gets a thumbnail immediately; legacy media
+generates one on the first authorized request. Thumbnail writes are atomic,
+limited to two concurrent conversions per process, and fall back to the original
+on failure. No private images enter the service-worker cache.
 
 ## Import trust boundary
 

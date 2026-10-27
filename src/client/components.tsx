@@ -372,7 +372,13 @@ export function Empty({
     </div>
   );
 }
-export function GiftPhoto({ gift }: { gift: GiftView }) {
+export function GiftPhoto({
+  gift,
+  size = "card",
+}: {
+  gift: GiftView;
+  size?: "card" | "full";
+}) {
   const [failedImage, setFailedImage] = useState<string>();
   const failed = gift.image === failedImage;
   const t = gift.tags.join(" ").toLowerCase();
@@ -391,7 +397,7 @@ export function GiftPhoto({ gift }: { gift: GiftView }) {
     >
       {gift.image && !failed ? (
         <img
-          src={gift.image}
+          src={size === "card" ? `${gift.image}?size=card` : gift.image}
           alt={gift.title}
           loading="lazy"
           onError={() => setFailedImage(gift.image)}

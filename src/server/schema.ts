@@ -77,3 +77,15 @@ export const records = pgTable(
   },
   (t) => [index("record_kind_idx").on(t.kind)],
 );
+
+// Disposable product metadata, intentionally excluded from application State.
+export const productImportCache = pgTable(
+  "product_import_cache",
+  {
+    key: text("key").primaryKey(),
+    data: jsonb("data").notNull(),
+    checkedAt: timestamp("checked_at", { withTimezone: true }).notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  },
+  (t) => [index("product_import_cache_expiry_idx").on(t.expiresAt)],
+);

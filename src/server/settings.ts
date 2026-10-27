@@ -1,5 +1,6 @@
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
-import { readState, transact } from "./db";
+import { readSettings, transact } from "./db";
+import type { Setting } from "../shared/model";
 import { stamp, fail } from "./domain";
 import { deploymentEnvironment, productPhotoOverride } from "./deployment";
 import {
@@ -74,81 +75,112 @@ export function decrypt(value: string) {
   c.setAuthTag(b.subarray(12, 28));
   return Buffer.concat([c.update(b.subarray(28)), c.final()]).toString("utf8");
 }
-export async function config(): Promise<Record<SettingKey, string>> {
+// Only decoded values are memoized. Every operation first reads committed rows,
+// so a change made by the API is visible to the worker without TTL staleness.
+let decoded = new Map<string, { encrypted: string; value: string }>();
+let decodingKey: string | undefined;
+function settingsValues(rows: Setting[], onlyPhoto = false) {
+  if (decodingKey !== process.env.SETTINGS_ENCRYPTION_KEY) {
+    decoded.clear();
+    decodingKey = process.env.SETTINGS_ENCRYPTION_KEY;
+  }
+  const next = new Map<string, { encrypted: string; value: string }>();
+  for (const row of rows) {
+    if (
+      !settingKeys.includes(row.key as SettingKey) &&
+      row.key !== productPhotoSettingKey
+    )
+      continue;
+    const prior = decoded.get(row.key);
+    if (
+      (onlyPhoto && row.key !== productPhotoSettingKey) ||
+      process.env[row.key]
+    ) {
+      if (prior?.encrypted === row.encrypted) next.set(row.key, prior);
+      continue;
+    }
+    next.set(
+      row.key,
+      prior?.encrypted === row.encrypted
+        ? prior
+        : {
+            encrypted: row.encrypted,
+            value: decrypt(row.encrypted),
+          },
+    );
+  }
+  decoded = next;
+  return new Map([...next].map(([k, v]) => [k, v.value]));
+}
+function effectiveConfig(
+  values: Map<string, string>,
+): Record<SettingKey, string> {
   if (deploymentEnvironment() === "staging") return stagingSettings();
-  const s = await readState();
   return Object.fromEntries(
-    settingKeys.map((k) => {
-      const v = s.settings.find((v) => v.key === k);
-      return [
-        k,
-        process.env[k] || (v ? decrypt(v.encrypted) : defaults[k]) || "",
-      ];
-    }),
+    settingKeys.map((k) => [
+      k,
+      process.env[k] || values.get(k) || defaults[k] || "",
+    ]),
   ) as Record<SettingKey, string>;
 }
+export async function config(): Promise<Record<SettingKey, string>> {
+  if (deploymentEnvironment() === "staging") return stagingSettings();
+  return effectiveConfig(settingsValues(await readSettings()));
+}
 export const productPhotoSettingKey = "AUTO_IMPORT_PRODUCT_PHOTOS";
-
-// Application preferences are editable in staging; provider settings are not.
-export async function productPhotoSetting() {
+function photoSetting(values: Map<string, string>) {
   const override = productPhotoOverride();
-  const saved =
-    override === undefined
-      ? (await readState()).settings.find(
-          (s) => s.key === productPhotoSettingKey,
-        )
-      : undefined;
+  const saved = values.has(productPhotoSettingKey);
   return {
     key: productPhotoSettingKey,
-    configured: override !== undefined || !!saved,
+    configured: override !== undefined || saved,
     source:
       override !== undefined ? "environment" : saved ? "settings" : "default",
     default: "false",
-    value: String(
-      override ?? (saved ? decrypt(saved.encrypted) === "true" : false),
-    ),
+    value: String(override ?? values.get(productPhotoSettingKey) === "true"),
   };
 }
-
+// Application preferences are editable in staging; provider settings are not.
+export async function productPhotoSetting() {
+  const override = productPhotoOverride();
+  if (override !== undefined) return photoSetting(new Map());
+  return photoSetting(settingsValues(await readSettings(), true));
+}
 export async function automaticallyImportProductPhotos(): Promise<boolean> {
   return (await productPhotoSetting()).value === "true";
 }
-
 export async function settingsSummary() {
-  return [await productPhotoSetting(), ...(await integrationSettingsSummary())];
-}
-
-async function integrationSettingsSummary() {
-  if (deploymentEnvironment() === "staging") {
-    const cfg = stagingSettings();
-    return settingKeys.map((key) => ({
-      key,
-      configured: !!cfg[key],
-      source: "environment",
-      default: cfg[key] || null,
-      ...(key === "SCRAPING_PROVIDER"
-        ? { value: "none", effectiveProvider: null }
+  const rows = await readSettings();
+  // Staging must not decrypt dormant production integration credentials.
+  const values = settingsValues(
+    deploymentEnvironment() === "staging"
+      ? rows.filter((s) => s.key === productPhotoSettingKey)
+      : rows,
+  );
+  const cfg = effectiveConfig(values);
+  const staging = deploymentEnvironment() === "staging";
+  return [
+    photoSetting(values),
+    ...settingKeys.map((k) => ({
+      key: k,
+      configured: staging
+        ? !!cfg[k]
+        : !!process.env[k] || rows.some((s) => s.key === k),
+      source:
+        staging || process.env[k]
+          ? "environment"
+          : rows.some((s) => s.key === k)
+            ? "settings"
+            : "default",
+      default: staging ? cfg[k] || null : (defaults[k] ?? null),
+      ...(k === "SCRAPING_PROVIDER"
+        ? {
+            value: cfg[k],
+            effectiveProvider: selectedScrapingProvider(cfg) ?? null,
+          }
         : {}),
-    }));
-  }
-  const s = await readState();
-  const cfg = await config();
-  return settingKeys.map((k) => ({
-    key: k,
-    configured: !!process.env[k] || s.settings.some((v) => v.key === k),
-    source: process.env[k]
-      ? "environment"
-      : s.settings.some((v) => v.key === k)
-        ? "settings"
-        : "default",
-    default: defaults[k] ?? null,
-    ...(k === "SCRAPING_PROVIDER"
-      ? {
-          value: cfg[k],
-          effectiveProvider: selectedScrapingProvider(cfg) ?? null,
-        }
-      : {}),
-  }));
+    })),
+  ];
 }
 export async function saveSetting(k: string, value: string) {
   const photoPreference = k === productPhotoSettingKey;

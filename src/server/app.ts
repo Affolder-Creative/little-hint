@@ -21,7 +21,7 @@ import { validationMessage } from "./validation-message";
 import { createReadStream, existsSync } from "node:fs";
 import path from "node:path";
 import { makeAuth, appUrl } from "./auth";
-import { readState, transact, pool } from "./db";
+import { readState, readImport, transact, pool } from "./db";
 import {
   activateAccount,
   world,
@@ -34,6 +34,7 @@ import {
 } from "./domain";
 import { config, settingsSummary, saveSetting } from "./settings";
 import { mediaDir, saveImage } from "./imports";
+import { cardImage } from "./media";
 import {
   linkTelegram,
   smsStart,
@@ -198,6 +199,13 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
       notificationAsOf,
       environment: deploymentEnvironment(),
     };
+  });
+  app.get<{ Params: { id: string } }>("/api/v1/imports/:id", async (req) => {
+    const a = await actor(req);
+    const id = z.string().uuid().parse(req.params.id);
+    const job = await readImport(id, a.id);
+    if (!job) fail(404, "Import not found.");
+    return job;
   });
   app.get<{ Params: { id: string } }>(
     "/api/v1/lists/:id/gift-summary",
@@ -397,9 +405,18 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
           ))
       )
         fail(404, "Image not found.");
+      const { size } = z
+        .object({ size: z.literal("card").optional() })
+        .parse(req.query);
       return reply
         .type("image/webp")
-        .send(createReadStream(path.join(mediaDir(), m.file)));
+        .send(
+          createReadStream(
+            size === "card"
+              ? await cardImage(m.file)
+              : path.join(mediaDir(), m.file),
+          ),
+        );
     },
   );
   app.get("/api/v1/admin/settings", async (req) => {

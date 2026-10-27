@@ -1253,7 +1253,7 @@ export function command(
           j.id === importId &&
           j.userId === a.id &&
           j.status === "complete" &&
-          canonicalUrl(j.url) === canonicalUrl(p.url),
+          j.url === p.url,
       );
       const i: Item = {
         ...stamp(),
@@ -1287,6 +1287,7 @@ export function command(
           archived: z.boolean(),
           visibility: z.enum(["private", "hidden", "visible"]),
           groupIds: ids,
+          importId: id.optional(),
         })
         .parse(b);
       const i = getItem(s, a, p.id);
@@ -1298,7 +1299,22 @@ export function command(
         if (p.visibility !== "private" && !p.groupIds.length)
           fail(400, "Select a family group to share this idea.");
       }
-      Object.assign(i, p);
+      const { importId, ...fields } = p;
+      const imported = s.imports.find(
+        (j) =>
+          j.id === importId &&
+          j.userId === a.id &&
+          j.status === "complete" &&
+          j.url === p.url,
+      );
+      if (imported) {
+        i.importedAt = imported.result?.importedAt;
+        i.source = imported.result?.source;
+      } else if (i.url !== p.url) {
+        delete i.importedAt;
+        delete i.source;
+      }
+      Object.assign(i, fields);
       touch(i);
       reconcileAccess(s);
       notify(
@@ -1828,13 +1844,19 @@ export function command(
       return prefs;
     }
     case "imports.create": {
-      const p = z.object({ url: z.url().max(2048) }).parse(b);
+      const p = z
+        .object({
+          url: z.url().max(2048),
+          forceRefresh: z.boolean().default(false),
+        })
+        .parse(b);
       if (!/^https?:\/\//.test(p.url))
         fail(400, "Use a full shop link starting with https:// or http://.");
       const j = {
         ...stamp(),
         userId: a.id,
         url: p.url,
+        forceRefresh: p.forceRefresh,
         status: "pending" as const,
       };
       s.imports.push(j);
