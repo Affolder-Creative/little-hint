@@ -396,6 +396,10 @@ main {
   margin: 0;
   max-width: 65ch;
 }
+.settings-version {
+  color: var(--muted);
+  font-size: 13px;
+}
 .home-intro,
 .section-heading {
   display: flex;
