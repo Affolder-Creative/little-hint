@@ -28,6 +28,7 @@ const fields: Record<string, string> = {
   priceCents: "Price",
   amountCents: "Contribution amount",
   poolTargetCents: "Contribution goal",
+  spendingGuidelineCents: "Spending guideline",
 };
 
 export function validationMessage(error: ZodError): string {

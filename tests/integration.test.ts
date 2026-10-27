@@ -140,6 +140,36 @@ describe.skipIf(!url)("PostgreSQL transaction integrity", () => {
         .assignments,
     ).toHaveLength(3);
   });
+  it("persists one concurrent guideline change without redrawing assignments", async () => {
+    const exchange = (await storage.readState()).exchanges.find(
+      (e) => e.status === "drawn",
+    )!;
+    const originalAssignments = structuredClone(exchange.assignments);
+    const results = await Promise.allSettled(
+      [5000, 7500].map((amount, index) =>
+        storage.transact((s) =>
+          idempotent(
+            s,
+            a,
+            `guideline_concurrent_${index}`,
+            "exchanges.guideline",
+            {
+              id: exchange.id,
+              revision: exchange.revision,
+              spendingGuidelineCents: amount,
+            },
+          ),
+        ),
+      ),
+    );
+    expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+    const persisted = (await storage.readState()).exchanges.find(
+      (e) => e.id === exchange.id,
+    )!;
+    expect([5000, 7500]).toContain(persisted.spendingGuidelineCents);
+    expect(persisted.revision).toBe(exchange.revision + 1);
+    expect(persisted.assignments).toEqual(originalAssignments);
+  });
   it("reconciles a reservation racing with removal of its last access path", async () => {
     const gift = (await storage.transact((s) =>
       command(s, a, "items.create", {

@@ -9,6 +9,15 @@
 
 A self-hosted, invite-only gift coordination PWA for families and friends. React/Vite frontend, Fastify API, PostgreSQL/Drizzle, Better Auth, and a pg-boss worker. Includes leader-managed group events with individual wish lists, wishes, private ideas, quantities, contributions, secret gift exchanges, URL imports, and optional SMTP/Telegram/US SMS integrations.
 
+Exchanges and group events can have an optional USD spending guideline for each
+giver and recipient. Buying views estimate your total across gifts and your share
+of group-event gifts, and flag shared gifts whose full cost exceeds the guideline.
+These notices never block a purchase or contribution. Totals use accessible gift
+plans, listed prices, and promised contributions, without tax or shipping. The
+buyer's contribution goal still prevents overfunding; secret-exchange gifts do
+not support cost sharing. Organizers can update a drawn exchange's guideline
+without changing assignments.
+
 The [master plan](MASTER_PLAN.md) is the approved product contract. Read [architecture](docs/ARCHITECTURE.md), [operations](docs/OPERATIONS.md), and [validation/release checks](docs/VALIDATION.md) before deployment. Production activation and physical-device acceptance still require the checks recorded there.
 
 ## Release status and support

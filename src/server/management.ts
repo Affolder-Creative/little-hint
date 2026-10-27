@@ -296,7 +296,7 @@ function purge(s: State, kind: TrashKind, id: string) {
   s.watches = s.watches.filter((w) => !removed.has(w.itemId));
   s.notices = s.notices.filter(
     (n) =>
-      ![n.itemId, n.listId, n.exchangeId].some(
+      ![n.itemId, n.listId, n.exchangeId, n.groupEventId].some(
         (ref) => ref && removed.has(ref),
       ),
   );

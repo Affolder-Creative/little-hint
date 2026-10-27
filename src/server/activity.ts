@@ -195,6 +195,15 @@ export function activityAllowed(s: State, n: Notice): boolean {
       e.participantIds.some((id) => controls(s, a, id))
     );
   }
+  if (n.groupEventId) {
+    const event = s.groupEvents.find(
+      (e) => e.id === n.groupEventId && !e.deletedAt,
+    );
+    return (
+      !!event &&
+      s.groups.some((g) => g.id === event.groupId && g.memberIds.includes(a.id))
+    );
+  }
   if (n.itemId) {
     const item = s.items.find((i) => i.id === n.itemId);
     if (!item || !itemVisible(s, a, item)) return false;
@@ -296,6 +305,7 @@ function renderActivity(s: State, n: Notice): NotificationView {
     access: "Your gift plans have changed",
   };
   const actions: Record<string, string> = {
+    "spending-guideline-updated": "The spending guideline has changed",
     pledged: `${who} offered to help pay for a gift`,
     sent: `${who} marked a contribution as sent`,
     received: `${who} marked a contribution as received`,
@@ -316,6 +326,9 @@ function renderActivity(s: State, n: Notice): NotificationView {
     context:
       item?.title ??
       list?.name ??
+      (n.groupEventId
+        ? s.groupEvents.find((e) => e.id === n.groupEventId)?.name
+        : undefined) ??
       (n.exchangeId
         ? s.exchanges.find((e) => e.id === n.exchangeId)?.name
         : undefined),
@@ -325,11 +338,13 @@ function renderActivity(s: State, n: Notice): NotificationView {
         ? "/lists"
         : n.event === "invitation"
           ? "/settings?section=groups"
-          : n.exchangeId
-            ? `/exchanges#exchange-${n.exchangeId}`
-            : item
-              ? `/gift/${item.id}${n.commentId ? `#note-${n.commentId}` : ""}`
-              : "/buying",
+          : n.groupEventId
+            ? `/events/${n.groupEventId}`
+            : n.exchangeId
+              ? `/exchanges#exchange-${n.exchangeId}`
+              : item
+                ? `/gift/${item.id}${n.commentId ? `#note-${n.commentId}` : ""}`
+                : "/buying",
     createdAt: n.createdAt,
     readAt: n.readAt,
   };

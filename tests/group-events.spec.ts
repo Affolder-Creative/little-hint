@@ -570,3 +570,267 @@ test("settings navigation isolates tasks and preserves unfinished preferences", 
     page.getByRole("heading", { name: "Profile & appearance" }),
   ).toBeVisible();
 });
+
+test("spending guidelines stay advisory for purchases, shared gifts, and drawn exchanges", async ({
+  page,
+  browser,
+}) => {
+  test.setTimeout(300000);
+  const contexts = await Promise.all([
+    browser.newContext(),
+    browser.newContext(),
+    browser.newContext(),
+  ]);
+  const [buyer, contributor, secondContributor] = await Promise.all(
+    contexts.map((context) => context.newPage()),
+  );
+  const world = async (p: Page): Promise<World> =>
+    (await p.request.get("/api/v1/world")).json();
+  try {
+    await login(page, "alex@example.test");
+    await login(buyer, "sam@example.test");
+    await login(contributor, "jamie@example.test");
+    await login(secondContributor, "riley@example.test");
+    const initial = await world(page);
+    const family = initial.groups.find((g) => g.name === "The Morgan circle")!;
+    const owner = initial.people.find((p) => p.userId === initial.me.id)!;
+    await page.goto(`/settings?section=groups&view=events&group=${family.id}`);
+    await page
+      .getByRole("button", { name: "Create event", exact: true })
+      .click();
+    await page
+      .getByLabel("Event name", { exact: true })
+      .fill("Guideline Christmas");
+    await page.getByRole("radio", { name: /Keep it a surprise/ }).check();
+    await page.getByRole("button", { name: "Clear", exact: true }).click();
+    await page
+      .locator(`input[name="participantIds"][value="${owner.id}"]`)
+      .check();
+    await page
+      .getByLabel("Spending guideline in USD, optional", { exact: true })
+      .fill("50");
+    await mkdir("test-results/visual", { recursive: true });
+    for (const width of [1440, 320]) {
+      await page.setViewportSize({ width, height: 950 });
+      await expectDialogFieldsToFit(page);
+      await page
+        .getByLabel("Spending guideline in USD, optional", { exact: true })
+        .scrollIntoViewIfNeeded();
+      await page.screenshot({
+        path: `test-results/visual/guideline-form-${width}.png`,
+        fullPage: true,
+      });
+    }
+    await page
+      .getByRole("button", { name: "Create 1 wish list", exact: true })
+      .click();
+    await expect(
+      page.getByRole("dialog").getByText(/Spending guideline: \$50/),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Confirm and save" }).click();
+    await expect(
+      page.getByRole("heading", { name: "Guideline Christmas" }),
+    ).toBeVisible();
+    const updated = await world(page);
+    const event = updated.groupEvents.find(
+      (e) => e.name === "Guideline Christmas",
+    )!;
+    const list = updated.lists.find((l) => l.groupEventId === event.id)!;
+    const addGift = (title: string, priceCents: number) =>
+      post(page, "items", {
+        listId: list.id,
+        title,
+        description: "",
+        url: "",
+        image: "",
+        tags: [],
+        quantity: 1,
+        priceCents,
+      });
+    const game = await addGift("Guideline game", 3500);
+    const book = await addGift("Guideline book", 2500);
+    const shared = await addGift("Guideline shared gift", 9000);
+    await buyer.goto(`/gift/${game.id}`);
+    await buyer
+      .getByRole("button", { name: "Reserve gift", exact: true })
+      .click();
+    await buyer.goto(`/gift/${book.id}`);
+    await expect(
+      buyer.getByText(/Your planned gifts total \$60, which is \$10 above/),
+    ).toBeVisible();
+    await buyer
+      .getByRole("button", { name: "Reserve gift", exact: true })
+      .click();
+    await buyer.goto("/buying");
+    await buyer
+      .getByRole("button", {
+        name: "Mark Guideline game as purchased",
+        exact: true,
+      })
+      .click();
+    await expect(
+      buyer
+        .locator(".buying-row")
+        .filter({ hasText: "Guideline game" })
+        .getByText("Purchased", { exact: true }),
+    ).toBeVisible();
+    const purchases = (await world(buyer)).buying.filter((r) =>
+      [game.id, book.id].includes(r.itemId),
+    );
+    for (const r of purchases)
+      await post(buyer, "reservations/update", {
+        id: r.id,
+        revision: r.revision,
+        quantity: 0,
+        purchased: 0,
+      });
+    await buyer.goto(`/gift/${shared.id}`);
+    await buyer
+      .getByRole("button", { name: "Reserve gift", exact: true })
+      .click();
+    await buyer.goto("/buying");
+    const sharedRow = buyer
+      .locator(".buying-row")
+      .filter({ hasText: "Guideline shared gift" });
+    await sharedRow
+      .getByRole("button", { name: "Share the cost", exact: true })
+      .click();
+    await buyer.getByLabel("Target amount in USD", { exact: true }).fill("90");
+    await expect(
+      buyer
+        .getByRole("dialog")
+        .getByText(/This shared gift totals \$90, above/),
+    ).toBeVisible();
+    await buyer
+      .getByRole("button", { name: "Save contribution goal", exact: true })
+      .click();
+    await contributor.goto(`/gift/${shared.id}`);
+    await contributor
+      .getByRole("button", { name: "Contribute", exact: true })
+      .click();
+    await contributor
+      .getByLabel("Contribution in USD", { exact: true })
+      .fill("30");
+    await expect(
+      contributor
+        .getByRole("dialog")
+        .getByText(/Your planned gifts total \$30/),
+    ).toBeVisible();
+    await expect(
+      contributor
+        .getByRole("dialog")
+        .getByText(/This shared gift totals \$90, above/),
+    ).toBeVisible();
+    await contributor
+      .getByRole("button", { name: "Save contribution", exact: true })
+      .click();
+    await expect(contributor.getByRole("dialog")).not.toBeVisible();
+    const reservation = (await world(buyer)).buying.find(
+      (r) => r.itemId === shared.id,
+    )!;
+    await post(secondContributor, "contributions", {
+      reservationId: reservation.id,
+      amountCents: 3000,
+    });
+    const overfund = await contributor.request.post("/api/v1/contributions", {
+      data: { reservationId: reservation.id, amountCents: 4000 },
+      headers: {
+        Origin: new URL(contributor.url()).origin,
+        "idempotency-key": crypto.randomUUID(),
+      },
+    });
+    expect(overfund.status(), await overfund.text()).toBe(409);
+    await buyer.reload();
+    await expect(
+      sharedRow.getByText(/Your planned gifts total \$30/),
+    ).toBeVisible();
+    for (const width of [1440, 320]) {
+      await buyer.setViewportSize({ width, height: 950 });
+      await expect(buyer.locator("body")).toBeVisible();
+      expect(
+        await buyer.evaluate(
+          () => document.documentElement.scrollWidth - innerWidth,
+        ),
+      ).toBeLessThanOrEqual(1);
+      await buyer.screenshot({
+        path: `test-results/visual/guideline-buying-${width}.png`,
+        fullPage: true,
+      });
+    }
+    expect(
+      (
+        await new AxeBuilder({ page: buyer })
+          .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+          .analyze()
+      ).violations,
+    ).toEqual([]);
+    await page.goto(`/gift/${shared.id}`);
+    await expect(page.locator(".spending-guidance")).toHaveCount(0);
+    expect(
+      (await world(page)).items.find((i) => i.id === shared.id)?.reservations,
+    ).toBeUndefined();
+    const actors = await Promise.all(
+      [page, buyer, contributor, secondContributor].map(world),
+    );
+    const participantIds = actors.map(
+      (w) => w.people.find((p) => p.userId === w.me.id)!.id,
+    );
+    // Each participant already has a surprise list shared with this family in the demo.
+    const created = await post(page, "exchanges", {
+      name: "Guideline exchange",
+      groupId: family.id,
+      participantIds,
+      count: 1,
+      excludeHousehold: false,
+      spendingGuidelineCents: 5000,
+    });
+    let exchange = (await world(page)).exchanges.find(
+      (e) => e.id === created.id,
+    )!;
+    await post(page, "exchanges/draw", {
+      id: exchange.id,
+      revision: exchange.revision,
+    });
+    const assignments = (await world(buyer)).exchanges.find(
+      (e) => e.id === exchange.id,
+    )!.myAssignments;
+    await page.goto(`/exchanges#exchange-${exchange.id}`);
+    const panel = page.locator(`#exchange-${exchange.id}`);
+    await panel
+      .getByRole("button", { name: "Edit spending guideline", exact: true })
+      .click();
+    await page
+      .getByLabel("Spending guideline in USD, optional", { exact: true })
+      .fill("75");
+    await page
+      .getByRole("button", { name: "Save spending guideline", exact: true })
+      .click();
+    await expect(panel.getByText(/Spending guideline: \$75/)).toBeVisible();
+    exchange = (await world(buyer)).exchanges.find(
+      (e) => e.id === exchange.id,
+    )!;
+    expect(exchange.myAssignments).toEqual(assignments);
+    const notices = await (
+      await buyer.request.get("/api/v1/notifications")
+    ).json();
+    expect(
+      notices.entries.some(
+        (n: { message: string; href: string }) =>
+          n.message === "The spending guideline has changed" &&
+          n.href === `/exchanges#exchange-${exchange.id}`,
+      ),
+    ).toBe(true);
+    await panel
+      .getByRole("button", { name: "Edit spending guideline", exact: true })
+      .click();
+    await page
+      .getByLabel("Spending guideline in USD, optional", { exact: true })
+      .fill("");
+    await page
+      .getByRole("button", { name: "Save spending guideline", exact: true })
+      .click();
+    await expect(panel.getByText(/Spending guideline:/)).toHaveCount(0);
+  } finally {
+    await Promise.all(contexts.map((context) => context.close()));
+  }
+});

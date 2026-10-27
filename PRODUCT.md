@@ -24,6 +24,13 @@ Invite-only. Surprise and Transparent lists. Scoped suggestions, quantities, con
 
 Optional wish-list priorities (Most wanted, Would love, Nice to have) are independent of shared item order. Viewer sorting and personal collection order persist per account. Archive, Trash, restore, and explicit permanent deletion are separate actions, with no automatic Trash purge. Removing a group event preserves its participant lists. Deleting a gift source preserves existing buying and contribution records without exposing them to surprise-list recipients. Drawn exchanges must be cancelled before removal; archiving retains assignments.
 
+Exchanges and group events support optional USD spending guidelines per giver
+and recipient. Guidance uses accessible plans and listed-price estimates, never
+blocks purchases or contributions, and compares shared gifts by their full cost
+while counting personal shares separately. Exchange organizers may change the
+guideline after drawing without changing assignments. Cost sharing remains
+unavailable for secret-exchange gifts.
+
 ## Brand commitments
 
 Little Hint. Gift ideas, shared thoughtfully. Use approved brand/little-hint-final artwork without reconstructing its lettering. Warm palette and accessible light/dark interface.

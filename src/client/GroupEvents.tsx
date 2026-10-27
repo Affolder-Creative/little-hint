@@ -1,3 +1,8 @@
+import {
+  GuidelineField,
+  GuidelineLabel,
+  guidelineValue,
+} from "./SpendingGuidance";
 import { ordered } from "../shared/organization";
 import {
   ActionMenu,
@@ -59,7 +64,12 @@ export function EventForm({
       }
       disabled={!event && participants.length === 0}
       review={(data) =>
-        !event ? <SharingReview data={data} audience={[group.name]} /> : null
+        !event ? (
+          <>
+            <SharingReview data={data} audience={[group.name]} />
+            <GuidelineLabel amount={guidelineValue(data)} />
+          </>
+        ) : null
       }
       onSubmit={async (form) => {
         if (participants.some((id) => !people.some((p) => p.id === id)))
@@ -78,6 +88,7 @@ export function EventForm({
               : { groupId }),
             name: String(form.get("name") ?? ""),
             description: String(form.get("description") ?? ""),
+            spendingGuidelineCents: guidelineValue(form),
             participantIds: participants,
             ...listPolicyValues(form, policy),
           },
@@ -133,6 +144,7 @@ export function EventForm({
           placeholder="Dates, gift ideas, or anything everyone should know."
         />
       </Field>
+      <GuidelineField amount={event?.spendingGuidelineCents} />
       <ListPolicyFields list={policy} event>
         <fieldset className="choice-group form-section event-participants">
           <legend>Who needs a wish list?</legend>
@@ -575,6 +587,7 @@ export function EventPage() {
         Shared with everyone in {group.name}. Each person manages their own
         wish-list items.
       </p>
+      <GuidelineLabel amount={event.spendingGuidelineCents} />
       {event.archived && (
         <p className="notice">
           This event is archived. Items and purchase history are kept.
@@ -623,6 +636,7 @@ export function ManagedEventNotice({ list }: { list: List }) {
     .join(", ");
   return (
     <div className="managed-event-notice">
+      <GuidelineLabel amount={event?.spendingGuidelineCents} />
       <p>
         Wish list for {names}. Event leaders manage this list’s settings; the
         recipient or the person managing their profile edits the items.
