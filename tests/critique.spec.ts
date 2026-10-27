@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import AxeBuilder from "@axe-core/playwright";
 import { stagingFixtures } from "../src/server/staging-fixtures";
 import { command, world } from "../src/server/domain";
 import { emptyState, type List, type Group } from "../src/shared/model";
@@ -12,6 +13,8 @@ async function preview(page: Page, actorIndex = 0, solo = false) {
     fixture.state.people.push(person);
   }
   const paths: Record<string, string> = {
+    preferences: "preferences.update",
+    follows: "follows.update",
     invitations: "invitations.create",
     "invitations/revoke": "invitations.revoke",
     groups: "groups.create",
@@ -45,6 +48,8 @@ async function preview(page: Page, actorIndex = 0, solo = false) {
       return route.fulfill({
         json: { workerLastSeen: Date.now(), imports: [], notifications: [] },
       });
+    if (path === "/api/v1/push")
+      return route.fulfill({ json: { publicKey: null, devices: [] } });
     const action = paths[path.replace("/api/v1/", "")];
     if (action && route.request().method() === "POST") {
       try {
@@ -70,6 +75,253 @@ async function preview(page: Page, actorIndex = 0, solo = false) {
   });
   return { ...fixture, actor };
 }
+
+for (const width of [1440, 390]) {
+  test(`notification disclosures preserve choices and fit at ${width}px`, async ({
+    page,
+  }, testInfo) => {
+    const { state, actor } = await preview(page);
+    const saved = command(state, actor, "preferences.update", {
+      ...world(state, actor).preferences,
+      pushEvents: ["mention", "wishlist"],
+      channelEvents: {
+        email: ["invitation"],
+        telegram: ["mention", "wishlist"],
+        sms: ["purchase"],
+      },
+      notificationDetails: {
+        push: true,
+        email: false,
+        telegram: true,
+        sms: false,
+      },
+    }) as (typeof state.preferences)[number];
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/settings?section=notifications");
+    const settings = page.locator(".notification-settings");
+    const topics = settings
+      .locator("summary")
+      .filter({ hasText: /^Customize topics/ });
+    const privacy = settings
+      .locator("summary")
+      .filter({ hasText: /^Preview privacy/ });
+    const delivery = settings.getByRole("group", {
+      name: "Delivery channels",
+      exact: true,
+    });
+    await expect(delivery.getByLabel(/Telegram/)).toBeDisabled();
+    await expect(delivery.getByLabel(/Text messages/)).toBeDisabled();
+    await expect(topics).toContainText("Telegram 2/9");
+    await expect(settings.locator(".channel-topics")).not.toBeVisible();
+    await page.screenshot({
+      path: testInfo.outputPath(`notification-settings-${width}.png`),
+      fullPage: true,
+    });
+    await delivery.getByLabel("Email", { exact: true }).uncheck();
+    await settings
+      .getByRole("button", { name: "Save notification preferences" })
+      .click();
+    await expect(settings.getByRole("status")).toHaveText(
+      "Notification preferences saved.",
+    );
+    expect(saved.channelEvents).toEqual({
+      email: ["invitation"],
+      telegram: ["mention", "wishlist"],
+      sms: ["purchase"],
+    });
+    expect(saved.pushEvents).toEqual(["mention", "wishlist"]);
+    expect(saved.notificationDetails).toEqual({
+      push: true,
+      email: false,
+      telegram: true,
+      sms: false,
+    });
+    expect(saved.email).toBe(false);
+    await topics.focus();
+    await page.keyboard.press("Enter");
+    const mentions = settings.getByRole("group", {
+      name: "Mentions",
+      exact: true,
+    });
+    await mentions.getByLabel("Telegram", { exact: true }).uncheck();
+    await expect(
+      settings.getByText("Notification preferences saved."),
+    ).toHaveCount(0);
+    await topics.click();
+    await privacy.click();
+    await settings
+      .locator(".notification-details")
+      .getByLabel("Email", { exact: true })
+      .check();
+    await privacy.click();
+    await settings
+      .getByRole("button", { name: "Save notification preferences" })
+      .click();
+    await expect(settings.getByRole("status")).toHaveText(
+      "Notification preferences saved.",
+    );
+    expect(saved.channelEvents?.telegram).toEqual(["wishlist"]);
+    expect(saved.notificationDetails?.email).toBe(true);
+    await page.reload();
+    await expect(topics).toContainText("Telegram 1/9");
+    await expect(privacy).toContainText("Push, Email, Telegram");
+    await topics.click();
+    await privacy.click();
+    await settings.locator(".push-setup > summary").click();
+    await expect(
+      settings.getByText(
+        "Push is not configured on this installation. Your in-app inbox still works.",
+      ),
+    ).toBeVisible();
+    for (const label of await settings.locator("label.check:visible").all())
+      expect((await label.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth - innerWidth,
+      ),
+    ).toBeLessThanOrEqual(1);
+    await page.screenshot({
+      path: testInfo.outputPath(`notification-expanded-${width}.png`),
+      fullPage: true,
+    });
+    expect(
+      (
+        await new AxeBuilder({ page })
+          .include(".notification-settings")
+          .analyze()
+      ).violations,
+    ).toEqual([]);
+  });
+}
+
+test("notification save failures retain edits and connected channels stay configurable", async ({
+  page,
+}) => {
+  const { state, actor } = await preview(page);
+  const saved = command(
+    state,
+    actor,
+    "preferences.update",
+    world(state, actor).preferences,
+  ) as (typeof state.preferences)[number];
+  Object.assign(saved, {
+    chatId: "fixture-chat",
+    phoneVerified: true,
+    phone: "+13175551234",
+    telegram: true,
+    sms: true,
+  });
+  let fail = true;
+  await page.route("**/api/v1/preferences", (route) =>
+    fail
+      ? route.fulfill({
+          status: 400,
+          json: { error: "Could not save. Try again." },
+        })
+      : route.fallback(),
+  );
+  await page.goto("/settings?section=notifications");
+  const settings = page.locator(".notification-settings");
+  const delivery = settings.getByRole("group", {
+    name: "Delivery channels",
+    exact: true,
+  });
+  await expect(delivery.getByLabel(/Telegram/)).toBeEnabled();
+  await expect(delivery.getByLabel(/Text messages/)).toBeChecked();
+  await delivery.getByLabel("Email", { exact: true }).uncheck();
+  const save = settings.getByRole("button", {
+    name: "Save notification preferences",
+  });
+  await save.click();
+  await expect(settings.getByRole("alert")).toHaveText(
+    "Could not save. Try again.",
+  );
+  await expect(delivery.getByLabel("Email", { exact: true })).not.toBeChecked();
+  expect(saved.email).toBe(true);
+  fail = false;
+  await save.click();
+  await expect(settings.getByRole("status")).toHaveText(
+    "Notification preferences saved.",
+  );
+  expect(saved).toMatchObject({ email: false, telegram: true, sms: true });
+  saved.smsOptOut = true;
+  saved.sms = false;
+  await page.reload();
+  await expect(delivery.getByLabel(/Text messages/)).toBeDisabled();
+  await expect(settings.getByText(/Reply START to the sender/)).toBeVisible();
+});
+
+test("follow inheritance names combined sources and explains list-dependent person choices", async ({
+  page,
+}) => {
+  const { state, actor } = await preview(page);
+  const list = state.lists.find(
+    (entry) => entry.groupIds.length && !entry.archived,
+  )!;
+  const firstGroup = state.groups.find((g) => g.id === list.groupIds[0])!;
+  const secondGroup = command(state, actor, "groups.create", {
+    name: "Holiday friends",
+  }) as Group;
+  list.groupIds.push(secondGroup.id);
+  for (const [targetId, channels] of [
+    [firstGroup.id, ["email"]],
+    [secondGroup.id, ["push"]],
+  ] as const)
+    command(state, actor, "follows.update", {
+      target: "group",
+      targetId,
+      following: true,
+      channels,
+    });
+  command(state, actor, "follows.update", {
+    target: "list",
+    targetId: list.id,
+    following: true,
+    channels: null,
+  });
+  const personId = list.ownerIds[0];
+  command(state, actor, "follows.update", {
+    target: "person",
+    targetId: personId,
+    following: true,
+    channels: null,
+  });
+  await page.goto("/settings?section=notifications");
+  const listRow = page.locator(".setting-row").filter({
+    has: page.getByRole("button", {
+      name: `Edit notifications for ${list.name}`,
+      exact: true,
+    }),
+  });
+  await expect(listRow).toContainText(
+    `Uses choices from ${firstGroup.name} and Holiday friends`,
+  );
+  await listRow.getByRole("button").click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toContainText(
+    `Uses choices from ${firstGroup.name} and Holiday friends: Push, Email.`,
+  );
+  await page.getByRole("button", { name: "Close dialog", exact: true }).click();
+  const person = state.people.find((p) => p.id === personId)!;
+  await page
+    .getByRole("button", {
+      name: `Edit notifications for ${person.name}`,
+      exact: true,
+    })
+    .click();
+  await expect(dialog).toContainText(
+    "Uses the first available custom choices for each wish list",
+  );
+  await page.getByRole("button", { name: "Close dialog", exact: true }).click();
+  await page
+    .getByRole("button", {
+      name: `Edit notifications for ${firstGroup.name}`,
+      exact: true,
+    })
+    .click();
+  await dialog.getByLabel("Updates for this follow").selectOption("inherit");
+  await expect(dialog).toContainText("Uses your default channels:");
+});
 
 for (const viewport of [
   { width: 1440, height: 1000 },
@@ -468,6 +720,10 @@ test("notification actions wrap with doubled text at phone widths", async ({
         name: "Save notification preferences",
       });
       await expect(save).toBeVisible();
+      for (const summary of await page
+        .locator(".notification-settings .notification-disclosure > summary")
+        .all())
+        await summary.click();
       await page.evaluate(() => {
         const sizes = Array.from(
           document.querySelectorAll<HTMLElement>("body *"),

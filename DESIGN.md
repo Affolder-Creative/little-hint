@@ -249,7 +249,7 @@ Browser favicons use the approved micro tag without a surrounding tile. The tag 
 - Don't use invented product photography or present demonstration fixtures as real gifts.
 - Don't rely on color alone to explain availability or list privacy.
 
-Optional gift notes, price, quantity, tags and photos share a disclosure below the gift name and destination. Upload progress is announced and saving waits for the photo. Missing-photo placeholders stay compact across screen sizes. Notification topics and administration integrations use labeled task groups; channel setup stays next to its checkbox. Session rows identify this device where available, with readable browser names and expandable details. Loading and failure states never stand in for empty data.
+Optional gift notes, price, quantity, tags and photos share a disclosure below the gift name and destination. Upload progress is announced and saving waits for the photo. Missing-photo placeholders stay compact across screen sizes. Notification delivery setup leads the page, with channel connection status and setup beside its checkbox. Push setup, topic customization, and preview privacy use native disclosures with summaries of their current choices. Collapsed controls remain mounted so saving preserves every selection, including disconnected channels. Notification and follow checkbox rows have 44px targets. Save feedback appears beside the form. Inherited follows name their source choices; person follows explain that the source depends on each wish list. Administration integrations use labeled task groups. Session rows identify this device where available, with readable browser names and expandable details. Loading and failure states never stand in for empty data.
 
 ### Notifications and mentions
 

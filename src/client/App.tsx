@@ -2250,6 +2250,7 @@ function SettingsPage({
     world.invitations.filter(
       (i) => !!i.groupId && i.email === world.me.email.toLowerCase(),
     ).length + world.links.filter((l) => l.kind === "ownership").length;
+  const [notificationSaved, setNotificationSaved] = useState(false);
   const [draftsEnabled, setDraftsEnabled] = useState(
     !!localStorage.getItem(`little-hint:draft-optin:${world.me.id}`),
   );
@@ -2690,12 +2691,16 @@ function SettingsPage({
             ))}
           </section>
           <section
-            className="settings-section"
+            className="settings-section notification-settings"
+            onChangeCapture={() => setNotificationSaved(false)}
             hidden={section !== "notifications"}
             aria-labelledby="settings-notifications-title"
           >
             <h2 id="settings-notifications-title">Notifications</h2>
-            <p>Choose which updates you receive and where they arrive.</p>
+            <p>
+              Your inbox keeps relevant updates. Choose where else to receive
+              them.
+            </p>
             <Form
               submit="Save notification preferences"
               onSubmit={async (f) => {
@@ -2724,61 +2729,69 @@ function SettingsPage({
                   },
                   recipientUpdates: f.get("recipientUpdates") === "on",
                 });
-                toast("Notification preferences saved.");
+                setNotificationSaved(true);
               }}
             >
-              <fieldset className="choice-group">
-                <legend>Where to send updates</legend>
-                <label className="check">
-                  <input
-                    type="checkbox"
-                    name="email"
-                    defaultChecked={world.preferences.email}
-                  />
-                  Email
-                </label>
-                <label className="check">
-                  <input
-                    type="checkbox"
-                    name="telegram"
-                    defaultChecked={world.preferences.telegram}
-                    disabled={!world.preferences.chatId}
-                  />
-                  Telegram{" "}
-                  {world.preferences.chatId ? "· Linked" : "· Not linked"}
-                </label>
-                {!world.preferences.chatId && <TelegramSetup />}
-                <label className="check">
-                  <input
-                    type="checkbox"
-                    name="sms"
-                    defaultChecked={world.preferences.sms}
-                    disabled={
-                      !world.preferences.phoneVerified ||
-                      world.preferences.smsOptOut
-                    }
-                  />
-                  Text messages{" "}
-                  {world.preferences.phoneVerified
-                    ? `· ${world.preferences.phone}`
-                    : "· Not verified"}
-                </label>
-                {(!world.preferences.phoneVerified ||
-                  world.preferences.smsOptOut) && (
-                  <button
-                    type="button"
-                    className="text-button"
-                    onClick={() => open("Verify your phone", <SmsForm />)}
-                  >
-                    Set up text messages
-                  </button>
-                )}
-                {world.preferences.smsOptOut && (
-                  <p className="muted">
-                    Text updates are turned off. Reply START to the sender to
-                    turn them back on, then verify your number here.
-                  </p>
-                )}
+              <fieldset className="choice-group notification-delivery">
+                <legend>Delivery channels</legend>
+                <div className="delivery-channel">
+                  <label className="check">
+                    <input
+                      type="checkbox"
+                      name="email"
+                      defaultChecked={world.preferences.email}
+                    />
+                    Email
+                  </label>
+                  <span className="muted">{world.me.email}</span>
+                </div>
+                <div className="delivery-channel">
+                  <label className="check">
+                    <input
+                      type="checkbox"
+                      name="telegram"
+                      defaultChecked={world.preferences.telegram}
+                      disabled={!world.preferences.chatId}
+                    />
+                    Telegram{" "}
+                    {world.preferences.chatId ? "· Linked" : "· Not linked"}
+                  </label>
+                  {!world.preferences.chatId && <TelegramSetup />}
+                </div>
+                <div className="delivery-channel">
+                  <label className="check">
+                    <input
+                      type="checkbox"
+                      name="sms"
+                      defaultChecked={world.preferences.sms}
+                      disabled={
+                        !world.preferences.phoneVerified ||
+                        world.preferences.smsOptOut
+                      }
+                    />
+                    Text messages{" "}
+                    {world.preferences.phoneVerified
+                      ? `· ${world.preferences.phone}`
+                      : "· Not verified"}
+                  </label>
+                  {(!world.preferences.phoneVerified ||
+                    world.preferences.smsOptOut) && (
+                    <button
+                      type="button"
+                      className="text-button"
+                      onClick={() => open("Verify your phone", <SmsForm />)}
+                    >
+                      Set up text messages
+                    </button>
+                  )}
+                  {world.preferences.smsOptOut && (
+                    <p className="muted">
+                      Text updates are turned off. Reply START to the sender to
+                      turn them back on, then verify your number here.
+                    </p>
+                  )}
+                </div>
+                <PushSetup />
               </fieldset>
               <NotificationTopics />
               <NotificationDetails />
@@ -2796,7 +2809,9 @@ function SettingsPage({
                 previews. Your inbox shows only updates you can access.
               </p>
             </Form>
-            <PushSetup />
+            {notificationSaved && (
+              <p role="status">Notification preferences saved.</p>
+            )}
             <FollowingSettings />
           </section>
           <section

@@ -58,12 +58,43 @@ export function useFollowSettings(target: FollowTarget) {
       (p) => target.target === "person" && p.id === target.targetId,
     )?.name ??
     "Unavailable";
-  return { direct, effective, inherited, name };
+  const sourceNames = parents
+    .filter((follow) => inherited.sources.includes(follow))
+    .map((follow) => {
+      if (follow.target === "group") {
+        const group = world.groups.find((g) => g.id === follow.targetId);
+        return group
+          ? familyGroupLabel(group, world)
+          : "an unavailable family group";
+      }
+      if (follow.target === "household") {
+        const household = world.households.find(
+          (h) => h.id === follow.targetId,
+        );
+        return household
+          ? householdLabel(household, world)
+          : "an unavailable household";
+      }
+      return (
+        world.people.find((p) => p.id === follow.targetId)?.name ??
+        "an unavailable person"
+      );
+    });
+  const inheritance =
+    target.target === "person"
+      ? "Choices depend on the wish list"
+      : sourceNames.length
+        ? `Uses choices from ${sourceNames.join(" and ")}`
+        : "Uses your default channels";
+  return { direct, effective, inherited, name, inheritance };
 }
 
 export function FollowSettings({ target, targetId }: FollowTarget) {
   const { world, mutate, close, toast } = useApp();
-  const { direct, inherited, name } = useFollowSettings({ target, targetId });
+  const { direct, inherited, name, inheritance } = useFollowSettings({
+    target,
+    targetId,
+  });
   const [mode, setMode] = useState(
     direct?.muted ? "mute" : direct?.channels ? "custom" : "inherit",
   );
@@ -73,6 +104,7 @@ export function FollowSettings({ target, targetId }: FollowTarget) {
   const p = world.preferences;
   return (
     <Form
+      className="follow-settings"
       submit="Save follow settings"
       onSubmit={async () => {
         await mutate("follows", {
@@ -107,8 +139,8 @@ export function FollowSettings({ target, targetId }: FollowTarget) {
       {mode === "inherit" && (
         <p className="muted">
           {target === "person"
-            ? "Inherited channels depend on the list's household and family-group follows. Account defaults apply when none set custom channels."
-            : `Inherited channels: ${inherited.channels.map((c) => channelLabels[c]).join(", ") || "Inbox only"}.`}
+            ? "Uses the first available custom choices for each wish list: the list, its people, its household, then its family group. Otherwise, uses your default channels."
+            : `${inheritance}: ${inherited.channels.map((c) => channelLabels[c]).join(", ") || "Inbox only"}.`}
         </p>
       )}
       {mode === "custom" && (
@@ -193,7 +225,7 @@ function FollowingRow({
   follow: Follow;
   onOpen: () => void;
 }) {
-  const { name, effective } = useFollowSettings(follow);
+  const { name, effective, inheritance } = useFollowSettings(follow);
   return (
     <div className="setting-row">
       <div>
@@ -212,7 +244,7 @@ function FollowingRow({
             : follow.channels !== undefined
               ? effective.channels.map((c) => channelLabels[c]).join(", ") ||
                 "Inbox only"
-              : "Inherited channels"}
+              : inheritance}
         </p>
       </div>
       <button

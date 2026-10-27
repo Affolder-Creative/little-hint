@@ -334,35 +334,48 @@ export function NotificationDetails() {
     world.preferences.notificationDetails ?? {},
   );
   return (
-    <fieldset className="choice-group notification-details">
-      <legend>Show details in notifications</legend>
-      <p className="muted">
-        Choose where previews may show names, list names, and priorities outside
-        Little Hint, including on a lock screen. Delivered previews cannot be
-        recalled. Private gift plans and notes stay generic.
-      </p>
-      {notificationChannels.map((c) => (
-        <div key={c}>
-          <label className="check">
-            <input
-              type="checkbox"
-              name={`details-${c}`}
-              checked={details[c] ?? false}
-              onChange={(e) =>
-                setDetails((d) => ({ ...d, [c]: e.target.checked }))
-              }
-            />
-            {channelLabels[c]}
-          </label>
-          <p className="muted">
-            Example:{" "}
-            {details[c]
-              ? 'John added 3 items to "Birthday", including 1 marked Most wanted.'
-              : "Open Little Hint to see the details."}
-          </p>
-        </div>
-      ))}
-    </fieldset>
+    <details className="notification-disclosure">
+      <summary>
+        Preview privacy
+        <span className="muted">
+          {notificationChannels.some((c) => details[c])
+            ? `Previews allowed: ${notificationChannels
+                .filter((c) => details[c])
+                .map((c) => channelLabels[c])
+                .join(", ")}`
+            : "Details hidden on all channels"}
+        </span>
+      </summary>
+      <fieldset className="choice-group notification-details">
+        <legend>Show details in notifications</legend>
+        <p className="muted">
+          Choose where previews may show names, list names, and priorities
+          outside Little Hint, including on a lock screen. Delivered previews
+          cannot be recalled. Private gift plans and notes stay generic.
+        </p>
+        {notificationChannels.map((c) => (
+          <div key={c}>
+            <label className="check">
+              <input
+                type="checkbox"
+                name={`details-${c}`}
+                checked={details[c] ?? false}
+                onChange={(e) =>
+                  setDetails((d) => ({ ...d, [c]: e.target.checked }))
+                }
+              />
+              {channelLabels[c]}
+            </label>
+            <p className="muted">
+              Example:{" "}
+              {details[c]
+                ? 'John added 3 items to "Birthday", including 1 marked Most wanted.'
+                : "Open Little Hint to see the details."}
+            </p>
+          </div>
+        ))}
+      </fieldset>
+    </details>
   );
 }
 export function WatchButton({ itemId }: { itemId: string }) {
@@ -381,45 +394,64 @@ export function WatchButton({ itemId }: { itemId: string }) {
 export function NotificationTopics() {
   const { world } = useApp();
   const p = world.preferences;
+  const [topics, setTopics] = useState(() => ({
+    push: p.pushEvents ?? defaultPushEvents,
+    email: p.channelEvents?.email ?? p.events,
+    telegram: p.channelEvents?.telegram ?? p.events,
+    sms: p.channelEvents?.sms ?? p.events,
+  }));
   return (
-    <div className="notification-topics channel-topics">
-      <p className="muted">
-        Relevant updates appear in your inbox. Choose which ones also reach you
-        elsewhere. Push applies to devices you enable below.
-      </p>
-      {notificationTopics.map((topic) => (
-        <fieldset className="choice-group" key={topic.id}>
-          <legend>
-            {topic.id === "wishlist"
-              ? "New wish-list items: default channels"
-              : topic.label}
-          </legend>
-          <div className="topic-channels">
-            {(["push", "email", "telegram", "sms"] as const).map((channel) => (
-              <label className="check" key={channel}>
-                <input
-                  type="checkbox"
-                  name={`${channel}Events`}
-                  value={topic.id}
-                  defaultChecked={(channel === "push"
-                    ? (p.pushEvents ?? defaultPushEvents)
-                    : (p.channelEvents?.[channel] ?? p.events)
-                  ).includes(topic.id as any)}
-                />
-                {
-                  {
-                    push: "Push",
-                    email: "Email",
-                    telegram: "Telegram",
-                    sms: "Text",
-                  }[channel]
-                }
-              </label>
-            ))}
-          </div>
-        </fieldset>
-      ))}
-    </div>
+    <details className="notification-disclosure">
+      <summary>
+        Customize topics
+        <span className="muted">
+          {notificationChannels
+            .map(
+              (c) =>
+                `${channelLabels[c]} ${topics[c].length}/${notificationTopics.length}`,
+            )
+            .join(" · ")}
+        </span>
+      </summary>
+      <div className="notification-topics channel-topics">
+        <p className="muted">
+          These are your topic choices, including for channels you haven’t
+          connected. Delivery also requires an enabled channel above; push
+          requires an enabled device. Follow settings can override the default
+          channels for new wish-list items.
+        </p>
+        {notificationTopics.map((topic) => (
+          <fieldset className="choice-group" key={topic.id}>
+            <legend>
+              {topic.id === "wishlist"
+                ? "New wish-list items: default channels"
+                : topic.label}
+            </legend>
+            <div className="topic-channels">
+              {notificationChannels.map((channel) => (
+                <label className="check" key={channel}>
+                  <input
+                    type="checkbox"
+                    name={`${channel}Events`}
+                    value={topic.id}
+                    checked={topics[channel].includes(topic.id)}
+                    onChange={(e) =>
+                      setTopics((current) => ({
+                        ...current,
+                        [channel]: e.target.checked
+                          ? [...current[channel], topic.id]
+                          : current[channel].filter((id) => id !== topic.id),
+                      }))
+                    }
+                  />
+                  {channel === "sms" ? "Text" : channelLabels[channel]}
+                </label>
+              ))}
+            </div>
+          </fieldset>
+        ))}
+      </div>
+    </details>
   );
 }
 export function PushSetup() {
@@ -469,11 +501,22 @@ export function PushSetup() {
     toast("Push notifications enabled on this device.");
   };
   return (
-    <section className="push-setup" aria-labelledby="push-title">
-      <h3 id="push-title">Push notifications</h3>
+    <details className="push-setup notification-disclosure">
+      <summary>
+        Push notifications
+        <span className="muted">
+          {info.isPending
+            ? "Checking device setup…"
+            : info.isError
+              ? "Could not check setup"
+              : !info.data?.publicKey
+                ? "Not configured on this installation"
+                : `${info.data.devices.length} ${info.data.devices.length === 1 ? "device" : "devices"} enabled · ${ios && !installed ? "Add this app to your Home Screen" : !supported() ? "Unsupported in this browser" : permission === "denied" ? "Blocked in this browser" : current ? "Enabled on this device" : "Set up this device"}`}
+        </span>
+      </summary>
       <p>
         Get an alert on this device when something needs your attention. Choose
-        which wish-list details appear using the preview settings above.
+        which wish-list details appear under Preview privacy below.
       </p>
       {info.isPending ? (
         <p role="status">Checking device setup…</p>
@@ -542,7 +585,7 @@ export function PushSetup() {
         devices update when they next receive a push or open Little Hint. Use
         your device’s notification settings for quiet hours.
       </p>
-    </section>
+    </details>
   );
 }
 export function PushLifecycle() {
