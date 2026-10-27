@@ -1727,13 +1727,13 @@ test("compact missing photos preserve mixed grids, real photos, and reading orde
   brokenGift.image = "/api/v1/media/broken-fixture";
   missingGift.title =
     "A thoughtful gift for long weekends and family adventures";
-  await page.route("**/api/v1/media/photo-fixture", (route) =>
+  await page.route("**/api/v1/media/photo-fixture?size=card", (route) =>
     route.fulfill({
       contentType: "image/svg+xml",
       body: '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"><rect width="400" height="300" fill="#e8eadd"/><rect x="120" y="45" width="160" height="180" rx="8" fill="#486348"/><text x="200" y="265" text-anchor="middle" font-family="sans-serif" font-size="20" fill="#2b201d">Sample photo</text></svg>',
     }),
   );
-  await page.route("**/api/v1/media/broken-fixture", (route) =>
+  await page.route("**/api/v1/media/broken-fixture?size=card", (route) =>
     route.fulfill({ status: 404, body: "Missing photo fixture" }),
   );
   let cardOrder: string[] | undefined;
@@ -1760,6 +1760,17 @@ test("compact missing photos preserve mixed grids, real photos, and reading orde
       `.gift-card[href="/gift/${photoGift.id}"] > .gift-photo`,
     );
     await expect(realPhoto.locator("img")).toBeVisible();
+    await expect(realPhoto.locator("img")).toHaveAttribute(
+      "src",
+      `${photoGift.image}?size=card`,
+    );
+    await expect
+      .poll(() =>
+        realPhoto
+          .locator("img")
+          .evaluate((image: HTMLImageElement) => image.naturalWidth),
+      )
+      .toBeGreaterThan(0);
     await expect(
       page.locator(
         `.gift-card[href="/gift/${brokenGift.id}"] > .without-photo`,
