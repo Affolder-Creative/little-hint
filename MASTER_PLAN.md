@@ -107,6 +107,16 @@ Validate DNS/address ranges and each redirect, pin validated DNS resolution for 
 
 ForwardEmail SMTP, one-time Telegram linking, verified opt-in US SMS through Twilio. Per-channel/event preferences, generic message previews, authenticated deep links. Recheck access and preferences before each channel attempt. Respect SMS opt-out. No real provider credentials ship in source.
 
+## Gift preferences and affordable discovery
+
+Implement recipient preferences with private-by-default family-group sharing, skippable setup and profile editing. Giver-only discovery is the default; admin and environment settings support off, givers, receivers or both. Guardians use receiver mode. Off applies to UI, APIs and background work, preserving saved items and preferences.
+
+Search one recipient at a time with reviewed interests and a per-item USD cap (required for givers). Bound each search to one low-cost Responses request, at most two web searches and 4,000 output tokens. No automatic paid retry, paid scraper or per-product AI enrichment. Allow three new searches/account/week and 100/app/month by default, transactionally enforced. Cache private batches for 24 hours; shuffle their six-at-a-time display without further AI calls.
+
+Verify exact products, USD prices, stock, trusted sellers and customer/editorial evidence before displaying up to twelve candidates. Refresh offers older than fifteen minutes without AI before confirmation. Keep public shop facts separate from private matching data. Confirm destination, visibility, current price and visible duplicate choices before atomic batch save; saving does not buy or reserve.
+
+Acceptance includes mocked provider failures and kill-switch races, privacy/guardian/group checks, real PostgreSQL quota concurrency, mobile/desktop keyboard-accessible selection and confirmation, and a ten-search synthetic live quality evaluation before wider activation. Record verified yield, budget compliance, evidence accuracy and actual provider cost; the live evaluation is an operator rollout step, not an automated test.
+
 ## PWA experience
 
 After onboarding and the first successful gift action, show a dismissible **Keep Little Hint handy** invitation. Native installation starts only on an explicit tap when `beforeinstallprompt` is available. Otherwise show platform-appropriate browser-menu instructions. iPhone/iPad guidance covers Share → Add to Home Screen → Add, Page Menu/More where needed, and Open as Web App when offered. Embedded browsers receive open-in-browser guidance and a copyable URL.

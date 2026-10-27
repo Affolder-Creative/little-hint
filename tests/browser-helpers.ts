@@ -75,8 +75,15 @@ export async function login(page: Page, email: string) {
   await expect(
     page
       .getByRole("heading", { name: /Hi,/ })
+      .or(page.getByRole("heading", { name: "What would you love?" }))
       .or(page.getByLabel("Email address", { exact: true })),
   ).toBeVisible();
+  if (
+    await page
+      .getByRole("heading", { name: "What would you love?" })
+      .isVisible()
+  )
+    await page.getByRole("button", { name: "Skip for now" }).click();
   if (
     await page
       .getByRole("heading", { name: /Hi,/ })
@@ -114,6 +121,17 @@ export async function login(page: Page, email: string) {
     .toHaveLength(6);
   await page.getByLabel("Six-digit code").fill(code);
   await submitAuth(page, "Sign in", "/api/auth/sign-in/email-otp");
+  await expect(
+    page
+      .getByRole("heading", { name: /Hi,/ })
+      .or(page.getByRole("heading", { name: "What would you love?" })),
+  ).toBeVisible();
+  if (
+    await page
+      .getByRole("heading", { name: "What would you love?" })
+      .isVisible()
+  )
+    await page.getByRole("button", { name: "Skip for now" }).click();
   await expect(page.getByRole("heading", { name: /Hi,/ })).toBeVisible();
   expect(
     await page.evaluate(() =>

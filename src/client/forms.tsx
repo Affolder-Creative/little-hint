@@ -1,3 +1,4 @@
+import { DiscoveryLink } from "./GiftPreferences";
 import { GuidelineField, guidelineValue } from "./SpendingGuidance";
 import { PrioritySelect } from "./Management";
 import type { ItemPriority } from "../shared/model";
@@ -412,6 +413,20 @@ export function GiftForm({
         close();
       }}
     >
+      {!gift && (
+        <div>
+          {idea && recipientId ? (
+            <DiscoveryLink personId={recipientId} />
+          ) : (
+            <DiscoveryLink
+              personId={
+                world.people.find((p) => p.userId === world.me.id)?.id ?? ""
+              }
+              listId={listId}
+            />
+          )}
+        </div>
+      )}
       <div className="url-entry">
         <Field label="Start with a product link">
           <input

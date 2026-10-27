@@ -1,3 +1,11 @@
+import type {
+  GiftPreferences,
+  GiftPreferenceView,
+  GiftDiscoveryJob,
+  GiftOffer,
+  GiftEvidence,
+  DiscoveryConfig,
+} from "./gift-discovery";
 export type Mode = "surprise" | "transparent";
 export type Visibility = "private" | "hidden" | "visible";
 export interface Base {
@@ -104,6 +112,8 @@ export interface GiftSummary {
   }>;
 }
 export interface Item extends Base {
+  purchaseOffers?: GiftOffer[];
+  recommendationEvidence?: GiftEvidence[];
   deletedAt?: string;
   priority?: ItemPriority | null;
   title: string;
@@ -291,6 +301,8 @@ export interface Media extends Base {
   file: string;
 }
 export interface Records {
+  giftPreferences: GiftPreferences;
+  giftDiscoveryJobs: GiftDiscoveryJob;
   organization: Organization;
   media: Media;
   people: Person;
@@ -319,6 +331,8 @@ export interface Records {
 export type Kind = keyof Records;
 export type State = { [K in Kind]: Records[K][] };
 export const kinds: Kind[] = [
+  "giftPreferences",
+  "giftDiscoveryJobs",
   "organization",
   "media",
   "people",
@@ -382,6 +396,8 @@ export interface GiftView extends Omit<Item, "creatorId"> {
   }>;
 }
 export interface World {
+  giftPreferences?: GiftPreferenceView[];
+  giftDiscovery?: DiscoveryConfig;
   organization?: Organization[];
   environment?: "production" | "staging" | "development" | "test";
   me: Actor & { admin: boolean };

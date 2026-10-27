@@ -78,3 +78,15 @@ Approved logo package only. No real user gift data; development fixtures must be
 ## Accessibility
 
 Keyboard access, readable contrast, reduced motion, screen readers, text enlargement, and mobile safe areas.
+
+## Gift discovery
+
+Recipient interests and likes/avoid notes are private by default, editable by owners and guardians, and shareable with selected family groups after confirmation. New accounts get skippable setup; existing accounts get a dismissible prompt. Preferences remain usable when AI is off.
+
+AI suggestions default to givers only, with admin modes Off / For others / For own lists / Both and a locking environment override. Managed profiles count as own lists. Each search targets one person; a joint list can be a save destination. Without shared preferences, users review locally inferred interests from visible, active wish-list titles and tags before searching.
+
+Givers must enter a maximum USD price per item, excluding tax/shipping. Own-list searches may omit it for a price mix up to $200. A batch has up to twelve checked physical products, shown six at a time, with one to three shop offers and customer/editorial evidence. Shuffling is free; an explicit new search uses an allowance. Defaults are three per account per UTC week and 100 for the app per UTC month across all recipients and modes. Private batches expire after 24 hours; dispatched failures count and are never retried automatically.
+
+Users select gifts, edit public notes, choose destinations and confirm before saving. Own-list gifts support a default list and per-item overrides. Giver suggestions become independent ideas, private by default, using existing sharing choices. Offers older than fifteen minutes are refreshed without AI; current prices appear in final review. Unverifiable or over-budget offers cannot be saved. Duplicate checks use visible gifts only and require an explicit separate-entry choice. Batch saves are atomic and never reserve or purchase gifts. Private search notes and matching reasons stay out of saved item descriptions.
+
+Off hides discovery controls and unsaved results, blocks endpoints, cancels pending work and discards in-flight results. Already dispatched requests may still be charged. Saved gifts and preferences remain available. Staging disables external AI discovery.

@@ -1,3 +1,6 @@
+import { processDiscovery } from "./gift-discovery-worker";
+import { pruneDiscovery } from "./gift-discovery";
+import { discoveryConfigForState } from "./settings";
 import { removeDeletedMedia } from "./media";
 import {
   deliverPushBatch,
@@ -17,6 +20,18 @@ validateDeployment();
 const boss = new PgBoss(process.env.DATABASE_URL!);
 boss.on("error", () => console.error("Background queue error."));
 await boss.start();
+await boss.createQueue("gift-discovery", {
+  policy: "exclusive",
+  retryLimit: 0,
+  expireInSeconds: 240,
+});
+await boss.work<{ id: string }>(
+  "gift-discovery",
+  { batchSize: 1 },
+  async (jobs) => {
+    for (const job of jobs) await processDiscovery(job.data.id);
+  },
+);
 await boss.createQueue("product-import", {
   policy: "exclusive",
   retryLimit: 2,
@@ -94,6 +109,7 @@ async function dispatch() {
     }
     await writeFile("/tmp/little-hint-worker-heartbeat", String(Date.now()));
     await transact((s) => {
+      pruneDiscovery(s, discoveryConfigForState(s));
       archiveDueLists(s);
       let row = s.usage.find((u) => u.key === "worker-heartbeat");
       if (!row) {
@@ -103,6 +119,10 @@ async function dispatch() {
       row.count = Date.now();
     });
     const s = await readState();
+    for (const j of s.giftDiscoveryJobs.filter(
+      (j) => j.status === "pending" || j.status === "reviewing",
+    ))
+      await boss.send("gift-discovery", { id: j.id }, { singletonKey: j.id });
     for (const j of s.imports.filter(
       (j) => j.status === "pending" || j.status === "running",
     ))

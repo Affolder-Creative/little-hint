@@ -258,3 +258,9 @@ The header bell opens a full notification page without adding a sixth mobile nav
 Person and list headers offer follow controls. Private notes offer watching and a keyboard-accessible name picker that only lists accounts allowed to read the note. Notification settings keep channel setup beside controls and provide topic-by-channel choices. Push permission is requested only from the enable button; unsupported devices retain the inbox.
 
 Push titles identify the activity category, such as New invitation, Ownership request, or Exchange update. The platform supplies the app attribution, so the title does not repeat Little Hint. Normal notification bodies say “Open Little Hint to see the details.” Test notifications use Notifications are ready with “This test notification reached your device.” Missing or unrecognized categories use New activity. Previews never include names, gift details, amounts, or private note text.
+
+### Gift preferences and discovery
+
+Use searchable, labeled checkbox categories with visible selection and 44px targets. Likes and things to avoid are optional; selected family groups form one audience for all preference fields. Name the audience in the sharing confirmation. Setup always offers Skip for now.
+
+Discovery uses existing typography, colors and open gift rows, with three result columns on desktop and one on narrow phones. Six results appear at a time; Show different ideas changes only the current batch. Keep new-search allowance text beside the explicit paid-search action. Product cards show checked shop prices and linked evidence. Selection editing and final confirmation are separate steps, with focus moved to the confirmation heading. Name destination lists, recipients and visibility before Confirm and add gifts. Prices exclude tax/shipping. Missing or rejected evidence produces an honest empty result, never a fabricated product card.
