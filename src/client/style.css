@@ -714,12 +714,7 @@ main {
   color: var(--muted);
 }
 .person-lists {
-  margin-bottom: 24px;
-}
-.person-lists h2,
-.person-items-heading {
-  font-size: 16px;
-  margin: 0 0 12px;
+  margin-bottom: 12px;
 }
 .person-lists ul {
   display: flex;
@@ -3305,4 +3300,27 @@ main {
     display: block;
     margin-left: 0;
   }
+}
+
+/* Keep the list title independent of its browsing and maintenance controls. */
+.page-heading.list-heading {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 16px;
+}
+.list-heading .actions {
+  justify-content: flex-start;
+}
+.list-heading .entry-actions {
+  margin-inline-start: auto;
+}
+.list-heading .entry-actions-content .button {
+  width: 100%;
+  justify-content: start;
+}
+.gift-preference-empty:has(button) {
+  margin-bottom: 12px;
+}
+.gift-preference-prompt {
+  margin-top: 28px;
 }

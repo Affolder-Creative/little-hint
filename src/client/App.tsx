@@ -721,7 +721,7 @@ function Browser({
   );
   return (
     <>
-      {canManage && !parentList?.archived && (
+      {canManage && items.length > 0 && !parentList?.archived && (
         <div className="tabs" role="group" aria-label="Item status">
           {["active", "archived"].map((status) => (
             <button
@@ -734,72 +734,76 @@ function Browser({
           ))}
         </div>
       )}
-      <div className="item-organization">
-        <SortSelect
-          items
-          manualLabel={parentList ? "List order" : "Default order"}
-          sort={settings.sort}
-          change={(sort) => settings.save(sort)}
-        />
-        {canReorder && items.filter((i) => !i.archived).length > 1 && (
-          <button
-            className="button secondary small"
-            onClick={() =>
-              open(
-                "Arrange wish-list items",
-                <ReorderForm
-                  entries={ordered(
-                    items.filter((i) => !i.archived),
-                    "manual",
-                    parentList.itemOrder,
-                  ).map((i) => ({ id: i.id, name: i.title }))}
-                  save={async (order) => {
-                    await mutate("lists/reorder", {
-                      id: parentList.id,
-                      revision: parentList.revision,
-                      order,
-                    });
-                    await settings.save("manual");
-                  }}
-                />,
-              )
-            }
-          >
-            Reorder items
-          </button>
-        )}
-      </div>
-      <div className="filters">
-        <label className="search">
-          <Search size={18} />
-          <input
-            aria-label={searchLabel}
-            placeholder="Search by name, person, or tag"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </label>
-        <select
-          aria-label="Filter by tag"
-          value={tag}
-          onChange={(e) => setTag(e.target.value)}
-        >
-          <option value="">All tags</option>
-          {tags.map((t) => (
-            <option key={t}>{t}</option>
-          ))}
-        </select>
-        {showAvailability && (
-          <label className="check filter-check">
-            <input
-              type="checkbox"
-              checked={available}
-              onChange={(e) => setAvailable(e.target.checked)}
+      {items.length > 0 && (
+        <>
+          <div className="item-organization">
+            <SortSelect
+              items
+              manualLabel={parentList ? "List order" : "Default order"}
+              sort={settings.sort}
+              change={(sort) => settings.save(sort)}
             />
-            Available to give
-          </label>
-        )}
-      </div>
+            {canReorder && items.filter((i) => !i.archived).length > 1 && (
+              <button
+                className="button secondary small"
+                onClick={() =>
+                  open(
+                    "Arrange wish-list items",
+                    <ReorderForm
+                      entries={ordered(
+                        items.filter((i) => !i.archived),
+                        "manual",
+                        parentList.itemOrder,
+                      ).map((i) => ({ id: i.id, name: i.title }))}
+                      save={async (order) => {
+                        await mutate("lists/reorder", {
+                          id: parentList.id,
+                          revision: parentList.revision,
+                          order,
+                        });
+                        await settings.save("manual");
+                      }}
+                    />,
+                  )
+                }
+              >
+                Reorder items
+              </button>
+            )}
+          </div>
+          <div className="filters">
+            <label className="search">
+              <Search size={18} />
+              <input
+                aria-label={searchLabel}
+                placeholder="Search by name, person, or tag"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </label>
+            <select
+              aria-label="Filter by tag"
+              value={tag}
+              onChange={(e) => setTag(e.target.value)}
+            >
+              <option value="">All tags</option>
+              {tags.map((t) => (
+                <option key={t}>{t}</option>
+              ))}
+            </select>
+            {showAvailability && (
+              <label className="check filter-check">
+                <input
+                  type="checkbox"
+                  checked={available}
+                  onChange={(e) => setAvailable(e.target.checked)}
+                />
+                Available to give
+              </label>
+            )}
+          </div>
+        </>
+      )}
       {filtered.length ? (
         <div className="gift-grid">
           {filtered.map((i) => (
@@ -859,7 +863,6 @@ function Home() {
   const hasLists = world.lists.some((list) => list.canEdit && !list.archived);
   return (
     <>
-      <GiftPreferencePrompt />
       <Header
         title={`Hi, ${world.me.name.split(" ")[0]}.`}
         description={
@@ -912,6 +915,7 @@ function Home() {
       ) : (
         <Browser items={items} />
       )}
+      <GiftPreferencePrompt />
       {solo && (
         <p>
           Ready to share?{" "}
@@ -1095,7 +1099,6 @@ function PersonPage() {
               className="person-lists"
               aria-label={`Wish lists for ${person.name}`}
             >
-              <h2>Wish lists</h2>
               <ul>
                 {lists.map((list) => (
                   <li key={list.id}>
@@ -1106,7 +1109,6 @@ function PersonPage() {
                 ))}
               </ul>
             </nav>
-            <h2 className="person-items-heading">All wish-list items</h2>
           </>
         )}
         <Browser
@@ -1194,7 +1196,19 @@ function Lists() {
             : (world.people.find((p) => p.id === list.ownerIds[0])?.name ??
               "On their wish lists")}
         </Link>
-        <Header title={list.name} description={list.description}>
+        <Header
+          className="list-heading"
+          title={list.name}
+          description={list.description}
+        >
+          {list.canEdit && !list.archived && (
+            <button
+              className="button"
+              onClick={() => open("Add item", <GiftForm listId={list.id} />)}
+            >
+              <Plus size={17} /> Add item
+            </button>
+          )}
           {list.canEdit && !list.archived && (
             <DiscoveryLink
               personId={list.ownerIds.find((id) =>
@@ -1208,16 +1222,16 @@ function Lists() {
               listId={list.id}
             />
           )}
-          <FollowButton target="list" targetId={list.id} />
           <Privacy mode={list.mode} />
-          {list.canManageSettings && (
-            <>
+          {list.canManageSettings ? (
+            <ActionMenu name={list.name}>
               <button
-                className="button secondary"
+                className="text-button"
                 onClick={() => open("List settings", <ListForm list={list} />)}
               >
                 List settings
               </button>
+              <FollowButton target="list" targetId={list.id} />
               <Action
                 secondary
                 onClick={() =>
@@ -1231,22 +1245,9 @@ function Lists() {
                 {list.archived ? "Restore list" : "Archive list"}
               </Action>
               <TrashButton kind="lists" entry={list} />
-            </>
-          )}
-          {list.canEdit && (
-            <>
-              {!list.archived && (
-                <button
-                  className="button"
-                  onClick={() =>
-                    open("Add item", <GiftForm listId={list.id} />)
-                  }
-                >
-                  <Plus size={17} />
-                  Add item
-                </button>
-              )}
-            </>
+            </ActionMenu>
+          ) : (
+            <FollowButton target="list" targetId={list.id} />
           )}
         </Header>
         {list.archived && (
