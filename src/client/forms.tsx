@@ -1,3 +1,5 @@
+import { PrioritySelect } from "./Management";
+import type { ItemPriority } from "../shared/model";
 import { actionError } from "./copy";
 import { useNavigate } from "react-router-dom";
 import { familyGroupLabel } from "../shared/households";
@@ -240,6 +242,9 @@ export function GiftForm({
     tags: gift?.tags.join(", ") ?? "",
     quantity: gift?.quantity ?? 1,
   });
+  const [priority, setPriority] = useState<ItemPriority | null>(
+    gift?.priority ?? null,
+  );
   const touched = useRef(new Set<string>());
   const [error, setError] = useState("");
   const importQuery = useImportJob(world.me.id);
@@ -341,6 +346,7 @@ export function GiftForm({
       onSubmit={async (f) => {
         const payload = {
           ...data,
+          ...(!idea ? { priority } : {}),
           tags: data.tags
             .split(",")
             .map((s) => s.trim())
@@ -530,6 +536,7 @@ export function GiftForm({
             />
           </Field>
         </div>
+        {!idea && <PrioritySelect value={priority} onChange={setPriority} />}
         <Field label="Tags" hint="Separate tags with commas.">
           <input
             value={data.tags}

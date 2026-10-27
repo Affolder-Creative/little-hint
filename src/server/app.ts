@@ -1,3 +1,4 @@
+import { managementActions, trash } from "./management";
 import {
   inbox,
   mentionCandidates,
@@ -347,6 +348,11 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
     preferences: "preferences.update",
     imports: "imports.create",
   };
+  app.get("/api/v1/trash", async (req) =>
+    trash(await readState(), await actor(req)),
+  );
+  for (const action of managementActions)
+    routes[action.replace(".", "/")] = action;
   for (const [url, action] of Object.entries(routes))
     app.post(`/api/v1/${url}`, async (req) => {
       const a = await actor(req);
@@ -399,6 +405,11 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
         m = s.media.find((m) => m.id === req.params.id);
       if (
         !m ||
+        m.deletedAt ||
+        (s.items.some((i) => i.image === `/api/v1/media/${m.id}`) &&
+          !s.items.some(
+            (i) => i.image === `/api/v1/media/${m.id}` && itemVisible(s, a, i),
+          )) ||
         (m.userId !== a.id &&
           !s.items.some(
             (i) => i.image === `/api/v1/media/${m.id}` && itemVisible(s, a, i),

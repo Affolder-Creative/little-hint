@@ -1,3 +1,5 @@
+import { managementActions, managementCommand } from "./management";
+import { itemTrashed } from "../shared/organization";
 import {
   activityAllowed,
   activityCommand,
@@ -159,8 +161,8 @@ function checkEventParticipants(
       "Choose people who belong to this family group. Refresh to see current members.",
     );
 }
-function syncEventLists(s: State, event: GroupEvent) {
-  for (const personId of event.participantIds) {
+export function syncEventLists(s: State, event: GroupEvent) {
+  for (const personId of event.deletedAt ? [] : event.participantIds) {
     if (
       !s.lists.some(
         (list) =>
@@ -190,7 +192,9 @@ function syncEventLists(s: State, event: GroupEvent) {
       name: event.name,
       description: event.description,
       archived:
-        event.archived || !event.participantIds.includes(list.ownerIds[0]),
+        event.archived ||
+        !!event.deletedAt ||
+        !event.participantIds.includes(list.ownerIds[0]),
       archiveAfter: event.archiveAfter,
       revealAfter: event.revealAfter,
       timeZone: event.timeZone,
@@ -274,9 +278,11 @@ const checkGroups = (s: State, a: Actor, gs: string[]) => {
 export const recipient = (s: State, a: Actor, i: Item) =>
   i.recipientIds.some((p) => controls(s, a, p));
 export const listVisible = (s: State, a: Actor, l: List) =>
-  l.ownerIds.some((p) => controls(s, a, p)) ||
-  l.groupIds.some((g) => groupAccess(s, a, g));
+  !l.deletedAt &&
+  (l.ownerIds.some((p) => controls(s, a, p)) ||
+    l.groupIds.some((g) => groupAccess(s, a, g)));
 export function itemVisible(s: State, a: Actor, i: Item): boolean {
+  if (itemTrashed(s, i)) return false;
   if (i.listId) {
     const l = s.lists.find((l) => l.id === i.listId);
     return !!l && listVisible(s, a, l);
@@ -320,7 +326,10 @@ export function archiveDueLists(s: State) {
 export function giftSummary(s: State, a: Actor, listId: string): GiftSummary {
   const list =
     s.lists.find(
-      (l) => l.id === listId && l.ownerIds.some((p) => controls(s, a, p)),
+      (l) =>
+        l.id === listId &&
+        !l.deletedAt &&
+        l.ownerIds.some((p) => controls(s, a, p)),
     ) ?? fail(404, "List not found.");
   if (!dateHasElapsed(list.revealAfter, list.timeZone))
     fail(409, "Gift details are not available before this list's reveal date.");
@@ -332,6 +341,7 @@ export function giftSummary(s: State, a: Actor, listId: string): GiftSummary {
       );
       if (
         !item ||
+        itemTrashed(s, item) ||
         r.purchased < 1 ||
         (r.exchangeId && !list.revealExchangeGivers)
       )
@@ -510,6 +520,7 @@ export function world(s: State, a: Actor): World {
   const people = s.people.filter((p) => personVisible(s, a, p));
   const ps = ownIds(s, a);
   return {
+    organization: s.organization.filter((o) => o.userId === a.id),
     me: {
       ...a,
       name: s.people.find((p) => p.userId === a.id)?.name ?? a.name,
@@ -524,7 +535,7 @@ export function world(s: State, a: Actor): World {
       ),
     ),
     groupEvents: s.groupEvents
-      .filter((event) => groupAccess(s, a, event.groupId))
+      .filter((event) => !event.deletedAt && groupAccess(s, a, event.groupId))
       .map((event) => ({
         ...event,
         archived: listIsArchived(event),
@@ -549,8 +560,9 @@ export function world(s: State, a: Actor): World {
     lists: s.lists
       .filter(
         (l) =>
-          listVisible(s, a, l) ||
-          l.pendingOwnerIds.some((id) => ps.includes(id)),
+          !l.deletedAt &&
+          (listVisible(s, a, l) ||
+            l.pendingOwnerIds.some((id) => ps.includes(id))),
       )
       .map((l) => ({
         ...l,
@@ -593,7 +605,7 @@ export function world(s: State, a: Actor): World {
           : undefined,
       })),
     exchanges: s.exchanges
-      .filter((e) => groupAccess(s, a, e.groupId))
+      .filter((e) => !e.deletedAt && groupAccess(s, a, e.groupId))
       .map(({ assignments, ...e }) => ({
         ...e,
         canManage: e.organizerId === a.id,
@@ -711,6 +723,7 @@ function reconcileAccess(s: State) {
       r.quantity &&
       !r.former &&
       i &&
+      !itemTrashed(s, i) &&
       !itemVisible(s, { id: r.buyerId, email: "", name: "" }, i)
     ) {
       r.quantity = r.purchased;
@@ -732,6 +745,7 @@ function checkImage(s: State, a: Actor, url: string) {
     !s.media.some(
       (m) =>
         m.id === id &&
+        !m.deletedAt &&
         (m.userId === a.id ||
           s.items.some((i) => i.image === url && itemVisible(s, a, i))),
     )
@@ -739,6 +753,10 @@ function checkImage(s: State, a: Actor, url: string) {
     fail(404, "Image not found.");
 }
 const itemInput = z.object({
+  priority: z
+    .enum(["most-wanted", "would-love", "nice-to-have"])
+    .nullable()
+    .optional(),
   title: text,
   description: z.string().max(5000).default(""),
   url: z
@@ -764,6 +782,8 @@ export function command(
   action: string,
   raw: unknown,
 ): unknown {
+  if (managementActions.includes(action))
+    return managementCommand(s, a, action, raw);
   const b = raw as Record<string, unknown>;
   if (
     ["notifications.read", "follows.update", "watches.update"].includes(action)
@@ -906,7 +926,7 @@ export function command(
         .extend({ id, revision, archived: z.boolean() })
         .parse(b);
       const event =
-        s.groupEvents.find((event) => event.id === p.id) ??
+        s.groupEvents.find((event) => event.id === p.id && !event.deletedAt) ??
         fail(404, "Event not found.");
       const group = managedEventGroup(s, a, event.groupId);
       checkRevision(event, p.revision);
@@ -1158,7 +1178,9 @@ export function command(
       const l =
         s.lists.find(
           (l) =>
-            l.id === p.id && l.pendingOwnerIds.some((id) => controls(s, a, id)),
+            l.id === p.id &&
+            !l.deletedAt &&
+            l.pendingOwnerIds.some((id) => controls(s, a, id)),
         ) ?? fail(404, "List invitation not found.");
       const mine = l.pendingOwnerIds.filter((id) => controls(s, a, id));
       l.ownerIds.push(...mine);
@@ -1185,7 +1207,10 @@ export function command(
         .parse(b);
       const l =
         s.lists.find(
-          (l) => l.id === p.id && l.ownerIds.some((id) => controls(s, a, id)),
+          (l) =>
+            l.id === p.id &&
+            !l.deletedAt &&
+            l.ownerIds.some((id) => controls(s, a, id)),
         ) ?? fail(404, "List not found.");
       if (l.groupEventId)
         fail(403, "This list is managed through its group event.");
@@ -1219,12 +1244,15 @@ export function command(
         })
         .parse(b);
       checkImage(s, a, p.image);
+      if (!p.listId && p.priority)
+        fail(400, "Only wish-list items have a recipient priority.");
       let recipients = p.recipientIds;
       if (p.listId) {
         const l =
           s.lists.find(
             (l) =>
               l.id === p.listId &&
+              !l.deletedAt &&
               !listIsArchived(l) &&
               l.ownerIds.some((id) => controls(s, a, id)),
           ) ?? fail(404, "List not found.");
@@ -1240,6 +1268,7 @@ export function command(
       const duplicate = s.items.find(
         (i) =>
           itemVisible(s, a, i) &&
+          !itemTrashed(s, i) &&
           !archived(s, i) &&
           i.recipientIds.some((r) => recipients.includes(r)) &&
           ((p.url && canonicalUrl(i.url) === canonicalUrl(p.url)) ||
@@ -1299,7 +1328,10 @@ export function command(
         if (p.visibility !== "private" && !p.groupIds.length)
           fail(400, "Select a family group to share this idea.");
       }
+      if (!i.listId && p.priority)
+        fail(400, "Only wish-list items have a recipient priority.");
       const { importId, ...fields } = p;
+      if (fields.priority === undefined) delete fields.priority;
       const imported = s.imports.find(
         (j) =>
           j.id === importId &&
@@ -1345,6 +1377,8 @@ export function command(
           s.exchanges.find(
             (e) =>
               e.id === p.exchangeId &&
+              !e.deletedAt &&
+              !e.archived &&
               e.status === "drawn" &&
               groupAccess(s, a, e.groupId),
           ) ?? fail(404, "Exchange not found.");
@@ -1402,15 +1436,16 @@ export function command(
           400,
           "Make a new reservation to buy more. The quantity purchased cannot be higher than the quantity reserved.",
         );
-      const i = s.items.find((i) => i.id === r.itemId)!;
+      const i = s.items.find((i) => i.id === r.itemId);
       if (
         p.purchased > r.purchased &&
-        (!itemVisible(s, a, i) || recipient(s, a, i))
+        (!i || !itemVisible(s, a, i) || recipient(s, a, i))
       )
         fail(403, "This gift is no longer available for new purchases.");
       if (
         p.poolTargetCents &&
-        (r.exchangeId || !itemVisible(s, a, i) || archived(s, i))
+        p.poolTargetCents !== r.poolTargetCents &&
+        (r.exchangeId || !i || !itemVisible(s, a, i) || archived(s, i))
       )
         fail(400, "Contributions are not available for this reservation.");
       const pledged = s.contributions
@@ -1471,7 +1506,7 @@ export function command(
           c.status = "cancelled";
           touch(c);
         }
-      if (!r.exchangeId)
+      if (!r.exchangeId && i && !itemTrashed(s, i))
         emitGiftActivity(s, a, i, increased ? "purchase" : "reservation", {
           reservationId: r.id,
           action: !r.quantity ? "released" : undefined,
@@ -1625,6 +1660,8 @@ export function command(
         ? s.exchanges.find(
             (e) =>
               e.id === edit.id &&
+              !e.deletedAt &&
+              !e.archived &&
               e.organizerId === a.id &&
               groupAccess(s, a, e.groupId),
           )
@@ -1684,7 +1721,8 @@ export function command(
       if (
         p.previousId &&
         !s.exchanges.some(
-          (e) => e.id === p.previousId && e.groupId === p.groupId,
+          (e) =>
+            e.id === p.previousId && !e.deletedAt && e.groupId === p.groupId,
         )
       )
         fail(404, "Previous exchange not found.");
@@ -1708,11 +1746,12 @@ export function command(
         s.exchanges.find(
           (e) =>
             e.id === p.id &&
+            !e.deletedAt &&
             e.organizerId === a.id &&
             groupAccess(s, a, e.groupId),
         ) ?? fail(404, "Exchange not found.");
       checkRevision(e, p.revision);
-      if (e.status !== "draft")
+      if (e.archived || e.status !== "draft")
         fail(409, "This exchange has already been drawn or cancelled.");
       const g = s.groups.find((g) => g.id === e.groupId)!;
       if (
@@ -1734,7 +1773,8 @@ export function command(
           (p) =>
             !s.lists.some(
               (l) =>
-                !l.archived &&
+                !l.deletedAt &&
+                !listIsArchived(l) &&
                 l.mode === "surprise" &&
                 l.ownerIds.includes(p) &&
                 l.groupIds.includes(e.groupId),
@@ -1770,6 +1810,7 @@ export function command(
         s.exchanges.find(
           (e) =>
             e.id === p.id &&
+            !e.deletedAt &&
             e.organizerId === a.id &&
             groupAccess(s, a, e.groupId),
         ) ?? fail(404, "Exchange not found.");

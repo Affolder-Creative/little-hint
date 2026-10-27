@@ -11,6 +11,7 @@ if (
     "sign-in",
     "list-features",
     "group-events",
+    "management",
     "polish",
     "critique",
     "pwa",

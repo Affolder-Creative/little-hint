@@ -177,12 +177,17 @@ export function activityAllowed(s: State, n: Notice): boolean {
   }
   if (n.action === "ownership-request") {
     const list = s.lists.find((l) => l.id === n.listId);
-    return !!list && list.pendingOwnerIds.some((id) => controls(s, a, id));
+    return (
+      !!list &&
+      !list.deletedAt &&
+      list.pendingOwnerIds.some((id) => controls(s, a, id))
+    );
   }
   if (n.exchangeId) {
     const e = s.exchanges.find((e) => e.id === n.exchangeId);
     return (
       !!e &&
+      !e.deletedAt &&
       (n.action === "cancelled"
         ? e.status === "cancelled"
         : e.status === "drawn") &&

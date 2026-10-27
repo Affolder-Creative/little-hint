@@ -111,7 +111,8 @@ export async function deliverNotice(id: string) {
   if (!n || n.status === "sent") return;
   if (!noticeAllowed(s, n)) {
     await transact((s) => {
-      const n = s.notices.find((n) => n.id === id)!;
+      const n = s.notices.find((n) => n.id === id);
+      if (!n) return;
       n.status = "sent";
       n.error = "No longer authorized.";
     });
@@ -142,7 +143,8 @@ export async function deliverNotice(id: string) {
     : preferences(s, { id: n.userId, email: user.email, name: user.name });
   if (!n.inbox && !prefs.events.includes(n.event)) {
     await transact((s) => {
-      s.notices.find((n) => n.id === id)!.status = "sent";
+      const notice = s.notices.find((n) => n.id === id);
+      if (notice) notice.status = "sent";
     });
     return;
   }
@@ -164,7 +166,8 @@ export async function deliverNotice(id: string) {
     let failures = 0;
     for (const channel of ["email", "telegram", "sms"] as const) {
       s = await readState();
-      n = s.notices.find((n) => n.id === id)!;
+      n = s.notices.find((n) => n.id === id);
+      if (!n) return;
       if (!noticeAllowed(s, n)) break;
       const current = inv
         ? prefs
@@ -216,7 +219,8 @@ export async function deliverNotice(id: string) {
           );
         }
         await transact((s) => {
-          const n = s.notices.find((n) => n.id === id)!;
+          const n = s.notices.find((n) => n.id === id);
+          if (!n) return;
           n.delivered = [...new Set([...n.delivered, channel])];
           n.revision++;
         });
@@ -226,14 +230,16 @@ export async function deliverNotice(id: string) {
     }
     if (failures) throw new Error("Notification provider unavailable.");
     await transact((s) => {
-      const n = s.notices.find((n) => n.id === id)!;
+      const n = s.notices.find((n) => n.id === id);
+      if (!n) return;
       n.status = "sent";
       n.error = undefined;
       n.revision++;
     });
   } catch {
     await transact((s) => {
-      const n = s.notices.find((n) => n.id === id)!;
+      const n = s.notices.find((n) => n.id === id);
+      if (!n) return;
       n.attempts++;
       n.error =
         "The delivery service is unavailable. Check Connected services in app settings.";

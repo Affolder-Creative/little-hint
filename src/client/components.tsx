@@ -1,3 +1,4 @@
+import { priorityLabels } from "../shared/organization";
 import { actionError } from "./copy";
 import {
   useEffect,
@@ -428,6 +429,11 @@ export function GiftCard({
           <ArrowUpRight size={15} />
         </div>
         <h3>{gift.title}</h3>
+        {gift.listId && gift.priority && (
+          <span className={`item-priority priority-${gift.priority}`}>
+            {priorityLabels[gift.priority]}
+          </span>
+        )}
         {sourceListName && (
           <p className="gift-source-list">From {sourceListName}</p>
         )}

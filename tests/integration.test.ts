@@ -549,4 +549,82 @@ describe.skipIf(!url)("PostgreSQL transaction integrity", () => {
     // Additive migration is safe to rerun after populating the database.
     await storage.migrate();
   });
+  it("persists priorities, private sort settings, and recovery with concurrent revision checks", async () => {
+    const result = await storage.transact((s) => {
+      const list = command(s, a, "lists.create", {
+        name: "Organization integration",
+        ownerIds: [s.people.find((p) => p.userId === a.id)!.id],
+        groupIds: [groupId],
+        mode: "surprise",
+      }) as { id: string; revision: number };
+      const first = command(s, a, "items.create", {
+        title: "First management gift",
+        listId: list.id,
+        quantity: 1,
+        priority: "most-wanted",
+      }) as { id: string };
+      const second = command(s, a, "items.create", {
+        title: "Second management gift",
+        listId: list.id,
+        quantity: 1,
+      }) as { id: string };
+      command(s, b, "organization.update", {
+        scope: `items:list:${list.id}`,
+        revision: 0,
+        sort: "priority",
+      });
+      return { list, first, second };
+    });
+    const { list, first, second } = result;
+    const outcomes = await Promise.allSettled(
+      [
+        [first.id, second.id],
+        [second.id, first.id],
+      ].map((order) =>
+        storage.transact((s) =>
+          command(s, a, "lists.reorder", { ...list, order }),
+        ),
+      ),
+    );
+    expect(outcomes.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+    expect(outcomes.filter((r) => r.status === "rejected")).toHaveLength(1);
+    const roundtrip = await storage.readState();
+    expect(roundtrip.items.find((i) => i.id === first.id)?.priority).toBe(
+      "most-wanted",
+    );
+    expect(world(roundtrip, a).organization).toEqual([]);
+    expect(world(roundtrip, b).organization).toEqual(
+      expect.arrayContaining([expect.objectContaining({ sort: "priority" })]),
+    );
+    await storage.transact((s) =>
+      command(
+        s,
+        a,
+        "lists.trash",
+        s.lists.find((l) => l.id === list.id),
+      ),
+    );
+    expect(
+      world(await storage.readState(), b).items.some((i) => i.id === first.id),
+    ).toBe(false);
+    await storage.transact((s) =>
+      command(
+        s,
+        a,
+        "lists.restore",
+        s.lists.find((l) => l.id === list.id),
+      ),
+    );
+    expect(
+      world(await storage.readState(), b).items.some((i) => i.id === first.id),
+    ).toBe(true);
+    await storage.transact((s) => {
+      const row = s.lists.find((l) => l.id === list.id)!;
+      command(s, a, "lists.trash", row);
+      command(s, a, "lists.purge", row);
+    });
+    const after = await storage.readState();
+    expect(after.lists.some((l) => l.id === list.id)).toBe(false);
+    expect(after.items.some((i) => i.listId === list.id)).toBe(false);
+  });
 });

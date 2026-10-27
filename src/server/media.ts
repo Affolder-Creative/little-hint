@@ -93,3 +93,22 @@ export async function saveImage(buffer: Buffer, userId: string) {
   await cardImage(media.file);
   return `/api/v1/media/${media.id}`;
 }
+
+// A tombstone is retained until both files have been removed successfully.
+export async function removeDeletedMedia() {
+  await transact(async (s) => {
+    for (const media of s.media.filter((m) => m.deletedAt)) {
+      const url = `/api/v1/media/${media.id}`;
+      if (
+        s.items.some((i) => i.image === url) ||
+        s.imports.some((i) => i.result?.image === url)
+      )
+        continue;
+      await rm(path.join(mediaDir(), media.file), { force: true });
+      await rm(path.join(mediaDir(), `${media.file}.card-v1.webp`), {
+        force: true,
+      });
+      s.media = s.media.filter((m) => m.id !== media.id);
+    }
+  });
+}

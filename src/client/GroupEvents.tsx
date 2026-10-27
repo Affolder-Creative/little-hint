@@ -1,3 +1,10 @@
+import { ordered } from "../shared/organization";
+import {
+  ActionMenu,
+  CollectionTools,
+  TrashButton,
+  useOrganization,
+} from "./Management";
 import { familyGroupLabel } from "../shared/households";
 /* Group events extend the existing list rows and focused forms. Organizers choose
    recipients once; families open individual wish lists. Keep gift activity private. */
@@ -300,20 +307,36 @@ export function GroupEventSettings({ group }: { group: Group }) {
 
 export function GroupEventsSection({ archived }: { archived: boolean }) {
   const { world, open } = useApp();
+  const [search, setSearch] = useState(""),
+    [group, setGroup] = useState("");
+  const settings = useOrganization("events");
+  const ownedLists = world.lists.filter(
+    (l) => l.canEdit && l.archived === archived,
+  );
   const events = world.groupEvents.filter(
-    (event) => event.archived === archived,
+    (event) =>
+      event.archived === archived ||
+      ownedLists.some((l) => l.groupEventId === event.id),
   );
   const canCreate = world.groups.some((g) =>
     canManageGroupEvents(g, world.me.id),
   );
   if (!world.groups.length) return null;
+  const filtered = ordered(events, settings.sort, settings.order).filter(
+    (e) =>
+      e.name.toLowerCase().includes(search.toLowerCase()) &&
+      (!group || e.groupId === group),
+  );
   return (
     <section
       className="group-events-section"
       aria-labelledby="group-events-heading"
     >
       <div className="section-heading">
-        <h2 id="group-events-heading">Group events</h2>
+        <div>
+          <h2 id="group-events-heading">Group events</h2>
+          <p className="muted">One occasion, a wish list for each person.</p>
+        </div>
         {canCreate && (
           <button
             className="button secondary small"
@@ -324,39 +347,121 @@ export function GroupEventsSection({ archived }: { archived: boolean }) {
           </button>
         )}
       </div>
-      {events.length ? (
-        <div className="list-index">
-          {events.map((event) => (
-            <Link
-              to={`/events/${event.id}`}
-              key={event.id}
-              className="list-row"
-            >
+      {events.length > 1 && (
+        <CollectionTools
+          scope="events"
+          rows={events}
+          search={search}
+          setSearch={setSearch}
+          group={group}
+          setGroup={setGroup}
+        />
+      )}
+      {filtered.map((event) => {
+        const mine = ownedLists
+          .filter((l) => l.groupEventId === event.id)
+          .sort(
+            (a, b) =>
+              Number(
+                !a.ownerIds.some((id) =>
+                  world.people.some(
+                    (p) => p.id === id && p.userId === world.me.id,
+                  ),
+                ),
+              ) -
+                Number(
+                  !b.ownerIds.some((id) =>
+                    world.people.some(
+                      (p) => p.id === id && p.userId === world.me.id,
+                    ),
+                  ),
+                ) || a.ownerIds[0].localeCompare(b.ownerIds[0]),
+          );
+        return (
+          <article className="event-entry" key={event.id}>
+            <div className="event-entry-heading">
               <span className="list-symbol">
                 <CalendarDays size={24} />
               </span>
               <div>
                 <h3>{event.name}</h3>
                 <p>
-                  {world.groups.find((g) => g.id === event.groupId)?.name} ·{" "}
-                  {event.participantIds.length}{" "}
+                  Shared with:{" "}
+                  {world.groups.find((g) => g.id === event.groupId)?.name ??
+                    "Family group"}{" "}
+                  · {event.participantIds.length}{" "}
                   {event.participantIds.length === 1
                     ? "participant"
                     : "participants"}
                 </p>
               </div>
               <Privacy mode={event.mode} />
-              <ArrowRight size={18} />
-            </Link>
-          ))}
-        </div>
-      ) : (
+              {event.canManage && (
+                <ActionMenu name={event.name}>
+                  <button
+                    className="text-button"
+                    onClick={() =>
+                      open("Edit group event", <EventForm event={event} />)
+                    }
+                  >
+                    Edit event
+                  </button>
+                  <button
+                    className="text-button"
+                    onClick={() =>
+                      open(
+                        event.archived
+                          ? "Restore group event"
+                          : "Archive group event",
+                        <EventArchiveForm event={event} />,
+                      )
+                    }
+                  >
+                    {event.archived ? "Restore event" : "Archive event"}
+                  </button>
+                  <TrashButton kind="group-events" entry={event} />
+                </ActionMenu>
+              )}
+            </div>
+            <div className="event-entry-links">
+              {mine.map((list) => {
+                const own = list.ownerIds.some((id) =>
+                  world.people.some(
+                    (p) => p.id === id && p.userId === world.me.id,
+                  ),
+                );
+                const label = own
+                  ? "Your wish list"
+                  : `${list.ownerIds.map((id) => world.people.find((p) => p.id === id)?.name ?? "Managed profile").join(" & ")}’s wish list`;
+                return (
+                  <Link
+                    key={list.id}
+                    className="event-wishlist-link"
+                    to={`/lists/${list.id}`}
+                  >
+                    <span>
+                      {label}
+                      {list.archived && <small>Archived wish list</small>}
+                    </span>
+                    <ArrowRight size={16} />
+                  </Link>
+                );
+              })}
+              <Link className="text-button" to={`/events/${event.id}`}>
+                {event.canManage ? "Manage event" : "View event"}
+                <ArrowRight size={16} />
+              </Link>
+            </div>
+          </article>
+        );
+      })}
+      {!filtered.length && (
         <p className="muted">
-          {archived
-            ? "No archived group events."
-            : canCreate
-              ? "Plan one occasion and create a wish list for each person taking part."
-              : "Your family-group owner or an event leader can create an occasion with wish lists for everyone taking part."}
+          {search || group
+            ? "No matching events."
+            : archived
+              ? "No archived group events."
+              : "Plan one occasion and create a wish list for each person taking part."}
         </p>
       )}
     </section>
@@ -462,6 +567,7 @@ export function EventPage() {
             >
               Edit event
             </button>
+            <TrashButton kind="group-events" entry={event} />
           </>
         )}
       </Header>
@@ -521,6 +627,12 @@ export function ManagedEventNotice({ list }: { list: List }) {
         Wish list for {names}. Event leaders manage this list’s settings; the
         recipient or the person managing their profile edits the items.
       </p>
+      {!event && (
+        <p>
+          The event is unavailable. Your list and items are kept; an event
+          leader can restore the event.
+        </p>
+      )}
       {event && (
         <Link className="text-button" to={`/events/${event.id}`}>
           {event.canManage ? "Manage event" : "View group event"}
