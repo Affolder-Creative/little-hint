@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.6.2](https://github.com/Affolder-Creative/little-hint/compare/v0.6.1...v0.6.2) (2026-10-27)
+
+
+### Fixes
+
+* clarify sign-in code eligibility ([#63](https://github.com/Affolder-Creative/little-hint/issues/63)) ([5ad7e7d](https://github.com/Affolder-Creative/little-hint/commit/5ad7e7d6759c7437644c703217e7ea4ec7987152))
+
+
+### Dependencies
+
+* bump the runtime group with 3 updates ([#68](https://github.com/Affolder-Creative/little-hint/issues/68)) ([8520277](https://github.com/Affolder-Creative/little-hint/commit/852027766c32b1406522c6f4f2bbef4b49063658))
+* bump uharfbuzz from 0.56.3 to 0.56.4 in /brand/little-hint-final/source ([#67](https://github.com/Affolder-Creative/little-hint/issues/67)) ([ab432b7](https://github.com/Affolder-Creative/little-hint/commit/ab432b7658f642fcc7f11fa2c5a854e6dca545a3))
+
+
+### Build and packaging
+
+* bump axllent/mailpit from v1.31.6 to v1.32.0 ([#66](https://github.com/Affolder-Creative/little-hint/issues/66)) ([ca63d59](https://github.com/Affolder-Creative/little-hint/commit/ca63d593b178cbeb1f481206bd272d13edc6e7b6))
+* bump node from `44fce69` to `06d7adf` ([#65](https://github.com/Affolder-Creative/little-hint/issues/65)) ([ef2847d](https://github.com/Affolder-Creative/little-hint/commit/ef2847d2869a65bfccee0a3491c741ea738d8658))
+
 ## [0.6.1](https://github.com/Affolder-Creative/little-hint/compare/v0.6.0...v0.6.1) (2026-10-25)
 
 
