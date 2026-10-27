@@ -912,6 +912,13 @@ main {
 .discussion .form {
   max-width: 660px;
 }
+.buying-views {
+  flex-wrap: wrap;
+  gap: 4px 24px;
+}
+.buying-views button {
+  min-height: 44px;
+}
 .buying-row {
   display: flex;
   align-items: center;

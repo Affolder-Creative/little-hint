@@ -2971,3 +2971,255 @@ test("archived-only collections keep their navigation while truly empty lists om
       .getByRole("button", { name: "Add item", exact: true }),
   ).toBeVisible();
 });
+
+for (const width of [1440, 390]) {
+  test(`Buying separates unfinished gifts from purchases at ${width}px`, async ({
+    page,
+  }, testInfo) => {
+    const { state, actors, actor } = await preview(page, 1);
+    const pending = world(state, actor).buying.find(
+      (r) => !r.purchased && r.quantity === 1,
+    )!;
+    const completed = state.reservations.find(
+      (r) => r.buyerId === actor.id && r.purchased > 0,
+    )!;
+    const completedItem = state.items.find(
+      (item) => item.id === completed.itemId,
+    )!;
+    completedItem.deletedAt = new Date().toISOString();
+    const list = state.lists.find(
+      (l) =>
+        l.ownerIds.includes(
+          state.people.find((p) => p.userId === actors[0].id)!.id,
+        ) && !l.archived,
+    )!;
+    const item = command(state, actors[0], "items.create", {
+      listId: list.id,
+      title: "Books for the whole family",
+      quantity: 3,
+    }) as { id: string };
+    const partial = command(state, actor, "reservations.create", {
+      itemId: item.id,
+      quantity: 3,
+    }) as (typeof state.reservations)[number];
+    command(state, actor, "reservations.update", {
+      id: partial.id,
+      revision: state.reservations.find((r) => r.id === partial.id)!.revision,
+      quantity: 3,
+      purchased: 1,
+    });
+    const cancelledItem = command(state, actors[0], "items.create", {
+      listId: list.id,
+      title: "Cancelled gift",
+    }) as { id: string };
+    const cancelled = command(state, actor, "reservations.create", {
+      itemId: cancelledItem.id,
+      quantity: 1,
+    }) as (typeof state.reservations)[number];
+    command(state, actor, "reservations.update", {
+      id: cancelled.id,
+      revision: state.reservations.find((r) => r.id === cancelled.id)!.revision,
+      quantity: 0,
+      purchased: 0,
+    });
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/buying");
+    const views = page.getByRole("group", { name: "Gift purchase status" });
+    await expect(
+      views.getByRole("button", { name: "Needs buying (2)", exact: true }),
+    ).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator(".buying-row")).toHaveCount(2);
+    await expect(
+      page.getByText("1 of 3 purchased", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("Jamie Chen contributing to Sam Morgan's purchase"),
+    ).toBeVisible();
+    await page
+      .locator("summary")
+      .filter({ hasText: "Cancelled reservations" })
+      .click();
+    await expect(
+      page.getByText("Cancelled gift", { exact: true }),
+    ).toBeVisible();
+    await page.screenshot({
+      path: testInfo.outputPath(`buying-needs-${width}.png`),
+      fullPage: true,
+    });
+    await views
+      .getByRole("button", { name: "Purchased (1)", exact: true })
+      .click();
+    await expect(page.locator(".buying-row")).toHaveCount(1);
+    await expect(page.locator(".buying-row")).toContainText(
+      completed.titleSnapshot,
+    );
+    await expect(page.locator(".buying-row")).toContainText(
+      "Access to the original gift has changed.",
+    );
+    await expect(
+      page.getByText("Cancelled gift", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Contributions", exact: true }),
+    ).toBeVisible();
+    await views.getByRole("button", { name: "All (3)", exact: true }).click();
+    await expect(page.locator(".buying-row")).toHaveCount(3);
+    await views.getByRole("button", { name: /^Needs buying/ }).click();
+    await page
+      .getByRole("button", {
+        name: `Mark ${pending.titleSnapshot} as purchased`,
+        exact: true,
+      })
+      .click();
+    await expect(page.locator(".buying-row")).toHaveCount(1);
+    await expect(
+      views.getByRole("button", { name: "Needs buying (1)", exact: true }),
+    ).toBeFocused();
+    await expect(
+      views.getByRole("button", { name: "Purchased (2)", exact: true }),
+    ).toBeVisible();
+    await page
+      .getByRole("button", { name: "Update purchase", exact: true })
+      .click();
+    await page.getByLabel("Quantity purchased", { exact: true }).fill("3");
+    await page
+      .getByRole("button", { name: "Save purchase status", exact: true })
+      .click();
+    await expect(
+      page.getByRole("heading", { name: "Nothing left to buy" }),
+    ).toBeVisible();
+    await expect(
+      views.getByRole("button", { name: "Needs buying (0)", exact: true }),
+    ).toBeFocused();
+    await page
+      .getByRole("button", { name: "View purchased gifts", exact: true })
+      .click();
+    await expect(
+      views.getByRole("button", { name: "Purchased (3)", exact: true }),
+    ).toBeFocused();
+    await expect(page.locator(".buying-row")).toHaveCount(3);
+    expect(
+      (await new AxeBuilder({ page }).include("#main").analyze()).violations,
+    ).toEqual([]);
+    await page.screenshot({
+      path: testInfo.outputPath(`buying-purchased-${width}.png`),
+      fullPage: true,
+    });
+  });
+}
+
+test("Buying keeps empty views, failed updates, and cancelled history recoverable", async ({
+  page,
+}) => {
+  const { state, actor } = await preview(page, 1);
+  const reservation = state.reservations.find(
+    (r) => r.buyerId === actor.id && r.quantity === 1 && !r.purchased,
+  )!;
+  state.reservations = state.reservations.filter(
+    (r) => r.buyerId !== actor.id || r.id === reservation.id,
+  );
+  let fail = true;
+  await page.route("**/api/v1/reservations/update", (route) =>
+    fail
+      ? route.fulfill({
+          status: 400,
+          json: { error: "Could not update this gift. Try again." },
+        })
+      : route.fallback(),
+  );
+  await page.goto("/buying");
+  const views = page.getByRole("group", { name: "Gift purchase status" });
+  await views.getByRole("button", { name: /^Purchased/ }).click();
+  await expect(
+    page.getByRole("heading", { name: "No purchases marked yet" }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "View gifts to buy", exact: true })
+    .click();
+  const mark = page.getByRole("button", {
+    name: `Mark ${reservation.titleSnapshot} as purchased`,
+    exact: true,
+  });
+  await mark.click();
+  await expect(page.getByRole("alert")).toHaveText(
+    "Could not update this gift. Try again.",
+  );
+  await expect(page.locator(".buying-row")).toHaveCount(1);
+  await expect(
+    views.getByRole("button", { name: "Needs buying (1)", exact: true }),
+  ).toBeVisible();
+  fail = false;
+  await mark.click();
+  await page
+    .getByRole("button", { name: "View purchased gifts", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Update purchase", exact: true })
+    .click();
+  await page.getByLabel("Quantity purchased", { exact: true }).fill("0");
+  await page
+    .getByRole("button", { name: "Save purchase status", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "No purchases marked yet" }),
+  ).toBeVisible();
+  await expect(
+    views.getByRole("button", { name: "Purchased (0)", exact: true }),
+  ).toBeFocused();
+  await page
+    .getByRole("button", { name: "View gifts to buy", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Cancel reservation", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Cancel selected quantity", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "No gift plans yet" }),
+  ).toBeVisible();
+  await expect(views).toHaveCount(0);
+  await expect(page.getByRole("main")).toBeFocused();
+  await page
+    .locator("summary")
+    .filter({ hasText: "Cancelled reservations" })
+    .click();
+  await expect(
+    page
+      .locator("details.detail-section")
+      .getByText(reservation.titleSnapshot, { exact: true }),
+  ).toBeVisible();
+});
+
+test("Buying status controls fit narrow screens with doubled text", async ({
+  page,
+}, testInfo) => {
+  await preview(page, 1);
+  await page.setViewportSize({ width: 320, height: 740 });
+  await page.goto("/buying");
+  await page.evaluate(() => {
+    document.documentElement.dataset.theme = "dark";
+    const sizes = [...document.querySelectorAll<HTMLElement>("body *")].map(
+      (el) => [el, parseFloat(getComputedStyle(el).fontSize)] as const,
+    );
+    for (const [el, size] of sizes) el.style.fontSize = `${size * 2}px`;
+  });
+  const views = page.getByRole("group", { name: "Gift purchase status" });
+  for (const button of await views.getByRole("button").all()) {
+    await button.focus();
+    await page.keyboard.press("Enter");
+    await expect(button).toHaveAttribute("aria-pressed", "true");
+    const box = (await button.boundingBox())!;
+    expect(box.height).toBeGreaterThanOrEqual(44);
+    expect(box.x + box.width).toBeLessThanOrEqual(320);
+  }
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth - innerWidth,
+    ),
+  ).toBeLessThanOrEqual(1);
+  await page.screenshot({
+    path: testInfo.outputPath("buying-320-dark-large-text.png"),
+    fullPage: true,
+  });
+});

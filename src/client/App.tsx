@@ -61,7 +61,7 @@ import { canManageGroupEvents } from "../shared/group-events";
 import { AccountInvitations } from "./AccountInvitations";
 import { HouseholdSettings } from "./Households";
 /* Little Hint operates as a quiet, practical gift notebook. Approved heart-tag artwork anchors the shell; product content leads. */
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   NavLink,
@@ -1640,190 +1640,272 @@ function GiftDetail() {
 function Buying() {
   const { world, open, mutate, toast, close } = useApp();
   const contributions = world.contributionHistory;
+  const [view, setView] = useState<"needs-buying" | "purchased" | "all">(
+    "needs-buying",
+  );
+  const activeView = useRef<HTMLButtonElement>(null);
+  const reservations = world.buying.filter((r) => r.quantity > 0);
+  const needsBuying = reservations.filter((r) => r.purchased < r.quantity);
+  const matchesView = (r: Pick<Reservation, "quantity" | "purchased">) =>
+    view === "all" ||
+    (view === "purchased"
+      ? r.purchased >= r.quantity
+      : r.purchased < r.quantity);
+  const visible = reservations.filter(matchesView);
+  const focusView = () =>
+    requestAnimationFrame(() => {
+      (activeView.current ?? document.getElementById("main"))?.focus({
+        preventScroll: true,
+      });
+    });
   return (
     <>
       <Header
         title="Your gift plans"
         description="Keep track of gifts you’re buying and helping pay for."
       />
-      {world.buying.some((r) => r.quantity > 0) ? (
+      {reservations.length > 0 && (
+        <div
+          className="tabs buying-views"
+          role="group"
+          aria-label="Gift purchase status"
+        >
+          {(
+            [
+              ["needs-buying", "Needs buying", needsBuying.length],
+              [
+                "purchased",
+                "Purchased",
+                reservations.length - needsBuying.length,
+              ],
+              ["all", "All", reservations.length],
+            ] as const
+          ).map(([key, label, count]) => (
+            <button
+              key={key}
+              ref={view === key ? activeView : undefined}
+              aria-pressed={view === key}
+              onClick={() => setView(key)}
+            >
+              {label} ({count})
+            </button>
+          ))}
+        </div>
+      )}
+      {visible.length > 0 ? (
         <div className="buying-list">
-          {world.buying
-            .filter((r) => r.quantity > 0)
-            .map((r) => (
-              <div className="buying-row" key={r.id}>
-                {r.item ? (
-                  <Link
-                    to={`/gift/${r.item.id}`}
-                    aria-label={`View ${r.titleSnapshot}`}
+          {visible.map((r) => (
+            <div className="buying-row" key={r.id}>
+              {r.item ? (
+                <Link
+                  to={`/gift/${r.item.id}`}
+                  aria-label={`View ${r.titleSnapshot}`}
+                >
+                  <GiftPhoto gift={r.item} />
+                </Link>
+              ) : (
+                <Gift size={36} />
+              )}
+              <div>
+                <h2>{r.titleSnapshot}</h2>
+                <p>
+                  {r.item
+                    ? `For ${r.item.recipientNames.join(" & ")}`
+                    : "Access to the original gift has changed."}
+                </p>
+                <span className="status">
+                  {r.purchased === r.quantity
+                    ? "Purchased"
+                    : r.purchased
+                      ? `${r.purchased} of ${r.quantity} purchased`
+                      : "Reserved"}
+                </span>
+                {r.exchangeId && <p className="muted">Secret gift exchange</p>}
+                <SpendingGuidance
+                  context={reservationSpendingContext(world, r)}
+                  sharedGift={
+                    r.poolTargetCents
+                      ? {
+                          priceCents: r.item?.priceCents ?? null,
+                          quantity: r.quantity,
+                          poolTargetCents: r.poolTargetCents,
+                        }
+                      : undefined
+                  }
+                />
+              </div>
+              <div className="actions">
+                {r.item && r.quantity === 1 && r.purchased === 0 && (
+                  <Action
+                    secondary
+                    onClick={async () => {
+                      await mutate("reservations/update", {
+                        id: r.id,
+                        revision: r.revision,
+                        quantity: 1,
+                        purchased: 1,
+                      });
+                      toast(
+                        view === "needs-buying"
+                          ? "Marked as purchased. Find it in Purchased to update or cancel."
+                          : "Marked as purchased. Use Update purchase if your plans change.",
+                      );
+                      if (view === "needs-buying") focusView();
+                    }}
+                    label={`Mark ${r.titleSnapshot} as purchased`}
                   >
-                    <GiftPhoto gift={r.item} />
-                  </Link>
-                ) : (
-                  <Gift size={36} />
+                    Mark as purchased
+                  </Action>
                 )}
-                <div>
-                  <h2>{r.titleSnapshot}</h2>
-                  <p>
-                    {r.item
-                      ? `For ${r.item.recipientNames.join(" & ")}`
-                      : "Access to the original gift has changed."}
-                  </p>
-                  <span className="status">
-                    {r.purchased === r.quantity
-                      ? "Purchased"
-                      : r.purchased
-                        ? `${r.purchased} of ${r.quantity} purchased`
-                        : "Reserved"}
-                  </span>
-                  {r.exchangeId && (
-                    <p className="muted">Secret gift exchange</p>
-                  )}
-                  <SpendingGuidance
-                    context={reservationSpendingContext(world, r)}
-                    sharedGift={
-                      r.poolTargetCents
-                        ? {
-                            priceCents: r.item?.priceCents ?? null,
+                <button
+                  className="button secondary small"
+                  onClick={() =>
+                    open(
+                      "Update purchase",
+                      <Form
+                        submit="Save purchase status"
+                        onSubmit={async (f) => {
+                          await mutate("reservations/update", {
+                            id: r.id,
+                            revision: r.revision,
                             quantity: r.quantity,
-                            poolTargetCents: r.poolTargetCents,
-                          }
-                        : undefined
-                    }
-                  />
-                </div>
-                <div className="actions">
-                  {r.item && r.quantity === 1 && r.purchased === 0 && (
-                    <Action
-                      secondary
-                      onClick={async () => {
-                        await mutate("reservations/update", {
-                          id: r.id,
-                          revision: r.revision,
-                          quantity: 1,
-                          purchased: 1,
-                        });
-                        toast(
-                          "Marked as purchased. Use Update purchase if your plans change.",
-                        );
-                      }}
-                      label={`Mark ${r.titleSnapshot} as purchased`}
-                    >
-                      Mark as purchased
-                    </Action>
-                  )}
-                  <button
-                    className="button secondary small"
-                    onClick={() =>
-                      open(
-                        "Update purchase",
-                        <Form
-                          submit="Save purchase status"
-                          onSubmit={async (f) => {
-                            await mutate("reservations/update", {
-                              id: r.id,
-                              revision: r.revision,
+                            purchased: Number(value(f, "purchased")),
+                          });
+                          close();
+                          toast("Purchase status updated.");
+                          if (
+                            !matchesView({
                               quantity: r.quantity,
                               purchased: Number(value(f, "purchased")),
-                            });
-                            close();
-                            toast("Purchase status updated.");
-                          }}
-                        >
-                          <p>
-                            <strong>{r.titleSnapshot}</strong>
-                            {r.item
-                              ? ` · For ${r.item.recipientNames.join(" & ")}`
-                              : ""}
-                          </p>
-                          <Field label="Quantity purchased">
-                            <input
-                              name="purchased"
-                              type="number"
-                              min="0"
-                              max={r.quantity}
-                              defaultValue={r.purchased}
-                              required
-                            />
-                          </Field>
-                          <p>
-                            Mark what you have bought so others know it is
-                            covered. If your plans change, choose Cancel
-                            reservation.
-                          </p>
-                        </Form>,
-                      )
+                            })
+                          )
+                            focusView();
+                        }}
+                      >
+                        <p>
+                          <strong>{r.titleSnapshot}</strong>
+                          {r.item
+                            ? ` · For ${r.item.recipientNames.join(" & ")}`
+                            : ""}
+                        </p>
+                        <Field label="Quantity purchased">
+                          <input
+                            name="purchased"
+                            type="number"
+                            min="0"
+                            max={r.quantity}
+                            defaultValue={r.purchased}
+                            required
+                          />
+                        </Field>
+                        <p>
+                          Mark what you have bought so others know it is
+                          covered. If your plans change, choose Cancel
+                          reservation.
+                        </p>
+                      </Form>,
+                    )
+                  }
+                >
+                  Update purchase
+                </button>
+                {!r.exchangeId && r.item && !r.item.archived && (
+                  <button
+                    className="text-button"
+                    onClick={() =>
+                      open("Share the cost", <ShareCostForm reservation={r} />)
                     }
                   >
-                    Update purchase
+                    {r.poolTargetCents
+                      ? "Edit contribution goal"
+                      : "Share the cost"}
                   </button>
-                  {!r.exchangeId && r.item && !r.item.archived && (
-                    <button
-                      className="text-button"
-                      onClick={() =>
-                        open(
-                          "Share the cost",
-                          <ShareCostForm reservation={r} />,
-                        )
-                      }
-                    >
-                      {r.poolTargetCents
-                        ? "Edit contribution goal"
-                        : "Share the cost"}
-                    </button>
-                  )}
-                  <button
-                    className="text-button muted"
-                    onClick={() =>
-                      open(
-                        "Cancel reservation",
-                        <Form
-                          submit="Cancel selected quantity"
-                          onSubmit={async (f) => {
-                            const release = Number(value(f, "release"));
-                            const qty = r.quantity - release;
-                            await mutate("reservations/update", {
-                              id: r.id,
-                              revision: r.revision,
+                )}
+                <button
+                  className="text-button muted"
+                  onClick={() =>
+                    open(
+                      "Cancel reservation",
+                      <Form
+                        submit="Cancel selected quantity"
+                        onSubmit={async (f) => {
+                          const release = Number(value(f, "release"));
+                          const qty = r.quantity - release;
+                          await mutate("reservations/update", {
+                            id: r.id,
+                            revision: r.revision,
+                            quantity: qty,
+                            purchased: Math.min(r.purchased, qty),
+                          });
+                          close();
+                          if (
+                            !qty ||
+                            !matchesView({
                               quantity: qty,
                               purchased: Math.min(r.purchased, qty),
-                            });
-                            close();
-                          }}
-                        >
-                          <p>
-                            <strong>{r.titleSnapshot}</strong>
-                            {r.item
-                              ? ` · For ${r.item.recipientNames.join(" & ")}`
-                              : ""}
-                          </p>
-                          <Field label="Quantity to cancel">
-                            <input
-                              name="release"
-                              type="number"
-                              min="1"
-                              max={r.quantity}
-                              defaultValue={r.quantity}
-                              required
-                            />
-                          </Field>
-                          <p>
-                            The quantity you cancel becomes available for others
-                            to reserve. This also reduces the quantity marked as
-                            purchased if it is higher than your remaining
-                            reservation. It does not cancel a shop order or
-                            refund a payment.
-                          </p>
-                        </Form>,
-                      )
-                    }
-                  >
-                    Cancel reservation
-                  </button>
-                </div>
+                            })
+                          )
+                            focusView();
+                        }}
+                      >
+                        <p>
+                          <strong>{r.titleSnapshot}</strong>
+                          {r.item
+                            ? ` · For ${r.item.recipientNames.join(" & ")}`
+                            : ""}
+                        </p>
+                        <Field label="Quantity to cancel">
+                          <input
+                            name="release"
+                            type="number"
+                            min="1"
+                            max={r.quantity}
+                            defaultValue={r.quantity}
+                            required
+                          />
+                        </Field>
+                        <p>
+                          The quantity you cancel becomes available for others
+                          to reserve. This also reduces the quantity marked as
+                          purchased if it is higher than your remaining
+                          reservation. It does not cancel a shop order or refund
+                          a payment.
+                        </p>
+                      </Form>,
+                    )
+                  }
+                >
+                  Cancel reservation
+                </button>
               </div>
-            ))}
+            </div>
+          ))}
         </div>
+      ) : reservations.length > 0 ? (
+        <Empty
+          title={
+            view === "needs-buying"
+              ? "Nothing left to buy"
+              : "No purchases marked yet"
+          }
+          action={
+            <button
+              className="button secondary"
+              onClick={() => {
+                setView(view === "needs-buying" ? "purchased" : "needs-buying");
+                focusView();
+              }}
+            >
+              {view === "needs-buying"
+                ? "View purchased gifts"
+                : "View gifts to buy"}
+            </button>
+          }
+        >
+          {view === "needs-buying"
+            ? "All your reserved quantities are marked purchased. You can still review or change them in Purchased."
+            : "Gifts appear here once all reserved quantities are marked purchased. Partially purchased gifts stay in Needs buying."}
+        </Empty>
       ) : (
         <Empty
           title="No gift plans yet"
