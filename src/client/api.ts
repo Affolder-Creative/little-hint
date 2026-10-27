@@ -14,11 +14,16 @@ export class ApiError extends Error {
 }
 let pendingWrites = 0;
 export const hasPendingWrites = () => pendingWrites > 0;
-export async function api<T = any>(path: string, body?: unknown): Promise<T> {
+export async function api<T = any>(
+  path: string,
+  body?: unknown,
+  options?: { signal?: AbortSignal },
+): Promise<T> {
   if (body !== undefined) pendingWrites++;
   try {
     const response = await fetch(`/api/v1/${path}`, {
       credentials: "same-origin",
+      signal: options?.signal,
       method: body === undefined ? "GET" : "POST",
       headers:
         body === undefined

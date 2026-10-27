@@ -13,6 +13,7 @@ import type { GiftView, Group, List, World } from "../shared/model";
 import { Form, Field, Privacy } from "./components";
 import { useApp } from "./context";
 import { api } from "./api";
+import { useImportJob } from "./useImportJob";
 import {
   ListPolicyFields,
   listPolicyValues,
@@ -240,14 +241,14 @@ export function GiftForm({
     quantity: gift?.quantity ?? 1,
   });
   const touched = useRef(new Set<string>());
-  const [jobId, setJobId] = useState(""),
-    [importing, setImporting] = useState(false),
-    [error, setError] = useState("");
+  const [error, setError] = useState("");
+  const importQuery = useImportJob(world.me.id);
+  const importing = importQuery.busy;
   const [uploading, setUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState("");
   const [duplicate, setDuplicate] = useState<GiftView | null>(null);
   const [allowDuplicate, setAllowDuplicate] = useState(false);
-  const job = world.imports.find((j) => j.id === jobId);
+  const job = importQuery.job;
   const applied = useRef("");
   const idea = !!recipientId || (!!gift && !gift.listId);
   const [visibility, setVisibility] = useState(gift?.visibility ?? "private");
@@ -257,6 +258,10 @@ export function GiftForm({
   );
   const sharingIdea = idea && visibility !== "private";
   const change = (key: keyof typeof data, v: string | number) => {
+    if (key === "url") {
+      importQuery.reset();
+      setError("");
+    }
     touched.current.add(key);
     setData((d) => ({ ...d, [key]: v }));
     setDuplicate(null);
@@ -281,25 +286,20 @@ export function GiftForm({
           }).filter(([k, v]) => v !== undefined && !touched.current.has(k)),
         ),
       }));
-      setImporting(false);
     }
     if (job?.status === "failed") {
-      setImporting(false);
       setError(
         job.error ??
           "We could not get the details. You can still enter them yourself.",
       );
     }
-  }, [job?.status]);
-  async function importUrl() {
+  }, [job?.id, job?.status]);
+  async function importUrl(forceRefresh = false) {
     setError("");
-    setImporting(true);
     try {
-      const j = await mutate("imports", { url: data.url });
-      setJobId(j.id);
+      await importQuery.start(data.url, forceRefresh);
     } catch (e) {
       setError(actionError(e));
-      setImporting(false);
     }
   }
   async function upload(file?: File) {
@@ -418,7 +418,7 @@ export function GiftForm({
           className="button secondary small"
           type="button"
           disabled={!data.url || importing}
-          onClick={importUrl}
+          onClick={() => importUrl()}
         >
           {importing ? (
             <LoaderCircle className="spin" size={16} />
@@ -432,6 +432,31 @@ export function GiftForm({
         <p className="error" role="alert">
           {error}
         </p>
+      )}
+      {importQuery.error && (
+        <div className="error" role="alert">
+          <p>
+            {actionError(importQuery.error)} You can retry or enter the details
+            manually.
+          </p>
+          <button
+            type="button"
+            className="text-button"
+            onClick={() => importQuery.retry()}
+          >
+            Retry status
+          </button>
+        </div>
+      )}
+      {job?.status === "complete" && (
+        <button
+          type="button"
+          className="text-button"
+          disabled={importing}
+          onClick={() => importUrl(true)}
+        >
+          Refresh from shop
+        </button>
       )}
       {job?.status === "complete" && (
         <p className="success" role="status">

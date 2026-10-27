@@ -223,6 +223,7 @@ export interface Preferences extends Base {
 export interface ImportJob extends Base {
   userId: string;
   url: string;
+  forceRefresh?: boolean;
   status: "pending" | "running" | "complete" | "failed";
   result?: Partial<Item>;
   error?: string;

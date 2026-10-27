@@ -16,6 +16,7 @@ x-app: &app
     PORT: 3000
     UPLOAD_DIR: /data/uploads
     AUTO_IMPORT_PRODUCT_PHOTOS: ${AUTO_IMPORT_PRODUCT_PHOTOS:-}
+    PRODUCT_IMPORT_CACHE_ENABLED: ${PRODUCT_IMPORT_CACHE_ENABLED:-true}
     NODE_EXTRA_CA_CERTS: /run/mailpit-ca.crt
   volumes:
     - staging-uploads:/data/uploads

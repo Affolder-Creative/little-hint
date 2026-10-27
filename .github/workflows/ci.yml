@@ -142,6 +142,7 @@ jobs:
             pwa,
             critique,
             notifications,
+            caching,
           ]
     services:
       postgres:

@@ -478,3 +478,28 @@ describe("privacy and reconciliation edge cases", () => {
     ).not.toHaveProperty("purchasedAt");
   });
 });
+
+it("keeps the retailer checked time when refreshed details are saved on an existing gift", () => {
+  const f = fixture();
+  const imported = {
+    ...stamp(),
+    userId: f.actors[0].id,
+    url: f.item.url,
+    status: "complete" as const,
+    result: { importedAt: "2026-01-01T12:00:00.000Z", source: "example.com" },
+  };
+  f.s.imports.push(imported);
+  command(f.s, f.actors[0], "items.update", {
+    ...f.item,
+    importId: imported.id,
+  });
+  expect(f.item.importedAt).toBe(imported.result.importedAt);
+  expect(f.item).not.toHaveProperty("importId");
+  command(f.s, f.actors[0], "items.update", {
+    ...f.item,
+    url: "https://example.com/other",
+    importId: imported.id,
+  });
+  expect(f.item.importedAt).toBeUndefined();
+  expect(f.item.source).toBeUndefined();
+});

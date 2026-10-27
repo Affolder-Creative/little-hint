@@ -1,13 +1,20 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createDecipheriv } from "node:crypto";
+vi.mock("node:crypto", async (original) => {
+  const actual = await original<typeof import("node:crypto")>();
+  return { ...actual, createDecipheriv: vi.fn(actual.createDecipheriv) };
+});
+import { readSettings } from "../src/server/db";
 import { emptyState } from "../src/shared/model";
 const storage = vi.hoisted(() => ({
   state: {} as ReturnType<typeof emptyState>,
 }));
 vi.mock("../src/server/db", () => ({
-  readState: vi.fn(async () => storage.state),
+  readSettings: vi.fn(async () => storage.state.settings),
   transact: vi.fn(async (fn) => fn(storage.state)),
 }));
 import {
+  encrypt,
   automaticallyImportProductPhotos,
   config,
   productPhotoSetting,
@@ -18,6 +25,7 @@ import { validateDeployment } from "../src/server/deployment";
 const key = "AUTO_IMPORT_PRODUCT_PHOTOS";
 beforeEach(() => {
   storage.state = emptyState();
+  vi.clearAllMocks();
   vi.stubEnv("SETTINGS_ENCRYPTION_KEY", Buffer.alloc(32, 7).toString("base64"));
   vi.stubEnv(key, "");
   vi.stubEnv("APP_ENV", "test");
@@ -93,5 +101,44 @@ describe("automatic product photo preference", () => {
     vi.stubEnv(key, "false");
     expect(await automaticallyImportProductPhotos()).toBe(false);
     await expect(saveSetting(key, "true")).rejects.toThrow("set on the server");
+  });
+});
+
+describe("settings read and decryption reuse", () => {
+  it("reuses decoded values, while observing external updates and deletion immediately", async () => {
+    vi.stubEnv("SMTP_HOST", "");
+    await saveSetting("SMTP_HOST", "first.example");
+    expect((await config()).SMTP_HOST).toBe("first.example");
+    expect((await config()).SMTP_HOST).toBe("first.example");
+    await automaticallyImportProductPhotos();
+    expect((await config()).SMTP_HOST).toBe("first.example");
+    expect(createDecipheriv).toHaveBeenCalledTimes(1);
+    storage.state.settings[0].encrypted = encrypt("second.example");
+    expect((await config()).SMTP_HOST).toBe("second.example");
+    expect(createDecipheriv).toHaveBeenCalledTimes(2);
+    storage.state.settings = [];
+    expect((await config()).SMTP_HOST).toBe("");
+  });
+  it("uses one narrow settings read for a summary and never returns secrets", async () => {
+    vi.stubEnv("SMTP_PASS", "");
+    await saveSetting("SMTP_PASS", "synthetic-password");
+    const summary = await settingsSummary();
+    expect(readSettings).toHaveBeenCalledTimes(1);
+    expect(JSON.stringify(summary)).not.toContain("synthetic-password");
+  });
+  it("does not decrypt saved credentials overridden by environment or disabled in staging", async () => {
+    storage.state.settings.push({
+      id: "saved",
+      revision: 1,
+      createdAt: new Date().toISOString(),
+      key: "SMTP_HOST",
+      encrypted: "invalid dormant ciphertext",
+    });
+    vi.stubEnv("SMTP_HOST", "override.example");
+    expect((await config()).SMTP_HOST).toBe("override.example");
+    vi.stubEnv("APP_ENV", "staging");
+    vi.stubEnv("SMTP_HOST", "");
+    await settingsSummary();
+    expect(createDecipheriv).not.toHaveBeenCalled();
   });
 });

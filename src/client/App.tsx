@@ -123,22 +123,15 @@ export function App() {
     [message, setMessage] = useState("");
   const query = useQuery({
     queryKey: ["world"],
-    queryFn: async (): Promise<World | null> => {
+    queryFn: async ({ signal }): Promise<World | null> => {
       try {
-        return await api<World>("world");
+        return await api<World>("world", undefined, { signal });
       } catch (error) {
         if (error instanceof ApiError && error.status === 401) return null;
         throw error;
       }
     },
-    refetchInterval: (q) =>
-      q.state.data?.imports.some((j) =>
-        ["pending", "running"].includes(j.status),
-      )
-        ? 2000
-        : q.state.data
-          ? 20000
-          : false,
+    refetchInterval: (q) => (q.state.data ? 20000 : false),
   });
   useEffect(() => {
     const mq = matchMedia("(prefers-color-scheme: dark)");
@@ -1329,7 +1322,7 @@ function GiftDetail() {
         {gift.listId ? "Back to wish list" : "Back to Home"}
       </Link>
       <div className="gift-detail">
-        <GiftPhoto gift={gift} />
+        <GiftPhoto gift={gift} size="full" />
         <section>
           <div className="gift-recipient">
             <Avatar name={gift.recipientNames[0]} small />

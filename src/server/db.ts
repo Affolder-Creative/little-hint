@@ -3,12 +3,35 @@ import { Pool } from "pg";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { sql, eq } from "drizzle-orm";
 import * as schema from "./schema";
-import { emptyState, kinds, type State, type Kind } from "../shared/model";
+import {
+  emptyState,
+  kinds,
+  type State,
+  type Kind,
+  type Setting,
+  type ImportJob,
+} from "../shared/model";
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   max: 10,
 });
 export const db = drizzle(pool, { schema });
+export async function readSettings(): Promise<Setting[]> {
+  const { rows } = await pool.query(
+    "SELECT data FROM app_record WHERE kind = 'settings'",
+  );
+  return rows.map((row) => row.data as Setting);
+}
+export async function readImport(
+  id: string,
+  userId: string,
+): Promise<ImportJob | undefined> {
+  const { rows } = await pool.query(
+    "SELECT data FROM app_record WHERE id = $1 AND kind = 'imports' AND data->>'userId' = $2",
+    [id, userId],
+  );
+  return rows[0]?.data as ImportJob | undefined;
+}
 export async function readState(): Promise<State> {
   const rows = await db.select().from(schema.records);
   const state = emptyState();
@@ -76,6 +99,20 @@ CREATE TABLE passkey (id text PRIMARY KEY,name text,public_key text NOT NULL,use
 CREATE TABLE app_record(id text PRIMARY KEY,kind text NOT NULL,data jsonb NOT NULL CHECK (data->>'id'=id));
 CREATE INDEX record_kind_idx ON app_record(kind);
 INSERT INTO schema_migration(version) VALUES (1);`);
+    }
+    const cacheMigration = await client.query(
+      "SELECT 1 FROM schema_migration WHERE version=2",
+    );
+    if (!cacheMigration.rowCount) {
+      await client.query(`
+CREATE TABLE product_import_cache (
+  key text PRIMARY KEY,
+  data jsonb NOT NULL CHECK (octet_length(data::text) <= 65536),
+  checked_at timestamptz NOT NULL,
+  expires_at timestamptz NOT NULL
+);
+CREATE INDEX product_import_cache_expiry_idx ON product_import_cache(expires_at);
+INSERT INTO schema_migration(version) VALUES (2);`);
     }
     await client.query("COMMIT");
   } catch (e) {

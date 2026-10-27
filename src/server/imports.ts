@@ -1,12 +1,8 @@
 import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
-import { randomUUID } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
-import path from "node:path";
 import { Agent, fetch as request } from "undici";
 import ipaddr from "ipaddr.js";
 import { load } from "cheerio";
-import sharp from "sharp";
 import { z } from "zod";
 import { automaticallyImportProductPhotos, config, spend } from "./settings";
 import {
@@ -14,8 +10,9 @@ import {
   selectedScrapingProvider,
 } from "../shared/scraping-providers";
 import { scrapingRequest } from "./scraping";
-import { stamp, fail } from "./domain";
-import { transact } from "./db";
+import { cachedImport, importCacheKey, productCacheUrl } from "./import-cache";
+import { saveImage } from "./media";
+export { saveImage, mediaDir } from "./media";
 import type { Item } from "../shared/model";
 export function publicAddress(address: string) {
   try {
@@ -70,10 +67,17 @@ const dispatcher = new Agent({
     },
   },
 });
-export async function safeFetch(value: string, maxBytes = 2_000_000) {
+export async function safeFetch(
+  value: string,
+  maxBytes = 2_000_000,
+  onUrl?: (url: string) => void,
+) {
   let url = value;
+  let cacheable = true;
   for (let n = 0; n < 6; n++) {
+    onUrl?.(url);
     await validateUrl(url);
+    cacheable &&= !!productCacheUrl(url);
     const response = await request(url, {
       dispatcher,
       redirect: "manual",
@@ -108,6 +112,7 @@ export async function safeFetch(value: string, maxBytes = 2_000_000) {
       chunks.push(v.value);
     }
     return {
+      cacheable,
       buffer: Buffer.concat(chunks),
       contentType: response.headers.get("content-type") ?? "",
       url,
@@ -310,28 +315,6 @@ export function parseAmazonResponse(
     importedAt: new Date().toISOString(),
   };
 }
-export const mediaDir = () =>
-  path.resolve(process.env.UPLOAD_DIR ?? ".local/uploads");
-export async function saveImage(buffer: Buffer, userId: string) {
-  const out = await sharp(buffer, {
-    limitInputPixels: 20_000_000,
-    animated: false,
-  })
-    .rotate()
-    .resize({
-      width: 1200,
-      height: 1200,
-      fit: "inside",
-      withoutEnlargement: true,
-    })
-    .webp({ quality: 85 })
-    .toBuffer();
-  const media = { ...stamp(), userId, file: `${randomUUID()}.webp` };
-  await mkdir(mediaDir(), { recursive: true });
-  await writeFile(path.join(mediaDir(), media.file), out, { mode: 0o600 });
-  await transact((s) => s.media.push(media));
-  return `/api/v1/media/${media.id}`;
-}
 async function supplement(result: Partial<Item>, key: string, model: string) {
   await spend("openai");
   const schema = {
@@ -389,40 +372,116 @@ async function supplement(result: Partial<Item>, key: string, model: string) {
     })
     .parse(JSON.parse(text));
 }
+const productMetadata = z.object({
+  title: z.string().min(1).max(160),
+  description: z.string().max(5000).default(""),
+  priceCents: z.number().int().min(0).max(100000000).nullable().default(null),
+  currency: z.literal("USD").default("USD"),
+  tags: z.array(z.string().min(1).max(30)).max(12).default([]),
+  source: z.string().max(253),
+  importedAt: z.iso.datetime(),
+  remoteImage: z.url().max(2048).optional(),
+  shareable: z.boolean(),
+});
+const enrichment = z.object({
+  description: z.string().max(5000),
+  tags: z.array(z.string().min(1).max(30)).min(3).max(5),
+});
 export async function importProduct(
   url: string,
   userId: string,
+  forceRefresh = false,
 ): Promise<Partial<Item>> {
-  // Snapshot when this attempt starts, not when the job was queued.
+  // Snapshot policy when this attempt starts, including on cache hits.
   const importPhotos = await automaticallyImportProductPhotos();
   await validateUrl(url);
   const cfg = await config();
-  let result: Partial<Item> & { remoteImage?: string } = {};
-  try {
-    const page = await safeFetch(url);
-    result = parseProduct(page.buffer.toString("utf8"), page.url);
-  } catch {}
-  result = await paidProductPreview(url, result, cfg, importPhotos);
-  if (!result.title)
-    throw new Error(
-      "This shop blocked the preview. You can still add the gift manually.",
-    );
-  if (importPhotos && result.remoteImage) {
+  const normalized = productCacheUrl(url);
+  const provider = selectedScrapingProvider(cfg);
+  const providerKey = provider
+    ? cfg[scrapingProviders.find((p) => p.id === provider)!.key]
+    : "";
+  const key = normalized
+    ? importCacheKey("metadata", [
+        normalized,
+        provider,
+        providerKey,
+        importPhotos,
+      ])
+    : undefined;
+  const metadata = await cachedImport(
+    key,
+    productMetadata,
+    async () => {
+      let result: Partial<Item> & { remoteImage?: string } = {};
+      let shareable = !!normalized;
+      try {
+        const page = await safeFetch(url, 2_000_000, (target) => {
+          shareable &&= !!productCacheUrl(target);
+        });
+        shareable &&= page.cacheable;
+        result = parseProduct(page.buffer.toString("utf8"), page.url);
+      } catch {
+        /* The configured provider may still supply usable metadata. */
+      }
+      result = await paidProductPreview(url, result, cfg, importPhotos);
+      if (!result.title)
+        throw new Error(
+          "This shop blocked the preview. You can still add the gift manually.",
+        );
+      // Signed/opaque image links stay private to this attempt rather than being
+      // retained in shared metadata. The whole result is then not shared.
+      if (!importPhotos) delete result.remoteImage;
+      if (result.remoteImage && !productCacheUrl(result.remoteImage))
+        shareable = false;
+      return {
+        value: productMetadata.parse({ ...result, shareable }),
+        cacheable: shareable,
+      };
+    },
+    forceRefresh,
+  );
+  const { remoteImage, shareable, ...details } = metadata;
+  const result: Partial<Item> = { ...details, url };
+  if (importPhotos && remoteImage) {
     try {
-      const image = await safeFetch(result.remoteImage, 5_000_000);
+      const image = await safeFetch(remoteImage, 5_000_000);
       if (!/^image\/(png|jpeg|webp|gif)/i.test(image.contentType))
         throw new Error("Unsupported image");
       result.image = await saveImage(image.buffer, userId);
-    } catch {}
+    } catch {
+      /* A photo failure must not discard usable product details. */
+    }
   }
-  delete result.remoteImage;
   if (cfg.OPENAI_API_KEY) {
     try {
+      const enrichmentKey = shareable
+        ? importCacheKey("enrichment", [
+            normalized,
+            details.title,
+            details.description,
+            cfg.OPENAI_MODEL,
+            cfg.OPENAI_API_KEY,
+          ])
+        : undefined;
       Object.assign(
         result,
-        await supplement(result, cfg.OPENAI_API_KEY, cfg.OPENAI_MODEL),
+        await cachedImport(
+          enrichmentKey,
+          enrichment,
+          async () => ({
+            value: await supplement(
+              result,
+              cfg.OPENAI_API_KEY,
+              cfg.OPENAI_MODEL,
+            ),
+          }),
+          forceRefresh,
+        ),
       );
-    } catch {}
+    } catch {
+      /* Keep retailer data when enrichment is unavailable. */
+    }
   }
   return result;
 }

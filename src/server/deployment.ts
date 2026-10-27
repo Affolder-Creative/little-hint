@@ -30,6 +30,7 @@ export function assertStagingSeed(env = process.env) {
 export function validateDeployment(env = process.env) {
   productPhotoOverride(env);
   cloudflareWebAnalyticsEnabled(env);
+  productImportCacheEnabled(env);
   if (deploymentEnvironment(env) !== "staging") return;
   assertStagingDatabase(env);
   if (env.NODE_ENV !== "production")
@@ -38,6 +39,15 @@ export function validateDeployment(env = process.env) {
     throw new Error("Staging requires an HTTPS APP_URL.");
   if (!env.NODE_EXTRA_CA_CERTS)
     throw new Error("Staging requires NODE_EXTRA_CA_CERTS for Mailpit TLS.");
+}
+
+export function productImportCacheEnabled(env = process.env): boolean {
+  const value = env.PRODUCT_IMPORT_CACHE_ENABLED;
+  if (value === undefined || value === "" || value === "true") return true;
+  if (value === "false") return false;
+  throw new Error(
+    "PRODUCT_IMPORT_CACHE_ENABLED must be true, false, or empty.",
+  );
 }
 
 export function cloudflareWebAnalyticsEnabled(env = process.env): boolean {
