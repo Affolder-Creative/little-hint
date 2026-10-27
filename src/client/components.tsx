@@ -481,13 +481,15 @@ export function Header({
   title,
   description,
   children,
+  className = "",
 }: {
   title: string;
   description?: string;
   children?: ReactNode;
+  className?: string;
 }) {
   return (
-    <div className="page-heading">
+    <div className={`page-heading ${className}`}>
       <div>
         <h1>{title}</h1>
         {description && <p>{description}</p>}
