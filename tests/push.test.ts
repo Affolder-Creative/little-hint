@@ -83,10 +83,83 @@ beforeEach(() => {
   mock.addresses = [{ address: "8.8.8.8", family: 4 }];
 });
 afterEach(() => {
+  vi.restoreAllMocks();
   vi.unstubAllEnvs();
   vi.useRealTimers();
 });
 describe("web push delivery", () => {
+  it("sends a category and delivery metadata without private content", async () => {
+    const f = fixture();
+    f.person.name = "PRIVATE PERSON";
+    f.n.actorId = f.person.userId;
+    const details = vi.spyOn(webPush, "generateRequestDetails");
+    await deliverPushBatch([f.n.id]);
+    expect(details).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(String(details.mock.calls[0][1]))).toEqual({
+      deviceId: f.d.id,
+      notificationId: f.n.id,
+      category: "access",
+      unreadCount: 1,
+      timestamp: expect.any(Number),
+      tag: f.n.id,
+    });
+  });
+  it("takes the category from the eligible notice rather than the batch lead", async () => {
+    const f = fixture();
+    f.n.readAt = new Date().toISOString();
+    const eligible: Notice = {
+      ...stamp(),
+      userId: f.person.userId,
+      event: "mention",
+      inbox: true,
+      status: "pending",
+      attempts: 0,
+      delivered: [],
+    };
+    f.s.notices.push(eligible);
+    const details = vi.spyOn(webPush, "generateRequestDetails");
+    await deliverPushBatch([f.n.id, eligible.id]);
+    expect(details).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(String(details.mock.calls[0][1]))).toMatchObject({
+      notificationId: eligible.id,
+      category: "mention",
+      tag: f.n.id,
+    });
+  });
+  it.each([false, true])(
+    "distinguishes ownership requests from invitations: %s",
+    async (ownership) => {
+      const f = fixture();
+      f.n.event = "invitation";
+      if (ownership) {
+        const list: List = {
+          ...stamp(),
+          name: "PRIVATE LIST",
+          description: "PRIVATE DESCRIPTION",
+          ownerIds: [],
+          pendingOwnerIds: [f.person.id],
+          groupIds: [],
+          mode: "surprise",
+          modeLocked: false,
+          archived: false,
+        };
+        f.s.lists.push(list);
+        f.n.listId = list.id;
+        f.n.action = "ownership-request";
+      }
+      const details = vi.spyOn(webPush, "generateRequestDetails");
+      await deliverPushBatch([f.n.id]);
+      expect(details).toHaveBeenCalledTimes(1);
+      expect(JSON.parse(String(details.mock.calls[0][1]))).toEqual({
+        deviceId: f.d.id,
+        notificationId: f.n.id,
+        category: ownership ? "ownership-request" : "invitation",
+        unreadCount: 1,
+        timestamp: expect.any(Number),
+        tag: f.n.id,
+      });
+    },
+  );
   it("requires matching VAPID keys and disables real delivery in staging and tests", async () => {
     const f = fixture();
     expect(pushConfiguration()).not.toBeNull();
@@ -185,6 +258,7 @@ describe("web push delivery", () => {
   });
   it("batches new wishes once, including devices enabled between additions", async () => {
     const f = fixture();
+    const details = vi.spyOn(webPush, "generateRequestDetails");
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-10-24T12:00:00Z"));
     f.s.notices = [];
@@ -235,6 +309,10 @@ describe("web push delivery", () => {
     await deliverPushBatch(batches[0].map((n) => n.id));
     await deliverPushBatch(batches[0].map((n) => n.id));
     expect(mock.fetch).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(String(details.mock.calls[0][1]))).toMatchObject({
+      category: "wishlist",
+      notificationId: batches[0][1].id,
+    });
     expect(pendingPushBatches(f.s)).toEqual([]);
     command(f.s, owner, "items.create", { title: "Third", listId: list.id });
     command(f.s, reader, "follows.update", {

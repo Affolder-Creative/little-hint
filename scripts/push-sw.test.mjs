@@ -94,11 +94,80 @@ test("push shows generic copy, updates badges, and asks open clients to refresh"
     url: "https://evil.test",
   });
   assert.equal(h.notifications.length, 1);
-  assert.equal(h.notifications[0].title, "Little Hint");
+  assert.equal(h.notifications[0].title, "New activity");
+  assert.equal(h.notifications[0].body, "Open Little Hint to see the details.");
   assert.equal(JSON.stringify(h.notifications).includes("SECRET"), false);
   assert.equal(JSON.stringify(h.notifications).includes("PRIVATE NOTE"), false);
   assert.deepEqual(h.badges, [3]);
   assert.equal(h.messages[0].type, "NOTIFICATION_UPDATE");
+});
+for (const [category, title] of Object.entries({
+  invitation: "New invitation",
+  "ownership-request": "Ownership request",
+  mention: "You were mentioned",
+  discussion: "New private note",
+  contribution: "Contribution update",
+  wishlist: "Wish list update",
+  exchange: "Exchange update",
+  access: "Gift plans updated",
+  reservation: "Reservation update",
+  purchase: "Purchase update",
+})) {
+  test(`${category} uses a fixed title without exposing payload copy`, async () => {
+    const h = harness();
+    await h.message({ type: "BIND_PUSH", deviceId: "device" });
+    await h.push({
+      deviceId: "device",
+      category,
+      notificationId: "11111111-1111-1111-1111-111111111111",
+      title: "SECRET GIFT",
+      body: "PRIVATE NOTE",
+      name: "PRIVATE PERSON",
+      amount: "PRIVATE AMOUNT",
+    });
+    assert.equal(h.notifications.length, 1);
+    assert.equal(h.notifications[0].title, title);
+    assert.equal(
+      h.notifications[0].body,
+      "Open Little Hint to see the details.",
+    );
+    assert.doesNotMatch(JSON.stringify(h.notifications), /SECRET|PRIVATE/);
+    assert.equal(
+      h.notifications[0].data.path,
+      "/notifications/11111111-1111-1111-1111-111111111111",
+    );
+  });
+}
+test("unknown and malformed categories fall back to New activity", async () => {
+  const h = harness();
+  await h.message({ type: "BIND_PUSH", deviceId: "device" });
+  for (const category of [
+    undefined,
+    null,
+    "future-category",
+    "__proto__",
+    "constructor",
+    "toString",
+    1,
+    {},
+    ["mention"],
+  ]) {
+    await h.push({ deviceId: "device", category });
+    assert.equal(h.notifications.at(-1).title, "New activity");
+  }
+});
+test("test notifications use readiness copy regardless of category", async () => {
+  const h = harness();
+  await h.message({ type: "BIND_PUSH", deviceId: "device" });
+  await h.push({ deviceId: "device", test: true, category: "purchase" });
+  assert.equal(h.notifications[0].title, "Notifications are ready");
+  assert.equal(
+    h.notifications[0].body,
+    "This test notification reached your device.",
+  );
+  assert.equal(h.notifications[0].data.path, "/notifications");
+  await h.push({ deviceId: "device", test: "true", category: "mention" });
+  assert.equal(h.notifications[1].title, "You were mentioned");
 });
 test("late messages cannot overwrite a newer badge count or revive a signed-out account", async () => {
   const h = harness();
