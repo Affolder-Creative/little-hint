@@ -20,7 +20,7 @@ import { ordered, priorityLabels, sortLabels } from "../shared/organization";
 import { api } from "./api";
 import { useApp } from "./context";
 import { Confirm } from "./Confirm";
-import { Empty, Field, Form } from "./components";
+import { Empty, Field, Form, useModalDismiss } from "./components";
 import { GiftForm } from "./forms";
 import { actionError } from "./copy";
 
@@ -239,6 +239,7 @@ export function ReorderForm({
   save: (ids: string[]) => Promise<unknown>;
 }) {
   const { close, toast } = useApp();
+  const dismiss = useModalDismiss();
   const [rows, setRows] = useState(entries),
     [saving, setSaving] = useState(false),
     [dragged, setDragged] = useState<string | null>(null),
@@ -255,6 +256,7 @@ export function ReorderForm({
   return (
     <Form
       submit="Save order"
+      dirty={rows.some((row, index) => row.id !== entries[index]?.id)}
       onSubmit={async () => {
         setSaving(true);
         try {
@@ -323,7 +325,7 @@ export function ReorderForm({
         type="button"
         className="button secondary"
         disabled={saving}
-        onClick={close}
+        onClick={() => (dismiss ? dismiss() : close())}
       >
         Cancel
       </button>

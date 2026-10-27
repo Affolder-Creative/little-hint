@@ -81,7 +81,7 @@ Keyboard access, readable contrast, reduced motion, screen readers, text enlarge
 
 ## Gift discovery
 
-Recipient interests and likes/avoid notes are private by default, editable by owners and guardians, and shareable with selected family groups after confirmation. New accounts get skippable setup; existing accounts get a dismissible prompt. Preferences remain usable when AI is off.
+Recipient interests and likes/avoid notes are private by default, editable by owners and guardians, and shareable with selected family groups after confirmation. New accounts get skippable setup on their initial Home visit. Navigation defers setup for the current signed-in visit, and direct links remain accessible. Existing accounts get a dismissible prompt. Preferences remain usable when AI is off.
 
 AI suggestions default to givers only, with admin modes Off / For others / For own lists / Both and a locking environment override. Managed profiles count as own lists. Each search targets one person; a joint list can be a save destination. Without shared preferences, users review locally inferred interests from visible, active wish-list titles and tags before searching.
 

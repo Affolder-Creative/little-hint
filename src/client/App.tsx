@@ -406,28 +406,7 @@ export function App() {
             </div>
           )}
           <main id="main" tabIndex={-1}>
-            {query.data.giftPreferences?.find(
-              (p) =>
-                p.setup === "new" &&
-                world.people.some(
-                  (person) =>
-                    person.id === p.personId && person.userId === world.me.id,
-                ),
-            ) ? (
-              <GiftPreferenceOnboarding
-                personId={
-                  query.data.giftPreferences.find(
-                    (p) =>
-                      p.setup === "new" &&
-                      world.people.some(
-                        (person) =>
-                          person.id === p.personId &&
-                          person.userId === world.me.id,
-                      ),
-                  )!.personId
-                }
-              />
-            ) : (
+            <GiftPreferenceOnboarding key={world.me.id}>
               <Routes>
                 <Route path="/" element={<Home />} />
                 <Route path="/notifications" element={<NotificationCenter />} />
@@ -473,7 +452,7 @@ export function App() {
                   }
                 />
               </Routes>
-            )}
+            </GiftPreferenceOnboarding>
           </main>
           <footer className="app-footer">
             <span>Created by Affolder Creative</span>
