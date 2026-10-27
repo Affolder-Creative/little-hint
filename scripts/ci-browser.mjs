@@ -17,6 +17,7 @@ if (
     "pwa",
     "notifications",
     "caching",
+    "gift-discovery",
   ].includes(suite)
 )
   throw new Error("Supply one known browser suite.");

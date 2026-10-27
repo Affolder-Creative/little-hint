@@ -101,7 +101,10 @@ export async function removeDeletedMedia() {
       const url = `/api/v1/media/${media.id}`;
       if (
         s.items.some((i) => i.image === url) ||
-        s.imports.some((i) => i.result?.image === url)
+        s.imports.some((i) => i.result?.image === url) ||
+        s.giftDiscoveryJobs.some((j) =>
+          j.candidates.some((c) => c.image === url),
+        )
       )
         continue;
       await rm(path.join(mediaDir(), media.file), { force: true });

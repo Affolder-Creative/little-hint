@@ -1,3 +1,5 @@
+import { registerGiftDiscovery } from "./gift-discovery-routes";
+import { discoveryJob } from "./gift-discovery";
 import { managementActions, trash } from "./management";
 import {
   inbox,
@@ -33,7 +35,12 @@ import {
   itemVisible,
   giftSummary,
 } from "./domain";
-import { config, settingsSummary, saveSetting } from "./settings";
+import {
+  config,
+  settingsSummary,
+  saveSetting,
+  discoveryConfiguration,
+} from "./settings";
 import { mediaDir, saveImage } from "./imports";
 import { cardImage } from "./media";
 import {
@@ -192,11 +199,13 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
       name: session.user.name,
     };
   }
+  registerGiftDiscovery(app, actor);
   app.get("/api/v1/world", async (req) => {
     const a = await actor(req);
     const notificationAsOf = Date.now();
     return {
       ...world(await readState(), a),
+      giftDiscovery: discoveryConfiguration(await config()),
       notificationAsOf,
       environment: deploymentEnvironment(),
     };
@@ -310,6 +319,7 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
     },
   );
   const routes: Record<string, string> = {
+    "gift-preferences": "gift-preferences.update",
     households: "households.create",
     "households/update": "households.update",
     "households/delete": "households.delete",
@@ -417,6 +427,24 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
           ))
       )
         fail(404, "Image not found.");
+      const image = `/api/v1/media/${m.id}`;
+      const batches = s.giftDiscoveryJobs.filter((j) =>
+        j.candidates.some((c) => c.image === image),
+      );
+      if (batches.length && !s.items.some((i) => i.image === image)) {
+        const cfg = discoveryConfiguration(await config());
+        if (
+          !batches.some((j) => {
+            try {
+              discoveryJob(s, a, cfg, j.id);
+              return true;
+            } catch {
+              return false;
+            }
+          })
+        )
+          fail(404, "Image not found.");
+      }
       const { size } = z
         .object({ size: z.literal("card").optional() })
         .parse(req.query);

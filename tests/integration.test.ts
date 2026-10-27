@@ -91,6 +91,57 @@ describe.skipIf(!url)("PostgreSQL transaction integrity", () => {
     const s = await storage.readState();
     expect(s.reservations.reduce((n, r) => n + r.quantity, 0)).toBe(1);
   });
+  it("reserves the final discovery allowance exactly once across concurrent workers and retries", async () => {
+    const { createDiscovery, startDiscovery, discoveryIdempotent, quotaKeys } =
+      await import("../src/server/gift-discovery");
+    const { discoveryConfig } = await import("./gift-discovery-fixture");
+    const cfg = { ...discoveryConfig, monthlyLimit: 1 };
+    const input = {
+      personId: (await storage.readState()).people.find(
+        (p) => p.userId === a.id,
+      )!.id,
+      categoryIds: ["coffee"],
+      interests: "",
+      likes: "",
+      avoid: "",
+      maxPriceCents: 5000,
+    };
+    const requests = await Promise.all(
+      [b, b, c].map((actor) =>
+        storage.transact((s) =>
+          discoveryIdempotent(
+            s,
+            actor,
+            "discovery_concurrent_01",
+            "create",
+            input,
+            () => createDiscovery(s, actor, cfg, input),
+          ),
+        ),
+      ),
+    );
+    expect(requests.filter((r) => "replayed" in r)).toHaveLength(1);
+    const jobs = (await storage.readState()).giftDiscoveryJobs;
+    expect(jobs).toHaveLength(2);
+    const outcomes = await Promise.allSettled(
+      [...jobs, jobs[0]].map((j) =>
+        storage.transact((s) =>
+          startDiscovery(s, j.userId === b.id ? b : c, cfg, j.id),
+        ),
+      ),
+    );
+    expect(
+      outcomes.filter((r) => r.status === "fulfilled" && r.value),
+    ).toHaveLength(1);
+    const state = await storage.readState();
+    expect(
+      state.usage.find((u) => u.key === quotaKeys(b.id).month)?.count,
+    ).toBe(1);
+    expect(
+      state.giftDiscoveryJobs.filter((j) => j.status === "running"),
+    ).toHaveLength(1);
+  });
+
   it("rolls back partial domain changes when a transaction fails", async () => {
     const count = (await storage.readState()).groups.length;
     await expect(
@@ -656,5 +707,67 @@ describe.skipIf(!url)("PostgreSQL transaction integrity", () => {
     const after = await storage.readState();
     expect(after.lists.some((l) => l.id === list.id)).toBe(false);
     expect(after.items.some((i) => i.listId === list.id)).toBe(false);
+  });
+  it("commits a confirmed discovery batch once and rolls back all items on a failed transaction", async () => {
+    const {
+      createDiscovery,
+      prepareDiscoveryReview,
+      saveDiscoveryReview,
+      discoveryIdempotent,
+    } = await import("../src/server/gift-discovery");
+    const {
+      discoveryFixture,
+      discoveryConfig: cfg,
+      candidate,
+      selection,
+    } = await import("./gift-discovery-fixture");
+    const f = discoveryFixture(),
+      actor = f.actors[1];
+    const setup = await storage.transact((s) => {
+      s.people.push(...f.state.people);
+      s.groups.push(...f.state.groups);
+      s.lists.push(...f.state.lists);
+      s.items.push(...f.state.items);
+      const job = createDiscovery(s, actor, cfg, f.input);
+      job.status = "complete";
+      job.candidates = [candidate(7), candidate(8)];
+      prepareDiscoveryReview(
+        s,
+        actor,
+        cfg,
+        job.id,
+        job.candidates.map((c) => selection(c)),
+      );
+      return { id: job.id, reviewId: job.review!.id };
+    });
+    const count = (await storage.readState()).items.length;
+    await expect(
+      storage.transact((s) => {
+        saveDiscoveryReview(s, actor, cfg, setup.id, {
+          reviewId: setup.reviewId,
+        });
+        throw new Error("Abort gift batch");
+      }),
+    ).rejects.toThrow("Abort gift batch");
+    expect((await storage.readState()).items).toHaveLength(count);
+    const results = await Promise.all(
+      [1, 2].map(() =>
+        storage.transact((s) =>
+          discoveryIdempotent(
+            s,
+            actor,
+            "discovery_batch_retry_01",
+            "save",
+            setup,
+            () =>
+              saveDiscoveryReview(s, actor, cfg, setup.id, {
+                reviewId: setup.reviewId,
+              }),
+          ),
+        ),
+      ),
+    );
+    expect(results.filter((r) => "replayed" in r)).toHaveLength(1);
+    expect((await storage.readState()).items).toHaveLength(count + 2);
   });
 });

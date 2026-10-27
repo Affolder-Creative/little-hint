@@ -1,6 +1,8 @@
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
 import { readSettings, transact } from "./db";
-import type { Setting } from "../shared/model";
+import type { Setting, State } from "../shared/model";
+import { pruneDiscovery } from "./gift-discovery";
+import { discoveryModes, type DiscoveryConfig } from "../shared/gift-discovery";
 import { stamp, fail } from "./domain";
 import { deploymentEnvironment, productPhotoOverride } from "./deployment";
 import {
@@ -8,6 +10,10 @@ import {
   selectedScrapingProvider,
 } from "../shared/scraping-providers";
 export const settingKeys = [
+  "GIFT_DISCOVERY_MODE",
+  "GIFT_DISCOVERY_USER_WEEKLY_LIMIT",
+  "GIFT_DISCOVERY_MONTHLY_LIMIT",
+  "GIFT_DISCOVERY_MODEL",
   "SMTP_HOST",
   "SMTP_PORT",
   "SMTP_USER",
@@ -30,6 +36,10 @@ export const settingKeys = [
 ] as const;
 export type SettingKey = (typeof settingKeys)[number];
 const defaults: Partial<Record<SettingKey, string>> = {
+  GIFT_DISCOVERY_MODE: "givers",
+  GIFT_DISCOVERY_USER_WEEKLY_LIMIT: "3",
+  GIFT_DISCOVERY_MONTHLY_LIMIT: "100",
+  GIFT_DISCOVERY_MODEL: "gpt-6-luna",
   SMTP_PORT: "465",
   SMTP_FROM: "Little Hint <littlehint@example.com>",
   OPENAI_MODEL: "gpt-6-luna",
@@ -43,6 +53,10 @@ export function stagingSettings(): Record<SettingKey, string> {
     settingKeys
       .map((k) => [k, ""])
       .concat([
+        ["GIFT_DISCOVERY_MODE", "off"],
+        ["GIFT_DISCOVERY_USER_WEEKLY_LIMIT", "3"],
+        ["GIFT_DISCOVERY_MONTHLY_LIMIT", "100"],
+        ["GIFT_DISCOVERY_MODEL", "gpt-6-luna"],
         ["SMTP_HOST", "mailpit"],
         ["SMTP_PORT", "1025"],
         ["SMTP_FROM", "Little Hint staging <staging@example.test>"],
@@ -116,16 +130,24 @@ function effectiveConfig(
   values: Map<string, string>,
 ): Record<SettingKey, string> {
   if (deploymentEnvironment() === "staging") return stagingSettings();
-  return Object.fromEntries(
+  const result = Object.fromEntries(
     settingKeys.map((k) => [
       k,
       process.env[k] || values.get(k) || defaults[k] || "",
     ]),
   ) as Record<SettingKey, string>;
+  discoveryConfiguration(result);
+  return result;
 }
 export async function config(): Promise<Record<SettingKey, string>> {
   if (deploymentEnvironment() === "staging") return stagingSettings();
   return effectiveConfig(settingsValues(await readSettings()));
+}
+// Mutation guards read settings under the same database lock as the mutation.
+export function discoveryConfigForState(s: State) {
+  if (deploymentEnvironment() === "staging")
+    return discoveryConfiguration(stagingSettings());
+  return discoveryConfiguration(effectiveConfig(settingsValues(s.settings)));
 }
 export const productPhotoSettingKey = "AUTO_IMPORT_PRODUCT_PHOTOS";
 function photoSetting(values: Map<string, string>) {
@@ -173,6 +195,7 @@ export async function settingsSummary() {
             ? "settings"
             : "default",
       default: staging ? cfg[k] || null : (defaults[k] ?? null),
+      ...(k.startsWith("GIFT_DISCOVERY_") ? { value: cfg[k] } : {}),
       ...(k === "SCRAPING_PROVIDER"
         ? {
             value: cfg[k],
@@ -199,18 +222,32 @@ export async function saveSetting(k: string, value: string) {
     fail(400, "Choose an available service for shop details.");
   if (k === "PAID_DAILY_LIMIT" && !/^\d{1,6}$/.test(value))
     fail(400, "Use a daily request limit from 0 to 999999.");
+  if (
+    value &&
+    k === "GIFT_DISCOVERY_MODE" &&
+    !discoveryModes.includes(value as DiscoveryConfig["mode"])
+  )
+    fail(400, "Choose Off, For others, For own lists, or Both.");
+  if (value && /^GIFT_DISCOVERY_.*LIMIT$/.test(k) && !/^\d{1,6}$/.test(value))
+    fail(400, "Use a search limit from 0 to 999999.");
+  if (
+    value &&
+    k === "GIFT_DISCOVERY_MODEL" &&
+    !/^[a-zA-Z0-9._-]{1,100}$/.test(value)
+  )
+    fail(400, "Enter a valid model identifier.");
   if (k === "SMTP_PORT" && !/^\d{1,5}$/.test(value))
     fail(400, "Use a valid SMTP port.");
   await transact((s) => {
     const existing = s.settings.find((x) => x.key === k);
     if (!value) {
       s.settings = s.settings.filter((x) => x.key !== k);
-      return;
-    }
-    if (existing) {
+    } else if (existing) {
       existing.encrypted = encrypt(value);
       existing.revision++;
     } else s.settings.push({ ...stamp(), key: k, encrypted: encrypt(value) });
+    if (k === "GIFT_DISCOVERY_MODE" || k === "OPENAI_API_KEY")
+      pruneDiscovery(s, discoveryConfigForState(s));
   });
 }
 export async function spend(service: string) {
@@ -231,4 +268,33 @@ export async function spend(service: string) {
     row.count++;
     row.revision++;
   });
+}
+
+export function discoveryConfiguration(
+  cfg: Record<string, string>,
+): DiscoveryConfig {
+  const mode = cfg.GIFT_DISCOVERY_MODE || defaults.GIFT_DISCOVERY_MODE!;
+  if (!discoveryModes.includes(mode as DiscoveryConfig["mode"]))
+    throw new Error("Invalid GIFT_DISCOVERY_MODE.");
+  for (const key of [
+    "GIFT_DISCOVERY_USER_WEEKLY_LIMIT",
+    "GIFT_DISCOVERY_MONTHLY_LIMIT",
+  ] as const)
+    if (!/^\d{1,6}$/.test(cfg[key] || defaults[key]!))
+      throw new Error(`Invalid ${key}.`);
+  const model = cfg.GIFT_DISCOVERY_MODEL || defaults.GIFT_DISCOVERY_MODEL!;
+  if (!/^[a-zA-Z0-9._-]{1,100}$/.test(model))
+    throw new Error("Invalid GIFT_DISCOVERY_MODEL.");
+  return {
+    mode: mode as DiscoveryConfig["mode"],
+    available: mode !== "off" && !!cfg.OPENAI_API_KEY,
+    weeklyLimit: Number(
+      cfg.GIFT_DISCOVERY_USER_WEEKLY_LIMIT ||
+        defaults.GIFT_DISCOVERY_USER_WEEKLY_LIMIT,
+    ),
+    monthlyLimit: Number(
+      cfg.GIFT_DISCOVERY_MONTHLY_LIMIT || defaults.GIFT_DISCOVERY_MONTHLY_LIMIT,
+    ),
+    model,
+  };
 }

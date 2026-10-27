@@ -3099,3 +3099,163 @@ main {
     flex-basis: 100%;
   }
 }
+
+/* Gift preferences and discovery use the existing open-row gift language. */
+.gift-discovery-page {
+  max-width: 1040px;
+}
+.gift-discovery-page > p,
+.gift-preference-summary > p {
+  max-width: 68ch;
+}
+.gift-interests {
+  border: 0;
+  padding: 0;
+  margin: 12px 0 24px;
+  min-width: 0;
+}
+.gift-interests legend {
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+.gift-interest-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px 16px;
+}
+.gift-interest-options .check {
+  min-height: 44px;
+  padding: 8px;
+  border-radius: 8px;
+  align-items: start;
+}
+.gift-interest-options .check:has(input:checked) {
+  background: var(--soft);
+}
+.gift-preference-summary {
+  margin: 24px 0 32px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+.gift-preference-summary h2 {
+  font-size: 20px;
+}
+.gift-preference-prompt {
+  padding: 20px;
+  margin-bottom: 28px;
+  background: var(--soft);
+  border-radius: 12px;
+}
+.gift-preference-prompt .text-button {
+  margin-left: 16px;
+}
+.discovery-search {
+  margin: 24px 0;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+.discovery-search > summary {
+  cursor: pointer;
+  min-height: 44px;
+  font-size: 20px;
+  font-weight: 550;
+  padding: 8px 0;
+}
+.discovery-search .form {
+  margin-top: 20px;
+}
+.discovery-results {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 28px 22px;
+  margin: 24px 0;
+}
+.discovery-product {
+  min-width: 0;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+  overflow-wrap: anywhere;
+}
+.discovery-product img {
+  width: 100%;
+  aspect-ratio: 1.13;
+  object-fit: contain;
+  border-radius: 14px;
+}
+.discovery-product h3 {
+  font-size: 18px;
+  margin-top: 16px;
+}
+.discovery-product p {
+  font-size: 14px;
+}
+.discovery-product .check {
+  align-items: start;
+  min-height: 44px;
+}
+.discovery-offers {
+  list-style: none;
+  margin: 12px 0;
+  padding: 0;
+}
+.discovery-offers li {
+  margin: 8px 0;
+}
+.discovery-offers a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  overflow-wrap: anywhere;
+}
+.discovery-offers small {
+  display: block;
+  color: var(--muted);
+}
+.discovery-selection,
+.discovery-review {
+  margin-top: 32px;
+}
+.discovery-selected-item {
+  padding: 24px 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 20px;
+}
+.discovery-selected-item > .field,
+.discovery-selected-item > label {
+  margin-bottom: 16px;
+}
+.discovery-review > .text-button {
+  margin-left: 16px;
+}
+.gift-discovery-admin {
+  margin: 32px 0;
+}
+.gift-discovery-admin .form {
+  margin: 20px 0;
+}
+@media (max-width: 900px) {
+  .discovery-results {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 650px) {
+  .gift-interest-options {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .discovery-results {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .discovery-product img {
+    max-height: 240px;
+  }
+  .gift-discovery-page .button {
+    max-width: 100%;
+    white-space: normal;
+  }
+  .discovery-review > .text-button {
+    display: block;
+    margin-left: 0;
+  }
+}

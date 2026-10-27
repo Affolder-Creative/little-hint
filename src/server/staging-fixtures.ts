@@ -31,6 +31,9 @@ export function stagingFixtures() {
     });
     activateAccount(state, actor);
   });
+  state.giftPreferences.forEach((p) => {
+    p.setup = "skipped";
+  });
   const people = actors.map((a) =>
     state.people.find((p) => p.userId === a.id)!,
   );

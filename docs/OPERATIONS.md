@@ -110,6 +110,25 @@ Before accepting production backups, execute `backup-sidecar doctor`, `backup-si
 8. Reconcile membership removals, guardianship changes, purchases, contribution payments, and cancelled exchanges that happened after the snapshot. A database restore can resurrect permissions revoked after the snapshot; session invalidation does not repair membership history. Keep the site closed until that review is complete. Reissue needed invitations and resume only reviewed jobs.
 9. Start app and worker, verify authorized login and representative privacy views, then reopen access. Take a fresh off-host backup and record the drill date, snapshot, and checks. Preserve the previous volumes until recovery is accepted.
 
+## AI gift suggestion controls and rollout
+
+Admin settings offer **Off throughout the app**, **For others only**, **For own lists only** and **Both**, plus account/week and app/month search limits and the discovery model. Nonempty environment values override and lock the corresponding controls on both app and worker:
+
+| Variable                           | Default when empty                              |
+| ---------------------------------- | ----------------------------------------------- |
+| `GIFT_DISCOVERY_MODE`              | `givers` (`off`, `givers`, `receivers`, `both`) |
+| `GIFT_DISCOVERY_USER_WEEKLY_LIMIT` | `3`                                             |
+| `GIFT_DISCOVERY_MONTHLY_LIMIT`     | `100`                                           |
+| `GIFT_DISCOVERY_MODEL`             | `gpt-6-luna`                                    |
+
+A configured `OPENAI_API_KEY` is also required. A zero search limit blocks new paid searches while existing eligible batches remain usable. Staging forces discovery off regardless of saved/provider settings. `.env.production.example` starts with `GIFT_DISCOVERY_MODE=off`; leave it off during rollout. Remove that override to use the admin toggle, or change it and recreate **both** app and worker containers. Admin changes take effect without restart; clients learn the change on their normal refresh, and server guards apply immediately. Already dispatched work may still be billed. Disabling clears unsaved batches, and re-enabling does not restore them.
+
+Usage resets Monday 00:00 UTC for accounts and the first of each month 00:00 UTC for the installation. Limits count dispatched attempts across all recipients/modes, including failures, rather than shuffles or direct price refreshes. Each attempt permits at most two web-search calls and 4,000 output tokens. Admin usage reports returned input/output tokens, search calls and a standard-rate estimate, plus attempts with unknown usage. Estimates are not a provider billing cap; reconcile actual invoices and recheck pricing before changing models. Discovery does not use `PAID_DAILY_LIMIT` or paid scraping: its weekly/monthly controls are separate.
+
+Deploy app and worker from the **same image** together. Stop old writers before starting the new release: the full-state writer removes unknown application-record kinds, so an old binary can delete `giftPreferences` or `giftDiscoveryJobs`. No SQL backfill is needed, but take a database/upload backup. Before rollback, set off, stop both services, export these two kinds and retain the backup. Restore them only with a compatible binary; do not run old and new workers concurrently. Saved item offer fields are optional, and existing manual lists/items continue to work.
+
+Before wider activation, run ten explicit searches using synthetic profiles only: coffee at $25/$50, books at $25, gardening at $50, cooking at $100, board games at $50, crafts at $25, camping at $100, one managed-profile own-list search without a maximum, and one intentionally restrictive no-match search. On an isolated non-staging test installation, set mode `both`, weekly limit `10`, monthly limit `10` and automatic photos off. Keep staging's provider isolation intact. Record verified candidate counts, exact product/variant, price and stock at each linked shop, review evidence, latency, reported usage and actual billed cost. Verify free shuffle, a changed-price refresh and cancellation during a request. All displayed offers must satisfy budget/identity/evidence requirements; empty results must be explained honestly. Investigate low verified yield before enabling the feature for users. Restore the intended limits and giver-only mode after evaluation. This paid live evaluation is not run by CI.
+
 ## Routine maintenance
 
 Back up before migrations or dependency upgrades. Deploy app and worker from the same commit. Avoid changing `APP_URL` without also reviewing passkey relying-party IDs and allowed origins. Never delete Compose volumes as part of a redeploy. Keep the settings encryption key and restic password in an independent secure store. Treat restored data as private.

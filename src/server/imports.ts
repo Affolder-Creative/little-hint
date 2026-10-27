@@ -70,12 +70,12 @@ const dispatcher = new Agent({
 export async function safeFetch(
   value: string,
   maxBytes = 2_000_000,
-  onUrl?: (url: string) => void,
+  onUrl?: (url: string) => void | Promise<void>,
 ) {
   let url = value;
   let cacheable = true;
   for (let n = 0; n < 6; n++) {
-    onUrl?.(url);
+    await onUrl?.(url);
     await validateUrl(url);
     cacheable &&= !!productCacheUrl(url);
     const response = await request(url, {

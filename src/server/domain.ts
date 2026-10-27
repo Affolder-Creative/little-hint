@@ -1,4 +1,9 @@
 import { managementActions, managementCommand } from "./management";
+import {
+  preferenceViews,
+  updateGiftPreferences,
+  newPreference,
+} from "./gift-discovery";
 import { itemTrashed } from "../shared/organization";
 import {
   activityAllowed,
@@ -522,6 +527,7 @@ export function world(s: State, a: Actor): World {
   const people = s.people.filter((p) => personVisible(s, a, p));
   const ps = ownIds(s, a);
   return {
+    giftPreferences: preferenceViews(s, a),
     organization: s.organization.filter((o) => o.userId === a.id),
     me: {
       ...a,
@@ -699,6 +705,7 @@ export function activateAccount(s: State, a: Actor) {
       admin: !!grant.bootstrap,
     };
     s.people.push(p);
+    s.giftPreferences.push(newPreference(p.id));
     if (grant.bootstrap) {
       grant.acceptedBy = a.id;
       touch(grant);
@@ -792,6 +799,8 @@ export function command(
   )
     return activityCommand(s, a, action, raw);
   switch (action) {
+    case "gift-preferences.update":
+      return updateGiftPreferences(s, a, raw);
     case "households.create": {
       const p = z.object({ groupId: id, name: text }).parse(b);
       ownedGroup(s, a, p.groupId);
@@ -1356,6 +1365,10 @@ export function command(
       } else if (i.url !== p.url) {
         delete i.importedAt;
         delete i.source;
+      }
+      if (i.url !== p.url) {
+        delete i.purchaseOffers;
+        delete i.recommendationEvidence;
       }
       Object.assign(i, fields);
       touch(i);

@@ -17,7 +17,7 @@ export const hasPendingWrites = () => pendingWrites > 0;
 export async function api<T = any>(
   path: string,
   body?: unknown,
-  options?: { signal?: AbortSignal },
+  options?: { signal?: AbortSignal; idempotencyKey?: string },
 ): Promise<T> {
   if (body !== undefined) pendingWrites++;
   try {
@@ -30,7 +30,7 @@ export async function api<T = any>(
           ? {}
           : {
               "Content-Type": "application/json",
-              "Idempotency-Key": crypto.randomUUID(),
+              "Idempotency-Key": options?.idempotencyKey ?? crypto.randomUUID(),
             },
       body: body === undefined ? undefined : JSON.stringify(body),
     });

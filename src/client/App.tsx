@@ -1,3 +1,12 @@
+import { GiftDiscoveryPage, OfferLinks } from "./GiftDiscovery";
+import { GiftDiscoveryAdmin } from "./GiftDiscoveryAdmin";
+import {
+  GiftPreferenceOnboarding,
+  GiftPreferencePrompt,
+  PreferenceButton,
+  PreferenceSummary,
+  DiscoveryLink,
+} from "./GiftPreferences";
 import {
   ContributionForm,
   ContributionSpendingGuidance,
@@ -394,40 +403,70 @@ export function App() {
             </div>
           )}
           <main id="main" tabIndex={-1}>
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/notifications" element={<NotificationCenter />} />
-              <Route path="/notifications/:id" element={<NotificationOpen />} />
-              <Route path="/people" element={<People />} />
-              <Route path="/people/:id" element={<PersonPage />} />
-              <Route path="/lists" element={<Lists />} />
-              <Route path="/lists/:id" element={<Lists />} />
-              <Route path="/events/:id" element={<EventPage />} />
-              <Route path="/gift/:id" element={<GiftDetail />} />
-              <Route path="/buying" element={<Buying />} />
-              <Route path="/exchanges" element={<Exchanges />} />
-              <Route
-                path="/settings"
-                element={<SettingsPage theme={theme} setTheme={setTheme} />}
-              />
-              <Route path="/invite/:id" element={<Invitations />} />
-              <Route
-                path="*"
-                element={
-                  <Empty
-                    page
-                    title="This page isn’t here"
-                    action={
-                      <Link className="button" to="/">
-                        Back home
-                      </Link>
-                    }
-                  >
-                    Try opening the link again or return to your lists.
-                  </Empty>
+            {query.data.giftPreferences?.find(
+              (p) =>
+                p.setup === "new" &&
+                world.people.some(
+                  (person) =>
+                    person.id === p.personId && person.userId === world.me.id,
+                ),
+            ) ? (
+              <GiftPreferenceOnboarding
+                personId={
+                  query.data.giftPreferences.find(
+                    (p) =>
+                      p.setup === "new" &&
+                      world.people.some(
+                        (person) =>
+                          person.id === p.personId &&
+                          person.userId === world.me.id,
+                      ),
+                  )!.personId
                 }
               />
-            </Routes>
+            ) : (
+              <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="/notifications" element={<NotificationCenter />} />
+                <Route
+                  path="/notifications/:id"
+                  element={<NotificationOpen />}
+                />
+                <Route path="/people" element={<People />} />
+                <Route
+                  path="/people/:id/gift-ideas"
+                  element={<GiftDiscoveryPage />}
+                />
+                <Route path="/people/:id" element={<PersonPage />} />
+                <Route path="/lists" element={<Lists />} />
+                <Route path="/lists/:id" element={<Lists />} />
+                <Route path="/events/:id" element={<EventPage />} />
+                <Route path="/gift/:id" element={<GiftDetail />} />
+                <Route path="/buying" element={<Buying />} />
+                <Route path="/exchanges" element={<Exchanges />} />
+                <Route
+                  path="/settings"
+                  element={<SettingsPage theme={theme} setTheme={setTheme} />}
+                />
+                <Route path="/invite/:id" element={<Invitations />} />
+                <Route
+                  path="*"
+                  element={
+                    <Empty
+                      page
+                      title="This page isn’t here"
+                      action={
+                        <Link className="button" to="/">
+                          Back home
+                        </Link>
+                      }
+                    >
+                      Try opening the link again or return to your lists.
+                    </Empty>
+                  }
+                />
+              </Routes>
+            )}
           </main>
           <footer className="app-footer">
             <span>Created by Affolder Creative</span>
@@ -834,6 +873,7 @@ function Home() {
   const hasLists = world.lists.some((list) => list.canEdit && !list.archived);
   return (
     <>
+      <GiftPreferencePrompt />
       <Header
         title={`Hi, ${world.me.name.split(" ")[0]}.`}
         description={
@@ -994,6 +1034,7 @@ function PersonPage() {
             : `A few hints about what ${person.name} would love.`
         }
       >
+        <DiscoveryLink personId={person.id} />
         <FollowButton target="person" targetId={person.id} />
         {own ? (
           <button
@@ -1017,6 +1058,7 @@ function PersonPage() {
           </button>
         )}
       </Header>
+      <PreferenceSummary personId={person.id} />
       <div
         className="tabs"
         role="tablist"
@@ -1167,6 +1209,19 @@ function Lists() {
               "On their wish lists")}
         </Link>
         <Header title={list.name} description={list.description}>
+          {list.canEdit && !list.archived && (
+            <DiscoveryLink
+              personId={list.ownerIds.find((id) =>
+                world.people.some(
+                  (p) =>
+                    p.id === id &&
+                    (p.userId === world.me.id ||
+                      p.guardians.includes(world.me.id)),
+                ),
+              )!}
+              listId={list.id}
+            />
+          )}
           <FollowButton target="list" targetId={list.id} />
           <Privacy mode={list.mode} />
           {list.canManageSettings && (
@@ -1390,6 +1445,16 @@ function GiftDetail() {
               Visit shop <ExternalLink size={16} />
             </a>
           )}
+          {gift.purchaseOffers && (
+            <OfferLinks candidate={{ offers: gift.purchaseOffers }} />
+          )}
+          {gift.recommendationEvidence?.map((e, i) => (
+            <p className="muted" key={i}>
+              <a href={e.url} target="_blank" rel="noopener noreferrer">
+                {e.label}
+              </a>
+            </p>
+          ))}
           {gift.canEdit && (
             <button
               className="text-button"
@@ -2266,6 +2331,7 @@ function SettingsPage({
                 >
                   Edit
                 </button>
+                <PreferenceButton personId={p.id} />
                 {!p.userId && (
                   <button
                     className="text-button"
@@ -3383,6 +3449,7 @@ function Admin() {
           </p>
         </Form>
       )}
+      <GiftDiscoveryAdmin settings={settings.data ?? []} />
       <h3>Connected services</h3>
       <p>
         Connect services for email, text messages, and shop details. Secret keys
@@ -3402,6 +3469,7 @@ function Admin() {
             settings.data?.filter(
               (s) =>
                 s.key !== "AUTO_IMPORT_PRODUCT_PHOTOS" &&
+                !s.key.startsWith("GIFT_DISCOVERY_") &&
                 integrationGroup(s.key) === group,
             ) ?? [];
           return (
