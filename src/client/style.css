@@ -2482,6 +2482,53 @@ main {
   justify-self: start;
 }
 
+/* Keep setup visible; expand topic and privacy choices only when needed. */
+.notification-settings .check,
+.follow-settings .check {
+  min-height: 44px;
+}
+.notification-delivery {
+  gap: 8px;
+}
+.delivery-channel {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+}
+.delivery-channel > .muted,
+.notification-disclosure > summary > .muted {
+  font-size: 13px;
+  font-weight: 400;
+  overflow-wrap: anywhere;
+}
+.delivery-channel > p {
+  flex-basis: 100%;
+  margin: 0;
+}
+.notification-disclosure > summary {
+  cursor: pointer;
+  min-height: 44px;
+  padding-block: 10px;
+  font-weight: 550;
+}
+.notification-disclosure > summary > span {
+  display: block;
+  margin-top: 4px;
+}
+.notification-disclosure[open] > :not(summary) {
+  margin-block: 12px;
+}
+.notification-delivery .push-setup {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.notification-settings > section {
+  margin-top: 32px;
+}
+
 /* Notification history follows the same flat rows as gift plans and settings. */
 .notification-bell {
   position: relative;

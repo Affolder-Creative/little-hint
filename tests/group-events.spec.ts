@@ -477,7 +477,7 @@ test("settings navigation isolates tasks and preserves unfinished preferences", 
     .getByRole("link", { name: "Notifications", exact: true })
     .click();
   const email = page
-    .getByRole("group", { name: "Where to send updates", exact: true })
+    .getByRole("group", { name: "Delivery channels", exact: true })
     .getByRole("checkbox", { name: "Email", exact: true });
   const wasChecked = await email.isChecked();
   await email.setChecked(!wasChecked);

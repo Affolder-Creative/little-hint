@@ -115,11 +115,16 @@ test("following, scoped mentions, inbox read controls, and mobile settings", asy
   ).toBe(false);
   await helper.goto("/settings?section=notifications");
   await helper.setViewportSize({ width: 390, height: 844 });
+  await helper.locator(".push-setup > summary").click();
   await expect(
     helper.getByText(
       "Push is not configured on this installation. Your in-app inbox still works.",
     ),
   ).toBeVisible();
+  await helper
+    .locator("summary")
+    .filter({ hasText: /^Customize topics/ })
+    .click();
   const topics = helper.locator(".channel-topics");
   await topics
     .getByRole("group", { name: "Mentions", exact: true })
@@ -271,6 +276,10 @@ test("family and household follows, list overrides, muting, and preview settings
     reader.getByRole("button", { name: /Muted notification item/ }),
   ).toHaveCount(0);
   await reader.goto("/settings?section=notifications");
+  await reader
+    .locator("summary")
+    .filter({ hasText: /^Preview privacy/ })
+    .click();
   const previews = reader.getByRole("group", {
     name: "Show details in notifications",
     exact: true,
@@ -284,6 +293,10 @@ test("family and household follows, list overrides, muting, and preview settings
     reader.getByText("Notification preferences saved.", { exact: true }),
   ).toBeVisible();
   await reader.reload();
+  await reader
+    .locator("summary")
+    .filter({ hasText: /^Preview privacy/ })
+    .click();
   await expect(previews.getByLabel("Push", { exact: true })).toBeChecked();
   await expect(previews.getByLabel("Email", { exact: true })).not.toBeChecked();
   await expect(
