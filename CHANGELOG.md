@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.8.0](https://github.com/Affolder-Creative/little-hint/compare/v0.7.0...v0.8.0) (2026-10-27)
+
+
+### Features
+
+* add budgeted gift discovery and preferences ([#75](https://github.com/Affolder-Creative/little-hint/issues/75)) ([0d59fc1](https://github.com/Affolder-Creative/little-hint/commit/0d59fc18d7f313e28d4c11032e0244c7bbf08512))
+* clean imported product copy and restrict exchanges to group leaders ([#78](https://github.com/Affolder-Creative/little-hint/issues/78)) ([789d933](https://github.com/Affolder-Creative/little-hint/commit/789d933b6b783fae045f35f94449ad40352662dc))
+* personalize and batch wish-list notifications ([#77](https://github.com/Affolder-Creative/little-hint/issues/77)) ([07704cf](https://github.com/Affolder-Creative/little-hint/commit/07704cf2bd72a3a9e8b770741e9ad797d50e1c81))
+
 ## [0.7.0](https://github.com/Affolder-Creative/little-hint/compare/v0.6.2...v0.7.0) (2026-10-27)
 
 
