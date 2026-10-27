@@ -4,9 +4,34 @@ import {
   publicAddress,
   validateUrl,
   tagsFor,
+  parseAmazonResponse,
 } from "../src/server/imports";
 import { canonicalUrl } from "../src/server/domain";
 describe("product imports", () => {
+  it("retains bounded source titles before display truncation for HTML and Amazon providers", () => {
+    const sourceTitle = "Retailer wording ".repeat(20) + "Blue, size L, 2-pack";
+    const html = `<script type="application/ld+json">${JSON.stringify({ "@type": "Product", name: sourceTitle })}</script>`;
+    for (const p of [
+      parseProduct(html, "https://example.com/product"),
+      parseAmazonResponse({ title: sourceTitle }, "https://amazon.com/product"),
+    ]) {
+      expect(p.title).toBe(sourceTitle.slice(0, 160));
+      expect(p.sourceTitle).toBe(sourceTitle);
+      expect(p.sourceTitle).toContain("Blue, size L, 2-pack");
+    }
+    expect(
+      parseAmazonResponse(
+        { title: "X".repeat(2500) },
+        "https://amazon.com/product",
+      ).sourceTitle,
+    ).toHaveLength(2000);
+    expect(
+      parseProduct(
+        `<title>${"X".repeat(2500)}</title>`,
+        "https://example.com/product",
+      ).sourceTitle,
+    ).toHaveLength(2000);
+  });
   it.each([
     "amazon.com",
     "walmart.com",

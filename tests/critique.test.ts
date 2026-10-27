@@ -66,7 +66,7 @@ describe("P1 coordination permissions", () => {
       false,
     );
   });
-  it("edits only the organizer's current draft and preserves a completed draw", () => {
+  it("lets event leaders edit a current draft and preserves a completed draw", () => {
     const { state, actors } = stagingFixtures();
     const input = {
       name: "Draft",
@@ -80,10 +80,10 @@ describe("P1 coordination permissions", () => {
       id: string;
     };
     const edit = { ...input, id, revision: 1, name: "Reviewed" };
-    expect(() => command(state, actors[1], "exchanges.update", edit)).toThrow(
+    expect(() => command(state, actors[2], "exchanges.update", edit)).toThrow(
       "Exchange not found",
     );
-    command(state, actors[0], "exchanges.update", edit);
+    command(state, actors[1], "exchanges.update", edit);
     expect(() => command(state, actors[0], "exchanges.update", edit)).toThrow(
       "changed since",
     );

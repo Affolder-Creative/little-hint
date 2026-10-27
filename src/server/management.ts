@@ -76,8 +76,7 @@ function manages(s: State, a: Actor, kind: TrashKind, id: string): boolean {
   return s.exchanges.some(
     (e) =>
       e.id === id &&
-      e.organizerId === a.id &&
-      s.groups.some((g) => g.id === e.groupId && g.memberIds.includes(a.id)),
+      s.groups.some((g) => g.id === e.groupId && canManageGroupEvents(g, a.id)),
   );
 }
 export function trash(s: State, a: Actor): TrashEntry[] {

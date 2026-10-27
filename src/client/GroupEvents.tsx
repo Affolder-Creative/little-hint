@@ -234,8 +234,9 @@ export function EventLeadersForm({ group }: { group: Group }) {
       }}
     >
       <p>
-        You manage events as the family group owner. Choose other members who
-        can create and manage every event in {group.name}.
+        You manage events and gift exchanges as the family group owner. Choose
+        other members who can create and manage every event and gift exchange in{" "}
+        {group.name}.
       </p>
       <fieldset className="choice-group">
         <legend>Event leaders</legend>
@@ -257,9 +258,10 @@ export function EventLeadersForm({ group }: { group: Group }) {
         )}
       </fieldset>
       <p className="muted">
-        Event leaders manage event settings and participants. Only the family
-        group owner manages membership and appoints leaders. People still edit
-        their own wish-list items.
+        Event leaders manage event and gift exchange settings, participants, and
+        exchange drawings. This does not reveal anyone else’s secret
+        assignments. Only the family group owner manages membership and appoints
+        leaders. People still edit their own wish-list items.
       </p>
     </Form>
   );

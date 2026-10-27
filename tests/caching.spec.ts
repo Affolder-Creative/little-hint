@@ -19,8 +19,8 @@ const job = (id: string, status = "running") => ({
   ...(status === "complete"
     ? {
         result: {
-          title: "Imported mug",
-          description: "Retailer description",
+          title: "Acme ceramic mug, blue, 12 oz",
+          description: "A blue 12 oz ceramic mug from Acme.",
           priceCents: 2500,
           source: "shop.example",
           importedAt: "2026-01-01T12:00:00.000Z",
@@ -55,6 +55,10 @@ test("polls only the active import, refreshes explicitly, and preserves manual e
   });
   await page.getByRole("button", { name: "Get details", exact: true }).click();
   await page.getByLabel("Item name", { exact: true }).fill("My own title");
+  await page.getByText("More details", { exact: true }).click();
+  await page
+    .getByLabel("A helpful note", { exact: true })
+    .fill("My own description");
   await expect.poll(() => polls, { timeout: 12000 }).toBeGreaterThanOrEqual(4);
   expect(worlds).toBe(0);
   complete = true;
@@ -63,6 +67,9 @@ test("polls only the active import, refreshes explicitly, and preserves manual e
   ).toBeVisible();
   await expect(page.getByLabel("Item name", { exact: true })).toHaveValue(
     "My own title",
+  );
+  await expect(page.getByLabel("A helpful note", { exact: true })).toHaveValue(
+    "My own description",
   );
   await page.getByRole("button", { name: "Refresh from shop" }).click();
   await expect.poll(() => bodies.length).toBe(2);
@@ -73,6 +80,9 @@ test("polls only the active import, refreshes explicitly, and preserves manual e
   await expect(page.getByLabel("Item name", { exact: true })).toHaveValue(
     "My own title",
   );
+  await expect(page.getByLabel("A helpful note", { exact: true })).toHaveValue(
+    "My own description",
+  );
   await page.screenshot({
     path: test.info().outputPath("import-refresh.png"),
     fullPage: true,
@@ -81,6 +91,32 @@ test("polls only the active import, refreshes explicitly, and preserves manual e
   await page.waitForTimeout(2500);
   expect(polls).toBe(stopped);
   await expect.poll(() => worlds, { timeout: 25000 }).toBe(1);
+});
+
+test("shows cleaned imported copy for review before saving", async ({
+  page,
+}) => {
+  await openImport(page);
+  await page.route("**/api/v1/imports", (route) =>
+    route.fulfill({ json: job("cleaned-copy", "pending") }),
+  );
+  await page.route("**/api/v1/imports/*", (route) =>
+    route.fulfill({ json: job("cleaned-copy", "complete") }),
+  );
+  await page.getByRole("button", { name: "Get details", exact: true }).click();
+  await expect(page.getByLabel("Item name", { exact: true })).toHaveValue(
+    "Acme ceramic mug, blue, 12 oz",
+  );
+  await expect(page.getByLabel("A helpful note", { exact: true })).toHaveValue(
+    "A blue 12 oz ceramic mug from Acme.",
+  );
+  await expect(
+    page.getByText("Details found. Check them before saving."),
+  ).toBeVisible();
+  await page.getByLabel("Item name", { exact: true }).fill("My preferred mug");
+  await expect(page.getByLabel("Item name", { exact: true })).toHaveValue(
+    "My preferred mug",
+  );
 });
 
 test("retries status failures and ignores late results after the product URL changes", async ({

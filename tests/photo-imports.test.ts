@@ -48,11 +48,14 @@ vi.mock("../src/server/db", () => {
   };
 });
 import { importProduct, saveImage } from "../src/server/imports";
+import { importCacheKey } from "../src/server/import-cache";
+import { spend } from "../src/server/settings";
 let dir: string;
 let png: Buffer;
 const page =
   '<script type="application/ld+json">{"@type":"Product","name":"Coffee mug","description":"A mug","image":"https://example.com/photo.png","offers":{"price":"25","priceCurrency":"USD"}}</script>';
 beforeEach(async () => {
+  vi.mocked(spend).mockReset();
   mocks.enabled = false;
   mocks.cfg = {};
   mocks.cache.clear();
@@ -125,6 +128,180 @@ describe("photo import policy", () => {
     expect(await saveImage(png, "owner")).toMatch(/^\/api\/v1\/media\//);
     expect(mocks.state.media).toHaveLength(1);
     expect(mocks.request).not.toHaveBeenCalled();
+  });
+});
+
+describe("AI product copy", () => {
+  const cleaned = {
+    title: "Acme ceramic mug, blue, 12 oz, 2-pack",
+    description: "Two blue 12 oz ceramic mugs from Acme.",
+    tags: ["Coffee", "Kitchen", "Mugs"],
+  };
+  const aiResponse = (value: unknown) =>
+    Response.json({
+      output: [
+        { content: [{ type: "output_text", text: JSON.stringify(value) }] },
+      ],
+    });
+  const enable = () => {
+    mocks.cfg = { OPENAI_API_KEY: "synthetic-key", OPENAI_MODEL: "test-model" };
+  };
+
+  it("cleans titles and descriptions from complete source text, caches them, and keeps retailer facts", async () => {
+    enable();
+    mocks.enabled = true;
+    const sourceTitle =
+      "Acme ceramic mug " +
+      "BEST SELLER online shop ".repeat(10) +
+      "Blue, 12 oz, 2-pack";
+    const productPage = page
+      .replace("Coffee mug", sourceTitle)
+      .replace('"A mug"', '"Two ceramic mugs, blue, 12 oz each."');
+    mocks.request.mockImplementation(
+      async (url: string) =>
+        new Response(
+          url.endsWith("photo.png") ? new Uint8Array(png) : productPage,
+          {
+            headers: {
+              "content-type": url.endsWith("photo.png")
+                ? "image/png"
+                : "text/html",
+            },
+          },
+        ),
+    );
+    const ai = vi.fn(async () => aiResponse(cleaned));
+    vi.stubGlobal("fetch", ai);
+    const first = await importProduct("https://example.com/product", "alice");
+    const second = await importProduct("https://example.com/product", "bob");
+    for (const result of [first, second]) {
+      expect(result).toMatchObject({
+        ...cleaned,
+        priceCents: 2500,
+        currency: "USD",
+        url: "https://example.com/product",
+        source: "example.com",
+      });
+      expect(result.image).toMatch(/^\/api\/v1\/media\//);
+      expect(result).not.toHaveProperty("sourceTitle");
+      expect(result).not.toHaveProperty("remoteImage");
+    }
+    expect(first.image).not.toBe(second.image);
+    expect(ai).toHaveBeenCalledTimes(1);
+    const request = JSON.parse(
+      (ai.mock.calls as unknown as [string, RequestInit][])[0][1]
+        .body as string,
+    );
+    expect(JSON.parse(request.input)).toEqual({
+      title: sourceTitle,
+      description: "Two ceramic mugs, blue, 12 oz each.",
+    });
+    expect(request.store).toBe(false);
+    expect(spend).toHaveBeenCalledExactlyOnceWith("openai");
+    await importProduct("https://example.com/product", "alice", true);
+    expect(ai).toHaveBeenCalledTimes(2);
+  });
+
+  it.each([undefined, "", "   ", "X".repeat(161), 123])(
+    "discards the entire AI response for an invalid title (%s)",
+    async (title) => {
+      enable();
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async () => aiResponse({ ...cleaned, title })),
+      );
+      const result = await importProduct(
+        "https://example.com/product",
+        "alice",
+      );
+      expect(result).toMatchObject({
+        title: "Coffee mug",
+        description: "A mug",
+        priceCents: 2500,
+      });
+      expect(result.tags).not.toEqual(cleaned.tags);
+      expect(
+        [...mocks.cache.values()].some(
+          (row) =>
+            (row.data as { description?: string }).description ===
+            cleaned.description,
+        ),
+      ).toBe(false);
+    },
+  );
+
+  it.each(["disabled", "quota", "provider", "malformed"])(
+    "keeps retailer data when AI is %s",
+    async (failure) => {
+      enable();
+      if (failure === "disabled") mocks.cfg.OPENAI_API_KEY = "";
+      if (failure === "quota")
+        vi.mocked(spend).mockRejectedValueOnce(
+          new Error("Daily limit reached"),
+        );
+      const ai = vi.fn(async () =>
+        failure === "provider"
+          ? new Response("Unavailable", { status: 503 })
+          : Response.json({
+              output: [
+                { content: [{ type: "output_text", text: "not JSON" }] },
+              ],
+            }),
+      );
+      vi.stubGlobal("fetch", ai);
+      const result = await importProduct(
+        "https://example.com/product",
+        "alice",
+      );
+      expect(result).toMatchObject({
+        title: "Coffee mug",
+        description: "A mug",
+        priceCents: 2500,
+      });
+      expect(result.tags!.length).toBeGreaterThanOrEqual(3);
+      expect(result).not.toHaveProperty("sourceTitle");
+      expect(ai).toHaveBeenCalledTimes(
+        ["disabled", "quota"].includes(failure) ? 0 : 1,
+      );
+    },
+  );
+
+  it("ignores old metadata and description-only enrichment cache entries", async () => {
+    enable();
+    const url = "https://example.com/product";
+    const oldMetadata = {
+      title: "Old truncated title",
+      description: "Old description",
+      priceCents: 2500,
+      currency: "USD",
+      tags: ["Coffee", "Kitchen", "Mugs"],
+      source: "example.com",
+      importedAt: new Date().toISOString(),
+      shareable: true,
+    };
+    for (const [key, data] of [
+      [importCacheKey("metadata", [url, undefined, "", false]), oldMetadata],
+      [
+        importCacheKey("enrichment", [
+          url,
+          "Coffee mug",
+          "A mug",
+          "test-model",
+          "synthetic-key",
+        ]),
+        { description: "Stale summary", tags: cleaned.tags },
+      ],
+    ] as const)
+      mocks.cache.set(key, {
+        data,
+        checked: new Date(),
+        expires: new Date(Date.now() + 60_000),
+      });
+    const ai = vi.fn(async () => aiResponse(cleaned));
+    vi.stubGlobal("fetch", ai);
+    expect(await importProduct(url, "alice")).toMatchObject(cleaned);
+    expect(mocks.request).toHaveBeenCalledTimes(1);
+    expect(ai).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -222,6 +399,7 @@ describe("shared product metadata cache", () => {
                 {
                   type: "output_text",
                   text: JSON.stringify({
+                    title: "Coffee mug",
                     description: "A mug",
                     tags: ["Coffee", "Kitchen", "Mugs"],
                   }),
