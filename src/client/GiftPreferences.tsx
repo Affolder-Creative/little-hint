@@ -282,26 +282,28 @@ export function PreferenceButton({ personId }: { personId: string }) {
 export function PreferenceSummary({ personId }: { personId: string }) {
   const { world } = useApp();
   const p = world.giftPreferences?.find((p) => p.personId === personId);
+  if (!p || !(p.categoryIds.length || p.interests || p.likes || p.avoid))
+    return (
+      <div className="gift-preference-empty">
+        <PreferenceButton personId={personId} />
+      </div>
+    );
   return (
     <section className="gift-preference-summary" aria-label="Gift preferences">
       <h2>Gift preferences</h2>
-      {p && (p.categoryIds.length || p.interests || p.likes || p.avoid) ? (
-        <>
-          {!!p.categoryIds.length && (
-            <p>
-              {giftCategories
-                .filter(([id]) => p.categoryIds.includes(id))
-                .map(([, name]) => name)
-                .join(" · ")}
-            </p>
-          )}
-          {p.interests && <p>{p.interests}</p>}
-          {p.likes && <p>Likes: {p.likes}</p>}
-          {p.avoid && <p>Things to avoid: {p.avoid}</p>}
-        </>
-      ) : (
-        <p className="muted">No gift preferences shared here yet.</p>
-      )}
+      <>
+        {!!p.categoryIds.length && (
+          <p>
+            {giftCategories
+              .filter(([id]) => p.categoryIds.includes(id))
+              .map(([, name]) => name)
+              .join(" · ")}
+          </p>
+        )}
+        {p.interests && <p>{p.interests}</p>}
+        {p.likes && <p>Likes: {p.likes}</p>}
+        {p.avoid && <p>Things to avoid: {p.avoid}</p>}
+      </>
       <PreferenceButton personId={personId} />
     </section>
   );

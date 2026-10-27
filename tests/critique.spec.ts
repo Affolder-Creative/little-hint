@@ -2594,3 +2594,124 @@ test("wish-list items and ideas for others keep distinct names through saving an
     page.getByRole("button", { name: "Reserve gift", exact: true }),
   ).toBeVisible();
 });
+
+for (const width of [1440, 390]) {
+  test(`browsing puts gifts and primary list actions first at ${width}px`, async ({
+    page,
+  }, testInfo) => {
+    const { state, actor } = await preview(page);
+    const ownList = world(state, actor).lists.find(
+      (list) =>
+        list.canManageSettings &&
+        !list.archived &&
+        state.items.some((item) => item.listId === list.id),
+    )!;
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto(`/lists/${ownList.id}`);
+    await expect(
+      page
+        .getByRole("main")
+        .getByRole("button", { name: "Add item", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "List settings", exact: true }),
+    ).not.toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Archive list", exact: true }),
+    ).not.toBeVisible();
+    await page
+      .getByLabel("Search items", { exact: true })
+      .fill("no such gift xyz");
+    await expect(
+      page.getByRole("heading", { name: "No matches found" }),
+    ).toBeVisible();
+    await expect(page.getByLabel("Filter by tag")).toBeVisible();
+    await page.getByLabel("Search items", { exact: true }).fill("");
+    await page.screenshot({
+      path: testInfo.outputPath(`browsing-list-${width}.png`),
+      fullPage: true,
+    });
+    const menu = page.locator(".list-heading .entry-actions > summary");
+    await menu.focus();
+    await page.keyboard.press("Enter");
+    await page
+      .getByRole("button", { name: "List settings", exact: true })
+      .click();
+    await expect(page.getByRole("dialog")).toBeVisible();
+    await page
+      .getByRole("button", { name: "Close dialog", exact: true })
+      .click();
+    await menu.click();
+    await page
+      .getByRole("button", { name: "Archive list", exact: true })
+      .click();
+    await expect(
+      page.getByText(
+        "This list is archived. Existing purchase history is preserved.",
+      ),
+    ).toBeVisible();
+    await menu.click();
+    await page
+      .getByRole("button", { name: "Restore list", exact: true })
+      .click();
+    await expect(
+      page
+        .getByRole("main")
+        .getByRole("button", { name: "Add item", exact: true }),
+    ).toBeVisible();
+
+    const recipient = world(state, actor).people.find(
+      (person) =>
+        person.userId !== actor.id &&
+        state.lists.some((list) => list.ownerIds.includes(person.id)),
+    )!;
+    state.items = state.items.filter(
+      (item) => item.listId || !item.recipientIds.includes(recipient.id),
+    );
+    await page.goto(`/people/${recipient.id}`);
+    await page.screenshot({
+      path: testInfo.outputPath(`browsing-person-${width}.png`),
+      fullPage: true,
+    });
+    await page.getByRole("tab", { name: /Gift ideas for/ }).click();
+    await expect(
+      page.getByLabel("Search gift ideas", { exact: true }),
+    ).toHaveCount(0);
+    await expect(page.getByLabel("Filter by tag")).toHaveCount(0);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth - innerWidth,
+      ),
+    ).toBeLessThanOrEqual(1);
+  });
+}
+
+test("archived-only collections keep their navigation while truly empty lists omit tools", async ({
+  page,
+}) => {
+  const { state, actor } = await preview(page);
+  const list = world(state, actor).lists.find(
+    (list) => list.canEdit && !list.archived,
+  )!;
+  const item = state.items.find((item) => item.listId === list.id)!;
+  state.items = state.items.filter(
+    (entry) => entry.listId !== list.id || entry.id === item.id,
+  );
+  item.archived = true;
+  await page.goto(`/lists/${list.id}`);
+  await page
+    .getByRole("button", { name: "Archived items", exact: true })
+    .click();
+  await expect(
+    page.locator(`.gift-card[href="/gift/${item.id}"]`),
+  ).toBeVisible();
+  state.items = state.items.filter((entry) => entry.id !== item.id);
+  await page.reload();
+  await expect(page.getByRole("group", { name: "Item status" })).toHaveCount(0);
+  await expect(page.getByLabel("Search items", { exact: true })).toHaveCount(0);
+  await expect(
+    page
+      .getByRole("main")
+      .getByRole("button", { name: "Add item", exact: true }),
+  ).toBeVisible();
+});

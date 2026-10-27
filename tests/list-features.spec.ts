@@ -275,6 +275,7 @@ test("list dates lock at sharing, archives restore, and controls fit desktop and
   expect(
     (await page.request.get(`/api/v1/lists/${list.id}/gift-summary`)).status(),
   ).toBe(409);
+  await page.locator(".list-heading .entry-actions > summary").click();
   await page
     .getByRole("button", { name: "List settings", exact: true })
     .click();
@@ -308,6 +309,7 @@ test("list dates lock at sharing, archives restore, and controls fit desktop and
   await expectDialogFieldsToFit(page);
   await page.getByRole("button", { name: "Close dialog", exact: true }).click();
   await page.getByRole("button", { name: "Discard changes" }).click();
+  await page.locator(".list-heading .entry-actions > summary").click();
   await page.getByRole("button", { name: "Archive list", exact: true }).click();
   await expect(
     page.getByText(
@@ -320,9 +322,12 @@ test("list dates lock at sharing, archives restore, and controls fit desktop and
   );
   await page.getByRole("button", { name: "Archived", exact: true }).click();
   await page.getByRole("link", { name: new RegExp(title) }).click();
+  await page.locator(".list-heading .entry-actions > summary").click();
   await page.getByRole("button", { name: "Restore list", exact: true }).click();
   await expect(
-    page.getByRole("button", { name: "Archive list", exact: true }),
+    page
+      .getByRole("main")
+      .getByRole("button", { name: "Add item", exact: true }),
   ).toBeVisible();
   const restored = (
     await (await page.request.get("/api/v1/world")).json()
@@ -653,6 +658,7 @@ test("gift summaries are owner-only, omit financial data, and remain available i
         ).violations,
       ).toEqual([]);
     }
+    await page.locator(".list-heading .entry-actions > summary").click();
     await page
       .getByRole("button", { name: "Archive list", exact: true })
       .click();
