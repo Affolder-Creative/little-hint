@@ -142,7 +142,20 @@ export class PushResponseError extends Error {
     super("Push delivery unavailable.");
   }
 }
-export async function sendPush(d: PushDevice, payload: object, topic: string) {
+type PushPayload = {
+  deviceId: string;
+  notificationId?: string;
+  category?: Notice["event"] | "ownership-request";
+  test?: boolean;
+  unreadCount: number;
+  timestamp: number;
+  tag: string;
+};
+export async function sendPush(
+  d: PushDevice,
+  payload: PushPayload,
+  topic: string,
+) {
   const vapidDetails = pushConfiguration();
   if (!vapidDetails) throw new Error("Push is not configured.");
   await validatePushEndpoint(d.endpoint);
@@ -246,6 +259,11 @@ export async function deliverPushBatch(ids: string[]) {
         {
           deviceId: current.id,
           notificationId: source.id,
+          category:
+            source.event === "invitation" &&
+            source.action === "ownership-request"
+              ? "ownership-request"
+              : source.event,
           unreadCount: inbox(s, { id: source.userId, email: "", name: "" })
             .unreadCount,
           timestamp,

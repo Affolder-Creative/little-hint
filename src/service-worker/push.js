@@ -83,6 +83,19 @@ self.addEventListener("message", (event) => {
     }),
   );
 });
+// Only fixed category labels may appear in previews. Never render payload copy.
+const pushTitles = {
+  invitation: "New invitation",
+  "ownership-request": "Ownership request",
+  mention: "You were mentioned",
+  discussion: "New private note",
+  contribution: "Contribution update",
+  wishlist: "Wish list update",
+  exchange: "Exchange update",
+  access: "Gift plans updated",
+  reservation: "Reservation update",
+  purchase: "Purchase update",
+};
 self.addEventListener("push", (event) => {
   event.waitUntil(
     serializePush(async () => {
@@ -98,10 +111,17 @@ self.addEventListener("push", (event) => {
       const validId =
         typeof data.notificationId === "string" &&
         /^[0-9a-f-]{36}$/i.test(data.notificationId);
-      await self.registration.showNotification("Little Hint", {
-        body: data.test
-          ? "Push notifications are ready on this device."
-          : "A new update is waiting. Open Little Hint to see it.",
+      const isTest = data.test === true;
+      const title = isTest
+        ? "Notifications are ready"
+        : typeof data.category === "string" &&
+            Object.hasOwn(pushTitles, data.category)
+          ? pushTitles[data.category]
+          : "New activity";
+      await self.registration.showNotification(title, {
+        body: isTest
+          ? "This test notification reached your device."
+          : "Open Little Hint to see the details.",
         icon: "/brand/little-hint/icons/little-hint-app-color-192.png",
         tag: typeof data.tag === "string" ? data.tag : "little-hint-update",
         data: {
