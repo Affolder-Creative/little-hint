@@ -834,6 +834,19 @@ main {
 .gift-detail section > .text-button {
   margin-left: 18px;
 }
+.spending-guidance {
+  margin-block: 16px;
+  max-width: 65ch;
+  overflow-wrap: anywhere;
+  color: var(--muted);
+}
+.spending-guidance p + p {
+  margin-top: 8px;
+}
+.spending-guidance small {
+  display: block;
+  margin-top: 8px;
+}
 .reserve-panel {
   border-top: 1px solid var(--border);
   margin-top: 24px;

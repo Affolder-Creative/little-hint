@@ -1,3 +1,4 @@
+import { GuidelineField, guidelineValue } from "./SpendingGuidance";
 import { PrioritySelect } from "./Management";
 import type { ItemPriority } from "../shared/model";
 import { actionError } from "./copy";
@@ -735,6 +736,7 @@ export function ExchangeForm({
     groupId,
     participantIds: participants,
     count: Number(value(f, "count")) as 1 | 2 | 3,
+    spendingGuidelineCents: guidelineValue(f),
     excludeHousehold,
     exclusions,
     previousId: previousId || undefined,
@@ -808,6 +810,7 @@ export function ExchangeForm({
           ))}
         </select>
       </Field>
+      <GuidelineField amount={exchange?.spendingGuidelineCents} />
       <fieldset className="choice-group">
         <legend>Participants</legend>
         {people.map((p) => (

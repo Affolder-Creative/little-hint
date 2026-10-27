@@ -153,11 +153,13 @@ export async function deliverNotice(id: string) {
     ? accountInvitation
       ? "/"
       : `/invite/${inv.id}`
-    : n.exchangeId
-      ? "/exchanges"
-      : n.itemId
-        ? `/gift/${n.itemId}`
-        : "/settings";
+    : n.groupEventId
+      ? `/events/${n.groupEventId}`
+      : n.exchangeId
+        ? "/exchanges"
+        : n.itemId
+          ? `/gift/${n.itemId}`
+          : "/settings";
   const link = new URL(actionPath, origin()).href;
   const message = inv
     ? `A little hint: you're invited. Sign in to Little Hint with this email address to accept: ${link}`

@@ -1,3 +1,4 @@
+import { GuidelineLabel } from "./SpendingGuidance";
 import { Link } from "react-router-dom";
 import type { Exchange, World } from "../shared/model";
 
@@ -9,6 +10,7 @@ type Plan = Pick<
   | "excludeHousehold"
   | "exclusions"
   | "previousId"
+  | "spendingGuidelineCents"
 >;
 
 export function participantLabel(world: World, id: string) {
@@ -46,6 +48,7 @@ export function ExchangeReview({
   return (
     <section aria-label="Exchange review">
       <h3>Participants and rules</h3>
+      <GuidelineLabel amount={exchange.spendingGuidelineCents} />
       <ul>
         {exchange.participantIds.map((id) => (
           <li key={id}>

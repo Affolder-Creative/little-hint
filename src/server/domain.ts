@@ -101,7 +101,9 @@ const listDates = {
     .optional(),
   revealExchangeGivers: z.boolean().optional(),
 };
+const spendingGuideline = z.number().int().positive().max(100000000).nullable();
 const eventInput = z.object({
+  spendingGuidelineCents: spendingGuideline.optional(),
   ...listDates,
   name: text,
   description: z.string().max(2000).default(""),
@@ -933,9 +935,18 @@ export function command(
       checkEventParticipants(s, group, p.participantIds);
       checkSharedListPolicy({ ...event, modeLocked: true }, { ...event, ...p });
       if (listIsArchived(event) && !p.archived) p.archiveAfter = null;
+      const guidelineChanged =
+        p.spendingGuidelineCents !== undefined &&
+        (event.spendingGuidelineCents ?? null) !== p.spendingGuidelineCents;
       Object.assign(event, p);
       touch(event);
       syncEventLists(s, event);
+      if (guidelineChanged)
+        notify(s, "access", group.memberIds, {
+          groupEventId: event.id,
+          actorId: a.id,
+          action: "spending-guideline-updated",
+        });
       return { id: event.id };
     }
     case "invitations.create":
@@ -1365,6 +1376,7 @@ export function command(
           itemId: id,
           quantity: z.number().int().min(1).max(999),
           exchangeId: id.optional(),
+          exchangeRecipientId: id.optional(),
           giverId: id.optional(),
         })
         .parse(b);
@@ -1391,6 +1403,21 @@ export function command(
           mode(s, i) !== "surprise"
         )
           fail(403, "Choose a gift for one of your assigned recipients.");
+        const recipients = e.assignments
+          .filter(
+            ([giver, receiver]) =>
+              giver === p.giverId && i.recipientIds.includes(receiver),
+          )
+          .map(([, receiver]) => receiver);
+        if (!p.exchangeRecipientId && recipients.length === 1)
+          p.exchangeRecipientId = recipients[0];
+        if (
+          !p.exchangeRecipientId ||
+          !recipients.includes(p.exchangeRecipientId)
+        )
+          fail(400, "Choose who this exchange gift is for in Buying for.");
+      } else if (p.exchangeRecipientId || p.giverId) {
+        fail(400, "Choose an exchange for this giver and recipient.");
       }
       const used = s.reservations
         .filter((r) => r.itemId === i.id)
@@ -1677,6 +1704,7 @@ export function command(
       }
       const p = z
         .object({
+          spendingGuidelineCents: spendingGuideline.optional(),
           name: text,
           groupId: id,
           participantIds: ids.min(2),
@@ -1739,6 +1767,41 @@ export function command(
         touch(existing);
       } else s.exchanges.push(e);
       return { id: e.id };
+    }
+    case "exchanges.guideline": {
+      const p = z
+        .object({ id, revision, spendingGuidelineCents: spendingGuideline })
+        .strict()
+        .parse(b);
+      const e =
+        s.exchanges.find(
+          (e) =>
+            e.id === p.id &&
+            !e.deletedAt &&
+            e.organizerId === a.id &&
+            groupAccess(s, a, e.groupId),
+        ) ?? fail(404, "Exchange not found.");
+      checkRevision(e, p.revision);
+      if (e.archived || e.status === "cancelled")
+        fail(409, "Restore an active exchange before changing its guideline.");
+      if ((e.spendingGuidelineCents ?? null) === p.spendingGuidelineCents)
+        return { ok: true };
+      e.spendingGuidelineCents = p.spendingGuidelineCents;
+      touch(e);
+      if (e.status === "drawn")
+        notify(
+          s,
+          "exchange",
+          e.participantIds.flatMap((id) =>
+            s.people.filter((p) => p.id === id).flatMap(controllers),
+          ),
+          {
+            exchangeId: e.id,
+            actorId: a.id,
+            action: "spending-guideline-updated",
+          },
+        );
+      return { ok: true };
     }
     case "exchanges.draw": {
       const p = z.object({ id, revision }).parse(b);

@@ -1,3 +1,16 @@
+import {
+  ContributionForm,
+  ContributionSpendingGuidance,
+  ShareCostForm,
+  GuidelineLabel,
+  SpendingGuidance,
+  ExchangeGuidelineForm,
+} from "./SpendingGuidance";
+import {
+  eventSpendingContext,
+  reservationSpendingContext,
+  spendingGuideline,
+} from "../shared/spending-guidance";
 import { ListIndex } from "./ListIndex";
 import { priorityLabels, ordered } from "../shared/organization";
 import {
@@ -1279,14 +1292,24 @@ function GiftDetail() {
     e.status === "drawn" && !e.archived
       ? e.myAssignments
           .filter(([, r]) => gift.recipientIds.includes(r))
-          .map(([g]) => ({
-            key: `${e.id}:${g}`,
-            label: e.name,
+          .map(([g, r]) => ({
+            key: `${e.id}:${g}:${r}`,
+            label: `${e.name} · ${world.people.find((p) => p.id === g)?.name ?? "Giver"} to ${world.people.find((p) => p.id === r)?.name ?? "Recipient"}`,
             id: e.id,
             giver: g,
+            recipient: r,
           }))
       : [],
   );
+  const selectedExchange = choices.find((c) => c.key === exchange);
+  const spendingContext = selectedExchange
+    ? {
+        kind: "exchange" as const,
+        id: selectedExchange.id,
+        giverId: selectedExchange.giver,
+        recipientId: selectedExchange.recipient,
+      }
+    : eventSpendingContext(world, gift);
   return (
     <>
       <Link
@@ -1333,6 +1356,11 @@ function GiftDetail() {
             </Link>
           )}
           <p className="detail-price">{dollars(gift.priceCents)}</p>
+          <GuidelineLabel
+            amount={
+              spendingContext ? spendingGuideline(world, spendingContext) : null
+            }
+          />
           {gift.description && (
             <p className="description">{gift.description}</p>
           )}
@@ -1433,6 +1461,10 @@ function GiftDetail() {
                       </Field>
                     )}
                   </div>
+                  <SpendingGuidance
+                    context={spendingContext}
+                    preview={{ itemId: gift.id, quantity }}
+                  />
                   <Action
                     onClick={async () => {
                       const c = choices.find((c) => c.key === exchange);
@@ -1441,6 +1473,7 @@ function GiftDetail() {
                         quantity,
                         exchangeId: c?.id,
                         giverId: c?.giver,
+                        exchangeRecipientId: c?.recipient,
                       });
                       toast(
                         "Gift reserved. Open Buying to mark it as purchased or cancel your reservation.",
@@ -1502,41 +1535,7 @@ function GiftDetail() {
                   onClick={() =>
                     open(
                       "Contribute to this gift",
-                      <Form
-                        submit="Save contribution"
-                        onSubmit={async (f) => {
-                          await mutate("contributions", {
-                            reservationId: r.id,
-                            amountCents: Math.round(
-                              Number(value(f, "amount")) * 100,
-                            ),
-                          });
-                          toast(
-                            "Contribution saved. Send your payment to the person buying the gift.",
-                          );
-                          close();
-                        }}
-                      >
-                        <p>
-                          <strong>{gift.title}</strong> · For{" "}
-                          {gift.recipientNames.join(" & ")} · Person buying the
-                          gift: {r.buyerName}
-                        </p>
-                        <Field label="Contribution in USD">
-                          <input
-                            name="amount"
-                            type="number"
-                            min="0.01"
-                            step="0.01"
-                            required
-                          />
-                        </Field>
-                        <p>
-                          Little Hint does not send money. Pay the person buying
-                          the gift separately, then mark your contribution as
-                          sent.
-                        </p>
-                      </Form>,
+                      <ContributionForm gift={gift} reservation={r} />,
                     )
                   }
                 >
@@ -1628,6 +1627,18 @@ function Buying() {
                   {r.exchangeId && (
                     <p className="muted">Secret gift exchange</p>
                   )}
+                  <SpendingGuidance
+                    context={reservationSpendingContext(world, r)}
+                    sharedGift={
+                      r.poolTargetCents
+                        ? {
+                            priceCents: r.item?.priceCents ?? null,
+                            quantity: r.quantity,
+                            poolTargetCents: r.poolTargetCents,
+                          }
+                        : undefined
+                    }
+                  />
                 </div>
                 <div className="actions">
                   {r.item && r.quantity === 1 && r.purchased === 0 && (
@@ -1700,47 +1711,7 @@ function Buying() {
                       onClick={() =>
                         open(
                           "Share the cost",
-                          <Form
-                            submit="Save contribution goal"
-                            onSubmit={async (f) => {
-                              await mutate("reservations/update", {
-                                id: r.id,
-                                revision: r.revision,
-                                quantity: r.quantity,
-                                purchased: r.purchased,
-                                poolTargetCents: Math.round(
-                                  Number(value(f, "amount")) * 100,
-                                ),
-                              });
-                              close();
-                            }}
-                          >
-                            <p>
-                              <strong>{r.titleSnapshot}</strong>
-                              {r.item
-                                ? ` · For ${r.item.recipientNames.join(" & ")}`
-                                : ""}
-                            </p>
-                            <Field label="Target amount in USD">
-                              <input
-                                name="amount"
-                                type="number"
-                                min="0.01"
-                                step="0.01"
-                                required
-                                defaultValue={
-                                  r.poolTargetCents
-                                    ? r.poolTargetCents / 100
-                                    : ""
-                                }
-                              />
-                            </Field>
-                            <p>
-                              You buy the gift and confirm when you receive each
-                              contribution. Little Hint does not collect or send
-                              money.
-                            </p>
-                          </Form>,
+                          <ShareCostForm reservation={r} />,
                         )
                       }
                     >
@@ -1852,6 +1823,11 @@ function Buying() {
                     {dollars(c.amountCents)} · {contributionStatus[c.status]}
                     {c.userId === world.me.id ? " · Your contribution" : ""}
                   </p>
+                  {c.userId === world.me.id && c.status !== "cancelled" && (
+                    <ContributionSpendingGuidance
+                      reservationId={c.reservationId}
+                    />
+                  )}
                 </div>
                 {c.status === "pledged" && c.userId === world.me.id && (
                   <>
@@ -2024,6 +2000,7 @@ function Exchanges() {
                   </ActionMenu>
                 )}
               </div>
+              <GuidelineLabel amount={e.spendingGuidelineCents} />
               {e.archived && (
                 <p className="notice">
                   This exchange is archived. Assignments and purchase history
@@ -2067,6 +2044,19 @@ function Exchanges() {
               )}
               {e.canManage && (
                 <div className="actions">
+                  {e.status === "drawn" && !e.archived && (
+                    <button
+                      className="button secondary"
+                      onClick={() =>
+                        open(
+                          "Edit spending guideline",
+                          <ExchangeGuidelineForm exchange={e} />,
+                        )
+                      }
+                    >
+                      Edit spending guideline
+                    </button>
+                  )}
                   {e.status === "draft" && !e.archived && (
                     <>
                       <ExchangeReview world={world} exchange={e} />

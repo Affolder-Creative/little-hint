@@ -343,6 +343,7 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
     watches: "watches.update",
     exchanges: "exchanges.create",
     "exchanges/update": "exchanges.update",
+    "exchanges/guideline": "exchanges.guideline",
     "exchanges/draw": "exchanges.draw",
     "exchanges/cancel": "exchanges.cancel",
     preferences: "preferences.update",

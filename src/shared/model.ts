@@ -74,6 +74,7 @@ export interface List extends Base {
   revealExchangeGivers?: boolean;
 }
 export interface GroupEvent extends Base {
+  spendingGuidelineCents?: number | null;
   deletedAt?: string;
   groupId: string;
   participantIds: string[];
@@ -129,6 +130,7 @@ export interface Reservation extends Base {
   purchased: number;
   former: boolean;
   exchangeId?: string;
+  exchangeRecipientId?: string;
   giverId?: string;
   poolTargetCents?: number;
   titleSnapshot: string;
@@ -153,6 +155,7 @@ export interface Mention {
   end: number;
 }
 export interface Exchange extends Base {
+  spendingGuidelineCents?: number | null;
   deletedAt?: string;
   archived?: boolean;
   name: string;
@@ -168,6 +171,7 @@ export interface Exchange extends Base {
   drawnAt?: string;
 }
 export interface Notice extends Base {
+  groupEventId?: string;
   userId: string;
   event:
     | "invitation"
