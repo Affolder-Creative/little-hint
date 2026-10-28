@@ -1,6 +1,4 @@
-import { sortLabels } from "../shared/organization";
 import { BrowseTools } from "./BrowseTools";
-import { ChevronRight } from "lucide-react";
 import { Invitations } from "./Invitations";
 import { OfferLinks } from "./OfferLinks";
 import { Action } from "./Action";
@@ -26,7 +24,7 @@ import {
   spendingGuideline,
 } from "../shared/spending-guidance";
 import { ListIndex } from "./ListIndex";
-import { priorityLabels, ordered } from "../shared/organization";
+import { priorityLabels, ordered, sortLabels } from "../shared/organization";
 import {
   ActionMenu,
   CollectionTools,
@@ -71,7 +69,7 @@ import {
   Shuffle,
   Settings,
   Plus,
-  Search,
+  ChevronRight,
   ArrowRight,
   ArrowLeft,
   Check,
