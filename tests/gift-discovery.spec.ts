@@ -92,6 +92,13 @@ async function preview(
           "gift-preferences.update",
           route.request().postDataJSON(),
         );
+      else if (path === "people/update")
+        value = command(
+          f.state,
+          actor,
+          "people.update",
+          route.request().postDataJSON(),
+        );
       else if (
         path.includes("list-sessions") ||
         path.includes("list-user-passkeys")
@@ -262,8 +269,9 @@ test("preferences work while AI is off, require sharing review, and hide discove
   await expect(page.getByRole("link", { name: "Find gift ideas" })).toHaveCount(
     0,
   );
+  await page.getByRole("button", { name: /^Edit profile/ }).click();
   await page
-    .getByRole("button", { name: "Gift preferences", exact: true })
+    .getByRole("tab", { name: "Gift preferences", exact: true })
     .click();
   await page.getByRole("checkbox", { name: "Coffee & tea" }).check();
   await page.getByRole("checkbox", { name: "Family", exact: true }).check();
@@ -273,6 +281,10 @@ test("preferences work while AI is off, require sharing review, and hide discove
   ).toBeVisible();
   expect(f.state.giftPreferences).toHaveLength(0);
   await page.getByRole("button", { name: "Confirm and save" }).click();
+  await expect(
+    page.getByRole("button", { name: "Save gift preferences" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Done", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   expect(f.state.giftPreferences[0].groupIds).toEqual([f.group.id]);
   expect(f.counts.search).toBe(0);
@@ -477,8 +489,9 @@ test("new-account deep links open directly and preference setup remains availabl
     page.getByRole("heading", { name: "Hi, Receiver." }),
   ).toBeVisible();
   await page.goto("/settings?section=profile");
+  await page.getByRole("button", { name: /^Edit profile/ }).click();
   await page
-    .getByRole("button", { name: "Gift preferences", exact: true })
+    .getByRole("tab", { name: "Gift preferences", exact: true })
     .click();
   await expect(
     page.getByRole("dialog").getByLabel("Specific interests", { exact: true }),
@@ -663,4 +676,100 @@ test("discovery titles follow delayed content, failures, retries, and navigation
   await expect(page).toHaveTitle(
     `Find gift ideas for ${f.people[0].name} · Little Hint`,
   );
+});
+
+test("profile editor preserves drafts, independent saves and failed requests", async ({
+  page,
+}) => {
+  const f = await preview(page, true);
+  await page.goto(`/people/${f.people[0].id}`);
+  await page.getByRole("button", { name: "Edit profile", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Name", { exact: true }).fill("New profile name");
+  await dialog
+    .getByRole("tab", { name: "Gift preferences", exact: true })
+    .click();
+  await dialog
+    .getByLabel("Specific interests", { exact: true })
+    .fill("Watercolor painting");
+  await dialog.getByRole("tab", { name: "Profile", exact: true }).click();
+  await expect(dialog.getByLabel("Name", { exact: true })).toHaveValue(
+    "New profile name",
+  );
+  await page.route("**/api/v1/people/update", (route) =>
+    route.fulfill({
+      status: 409,
+      json: { error: "Please retry the profile save." },
+    }),
+  );
+  await dialog
+    .getByRole("button", { name: "Save profile", exact: true })
+    .click();
+  await expect(dialog.getByRole("alert")).toContainText("Please retry");
+  await expect(dialog.getByLabel("Name", { exact: true })).toHaveValue(
+    "New profile name",
+  );
+  await page.unroute("**/api/v1/people/update");
+  await dialog
+    .getByRole("button", { name: "Save profile", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "New profile name", exact: true }),
+  ).toBeVisible();
+  await dialog.getByRole("button", { name: "Done", exact: true }).click();
+  await expect(
+    dialog.getByRole("heading", { name: "Discard your changes?" }),
+  ).toBeVisible();
+  await dialog
+    .getByRole("button", { name: "Keep editing", exact: true })
+    .click();
+  await dialog
+    .getByRole("tab", { name: "Gift preferences", exact: true })
+    .click();
+  await expect(
+    dialog.getByLabel("Specific interests", { exact: true }),
+  ).toHaveValue("Watercolor painting");
+  await dialog
+    .getByRole("button", { name: "Save gift preferences", exact: true })
+    .click();
+  await expect(page.locator(".gift-preference-summary")).toContainText(
+    "Watercolor painting",
+  );
+  await dialog.getByRole("button", { name: "Done", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  expect(f.state.people.find((p) => p.id === f.people[0].id)?.name).toBe(
+    "New profile name",
+  );
+  expect(f.state.giftPreferences[0].interests).toBe("Watercolor painting");
+});
+
+test("profile editor supports managed profiles and keyboard tabs without exposing other profiles", async ({
+  page,
+}) => {
+  const f = await preview(page, true);
+  const managed = command(f.state, f.actors[0], "people.create", {
+    name: "Managed child",
+  }) as { id: string };
+  await page.goto(`/people/${managed.id}`);
+  await page.getByRole("button", { name: "Edit profile", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByRole("tab", { name: "Profile", exact: true }).focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(
+    dialog.getByRole("tab", { name: "Gift preferences", exact: true }),
+  ).toBeFocused();
+  await dialog
+    .getByLabel("Specific interests", { exact: true })
+    .fill("Dinosaurs");
+  await dialog
+    .getByRole("button", { name: "Save gift preferences", exact: true })
+    .click();
+  await expect(page.locator(".gift-preference-summary")).toContainText(
+    "Dinosaurs",
+  );
+  await dialog.getByRole("button", { name: "Done", exact: true }).click();
+  await page.goto(`/people/${f.people[1].id}`);
+  await expect(
+    page.getByRole("button", { name: "Edit profile", exact: true }),
+  ).toHaveCount(0);
 });

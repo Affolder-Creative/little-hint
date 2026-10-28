@@ -1,4 +1,5 @@
 import { BrowseTools } from "./BrowseTools";
+import { ProfileEditor } from "./ProfileEditor";
 import { Invitations } from "./Invitations";
 import { OfferLinks } from "./OfferLinks";
 import { Action } from "./Action";
@@ -600,6 +601,7 @@ function Browser({
   listNames,
   listId,
   headingLevel = 2,
+  personScoped = false,
 }: {
   items: GiftView[];
   emptyTitle?: string;
@@ -609,10 +611,15 @@ function Browser({
   listNames?: ReadonlyMap<string, string>;
   listId?: string;
   headingLevel?: 2 | 3;
+  personScoped?: boolean;
 }) {
   const [search, setSearch] = useNavigationState<string>("search", ""),
     [tag, setTag] = useNavigationState<string>("tag", ""),
     [available, setAvailable] = useNavigationState<boolean>("available", false);
+  const [selectedPeople, setSelectedPeople] = useNavigationState<string[]>(
+    "people",
+    [],
+  );
   const { world, open, mutate } = useApp();
   const settings = useOrganization(useItemScope(listId));
   const parentList = world.lists.find((l) => l.id === listId);
@@ -630,12 +637,22 @@ function Browser({
   const sorted = ordered(visibleItems, settings.sort, parentList?.itemOrder);
   const showAvailability = items.some((item) => item.available !== undefined);
   const tags = [...new Set(items.flatMap((i) => i.tags))].sort();
+  const recipientIds = new Set(items.flatMap((item) => item.recipientIds));
+  const people = world.people
+    .filter((person) => recipientIds.has(person.id))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const showPeople = !personScoped && people.length > 1;
+  const chosenPeople = showPeople
+    ? people.filter((person) => selectedPeople.includes(person.id))
+    : [];
   const filtered = sorted.filter(
     (i) =>
       `${i.title} ${i.recipientNames.join(" ")} ${i.tags.join(" ")}`
         .toLowerCase()
         .includes(search.toLowerCase()) &&
       (!tag || i.tags.includes(tag)) &&
+      (!chosenPeople.length ||
+        chosenPeople.some((person) => i.recipientIds.includes(person.id))) &&
       (!showAvailability ||
         !available ||
         (i.available !== undefined && i.available > 0)),
@@ -661,18 +678,33 @@ function Browser({
             search={search}
             setSearch={setSearch}
             searchLabel={searchLabel}
-            placeholder="Search by name, person, or tag"
-            activeCount={Number(!!tag) + Number(showAvailability && available)}
+            placeholder={
+              searchLabel === "Search gift ideas"
+                ? "Search gift ideas"
+                : "Search items"
+            }
+            searchHint="Search by name, person, or tag"
+            activeCount={
+              Number(!!tag) +
+              Number(showAvailability && available) +
+              Number(chosenPeople.length > 0)
+            }
             summary={[
               ...(settings.sort !== "manual"
                 ? [sortLabels[settings.sort]]
                 : []),
               ...(tag ? [tag] : []),
+              ...(chosenPeople.length
+                ? [
+                    `For ${chosenPeople.map((person) => person.name).join(", ")}`,
+                  ]
+                : []),
               ...(showAvailability && available ? ["Available to give"] : []),
             ]}
             clear={() => {
               setTag("");
               setAvailable(false);
+              setSelectedPeople([]);
             }}
           >
             <SortSelect
@@ -722,6 +754,47 @@ function Browser({
                 ))}
               </select>
             </label>
+            {showPeople && (
+              <fieldset className="people-filter">
+                <legend>People</legend>
+                <details>
+                  <summary>
+                    {chosenPeople.length
+                      ? `${chosenPeople.length} selected`
+                      : "All people"}
+                  </summary>
+                  <div className="people-filter-options">
+                    {people.map((person) => (
+                      <label className="check" key={person.id}>
+                        <input
+                          type="checkbox"
+                          checked={chosenPeople.some(
+                            (selected) => selected.id === person.id,
+                          )}
+                          onChange={(event) =>
+                            setSelectedPeople(
+                              event.target.checked
+                                ? [
+                                    ...chosenPeople.map(
+                                      (selected) => selected.id,
+                                    ),
+                                    person.id,
+                                  ]
+                                : chosenPeople
+                                    .filter(
+                                      (selected) => selected.id !== person.id,
+                                    )
+                                    .map((selected) => selected.id),
+                            )
+                          }
+                        />
+                        {person.name}
+                      </label>
+                    ))}
+                  </div>
+                </details>
+              </fieldset>
+            )}
             {showAvailability && (
               <label className="check filter-check">
                 <input
@@ -765,6 +838,7 @@ function Browser({
                   setSearch("");
                   setTag("");
                   setAvailable(false);
+                  setSelectedPeople([]);
                 }}
               >
                 Clear filters
@@ -985,7 +1059,9 @@ function PersonPage() {
         {own ? (
           <button
             className="button secondary"
-            onClick={() => open("Edit profile", <PersonForm id={id} />)}
+            onClick={() =>
+              open("Edit profile", <ProfileEditor personId={person.id} />)
+            }
           >
             Edit profile
           </button>
@@ -1069,6 +1145,7 @@ function PersonPage() {
         )}
         <Browser
           key={`${id}-${tab}`}
+          personScoped
           searchLabel={tab === "ideas" ? "Search gift ideas" : "Search items"}
           listNames={
             tab === "wishes"
@@ -1241,8 +1318,13 @@ function Lists() {
             </p>
             <nav aria-label="Saved gift ideas">
               {ideaRecipients.map((person) => (
-                <Link key={person.id} to={`/people/${person.id}?tab=ideas`}>
+                <Link
+                  className="gift-ideas-link"
+                  key={person.id}
+                  to={`/people/${person.id}?tab=ideas`}
+                >
                   View gift ideas for {person.name}
+                  <ArrowRight size={16} aria-hidden="true" />
                 </Link>
               ))}
             </nav>
@@ -1388,7 +1470,7 @@ function GiftDetail() {
       </Link>
       <div className="gift-detail">
         <GiftPhoto gift={gift} size="full" />
-        <section>
+        <section className="gift-detail-info">
           <div className="gift-recipient">
             <Avatar name={gift.recipientNames[0]} small />
             <span>For {gift.recipientNames.join(" & ")}</span>

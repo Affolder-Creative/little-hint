@@ -81,6 +81,14 @@ typography:
     fontSize: '14px'
     fontWeight: 600
     lineHeight: 1.25
+  filter-label:
+    fontSize: '14px'
+    fontWeight: 550
+  supporting:
+    fontSize: '14px'
+    lineHeight: 1.5
+  search-placeholder:
+    fontSize: '13px'
   caption:
     fontSize: "12px"
   compact-label:
@@ -129,6 +137,8 @@ rounded:
   toast: "10px"
   install-icon: "11px"
 spacing:
+  metadata: "4px"
+  section-wide: "32px"
   compact: '8px'
   small: '12px'
   medium: '16px'
@@ -222,7 +232,7 @@ Component and responsive type roles record existing CSS sizes. Their selector sc
 
 The approved logo has outlined Fraunces artwork. It does not require loading a web font. All interface text uses the system sans stack in the frontmatter, including page headings; this is the user-approved identity.
 
-Page headings use a responsive size with restrained weight and tight tracking. Section headings step down to 22px; ordinary component titles use 17px, and gift titles use 16px. Paragraphs use a 1.6 line height. Common form labels use 13px and medium weight. No separate mono family is established.
+Page headings use a responsive size with restrained weight and tight tracking. Section headings step down to 22px; ordinary component titles use 17px, and gift titles use 16px. Paragraphs use a 1.6 line height. Common form labels use 13px and medium weight. Sort & filter labels use the filter-label role; checkbox labels and action-menu entries use the button size. Search placeholders use their own smaller role while touch input text remains at least 16px. No separate mono family is established.
 
 At 900px and below, page headings are 32px; at 650px and below, they are 30px. Gift titles become 15px and then 14px at the same breakpoints. Supporting description widths are capped at 65ch on desktop and 40ch on narrow screens. Login-specific display sizes are local composition choices, not a general type role.
 
@@ -238,13 +248,17 @@ New route and settings-section navigation starts at the top, including taps on t
 
 Buying opens on Needs buying, including partially purchased reservations. Purchased contains gifts whose reserved quantities are fully purchased; All combines both. Status controls show gift counts and wrap on narrow screens. Contributions and cancelled history remain outside these filters. When an update removes a row from the current view, keyboard focus returns to the selected status control, or main content if no active reservations remain.
 
-Home, People, My lists, Buying, and Exchanges are the persistent navigation destinations. Settings and private groups remain together. The first home view pairs the logo and clear navigation with welcome copy and gift browsing controls. Optional gift-preference prompts follow the gifts or first-list action. List detail titles occupy a full row; Add item leads the action row, with settings, following, archive, and Trash grouped in the list action menu for managers. Empty collections omit sorting and filtering; archived-only and filtered collections retain the controls needed to recover their items. Person pages keep compact, wrapping list links and source-list captions. Empty preference summaries yield to an edit link for the owner or guardian.
+Home, People, My lists, Buying, and Exchanges are the persistent navigation destinations. Settings and private groups remain together. The first home view pairs the logo and clear navigation with welcome copy and gift browsing controls. Optional gift-preference prompts follow the gifts or first-list action. List detail titles occupy a full row; Add item leads the action row, with settings, following, archive, and Trash grouped in the list action menu for managers. Empty collections omit sorting and filtering; archived-only and filtered collections retain the controls needed to recover their items. Person pages keep compact, wrapping list links and source-list captions. Empty preference summaries occupy no space; owners and guardians reach preferences through Edit profile.
 
 Gift browsing uses three equal columns, then two at 650px and below. Cards share image and content row heights so mixed photo and no-photo rows align. A row with a real photo keeps its full image area; rows containing only missing photos stay compact. Reading and keyboard order remain unchanged. Desktop gaps are 28px vertically and 22px horizontally; narrow-screen gaps are 28px and 15px. People use two columns before becoming a single list. Gift details use two columns before stacking on narrow screens. Recurring gaps and padding use the spacing steps in frontmatter, alongside local layout measurements.
 
-Search stays visible beside a labeled Sort & filter button at all viewport sizes. Sorting, tags, availability, group, and exchange-status choices use a focused dialog and apply immediately. Active choices remain summarized beside results. Clear filters preserves search and saved sorting. Profile avatars keep their fixed size while adjacent settings copy can grow.
+Search stays visible beside a labeled Sort & filter button, wrapping as needed on the narrowest screens. Gift searches use Search items or Search gift ideas, with a smaller placeholder and an accessible description of name, person, and tag matching. Sorting, people, tags, availability, group, and exchange-status choices use a focused dialog and apply immediately. People uses an expandable checkbox selector in mixed-recipient item views, omitted on person pages and single-recipient collections. No selection means everyone; selecting several people matches any of them, including joint gifts. Choices come from authorized items before filtering. Active choices remain summarized beside results, with People counted as one filter. Clear filters preserves search and saved sorting. Per-entry filter state survives Back, Forward, and reload; fresh visits start unfiltered. Profile avatars keep their fixed size while adjacent settings copy can grow.
 
-Page titles sit 8px above their descriptions. Headers leave 24px before content on desktop and 20px on mobile; filters leave 20px before gift grids. Section breaks use 32px on desktop and 24px on mobile. Security and administration subheadings have explicit space above them, and gift quantity controls leave 16px before the reservation action. Mobile gift recipients use 12px text; tags, status labels, and navigation labels use at least 11px.
+Page titles sit 8px above their descriptions. Headers leave 24px before content on desktop and 20px on mobile; filters leave 20px before gift grids. Wish-list guidance leaves 16px below the header actions. Section breaks use 32px on desktop and 24px on mobile. Security and administration subheadings have explicit space above them, and gift quantity controls leave 16px before the reservation action. Mobile gift recipients use 12px text; tags, status labels, and navigation labels use at least 11px.
+
+Paragraph spacing follows content roles across app pages and dialogs. Dense title-and-metadata pairs use the metadata step; headings and closely related explanations use compact spacing. Ordinary prose uses the small step, and content before controls uses medium spacing. The corresponding CSS properties are --space-metadata, --space-related, --space-prose, --space-controls, and --space-section. Form groups use the controls step; adjacent explanations use the related step. Explicit text stacks reset child margins and own the gap. Final paragraphs have no trailing space where the container owns separation. Hero copy and card-specific rows retain their established composition.
+
+Gift details group the recipient, title, status, price, and quantity with the prose step. Phones place the photo 16px above the details, and the back link leaves 8px below its touch target. Reservation, Gift plans, and Private notes use matching section headings, reduced to the section-phone role on phones. Reservation explanations and private-note guidance use the supporting role, capped at 65ch. Keep their heading-to-copy and paragraph gaps compact; do not compound the privacy-note margin with the section heading margin.
 
 ## Elevation & Depth
 
@@ -293,7 +307,7 @@ Desktop navigation combines outlined SVG icons with labels. Muted inactive links
 
 Person pages keep all wish-list items together and show compact, wrapping links to accessible active lists above the filters, including lists with no items. On these pages, gift cards show their source list beneath the title as plain text. List navigation stays inside the wishes tab; gift ideas keep their separate view.
 
-Family-group settings keep the wrapping selected-group name and the viewer’s role together above Members, Households, and Events. A group selector appears only when there is more than one group. Phones omit the generic Settings description on this section and use tighter header spacing; first-time guidance remains when no groups exist. Pending invitations and ownership requests remain visible before the group controls.
+Family-group settings keep the wrapping selected-group name and the viewer’s role together above Members, Households, and Events. A group selector appears only when there is more than one group. Phones retain the Settings introduction on this section with tighter header spacing; first-time guidance remains when no groups exist. Pending invitations and ownership requests remain visible before the group controls.
 
 ### Private gift ideas
 
@@ -306,7 +320,7 @@ The idea form puts Who can see this idea? before product entry and defaults new
 ideas to Only me. Existing sharing choices remain editable. A lock with Only me
 identifies private ideas on cards, detail pages, and Buying entries. Reservation
 and purchase guidance explains that the idea and its buying activity stay
-visible only to its creator. Wish-list item visibility does not use this badge.
+visible only to its creator. Wish-list item visibility does not use this badge. Group the audience selector and its explanation using compact spacing, with medium spacing before product entry. An unavailable discovery action occupies no layout space. Saved-idea links use accent text, a persistent underline, an arrow, and a 44px touch target.
 
 ### Attribution
 
@@ -345,15 +359,26 @@ Push titles identify the activity category, such as New invitation, Ownership re
 
 ### Purchase and exchange actions
 
-Buying rows keep their primary purchase action beside a labeled **More actions** disclosure. On narrow screens this group spans the row below the photo and gift details. Update purchase remains available when Mark as purchased is primary; sharing and cancellation live in More actions. Keep destructive confirmation and quantity controls intact.
+Buying rows keep their primary purchase action beside a labeled **More actions** disclosure. Menu actions and labeled triggers use 14px text. Menus have 8px outer padding and no inter-row gap; each action retains at least 44px height with 8px by 12px padding. On narrow screens this group spans the row below the photo and gift details. Update purchase remains available when Mark as purchased is primary; sharing and cancellation live in More actions. Keep destructive confirmation and quantity controls intact.
 
 Exchange status stays with its title. Organizer controls follow the heading and spending guideline, ahead of assignments. Use **Exchange actions** for cancellation, archival, restoration, and trash. Notification delivery details follow assignments in a disclosure; pending or failed delivery opens the details and appears in its summary.
 
 ### Gift preferences and discovery
 
-Use searchable, labeled checkbox categories with visible selection and 44px targets. Likes and things to avoid are optional; selected family groups form one audience for all preference fields. Name the audience in the sharing confirmation. Initial setup appears only on the first Home visit, with Skip for now before the interest fields. Navigation defers setup for the current signed-in visit without publishing unfinished preferences; direct links open their requested page. Explicit Skip persists the skipped state without saving unfinished fields. Preferences remain available in profile settings.
+Use searchable, labeled checkbox categories with visible selection and 44px targets. Likes and things to avoid are optional; selected family groups form one audience for all preference fields. Name the audience in the sharing confirmation. Initial setup appears only on the first Home visit, with Skip for now before the interest fields. Navigation defers setup for the current signed-in visit without publishing unfinished preferences; direct links open their requested page. Explicit Skip persists the skipped state without saving unfinished fields. Preferences remain available in Edit profile on person pages and in Settings. Profile and Gift preferences are keyboard-accessible tabs in the same dialog. Switching tabs preserves both drafts. Each tab saves independently and leaves the dialog open; Done and Close protect unsaved changes in either tab. Successful saves clear only that form’s dirty and confirmation state. Saved preferences remain readable on the profile page, subject to the existing audience permissions.
 
 Discovery uses existing typography, colors and open gift rows, with three result columns on desktop and one on narrow phones. Six results appear at a time; Show different ideas changes only the current batch. Keep new-search allowance text beside the explicit paid-search action. Product cards show checked shop prices and linked evidence. Selection editing and final confirmation are separate steps, with focus moved to the confirmation heading. Name destination lists, recipients and visibility before Confirm and add gifts. Prices exclude tax/shipping. Missing or rejected evidence produces an honest empty result, never a fabricated product card.
+
+### Touch dialogs and list rows
+
+Touch-device editing fields use at least 16px text in either orientation. Dialogs
+fit the visible viewport while the keyboard opens or closes, with a fixed heading
+and one scrollable body. Pinch zoom remains available. The page behind a dialog
+cannot scroll, and normal scrolling resumes when it closes.
+
+Wish-list rows reserve a text column for the title and sharing description. Privacy
+sits below that copy rather than competing for its width. The Settings introduction
+remains visible in every section, including Family groups.
 
 ## Do's and Don'ts
 
@@ -371,14 +396,3 @@ Discovery uses existing typography, colors and open gift rows, with three result
 - Don't add shadows to ordinary gift cards or list rows.
 - Don't use invented product photography or present demonstration fixtures as real gifts.
 - Don't rely on color alone to explain availability or list privacy.
-
-### Touch dialogs and list rows
-
-Touch-device editing fields use at least 16px text in either orientation. Dialogs
-fit the visible viewport while the keyboard opens or closes, with a fixed heading
-and one scrollable body. Pinch zoom remains available. The page behind a dialog
-cannot scroll, and normal scrolling resumes when it closes.
-
-Wish-list rows reserve a text column for the title and sharing description. Privacy
-sits below that copy rather than competing for its width. The Settings introduction
-remains visible in every section, including Family groups.

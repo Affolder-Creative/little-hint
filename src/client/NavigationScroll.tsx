@@ -9,11 +9,12 @@ import {
 } from "react";
 import { useLocation, useNavigationType } from "react-router-dom";
 
+type ViewValue = string | boolean | string[];
 type Position = {
   url: string;
   x: number;
   y: number;
-  view?: Record<string, string | boolean>;
+  view?: Record<string, ViewValue>;
   focus?: string;
 };
 const storageKey = "little-hint:scroll";
@@ -31,7 +32,7 @@ function rememberEntry(
 }
 
 /** View choices belong to an entry, so a fresh visit never inherits old filters. */
-export function useNavigationState<T extends string | boolean>(
+export function useNavigationState<T extends ViewValue>(
   name: string,
   initial: T,
 ) {
@@ -43,7 +44,13 @@ export function useNavigationState<T extends string | boolean>(
   const entry = entries.get(location.key);
   const value = entry?.url === url ? entry.view?.[name] : undefined;
   return [
-    typeof value === typeof initial ? (value as T) : initial,
+    (
+      Array.isArray(initial)
+        ? Array.isArray(value) && value.every((id) => typeof id === "string")
+        : typeof value === typeof initial
+    )
+      ? (value as T)
+      : initial,
     (next: T) => {
       const previous = entries.get(location.key);
       const current = previous?.url === url ? previous : { url, x: 0, y: 0 };

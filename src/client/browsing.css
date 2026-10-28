@@ -13,6 +13,9 @@
 .browse-toolbar > .button {
   flex-shrink: 0;
 }
+.browse-toolbar .search input::placeholder {
+  font-size: 13px;
+}
 .browse-summary {
   display: flex;
   flex-wrap: wrap;
@@ -24,15 +27,44 @@
 }
 .browse-options {
   display: grid;
-  gap: 20px;
+  gap: var(--space-controls);
 }
-.browse-options > label {
+.browse-options > label,
+.browse-options .sort-control label {
   display: grid;
-  gap: 8px;
+  gap: var(--space-related);
+  font-size: 14px;
+  font-weight: 550;
+  color: var(--text);
 }
 .browse-options > label.check {
   display: flex;
   min-height: 44px;
+  font-size: 14px;
+  font-weight: 400;
+}
+.people-filter > legend {
+  font-size: 14px;
+  font-weight: 550;
+  margin-bottom: var(--space-related);
+}
+.people-filter summary {
+  padding: 11px 12px;
+  border: 1px solid var(--control-border);
+  border-radius: 8px;
+  background: var(--paper);
+  font-size: 16px;
+}
+.people-filter-options {
+  display: grid;
+  margin-top: var(--space-related);
+}
+.people-filter-options .check {
+  padding: 8px;
+  border-radius: 8px;
+}
+.people-filter-options .check:has(input:checked) {
+  background: var(--soft);
 }
 .browse-options .sort-control select {
   width: 100%;
@@ -49,6 +81,7 @@
 .browse-options input,
 .browse-options select {
   font-size: 16px;
+  font-weight: 400;
 }
 .list-privacy > summary {
   display: flex;

@@ -1,7 +1,7 @@
 import { Invitations } from "./Invitations";
 import { FollowingSettings } from "./FollowSettings";
 import { GiftDiscoveryAdmin } from "./GiftDiscoveryAdmin";
-import { PreferenceButton } from "./GiftPreferences";
+import { ProfileEditor } from "./ProfileEditor";
 import {
   FollowButton,
   NotificationTopics,
@@ -30,14 +30,7 @@ import type { World } from "../shared/model";
 import { api, authClient, clearPersonalData } from "./api";
 import { useApp } from "./context";
 import { Avatar, Form, Field, Header, Logo } from "./components";
-import {
-  GroupForm,
-  PersonForm,
-  GiftForm,
-  value,
-  getDrafts,
-  draftKey,
-} from "./forms";
+import { GroupForm, GiftForm, value, getDrafts, draftKey } from "./forms";
 import { Install } from "./pwa";
 import { GroupEventSettings } from "./GroupEvents";
 import { scrapingProviders } from "../shared/scraping-providers";
@@ -146,11 +139,12 @@ export default function SettingsPage({
                 <button
                   className="text-button"
                   aria-label={`Edit profile for ${p.name}`}
-                  onClick={() => open("Edit profile", <PersonForm id={p.id} />)}
+                  onClick={() =>
+                    open("Edit profile", <ProfileEditor personId={p.id} />)
+                  }
                 >
                   Edit
                 </button>
-                <PreferenceButton personId={p.id} />
                 {!p.userId && (
                   <button
                     className="text-button"
