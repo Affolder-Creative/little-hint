@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.9.0](https://github.com/Affolder-Creative/little-hint/compare/v0.8.1...v0.9.0) (2026-10-28)
+
+
+### Features
+
+* add isolated local and shared preview environments ([#94](https://github.com/Affolder-Creative/little-hint/issues/94)) ([817cd86](https://github.com/Affolder-Creative/little-hint/commit/817cd8653595eb9ebbc348571f57a893fca5f65d))
+
+
+### Fixes
+
+* compact browsing controls and clarify list actions ([#91](https://github.com/Affolder-Creative/little-hint/issues/91)) ([b6d3f0f](https://github.com/Affolder-Creative/little-hint/commit/b6d3f0fc055a26081f10fca90f9b1f82ad971637))
+* group purchase and exchange actions ([#92](https://github.com/Affolder-Creative/little-hint/issues/92)) ([ea64602](https://github.com/Affolder-Creative/little-hint/commit/ea646021b41556ac991594d6c914f4d1c0d71852))
+* stabilize touch dialogs and mobile list rows ([#90](https://github.com/Affolder-Creative/little-hint/issues/90)) ([c25ffdc](https://github.com/Affolder-Creative/little-hint/commit/c25ffdc66749d8e00317d4bf076e15aa6c00bb80))
+* support per-user AI allowances and compact surprise badges ([#95](https://github.com/Affolder-Creative/little-hint/issues/95)) ([956a705](https://github.com/Affolder-Creative/little-hint/commit/956a7054888203505fd39abe68bac1ca8a82eaee))
+
 ## [0.8.1](https://github.com/Affolder-Creative/little-hint/compare/v0.8.0...v0.8.1) (2026-10-28)
 
 
