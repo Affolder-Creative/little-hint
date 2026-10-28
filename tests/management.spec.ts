@@ -221,7 +221,7 @@ test("management screens remain clear on desktop and mobile in both themes", asy
       await expect(page.locator("main h1")).toBeVisible();
       await expect(
         page.getByText("Created by Affolder Creative", { exact: true }),
-      ).toBeAttached();
+      ).not.toBeAttached();
       expect(
         await page.evaluate(
           () => document.documentElement.scrollWidth <= innerWidth,

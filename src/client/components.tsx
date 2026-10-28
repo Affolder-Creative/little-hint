@@ -454,6 +454,21 @@ export function GiftPhoto({
     </div>
   );
 }
+export const isPrivateIdea = (gift?: GiftView) =>
+  !!gift && !gift.listId && gift.visibility === "private";
+
+export const privateIdeaDescription =
+  "Only you can see this idea, including reservations and purchases.";
+
+export function PrivateIdeaBadge({ gift }: { gift?: GiftView }) {
+  if (!isPrivateIdea(gift)) return null;
+  return (
+    <span className="private-idea-badge">
+      <LockKeyhole size={14} aria-hidden="true" /> Only me
+    </span>
+  );
+}
+
 export function GiftCard({
   gift,
   sourceListName,
@@ -475,6 +490,7 @@ export function GiftCard({
           <ArrowUpRight size={15} />
         </div>
         <h3>{gift.title}</h3>
+        <PrivateIdeaBadge gift={gift} />
         {gift.listId && gift.priority && (
           <span className={`item-priority priority-${gift.priority}`}>
             {priorityLabels[gift.priority]}

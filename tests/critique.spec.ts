@@ -2754,7 +2754,10 @@ test("idea audience controls match the saved privacy choice", async ({
     .fill("A thoughtful idea");
   await expect(groups).toBeHidden();
   await expect(
-    page.getByText("Only you can see this idea.", { exact: true }),
+    page.getByText(
+      "Only you can see this idea, including reservations and purchases.",
+      { exact: true },
+    ),
   ).toBeVisible();
   await audience.selectOption("hidden");
   const save = page.getByRole("button", {
@@ -4268,5 +4271,260 @@ for (const browserName of ["chromium", "webkit"] as const) {
         ).toBeVisible();
       }
     });
+  });
+}
+
+for (const [width, theme] of [
+  [1440, "light"],
+  [393, "dark"],
+  [320, "light"],
+] as const) {
+  test(`private idea shortcut follows the gift through Buying at ${width}px ${theme}`, async ({
+    page,
+  }, testInfo) => {
+    const { state, actors } = await preview(page);
+    await page.addInitScript(
+      (theme) => localStorage.setItem("little-hint:theme", theme),
+      theme,
+    );
+    await page.setViewportSize({ width, height: 950 });
+    const recipient = state.people.find((p) => p.userId === actors[1].id)!;
+    const list = state.lists.find(
+      (l) => l.ownerIds.includes(recipient.id) && !l.archived,
+    )!;
+    await page.goto(`/lists/${list.id}`);
+    await expect(page.locator(".app-footer")).toHaveCount(0);
+    await expect(page.locator(".private-idea-badge")).toHaveCount(0);
+    await page
+      .getByRole("button", { name: "Add gift idea", exact: true })
+      .click();
+    await expect(page.getByLabel("Who can see this idea?")).toHaveValue(
+      "private",
+    );
+    await expect(page.getByRole("dialog")).toContainText(
+      `Saved under Gift ideas for ${recipient.name}`,
+    );
+    const audience = await page
+      .getByLabel("Who can see this idea?")
+      .boundingBox();
+    const product = await page
+      .getByLabel("Start with a product link")
+      .boundingBox();
+    expect(audience!.y).toBeLessThan(product!.y);
+    await page
+      .getByLabel("Gift idea name", { exact: true })
+      .fill("Private pottery class");
+    await page.screenshot({
+      path: testInfo.outputPath("idea-form.png"),
+      fullPage: true,
+    });
+    await page
+      .getByRole("button", { name: "Save gift idea", exact: true })
+      .click();
+    const idea = state.items.find((i) => i.title === "Private pottery class")!;
+    expect(idea).toMatchObject({
+      visibility: "private",
+      recipientIds: [recipient.id],
+      groupIds: [],
+    });
+    expect(idea.listId).toBeUndefined();
+    await expect(page).toHaveURL(new RegExp(`/gift/${idea.id}$`));
+    await expect(page.locator(".private-idea-badge")).toHaveText("Only me");
+    await page
+      .getByRole("button", { name: "Reserve gift", exact: true })
+      .click();
+    await page
+      .getByRole("link", { name: "Manage reservation", exact: true })
+      .click();
+    const row = page
+      .locator(".buying-row")
+      .filter({ hasText: "Private pottery class" });
+    await expect(row.locator(".private-idea-badge")).toHaveText("Only me");
+    await expect(row).toContainText(
+      "Only you can see this idea, including reservations and purchases.",
+    );
+    await page.screenshot({
+      path: testInfo.outputPath("buying-private.png"),
+      fullPage: true,
+    });
+    await row
+      .getByRole("button", { name: "Mark Private pottery class as purchased" })
+      .click();
+    await page.getByRole("button", { name: /^Purchased/ }).click();
+    await expect(row).toContainText("Purchased");
+    await row
+      .getByRole("button", { name: "Update purchase", exact: true })
+      .click();
+    await expect(page.getByRole("dialog")).toContainText(
+      "Only you can see this idea, including reservations and purchases.",
+    );
+    await expect(page.getByRole("dialog")).not.toContainText("so others know");
+    await page.keyboard.press("Escape");
+    await row.getByRole("link", { name: "View Private pottery class" }).click();
+    await page.getByRole("link", { name: "Back to gift ideas" }).click();
+    await expect(page).toHaveURL(
+      new RegExp(`/people/${recipient.id}\\?tab=ideas$`),
+    );
+    await expect(
+      page.getByRole("tab", { name: /^Gift ideas for/ }),
+    ).toHaveAttribute("aria-selected", "true");
+    await expect(
+      page
+        .locator(".gift-card")
+        .filter({ hasText: idea.title })
+        .locator(".private-idea-badge"),
+    ).toHaveText("Only me");
+    await page.reload();
+    await expect(
+      page.getByRole("tab", { name: /^Gift ideas for/ }),
+    ).toHaveAttribute("aria-selected", "true");
+    await page.getByRole("tab", { name: "On their wish lists" }).click();
+    await expect(page.locator(".private-idea-badge")).toHaveCount(0);
+    await page.goBack();
+    await expect(
+      page.getByRole("tab", { name: /^Gift ideas for/ }),
+    ).toHaveAttribute("aria-selected", "true");
+    for (const actor of actors.slice(1))
+      expect(JSON.stringify(world(state, actor))).not.toContain(idea.id);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    expect(
+      (
+        await new AxeBuilder({ page })
+          .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+          .analyze()
+      ).violations,
+    ).toEqual([]);
+  });
+}
+
+test("joint-list shortcut requires an explicit recipient and respects list ownership", async ({
+  page,
+}) => {
+  const { state, actors } = await preview(page);
+  const people = actors
+    .slice(1, 3)
+    .map((a) => state.people.find((p) => p.userId === a.id)!);
+  const list = state.lists.find(
+    (l) => l.ownerIds.includes(people[0].id) && !l.archived,
+  )!;
+  list.ownerIds = people.map((p) => p.id);
+  await page.goto(`/lists/${list.id}`);
+  await page
+    .getByRole("button", { name: "Add gift idea", exact: true })
+    .click();
+  await page
+    .getByLabel("Gift idea name", { exact: true })
+    .fill("Joint list idea for one person");
+  await expect(
+    page.getByRole("button", { name: "Save gift idea", exact: true }),
+  ).toBeDisabled();
+  await page.getByLabel("Who is this idea for?").selectOption(people[1].id);
+  await page
+    .getByRole("button", { name: "Save gift idea", exact: true })
+    .click();
+  expect(
+    state.items.find((i) => i.title === "Joint list idea for one person")
+      ?.recipientIds,
+  ).toEqual([people[1].id]);
+  list.archived = true;
+  await page.goto(`/lists/${list.id}`);
+  await expect(
+    page.getByRole("button", { name: "Add gift idea", exact: true }),
+  ).toHaveCount(0);
+  const own = state.lists.find(
+    (l) =>
+      l.ownerIds.some(
+        (id) => state.people.find((p) => p.id === id)?.userId === actors[0].id,
+      ) && !l.archived,
+  )!;
+  await page.goto(`/lists/${own.id}`);
+  await expect(
+    page.getByRole("button", { name: "Add gift idea", exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.locator("main").getByRole("button", { name: "Add item", exact: true }),
+  ).toBeVisible();
+});
+
+for (const [width, theme] of [
+  [1440, "dark"],
+  [393, "light"],
+  [320, "dark"],
+] as const) {
+  test(`attribution lives in About and loading at ${width}px ${theme}`, async ({
+    page,
+  }, testInfo) => {
+    await preview(page, 1);
+    await page.addInitScript(
+      (theme) => localStorage.setItem("little-hint:theme", theme),
+      theme,
+    );
+    await page.setViewportSize({ width, height: 900 });
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await page.route("**/api/v1/world", async (route) => {
+      await held;
+      await route.fallback();
+    });
+    await page.goto("/settings?section=about");
+    await expect(
+      page.getByRole("status", { name: "Loading Little Hint" }),
+    ).toBeVisible();
+    await expect(page.locator(".loading-credit")).toHaveText(
+      "Created by Affolder Creative",
+    );
+    await expect(
+      page.getByRole("status", { name: "Loading Little Hint" }),
+    ).not.toContainText("Affolder");
+    await page.screenshot({
+      path: testInfo.outputPath("loading-credit.png"),
+      fullPage: true,
+    });
+    release();
+    await expect(
+      page.getByRole("heading", { name: "About Little Hint" }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("Created by Affolder Creative", { exact: true }),
+    ).toBeVisible();
+    await expect(page.getByText(/^Version /)).toBeVisible();
+    await expect(page.locator(".app-footer")).toHaveCount(0);
+    await page.screenshot({
+      path: testInfo.outputPath("settings-about.png"),
+      fullPage: true,
+    });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    expect(
+      (
+        await new AxeBuilder({ page })
+          .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+          .analyze()
+      ).violations,
+    ).toEqual([]);
+    if (width > 1100)
+      await page
+        .getByRole("link", { name: "Profile & appearance", exact: true })
+        .click();
+    else
+      await page
+        .getByLabel("Settings section", { exact: true })
+        .selectOption("profile");
+    await expect(
+      page.getByText("Created by Affolder Creative", { exact: true }),
+    ).toBeHidden();
+    await page.goBack();
+    await expect(
+      page.getByRole("heading", { name: "About Little Hint" }),
+    ).toBeVisible();
   });
 }
