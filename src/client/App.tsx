@@ -1644,6 +1644,14 @@ function Buying() {
     "needs-buying",
   );
   const activeView = useRef<HTMLButtonElement>(null);
+  const [focusRequest, setFocusRequest] = useState(0);
+  useEffect(() => {
+    if (!focusRequest) return;
+    // Wait for React to close the dialog and finish restoring its opener.
+    (activeView.current ?? document.getElementById("main"))?.focus({
+      preventScroll: true,
+    });
+  }, [focusRequest]);
   const reservations = world.buying.filter((r) => r.quantity > 0);
   const needsBuying = reservations.filter((r) => r.purchased < r.quantity);
   const matchesView = (r: Pick<Reservation, "quantity" | "purchased">) =>
@@ -1652,12 +1660,7 @@ function Buying() {
       ? r.purchased >= r.quantity
       : r.purchased < r.quantity);
   const visible = reservations.filter(matchesView);
-  const focusView = () =>
-    requestAnimationFrame(() => {
-      (activeView.current ?? document.getElementById("main"))?.focus({
-        preventScroll: true,
-      });
-    });
+  const focusView = () => setFocusRequest((request) => request + 1);
   return (
     <>
       <Header
