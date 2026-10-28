@@ -1,4 +1,10 @@
-import { createContext, useContext, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useId,
+  useState,
+  type ReactNode,
+} from "react";
 import { Search, SlidersHorizontal } from "lucide-react";
 import { Modal, useModalDismiss } from "./components";
 import "./browsing.css";
@@ -25,6 +31,7 @@ export function BrowseTools({
   setSearch,
   searchLabel,
   placeholder = "Search by name",
+  searchHint,
   summary,
   activeCount,
   clear,
@@ -34,6 +41,7 @@ export function BrowseTools({
   setSearch: (value: string) => void;
   searchLabel: string;
   placeholder?: string;
+  searchHint?: string;
   summary: string[];
   activeCount: number;
   clear: () => void;
@@ -41,6 +49,7 @@ export function BrowseTools({
 }) {
   const [opened, setOpened] = useState(false);
   const [busy, setBusy] = useState(false);
+  const hintId = useId();
   return (
     <div className="browse-tools">
       <div className="browse-toolbar">
@@ -49,11 +58,17 @@ export function BrowseTools({
           <input
             type="search"
             aria-label={searchLabel}
+            aria-describedby={searchHint ? hintId : undefined}
             placeholder={placeholder}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </label>
+        {searchHint && (
+          <span id={hintId} className="sr-only">
+            {searchHint}
+          </span>
+        )}
         <button
           className="button secondary"
           aria-haspopup="dialog"

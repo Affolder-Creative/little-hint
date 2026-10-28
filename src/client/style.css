@@ -15,6 +15,11 @@
   --green: #486348;
   --error: #9f3327;
   --radius: 14px;
+  --space-metadata: 4px;
+  --space-related: 8px;
+  --space-prose: 12px;
+  --space-controls: 16px;
+  --space-section: 32px;
   --mobile-nav-height: 0px;
   --safe-area-top: env(safe-area-inset-top, 0px);
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
@@ -173,7 +178,7 @@ h2 {
   line-height: 1.3;
   font-weight: 550;
   letter-spacing: -0.02em;
-  margin-bottom: 9px;
+  margin-bottom: var(--space-related);
 }
 h3 {
   font-size: 17px;
@@ -183,7 +188,22 @@ h3 {
 }
 p {
   line-height: 1.6;
-  margin-bottom: 16px;
+  margin-bottom: var(--space-prose);
+}
+/* Groups own their gaps; children never add a second margin. */
+.text-stack {
+  display: grid;
+  gap: var(--space-related);
+}
+.text-stack > :is(p, h2, h3) {
+  margin: 0;
+}
+:where(main, .dialog-body, .login-page) p:last-child {
+  margin-bottom: 0;
+}
+:where(main, .dialog-body, .login-page)
+  p:has(+ :is(.actions, .button, .form, .tabs)) {
+  margin-bottom: var(--space-controls);
 }
 small {
   font-size: 12px;
@@ -453,6 +473,12 @@ main {
   gap: 20px;
   margin: 24px 0 16px;
 }
+.section-heading > :is(h1, h2, h3) {
+  margin-bottom: 0;
+}
+.section-heading:has(+ p) {
+  margin-bottom: var(--space-related);
+}
 .home-intro {
   margin-top: 0;
 }
@@ -513,8 +539,7 @@ main {
   color: var(--muted);
 }
 .filter-check {
-  font-size: 12px;
-  white-space: nowrap;
+  font-size: 14px;
 }
 .gift-grid {
   display: grid;
@@ -718,7 +743,7 @@ main {
   color: var(--muted);
   font-size: 14px;
   max-width: 48ch;
-  margin: 0 auto 22px;
+  margin: 0 auto var(--space-controls);
 }
 .people-list {
   display: grid;
@@ -870,6 +895,22 @@ main {
 .gift-detail > section {
   min-width: 0;
 }
+.gift-detail-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-prose);
+}
+.gift-detail-info > :is(p, .gift-recipient, .section-heading, .tags) {
+  margin: 0;
+}
+.gift-detail-info > .section-heading {
+  width: 100%;
+  gap: var(--space-related);
+}
+.back-link:has(+ .gift-detail) {
+  margin-bottom: var(--space-related);
+}
 .gift-detail > .gift-photo {
   position: sticky;
   top: 24px;
@@ -881,7 +922,7 @@ main {
 }
 .gift-detail h1 {
   font-size: 34px;
-  margin-top: 16px;
+  margin: 0;
 }
 .gift-detail .gift-recipient {
   font-size: 13px;
@@ -897,14 +938,11 @@ main {
   line-height: 1.7;
   color: var(--muted);
 }
-.gift-detail .tags {
-  margin-bottom: 20px;
-}
-.gift-detail .muted {
+.gift-detail-info > .muted {
   font-size: 12px;
 }
 .gift-detail section > .text-button {
-  margin-left: 18px;
+  margin: 0;
 }
 .spending-guidance {
   margin-block: 16px;
@@ -913,7 +951,10 @@ main {
   color: var(--muted);
 }
 .spending-guidance p + p {
-  margin-top: 8px;
+  margin-top: var(--space-related);
+}
+.spending-guidance p {
+  margin-bottom: 0;
 }
 .spending-guidance small {
   display: block;
@@ -921,21 +962,35 @@ main {
 }
 .reserve-panel {
   border-top: 1px solid var(--border);
-  margin-top: 24px;
+  align-self: stretch;
+  margin-top: var(--space-prose);
   padding-top: 24px;
 }
 .reserve-panel > .form-row {
-  margin-bottom: 16px;
+  margin-block: var(--space-controls);
 }
-.reserve-panel h2 {
-  font-size: 20px;
+.reserve-panel h2,
+.detail-section h2 {
+  font-size: 22px;
+  margin-bottom: var(--space-related);
 }
-.reserve-panel p {
-  font-size: 13px;
+.reserve-panel > p,
+.discussion > p {
+  font-size: 14px;
+  line-height: 1.5;
+  max-width: 65ch;
+  margin-top: 0;
+  margin-bottom: var(--space-related);
+}
+.reserve-panel > p:last-child {
+  margin-bottom: 0;
+}
+.reserve-panel > p,
+.discussion > .muted {
   color: var(--muted);
 }
 .detail-section {
-  margin-top: 32px;
+  margin-top: var(--space-section);
   padding-top: 24px;
   border-top: 1px solid var(--border);
 }
@@ -963,7 +1018,7 @@ main {
 .setting-row p {
   font-size: 12px;
   color: var(--muted);
-  margin: 5px 0 0;
+  margin: var(--space-metadata) 0 0;
 }
 .setting-row > span:first-child:not(.avatar) {
   flex: 1;
@@ -1026,7 +1081,7 @@ main {
 .buying-row p {
   font-size: 13px;
   color: var(--muted);
-  margin-bottom: 10px;
+  margin-bottom: var(--space-related);
 }
 .buying-row .actions {
   max-width: 200px;
@@ -1066,12 +1121,12 @@ main {
 .form {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 18px;
+  gap: var(--space-controls);
 }
 .form > fieldset {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 18px;
+  gap: var(--space-controls);
 }
 .form .button[type="submit"] {
   justify-self: start;
@@ -1180,6 +1235,17 @@ main {
 .form p {
   font-size: 13px;
   margin: 0;
+}
+.form > fieldset > p:has(+ p) {
+  margin-bottom: calc(var(--space-related) - var(--space-controls));
+}
+.profile-editor > .tabs {
+  margin-bottom: var(--space-controls);
+}
+.profile-editor-done {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--space-controls);
 }
 .url-entry {
   display: flex;
@@ -1318,7 +1384,7 @@ main {
   color: var(--muted);
 }
 .invitation h3 {
-  margin-bottom: 5px;
+  margin-bottom: var(--space-related);
 }
 .settings-layout {
   display: grid;
@@ -1448,7 +1514,7 @@ main {
   }
 }
 .settings-section {
-  padding: 32px 0;
+  padding: var(--space-section) 0;
   border-top: 1px solid var(--border);
 }
 .settings-section:first-child {
@@ -1460,21 +1526,21 @@ main {
 }
 .settings-section > h3 {
   margin-top: 24px;
-  margin-bottom: 12px;
+  margin-bottom: var(--space-related);
 }
 .settings-section > p {
   font-size: 13px;
   color: var(--muted);
 }
 .settings-section > .actions {
-  margin-top: 20px;
+  margin-top: var(--space-controls);
 }
 .settings-section > .field {
   max-width: 320px;
-  margin-top: 20px;
+  margin-top: var(--space-controls);
 }
 .settings-section > .section-heading {
-  margin: 0 0 18px;
+  margin: 0 0 var(--space-related);
 }
 .group-settings {
   padding: 18px 0;
@@ -1704,7 +1770,7 @@ main {
 .login-form-panel h2 {
   font-size: 26px;
   font-weight: 500;
-  margin-bottom: 12px;
+  margin-bottom: var(--space-related);
 }
 .login-form-panel > p {
   font-size: 14px;
@@ -2175,7 +2241,7 @@ main {
   }
   .gift-detail {
     grid-template-columns: 1fr;
-    gap: 28px;
+    gap: var(--space-controls);
   }
   .gift-detail > .gift-photo {
     position: static;
@@ -2195,7 +2261,11 @@ main {
     height: 29px;
   }
   .reserve-panel {
-    margin-top: 24px;
+    margin-top: var(--space-prose);
+  }
+  .reserve-panel h2,
+  .detail-section h2 {
+    font-size: 21px;
   }
   .buying-row {
     flex-wrap: wrap;
@@ -2216,12 +2286,6 @@ main {
     justify-content: flex-start;
     padding-left: 104px;
     gap: 8px;
-  }
-  .buying-row .actions .button {
-    font-size: 12px;
-  }
-  .buying-row .actions .text-button {
-    font-size: 12px;
   }
   .exchange-panel .section-heading {
     align-items: flex-start;
@@ -2362,7 +2426,7 @@ main {
     font-size: 24px;
   }
   .detail-section {
-    margin-top: 24px;
+    margin-top: var(--space-section);
     padding-top: 20px;
   }
   .offline-page {
@@ -2631,7 +2695,7 @@ main {
 }
 
 .notification-settings > section {
-  margin-top: 32px;
+  margin-top: var(--space-section);
 }
 
 /* Notification history follows the same flat rows as gift plans and settings. */
@@ -2689,7 +2753,7 @@ main {
 .notification-open {
   appearance: none;
   display: grid;
-  gap: 6px;
+  gap: var(--space-metadata);
   min-height: 44px;
   padding: 8px 0;
   border: 0;
@@ -2814,7 +2878,7 @@ main {
   border-radius: 8px;
 }
 .discussion > .async-control {
-  margin-bottom: 20px;
+  margin-block: var(--space-related) var(--space-controls);
 }
 @media (max-width: 650px) {
   .notification-list > li {
@@ -2905,6 +2969,7 @@ main {
 @media (max-width: 650px) {
   .gift-detail:has(> .gift-photo.without-photo) {
     grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-controls);
   }
 }
 
@@ -3021,15 +3086,17 @@ main {
   width: max-content;
   max-width: min(280px, calc(100vw - 40px));
   min-width: 180px;
-  padding: 12px;
+  padding: 8px;
   background: var(--paper);
   border: 1px solid var(--control-border);
   border-radius: 8px;
   display: grid;
-  gap: 4px;
+  gap: 0;
 }
-.entry-actions-content .text-button {
-  padding-inline: 8px;
+.entry-actions-content :is(.text-button, .button) {
+  padding: 8px 12px;
+  min-height: 44px;
+  font-size: 14px;
   border-radius: 4px;
   text-align: start;
   justify-content: start;
@@ -3256,12 +3323,12 @@ main {
 .gift-interests {
   border: 0;
   padding: 0;
-  margin: 12px 0 24px;
+  margin: 0;
   min-width: 0;
 }
 .gift-interests legend {
   font-weight: 600;
-  margin-bottom: 12px;
+  margin-bottom: var(--space-related);
 }
 .gift-interest-options {
   display: grid;
@@ -3281,12 +3348,18 @@ main {
   background: var(--soft);
 }
 .gift-preference-summary {
-  margin: 24px 0 32px;
+  margin: 24px 0 var(--space-section);
   padding-bottom: 20px;
   border-bottom: 1px solid var(--border);
 }
 .gift-preference-summary h2 {
-  font-size: 20px;
+  margin-bottom: var(--space-related);
+}
+.gift-preference-summary p {
+  margin-bottom: var(--space-related);
+}
+.gift-preference-summary p:last-child {
+  margin-bottom: 0;
 }
 .gift-preference-prompt {
   padding: 20px;
@@ -3472,9 +3545,7 @@ main {
     margin-block: 12px;
   }
 }
-.gift-preference-empty:has(button) {
-  margin-bottom: 12px;
-}
+
 .gift-preference-prompt {
   margin-top: 28px;
 }
@@ -3494,10 +3565,29 @@ main {
   flex-shrink: 0;
 }
 .list-gift-ideas {
-  margin: -8px 0 24px;
+  margin: 0 0 24px;
+}
+.page-heading.list-heading:has(+ .list-gift-ideas) {
+  margin-bottom: var(--space-controls);
 }
 .list-gift-ideas p {
-  margin: 0 0 8px;
+  margin: 0 0 var(--space-related);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.gift-ideas-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-related);
+  min-height: 44px;
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  font-size: 14px;
+  font-weight: 550;
+}
+.gift-ideas-link:hover {
+  text-decoration-thickness: 2px;
 }
 .list-gift-ideas nav {
   display: flex;
@@ -3531,4 +3621,10 @@ main {
   margin: 0;
   font-size: 13px;
   color: var(--muted);
+}
+
+@media (max-width: 650px) {
+  :root {
+    --space-section: 24px;
+  }
 }

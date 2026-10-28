@@ -95,9 +95,13 @@ export function InterestFields({
 export function GiftPreferencesForm({
   personId,
   onboarding = false,
+  onSaved,
+  onBusyChange,
 }: {
   personId: string;
   onboarding?: boolean;
+  onSaved?: () => void;
+  onBusyChange?: (busy: boolean) => void;
 }) {
   const { world, mutate, close, toast } = useApp();
   const existing = world.giftPreferences?.find((p) => p.personId === personId);
@@ -120,13 +124,15 @@ export function GiftPreferencesForm({
       setup,
       confirmSharing: setup === "done",
     });
-    if (!onboarding) close();
+    if (onSaved) onSaved();
+    else if (!onboarding) close();
     if (setup === "done") toast("Gift preferences saved.");
   }
   return (
     <>
       <Form
         submit="Save gift preferences"
+        onBusyChange={onBusyChange}
         disabled={skipping}
         review={() =>
           newlyShared ? (
@@ -257,37 +263,11 @@ export function GiftPreferenceOnboarding({
     </section>
   );
 }
-export function PreferenceButton({ personId }: { personId: string }) {
-  const { open, world } = useApp();
-  const person = world.people.find((p) => p.id === personId);
-  if (
-    !person ||
-    !(person.userId === world.me.id || person.guardians.includes(world.me.id))
-  )
-    return null;
-  return (
-    <button
-      className="text-button"
-      onClick={() =>
-        open(
-          `Gift preferences for ${person.name}`,
-          <GiftPreferencesForm personId={personId} />,
-        )
-      }
-    >
-      Gift preferences
-    </button>
-  );
-}
 export function PreferenceSummary({ personId }: { personId: string }) {
   const { world } = useApp();
   const p = world.giftPreferences?.find((p) => p.personId === personId);
   if (!p || !(p.categoryIds.length || p.interests || p.likes || p.avoid))
-    return (
-      <div className="gift-preference-empty">
-        <PreferenceButton personId={personId} />
-      </div>
-    );
+    return null;
   return (
     <section className="gift-preference-summary" aria-label="Gift preferences">
       <h2>Gift preferences</h2>
@@ -304,7 +284,6 @@ export function PreferenceSummary({ personId }: { personId: string }) {
         {p.likes && <p>Likes: {p.likes}</p>}
         {p.avoid && <p>Things to avoid: {p.avoid}</p>}
       </>
-      <PreferenceButton personId={personId} />
     </section>
   );
 }

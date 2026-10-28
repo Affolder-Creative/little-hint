@@ -57,18 +57,28 @@ export function GroupForm({ onCreated }: { onCreated?: (id: string) => void }) {
     </Form>
   );
 }
-export function PersonForm({ id }: { id?: string }) {
+export function PersonForm({
+  id,
+  onSaved,
+  onBusyChange,
+}: {
+  id?: string;
+  onSaved?: () => void;
+  onBusyChange?: (busy: boolean) => void;
+}) {
   const { world, mutate, close } = useApp();
   const person = world.people.find((p) => p.id === id);
   return (
     <Form
       submit={person ? "Save profile" : "Create profile"}
+      onBusyChange={onBusyChange}
       onSubmit={async (f) => {
         await mutate(person ? "people/update" : "people", {
           ...(person ? { id: person.id, revision: person.revision } : {}),
           name: value(f, "name"),
         });
-        close();
+        if (onSaved) onSaved();
+        else close();
       }}
     >
       <Field label="Name">
@@ -460,69 +470,71 @@ export function GiftForm({
               ? `Saved under Gift ideas for ${recipientName}, separately from their wish lists.`
               : "Saved under the recipient's Gift ideas, separately from their wish lists."}
           </p>
-          <Field label="Who can see this idea?">
-            <select
-              name="visibility"
-              value={visibility}
-              onChange={(e) =>
-                setVisibility(e.target.value as typeof visibility)
-              }
+          <div className="text-stack idea-audience">
+            <Field label="Who can see this idea?">
+              <select
+                name="visibility"
+                value={visibility}
+                onChange={(e) =>
+                  setVisibility(e.target.value as typeof visibility)
+                }
+              >
+                <option value="private">Only me</option>
+                <option value="hidden">
+                  Selected family groups, but not the recipient
+                </option>
+                <option value="visible">
+                  Selected family groups and the recipient
+                </option>
+              </select>
+            </Field>
+            <fieldset
+              className="choice-group"
+              hidden={!sharingIdea}
+              disabled={!sharingIdea}
             >
-              <option value="private">Only me</option>
-              <option value="hidden">
-                Selected family groups, but not the recipient
-              </option>
-              <option value="visible">
-                Selected family groups and the recipient
-              </option>
-            </select>
-          </Field>
-          <fieldset
-            className="choice-group"
-            hidden={!sharingIdea}
-            disabled={!sharingIdea}
-          >
-            <legend>Share with these family groups</legend>
-            {world.groups.map((g) => (
-              <label className="check" key={g.id}>
-                <input
-                  name="groupIds"
-                  type="checkbox"
-                  value={g.id}
-                  checked={groupIds.includes(g.id)}
-                  onChange={(e) =>
-                    setGroupIds((ids) =>
-                      e.target.checked
-                        ? [...ids, g.id]
-                        : ids.filter((id) => id !== g.id),
-                    )
-                  }
-                />
-                {familyGroupLabel(g, world)}
-              </label>
-            ))}
-          </fieldset>
-          <p className="muted" role="status">
-            {!sharingIdea
-              ? privateIdeaDescription
-              : !audienceGroups.length
-                ? world.groups.length
-                  ? "Choose at least one family group to share this idea."
-                  : "Join a family group to share this idea, or choose Only me."
-                : visibility === "hidden"
-                  ? `Visible to you and members of ${audienceGroups.map((g) => familyGroupLabel(g, world)).join(", ")}. Hidden from the recipient and anyone managing their profile.`
-                  : `Visible to you, members of ${audienceGroups.map((g) => familyGroupLabel(g, world)).join(", ")}, the recipient and anyone managing their profile.`}
-          </p>
-          {sharingIdea && (
-            <p className="muted">
-              Who reserves or buys this gift stays hidden from the recipient,
-              even if they can see the idea.
+              <legend>Share with these family groups</legend>
+              {world.groups.map((g) => (
+                <label className="check" key={g.id}>
+                  <input
+                    name="groupIds"
+                    type="checkbox"
+                    value={g.id}
+                    checked={groupIds.includes(g.id)}
+                    onChange={(e) =>
+                      setGroupIds((ids) =>
+                        e.target.checked
+                          ? [...ids, g.id]
+                          : ids.filter((id) => id !== g.id),
+                      )
+                    }
+                  />
+                  {familyGroupLabel(g, world)}
+                </label>
+              ))}
+            </fieldset>
+            <p className="muted" role="status">
+              {!sharingIdea
+                ? privateIdeaDescription
+                : !audienceGroups.length
+                  ? world.groups.length
+                    ? "Choose at least one family group to share this idea."
+                    : "Join a family group to share this idea, or choose Only me."
+                  : visibility === "hidden"
+                    ? `Visible to you and members of ${audienceGroups.map((g) => familyGroupLabel(g, world)).join(", ")}. Hidden from the recipient and anyone managing their profile.`
+                    : `Visible to you, members of ${audienceGroups.map((g) => familyGroupLabel(g, world)).join(", ")}, the recipient and anyone managing their profile.`}
             </p>
-          )}
+            {sharingIdea && (
+              <p className="muted">
+                Who reserves or buys this gift stays hidden from the recipient,
+                even if they can see the idea.
+              </p>
+            )}
+          </div>
         </>
       )}
       {!gift && (!idea || recipientId) && (
-        <div>
+        <>
           {idea && recipientId ? (
             <DiscoveryLink personId={recipientId} />
           ) : (
@@ -533,7 +545,7 @@ export function GiftForm({
               listId={listId}
             />
           )}
-        </div>
+        </>
       )}
       <div className="url-entry">
         <Field label="Start with a product link">

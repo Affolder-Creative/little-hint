@@ -3837,7 +3837,9 @@ test.describe("navigation scroll restoration", () => {
       for (const item of state.items.filter((item) => item.listId === list.id))
         item.tags = [item.title.endsWith("1") ? "Coffee" : "Travel"];
       await page.goto(`/lists/${list.id}`);
-      const search = page.getByPlaceholder("Search by name, person, or tag");
+      const search = page.getByRole("searchbox", {
+        name: /Search (items|gift ideas)/,
+      });
       await search.fill("Scroll test");
       await page.getByRole("button", { name: /^Sort & filter/ }).click();
       await page.getByLabel("Filter by tag").selectOption("Travel");
@@ -3934,7 +3936,9 @@ test.describe("navigation scroll restoration", () => {
   }) => {
     const { state, list } = await longList(page);
     await page.goto(`/lists/${list.id}`);
-    const search = page.getByPlaceholder("Search by name, person, or tag");
+    const search = page.getByRole("searchbox", {
+      name: /Search (items|gift ideas)/,
+    });
     await search.fill("Scroll test");
     const gift = page.locator(".gift-card").nth(15);
     const href = await gift.getAttribute("href");
@@ -4604,4 +4608,203 @@ test("confirmation Cancel preserves the list and returns focus to its actions", 
   await expect(actions).toBeFocused();
   await expect(row).toBeVisible();
   expect(state.lists).toHaveLength(before);
+});
+
+for (const width of [393, 1440]) {
+  test(`people filter combines recipients and restores history at ${width}px`, async ({
+    page,
+  }) => {
+    const { state, actor } = await preview(page);
+    const incoming = world(state, actor).items.filter(
+      (item) =>
+        !item.archived &&
+        !item.isRecipient &&
+        item.listId &&
+        (item.available ?? 0) > 0,
+    );
+    const first = incoming[0];
+    const second = incoming.find(
+      (item) => item.recipientIds[0] !== first.recipientIds[0],
+    )!;
+    const people = [first.recipientIds[0], second.recipientIds[0]].map((id) =>
+      state.people.find((person) => person.id === id)!,
+    );
+    const joint = state.lists.find((list) => list.id === first.listId)!;
+    joint.ownerIds = people.map((person) => person.id);
+    const jointItem = state.items.find((item) => item.id === first.id)!;
+    jointItem.recipientIds = people.map((person) => person.id);
+    jointItem.tags = ["Filter test"];
+    await page.setViewportSize({ width, height: 852 });
+    await page.goto("/");
+    const browse = page.getByRole("button", { name: /^Sort & filter/ });
+    const search = page.getByRole("searchbox", {
+      name: "Search items and gift ideas",
+    });
+    const eligible = world(state, actor).items.filter(
+      (item) => !item.archived && !item.isRecipient,
+    );
+    await browse.click();
+    await page.locator(".people-filter summary").click();
+    const picker = page.locator(".people-filter");
+    await picker
+      .getByRole("checkbox", { name: people[1].name, exact: true })
+      .check();
+    await page.getByRole("button", { name: "Done", exact: true }).click();
+    await expect(page.locator(".gift-card")).toHaveCount(
+      eligible.filter((item) => item.recipientIds.includes(people[1].id))
+        .length,
+    );
+    await expect(
+      page.locator(".gift-card").filter({ hasText: jointItem.title }),
+    ).toBeVisible();
+    await browse.click();
+    await page.locator(".people-filter summary").click();
+    await picker
+      .getByRole("checkbox", { name: people[0].name, exact: true })
+      .check();
+    await page.getByLabel("Filter by tag").selectOption("Filter test");
+    await page.getByLabel("Available to give", { exact: true }).check();
+    await page.getByRole("button", { name: "Done", exact: true }).click();
+    const expected = eligible.filter(
+      (item) =>
+        item.recipientIds.some((id) => people.some((p) => p.id === id)) &&
+        item.tags.includes("Filter test") &&
+        (item.available ?? 0) > 0,
+    );
+    await expect(page.locator(".gift-card")).toHaveCount(expected.length);
+    await expect(browse).toContainText("(3)");
+    await search.fill(jointItem.title);
+    await page.locator(".gift-card").first().click();
+    await page.reload();
+    await page.goBack();
+    await expect(search).toHaveValue(jointItem.title);
+    await expect(page.locator(".browse-summary")).toContainText(people[1].name);
+    await expect(page.locator(".browse-summary")).toContainText(people[0].name);
+    await page
+      .locator(".browse-summary")
+      .getByRole("button", { name: "Clear filters" })
+      .click();
+    await expect(search).toHaveValue(jointItem.title);
+    await expect(browse).not.toContainText("(");
+    await search.fill("unmatched search");
+    await expect(
+      page.getByRole("heading", { name: "No matches found" }),
+    ).toBeVisible();
+    await page
+      .getByRole("button", { name: "Clear filters", exact: true })
+      .click();
+    await expect(search).toHaveValue("");
+    await expect(page.locator(".gift-card")).toHaveCount(eligible.length);
+    await page.goto(`/people/${people[0].id}`);
+    await browse.click();
+    await expect(picker).toHaveCount(0);
+    await page.keyboard.press("Escape");
+    const singleList = state.lists.find(
+      (list) =>
+        !list.archived &&
+        list.ownerIds.length === 1 &&
+        state.items.some((item) => item.listId === list.id),
+    )!;
+    await page.goto(`/lists/${singleList.id}`);
+    await browse.click();
+    await expect(picker).toHaveCount(0);
+  });
+}
+
+test.describe("interface rhythm", () => {
+  test.use({ hasTouch: true });
+  for (const [width, theme] of [
+    [320, "dark"],
+    [393, "light"],
+    [768, "light"],
+    [1440, "dark"],
+  ] as const) {
+    test(`screens and dialogs at ${width}px ${theme}`, async ({
+      page,
+    }, info) => {
+      const { state, actor } = await preview(page);
+      await page.addInitScript(
+        (appearance) => localStorage.setItem("little-hint:theme", appearance),
+        theme,
+      );
+      await page.setViewportSize({ width, height: 900 });
+      const capture = async (name: string) => {
+        await expect(page.locator("main h1").first()).toBeVisible();
+        await expect(page.locator("main h1").first()).not.toHaveText(/Loading/);
+        expect(
+          await page.evaluate(
+            () => document.documentElement.scrollWidth <= innerWidth,
+          ),
+        ).toBe(true);
+        await page.screenshot({
+          path: info.outputPath(`${name}.png`),
+          fullPage: true,
+        });
+      };
+      await page.goto("/");
+      await capture("home");
+      await expect(
+        page.getByRole("searchbox", { name: "Search items and gift ideas" }),
+      ).toHaveCSS("font-size", "16px");
+      await page.getByRole("button", { name: /^Sort & filter/ }).click();
+      await page.locator(".people-filter summary").click();
+      await capture("filters");
+      expect(
+        (
+          await new AxeBuilder({ page })
+            .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+            .analyze()
+        ).violations,
+      ).toEqual([]);
+      await page.keyboard.press("Escape");
+      const gift = world(state, actor).items.find(
+        (item) =>
+          !item.isRecipient &&
+          !item.archived &&
+          item.listId &&
+          (item.available ?? 0) > 0,
+      )!;
+      await page.goto(`/gift/${gift.id}`);
+      await capture("item");
+      await page.goto(`/lists/${gift.listId}`);
+      await capture("list");
+      await page
+        .getByRole("button", { name: "Add gift idea", exact: true })
+        .click();
+      await capture("idea-form");
+      await page.keyboard.press("Escape");
+      await page.goto("/buying");
+      await page.getByRole("button", { name: /^All \(/ }).click();
+      await page.locator(".buying-row summary").first().click();
+      await capture("buying-menu");
+      const own = state.people.find((person) => person.userId === actor.id)!;
+      await page.goto(`/people/${own.id}`);
+      await capture("profile");
+      await page
+        .getByRole("button", { name: "Edit profile", exact: true })
+        .click();
+      await page
+        .getByRole("tab", { name: "Gift preferences", exact: true })
+        .click();
+      await capture("profile-editor");
+      expect(
+        (
+          await new AxeBuilder({ page })
+            .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+            .analyze()
+        ).violations,
+      ).toEqual([]);
+      await page.keyboard.press("Escape");
+      for (const route of [
+        "/people",
+        "/lists",
+        "/exchanges",
+        "/settings?section=profile",
+        "/settings?section=notifications",
+      ]) {
+        await page.goto(route);
+        await capture(route.replace(/[^a-z]+/g, "-"));
+      }
+    });
+  }
 });

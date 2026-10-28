@@ -248,6 +248,7 @@ export function Form({
   dirty: controlledDirty,
   cancel,
   busyLabel = "Saving…",
+  onBusyChange,
 }: {
   onSubmit: (data: FormData) => Promise<unknown>;
   children: ReactNode;
@@ -261,11 +262,13 @@ export function Form({
   dirty?: boolean;
   cancel?: () => void;
   busyLabel?: string;
+  onBusyChange?: (busy: boolean) => void;
 }) {
   const [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [changed, setDirty] = useState(false);
   const dirty = controlledDirty ?? changed;
+  useEffect(() => onBusyChange?.(busy), [busy, onBusyChange]);
   const [pending, setPending] = useState<{
     data: FormData;
     content: ReactNode;
@@ -322,6 +325,7 @@ export function Form({
       await onSubmit(data);
       if (resetOnSuccess) form.reset();
       setDirty(false);
+      setPending(null);
     } catch (e) {
       setError(actionError(e));
     } finally {
