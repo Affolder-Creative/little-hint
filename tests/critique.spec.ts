@@ -753,7 +753,7 @@ for (const method of ["arrows", "drag"] as const) {
       title: "Second wish",
     });
     await page.goto(`/lists/${list.id}`);
-    const titles = page.locator(".gift-card h3");
+    const titles = page.locator(".gift-card .gift-title");
     // allTextContents snapshots immediately; wait for the world query to render.
     await expect(titles).toHaveCount(2);
     const original = await titles.allTextContents();
@@ -804,18 +804,18 @@ for (const method of ["arrows", "drag"] as const) {
       ).toBeVisible();
       await page.getByRole("button", { name: "Discard changes" }).click();
       await expect(dialog).toHaveCount(0);
-      await expect(page.locator(".gift-card h3")).toHaveText(original);
+      await expect(page.locator(".gift-card .gift-title")).toHaveText(original);
     }
     await page.getByRole("button", { name: /^Sort & filter/ }).click();
     await open.click();
     await move();
     await page.getByRole("button", { name: "Save order", exact: true }).click();
     await expect(dialog).toHaveCount(0);
-    await expect(page.locator(".gift-card h3")).toHaveText(
+    await expect(page.locator(".gift-card .gift-title")).toHaveText(
       [...original].reverse(),
     );
     await page.reload();
-    await expect(page.locator(".gift-card h3")).toHaveText(
+    await expect(page.locator(".gift-card .gift-title")).toHaveText(
       [...original].reverse(),
     );
   });
@@ -1171,7 +1171,7 @@ test("search recovery and person tabs work with a keyboard", async ({
   const { state } = await preview(page);
   await page.goto("/");
   await page
-    .getByRole("textbox", { name: "Search items and gift ideas" })
+    .getByRole("searchbox", { name: "Search items and gift ideas" })
     .fill("no matching gifts xyz");
   await expect(
     page.getByRole("heading", { name: "No matches found" }),
@@ -1181,7 +1181,9 @@ test("search recovery and person tabs work with a keyboard", async ({
   await page.goto(`/people/${state.people[1].id}`);
   await page.getByRole("tab", { name: "On their wish lists" }).focus();
   await page.keyboard.press("ArrowRight");
-  await expect(page.getByRole("tab", { name: "Ideas for Sam" })).toBeFocused();
+  await expect(
+    page.getByRole("tab", { name: "Gift ideas for Sam" }),
+  ).toBeFocused();
   await expect(page.getByRole("tabpanel")).toHaveAttribute(
     "aria-labelledby",
     "person-tab-ideas",
@@ -1254,12 +1256,12 @@ test("person pages link accessible wish lists and keep all items with their sour
   await expect(page.locator(".gift-card")).toHaveCount(2);
   await expect(page.locator(".gift-card a")).toHaveCount(0);
   await page
-    .getByRole("textbox", { name: "Search items", exact: true })
+    .getByRole("searchbox", { name: "Search items", exact: true })
     .fill("Trail");
   await expect(page.locator(".gift-card")).toHaveCount(1);
   await expect(links.getByRole("link")).toHaveCount(3);
   await page
-    .getByRole("textbox", { name: "Search items", exact: true })
+    .getByRole("searchbox", { name: "Search items", exact: true })
     .fill("");
   await expect(page.locator(".gift-card")).toHaveCount(2);
   await links
@@ -2100,7 +2102,7 @@ test("missing pages have descriptive headings and titles while empty sections ke
     });
     await page.goto("/");
     await page
-      .getByRole("textbox", { name: "Search items and gift ideas" })
+      .getByRole("searchbox", { name: "Search items and gift ideas" })
       .fill("no-such-gift-000");
     await expect(
       page.getByRole("heading", { name: "No matches found", level: 2 }),
@@ -2534,7 +2536,8 @@ test("compact missing photos preserve mixed grids, real photos, and reading orde
   ]) {
     await page.goto(route);
     const cards = page.locator(".gift-card");
-    expect(await cards.count()).toBeGreaterThan(0);
+    // Navigation can finish before the world query renders the cards.
+    await expect(cards.first()).toBeVisible();
     await expect(cards.locator("img")).toHaveCount(0);
     for (const area of await cards.locator(".without-photo").all())
       expect((await area.boundingBox())!.height).toBeLessThanOrEqual(96);
@@ -3020,7 +3023,7 @@ test("wish-list items and ideas for others keep distinct names through saving an
 
   await page.goto(`/lists/${mine.id}`);
   await expect(
-    page.getByRole("textbox", { name: "Search items", exact: true }),
+    page.getByRole("searchbox", { name: "Search items", exact: true }),
   ).toBeVisible();
   await page
     .getByRole("button", { name: "Add item", exact: true })
@@ -3240,7 +3243,10 @@ for (const width of [320, 390, 650, 900, 1440]) {
         page.getByLabel("Search items", { exact: true }),
       ).toBeVisible();
       if (width <= 390) {
-        const title = await page.locator(".gift-card h3").first().boundingBox();
+        const title = await page
+          .locator(".gift-card .gift-title")
+          .first()
+          .boundingBox();
         const nav = await page.locator(".mobile-nav").boundingBox();
         expect(title!.y + title!.height).toBeLessThan(nav!.y);
       }
@@ -4531,3 +4537,71 @@ for (const [width, theme] of [
     ).toBeVisible();
   });
 }
+
+test("failed form submissions focus the recovery message and retain edits", async ({
+  page,
+}) => {
+  await preview(page);
+  await page.goto("/people");
+  await page
+    .getByRole("button", { name: "Managed profile", exact: true })
+    .click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Name", { exact: true }).fill("Casey Morgan");
+  let requests = 0;
+  let release!: () => void;
+  const pending = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/api/v1/people", async (route) => {
+    requests++;
+    await pending;
+    await route.fulfill({
+      status: 503,
+      json: { error: "Could not save the profile. Try again." },
+    });
+  });
+  try {
+    // Two submissions before React renders the disabled button must still send once.
+    await dialog.locator("form").evaluate((form: HTMLFormElement) => {
+      form.requestSubmit();
+      form.requestSubmit();
+    });
+    await expect(dialog.locator("form")).toHaveAttribute("aria-busy", "true");
+    await expect.poll(() => requests).toBe(1);
+    release();
+    const error = dialog.getByRole("alert");
+    await expect(error).toBeFocused();
+    await expect(error).toBeInViewport();
+    await expect(dialog.getByLabel("Name", { exact: true })).toHaveValue(
+      "Casey Morgan",
+    );
+    await expect(
+      dialog.getByRole("button", { name: "Create profile", exact: true }),
+    ).toBeEnabled();
+    expect(requests).toBe(1);
+  } finally {
+    release();
+  }
+});
+
+test("confirmation Cancel preserves the list and returns focus to its actions", async ({
+  page,
+}) => {
+  const { state } = await preview(page);
+  const before = state.lists.length;
+  await page.goto("/lists");
+  const row = page.locator(".managed-list-row").first();
+  const actions = row.locator("summary");
+  await actions.click();
+  await row.getByRole("button", { name: "Move to Trash", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(
+    dialog.getByRole("button", { name: "Move to Trash", exact: true }),
+  ).toBeVisible();
+  await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(actions).toBeFocused();
+  await expect(row).toBeVisible();
+  expect(state.lists).toHaveLength(before);
+});

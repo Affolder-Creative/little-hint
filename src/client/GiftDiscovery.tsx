@@ -42,7 +42,9 @@ export function GiftDiscoveryPage() {
           This feature is not enabled for this person. You can still add gift
           ideas manually.
         </p>
-        <Link to={`/people/${id}`}>Back to profile</Link>
+        <Link className="button secondary" to={`/people/${id}`}>
+          Back to profile
+        </Link>
       </>
     );
   if (context.error)
@@ -246,6 +248,7 @@ function DiscoveryFlow({
               </p>
             )}
             <Form
+              busyLabel="Starting search…"
               submit={
                 jobId
                   ? context.allowance.weeklyRemaining === null

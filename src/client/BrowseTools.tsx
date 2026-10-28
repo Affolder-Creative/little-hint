@@ -45,8 +45,9 @@ export function BrowseTools({
     <div className="browse-tools">
       <div className="browse-toolbar">
         <label className="search">
-          <Search size={18} />
+          <Search size={18} aria-hidden="true" />
           <input
+            type="search"
             aria-label={searchLabel}
             placeholder={placeholder}
             value={search}
@@ -56,6 +57,7 @@ export function BrowseTools({
         <button
           className="button secondary"
           aria-haspopup="dialog"
+          aria-expanded={opened}
           onClick={() => setOpened(true)}
         >
           <SlidersHorizontal size={17} />

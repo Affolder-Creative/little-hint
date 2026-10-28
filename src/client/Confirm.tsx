@@ -16,6 +16,8 @@ export function Confirm({
   return (
     <Form
       submit={label}
+      cancel={close}
+      busyLabel="Working…"
       allowOffline={allowOffline}
       onSubmit={async () => {
         await onConfirm();

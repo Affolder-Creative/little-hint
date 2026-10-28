@@ -187,7 +187,7 @@ test("mobile shell clears safe areas, resizing, and date dialogs", async ({
         ).toBeGreaterThan(0);
       }
       if (width === 320) {
-        const submit = page.locator("dialog .form > button[type=submit]");
+        const submit = page.locator("dialog .form button[type=submit]");
         await submit.evaluate((el) => {
           el.style.fontSize = `${parseFloat(getComputedStyle(el).fontSize) * 2}px`;
         });

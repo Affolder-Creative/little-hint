@@ -48,7 +48,9 @@ test("priorities, shared ordering, Trash, and event preservation", async ({
   await expect(page.getByRole("dialog")).not.toBeVisible();
   await page.getByRole("button", { name: /^Sort & filter/ }).click();
   await page.getByLabel("Sort by", { exact: true }).selectOption("priority");
-  await expect(page.locator(".gift-card h3").first()).toHaveText("Ceramic mug");
+  await expect(page.locator(".gift-card .gift-title").first()).toHaveText(
+    "Ceramic mug",
+  );
   await page.getByRole("button", { name: "Reorder items" }).click();
   await page
     .getByRole("button", { name: "Move Poetry book up", exact: true })
@@ -58,7 +60,9 @@ test("priorities, shared ordering, Trash, and event preservation", async ({
     .click();
   await page.getByRole("button", { name: "Save order", exact: true }).click();
   await expect(page.getByRole("dialog")).not.toBeVisible();
-  await expect(page.locator(".gift-card h3").first()).toHaveText("Poetry book");
+  await expect(page.locator(".gift-card .gift-title").first()).toHaveText(
+    "Poetry book",
+  );
   await expect(
     page
       .locator(".gift-card")
@@ -74,14 +78,18 @@ test("priorities, shared ordering, Trash, and event preservation", async ({
     "price-desc",
   );
   await page.getByRole("button", { name: "Done", exact: true }).click();
-  await expect(page.locator(".gift-card h3").last()).toHaveText("Poetry book");
+  await expect(page.locator(".gift-card .gift-title").last()).toHaveText(
+    "Poetry book",
+  );
   await page.getByLabel("Actions for Ceramic mug", { exact: true }).click();
   await page.getByRole("button", { name: "Archive item", exact: true }).click();
   await expect(page.locator(".gift-card")).toHaveCount(2);
   await page
     .getByRole("button", { name: "Archived items", exact: true })
     .click();
-  await expect(page.locator(".gift-card h3")).toHaveText(["Ceramic mug"]);
+  await expect(page.locator(".gift-card .gift-title")).toHaveText([
+    "Ceramic mug",
+  ]);
   await page.getByLabel("Actions for Ceramic mug", { exact: true }).click();
   await page.getByRole("button", { name: "Restore item", exact: true }).click();
   await page.getByRole("button", { name: "Active items", exact: true }).click();
