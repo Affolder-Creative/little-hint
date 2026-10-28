@@ -4,7 +4,11 @@ import type { Setting, State } from "../shared/model";
 import { pruneDiscovery } from "./gift-discovery";
 import { discoveryModes, type DiscoveryConfig } from "../shared/gift-discovery";
 import { stamp, fail } from "./domain";
-import { deploymentEnvironment, productPhotoOverride } from "./deployment";
+import {
+  deploymentEnvironment,
+  syntheticEnvironment,
+  productPhotoOverride,
+} from "./deployment";
 import {
   scrapingSelections,
   selectedScrapingProvider,
@@ -59,7 +63,12 @@ export function stagingSettings(): Record<SettingKey, string> {
         ["GIFT_DISCOVERY_MODEL", "gpt-6-luna"],
         ["SMTP_HOST", "mailpit"],
         ["SMTP_PORT", "1025"],
-        ["SMTP_FROM", "Little Hint staging <staging@example.test>"],
+        [
+          "SMTP_FROM",
+          deploymentEnvironment() === "preview"
+            ? "Little Hint preview <preview@example.test>"
+            : "Little Hint staging <staging@example.test>",
+        ],
         ["SCRAPING_PROVIDER", "none"],
         ["PAID_DAILY_LIMIT", "0"],
         ["OPENAI_MODEL", defaults.OPENAI_MODEL!],
@@ -129,7 +138,7 @@ function settingsValues(rows: Setting[], onlyPhoto = false) {
 function effectiveConfig(
   values: Map<string, string>,
 ): Record<SettingKey, string> {
-  if (deploymentEnvironment() === "staging") return stagingSettings();
+  if (syntheticEnvironment()) return stagingSettings();
   const result = Object.fromEntries(
     settingKeys.map((k) => [
       k,
@@ -140,13 +149,12 @@ function effectiveConfig(
   return result;
 }
 export async function config(): Promise<Record<SettingKey, string>> {
-  if (deploymentEnvironment() === "staging") return stagingSettings();
+  if (syntheticEnvironment()) return stagingSettings();
   return effectiveConfig(settingsValues(await readSettings()));
 }
 // Mutation guards read settings under the same database lock as the mutation.
 export function discoveryConfigForState(s: State) {
-  if (deploymentEnvironment() === "staging")
-    return discoveryConfiguration(stagingSettings());
+  if (syntheticEnvironment()) return discoveryConfiguration(stagingSettings());
   return discoveryConfiguration(effectiveConfig(settingsValues(s.settings)));
 }
 export const productPhotoSettingKey = "AUTO_IMPORT_PRODUCT_PHOTOS";
@@ -175,12 +183,12 @@ export async function settingsSummary() {
   const rows = await readSettings();
   // Staging must not decrypt dormant production integration credentials.
   const values = settingsValues(
-    deploymentEnvironment() === "staging"
+    syntheticEnvironment()
       ? rows.filter((s) => s.key === productPhotoSettingKey)
       : rows,
   );
   const cfg = effectiveConfig(values);
-  const staging = deploymentEnvironment() === "staging";
+  const staging = syntheticEnvironment();
   return [
     photoSetting(values),
     ...settingKeys.map((k) => ({
@@ -209,7 +217,7 @@ export async function saveSetting(k: string, value: string) {
   const photoPreference = k === productPhotoSettingKey;
   if (photoPreference && value !== "true" && value !== "false")
     fail(400, "Choose true or false for automatic product photos.");
-  if (!photoPreference && deploymentEnvironment() === "staging")
+  if (!photoPreference && syntheticEnvironment())
     fail(
       409,
       "This test app uses a private email inbox. External services are turned off.",

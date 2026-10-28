@@ -90,8 +90,16 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
   const auth = makeAuth();
   const cloudflareAnalytics = cloudflareWebAnalyticsEnabled();
   await app.register(helmet, {
+    // Safari upgrades localhost subresources with Helmet's default directive.
+    // HTTP preview is deliberate; production and staging retain the default.
+    strictTransportSecurity: !(
+      deploymentEnvironment() === "preview" && appUrl.startsWith("http:")
+    ),
     contentSecurityPolicy: {
       directives: {
+        ...(deploymentEnvironment() === "preview" && appUrl.startsWith("http:")
+          ? { upgradeInsecureRequests: null }
+          : {}),
         defaultSrc: ["'self'"],
         scriptSrc: [
           "'self'",

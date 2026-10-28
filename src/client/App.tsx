@@ -382,15 +382,18 @@ export function App() {
               </div>
             )}
             {(world.environment === "staging" ||
+              world.environment === "preview" ||
               world.me.email.endsWith("@example.test")) && (
               <div
                 className="demo-banner"
                 role="region"
                 aria-label="Test environment"
               >
-                {world.environment === "staging"
-                  ? "Test version · Sample data · Emails go to a test inbox"
-                  : "Demo version · Sample data"}
+                {world.environment === "preview"
+                  ? "Synthetic preview · Sample data · Emails go to the test inbox"
+                  : world.environment === "staging"
+                    ? "Test version · Sample data · Emails go to a test inbox"
+                    : "Demo version · Sample data"}
               </div>
             )}
             <main id="main" tabIndex={-1}>

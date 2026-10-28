@@ -3,15 +3,35 @@ import { randomUUID } from "node:crypto";
 import { pool, migrate, transact } from "./db";
 import { stamp, command, activateAccount } from "./domain";
 import type { Actor } from "../shared/model";
-import { assertStagingSeed, assertStagingDatabase } from "./deployment";
+import {
+  assertStagingSeed,
+  assertStagingDatabase,
+  assertPreviewSeed,
+  assertPreviewDatabase,
+} from "./deployment";
+import { seedPreview } from "./preview-seed";
 import { seedStaging } from "./staging-seed";
 import { addHouseholdScenario } from "./household-fixtures";
 const cmd = process.argv[2];
 try {
+  if (process.env.APP_ENV === "preview") assertPreviewDatabase();
   if (process.env.APP_ENV === "staging") assertStagingDatabase();
   if (cmd === "migrate") {
     await migrate();
     console.log("Database migrations applied.");
+  } else if (cmd === "seed-preview" || cmd === "ensure-preview") {
+    assertPreviewSeed();
+    await migrate();
+    const emails = await seedPreview(
+      pool,
+      process.env,
+      cmd === "ensure-preview",
+    );
+    console.log(
+      emails.length
+        ? "Synthetic preview fixtures created."
+        : "Existing preview data retained.",
+    );
   } else if (cmd === "seed-staging") {
     assertStagingSeed();
     await migrate();
@@ -166,7 +186,7 @@ try {
     );
   } else
     throw new Error(
-      "Commands: migrate, bootstrap <email>, demo, seed-staging, seed-households, invalidate-sessions",
+      "Commands: migrate, bootstrap <email>, demo, seed-preview, ensure-preview, seed-staging, seed-households, invalidate-sessions",
     );
 } finally {
   await pool.end();
