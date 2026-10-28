@@ -1,0 +1,81 @@
+/* Keep each purchase's controls together, aligned with the item they affect. */
+.buying-list > .buying-row {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 16px 24px;
+}
+.buying-list > .buying-row > div:nth-child(2) {
+  min-width: 0;
+}
+.buying-list > .buying-row > .actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: start;
+  max-width: none;
+  width: auto;
+  padding: 0;
+  gap: 8px;
+}
+.buying-row > .actions .entry-actions-content {
+  text-align: start;
+}
+.buying-row > .actions .entry-actions-content > button {
+  width: 100%;
+  justify-content: start;
+  text-align: start;
+}
+.exchange-list > .exchange-panel > .section-heading {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.exchange-list > .exchange-panel > .section-heading p {
+  margin-bottom: 0;
+}
+.exchange-panel > .exchange-controls {
+  align-items: center;
+  justify-content: start;
+  gap: 8px;
+  margin-block: 16px;
+}
+.exchange-panel > .assignments {
+  padding: 18px;
+  margin-block: 16px;
+}
+.exchange-panel > .assignments h3 {
+  margin-bottom: 8px;
+}
+.exchange-panel > .assignments a {
+  margin-bottom: 0;
+}
+.exchange-panel > .exchange-notifications {
+  margin: 12px 0 0;
+  font-size: 13px;
+}
+.exchange-notifications > summary {
+  cursor: pointer;
+  min-height: 44px;
+  align-content: center;
+}
+.exchange-notifications > p {
+  margin-top: 8px;
+}
+@media (max-width: 1000px) {
+  .buying-list > .buying-row {
+    grid-template-columns: 88px minmax(0, 1fr);
+    gap: 16px;
+  }
+  .buying-list > .buying-row > a {
+    width: 88px;
+  }
+  .buying-list > .buying-row > .actions {
+    grid-column: 1 / -1;
+  }
+  .buying-list > .buying-row > .actions > .button {
+    font-size: 13px;
+  }
+}

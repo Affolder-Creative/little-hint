@@ -112,6 +112,8 @@ import { Login } from "./Login";
 import { RevealPolicy, GiftSummaryPanel } from "./ListFeatures";
 import { EventPage, ManagedEventNotice } from "./GroupEvents";
 import { ExchangeReview, exchangeMissingLists } from "./ExchangeReview";
+import "./gift-actions.css";
+
 const SettingsPage = lazy(() => import("./SettingsPage"));
 const GiftDiscoveryPage = lazy(() =>
   import("./GiftDiscovery").then((module) => ({
@@ -1626,193 +1628,209 @@ function Buying() {
       )}
       {visible.length > 0 ? (
         <div className="buying-list">
-          {visible.map((r) => (
-            <div className="buying-row" key={r.id}>
-              {r.item ? (
-                <Link
-                  to={`/gift/${r.item.id}`}
-                  data-navigation-focus={`reservation-${r.id}`}
-                  aria-label={`View ${r.titleSnapshot}`}
-                >
-                  <GiftPhoto gift={r.item} />
-                </Link>
-              ) : (
-                <Gift size={36} />
-              )}
-              <div>
-                <h2>{r.titleSnapshot}</h2>
-                <p>
-                  {r.item
-                    ? `For ${r.item.recipientNames.join(" & ")}`
-                    : "Access to the original gift has changed."}
-                </p>
-                <span className="status">
-                  {r.purchased === r.quantity
-                    ? "Purchased"
-                    : r.purchased
-                      ? `${r.purchased} of ${r.quantity} purchased`
-                      : "Reserved"}
-                </span>
-                {r.exchangeId && <p className="muted">Secret gift exchange</p>}
-                <SpendingGuidance
-                  context={reservationSpendingContext(world, r)}
-                  sharedGift={
-                    r.poolTargetCents
-                      ? {
-                          priceCents: r.item?.priceCents ?? null,
+          {visible.map((r) => {
+            const updateAction = (
+              <button
+                className="button secondary small"
+                onClick={() =>
+                  open(
+                    "Update purchase",
+                    <Form
+                      submit="Save purchase status"
+                      onSubmit={async (f) => {
+                        await mutate("reservations/update", {
+                          id: r.id,
+                          revision: r.revision,
                           quantity: r.quantity,
-                          poolTargetCents: r.poolTargetCents,
-                        }
-                      : undefined
-                  }
-                />
-              </div>
-              <div className="actions">
-                {r.item && r.quantity === 1 && r.purchased === 0 && (
-                  <Action
-                    secondary
-                    onClick={async () => {
-                      await mutate("reservations/update", {
-                        id: r.id,
-                        revision: r.revision,
-                        quantity: 1,
-                        purchased: 1,
-                      });
-                      toast(
-                        view === "needs-buying"
-                          ? "Marked as purchased. Find it in Purchased to update or cancel."
-                          : "Marked as purchased. Use Update purchase if your plans change.",
-                      );
-                      if (view === "needs-buying") focusView();
-                    }}
-                    label={`Mark ${r.titleSnapshot} as purchased`}
-                  >
-                    Mark as purchased
-                  </Action>
-                )}
-                <button
-                  className="button secondary small"
-                  onClick={() =>
-                    open(
-                      "Update purchase",
-                      <Form
-                        submit="Save purchase status"
-                        onSubmit={async (f) => {
-                          await mutate("reservations/update", {
-                            id: r.id,
-                            revision: r.revision,
+                          purchased: Number(value(f, "purchased")),
+                        });
+                        close();
+                        toast("Purchase status updated.");
+                        if (
+                          !matchesView({
                             quantity: r.quantity,
                             purchased: Number(value(f, "purchased")),
-                          });
-                          close();
-                          toast("Purchase status updated.");
-                          if (
-                            !matchesView({
-                              quantity: r.quantity,
-                              purchased: Number(value(f, "purchased")),
-                            })
-                          )
-                            focusView();
-                        }}
-                      >
-                        <p>
-                          <strong>{r.titleSnapshot}</strong>
-                          {r.item
-                            ? ` · For ${r.item.recipientNames.join(" & ")}`
-                            : ""}
-                        </p>
-                        <Field label="Quantity purchased">
-                          <input
-                            name="purchased"
-                            type="number"
-                            min="0"
-                            max={r.quantity}
-                            defaultValue={r.purchased}
-                            required
-                          />
-                        </Field>
-                        <p>
-                          Mark what you have bought so others know it is
-                          covered. If your plans change, choose Cancel
-                          reservation.
-                        </p>
-                      </Form>,
-                    )
-                  }
-                >
-                  Update purchase
-                </button>
-                {!r.exchangeId && r.item && !r.item.archived && (
-                  <button
-                    className="text-button"
-                    onClick={() =>
-                      open("Share the cost", <ShareCostForm reservation={r} />)
-                    }
+                          })
+                        )
+                          focusView();
+                      }}
+                    >
+                      <p>
+                        <strong>{r.titleSnapshot}</strong>
+                        {r.item
+                          ? ` · For ${r.item.recipientNames.join(" & ")}`
+                          : ""}
+                      </p>
+                      <Field label="Quantity purchased">
+                        <input
+                          name="purchased"
+                          type="number"
+                          min="0"
+                          max={r.quantity}
+                          defaultValue={r.purchased}
+                          required
+                        />
+                      </Field>
+                      <p>
+                        Mark what you have bought so others know it is covered.
+                        If your plans change, choose Cancel reservation.
+                      </p>
+                    </Form>,
+                  )
+                }
+              >
+                Update purchase
+              </button>
+            );
+            return (
+              <div className="buying-row" key={r.id}>
+                {r.item ? (
+                  <Link
+                    to={`/gift/${r.item.id}`}
+                    data-navigation-focus={`reservation-${r.id}`}
+                    aria-label={`View ${r.titleSnapshot}`}
                   >
-                    {r.poolTargetCents
-                      ? "Edit contribution goal"
-                      : "Share the cost"}
-                  </button>
+                    <GiftPhoto gift={r.item} />
+                  </Link>
+                ) : (
+                  <Gift size={36} />
                 )}
-                <button
-                  className="text-button muted"
-                  onClick={() =>
-                    open(
-                      "Cancel reservation",
-                      <Form
-                        submit="Cancel selected quantity"
-                        onSubmit={async (f) => {
-                          const release = Number(value(f, "release"));
-                          const qty = r.quantity - release;
-                          await mutate("reservations/update", {
-                            id: r.id,
-                            revision: r.revision,
-                            quantity: qty,
-                            purchased: Math.min(r.purchased, qty),
-                          });
-                          close();
-                          if (
-                            !qty ||
-                            !matchesView({
-                              quantity: qty,
-                              purchased: Math.min(r.purchased, qty),
-                            })
+                <div>
+                  <h2>{r.titleSnapshot}</h2>
+                  <p>
+                    {r.item
+                      ? `For ${r.item.recipientNames.join(" & ")}`
+                      : "Access to the original gift has changed."}
+                  </p>
+                  <span className="status">
+                    {r.purchased === r.quantity
+                      ? "Purchased"
+                      : r.purchased
+                        ? `${r.purchased} of ${r.quantity} purchased`
+                        : "Reserved"}
+                  </span>
+                  {r.exchangeId && (
+                    <p className="muted">Secret gift exchange</p>
+                  )}
+                  <SpendingGuidance
+                    context={reservationSpendingContext(world, r)}
+                    sharedGift={
+                      r.poolTargetCents
+                        ? {
+                            priceCents: r.item?.priceCents ?? null,
+                            quantity: r.quantity,
+                            poolTargetCents: r.poolTargetCents,
+                          }
+                        : undefined
+                    }
+                  />
+                </div>
+                <div className="actions">
+                  {r.item && r.quantity === 1 && r.purchased === 0 && (
+                    <Action
+                      secondary
+                      onClick={async () => {
+                        await mutate("reservations/update", {
+                          id: r.id,
+                          revision: r.revision,
+                          quantity: 1,
+                          purchased: 1,
+                        });
+                        toast(
+                          view === "needs-buying"
+                            ? "Marked as purchased. Find it in Purchased to update or cancel."
+                            : "Marked as purchased. Use Update purchase if your plans change.",
+                        );
+                        if (view === "needs-buying") focusView();
+                      }}
+                      label={`Mark ${r.titleSnapshot} as purchased`}
+                    >
+                      Mark as purchased
+                    </Action>
+                  )}
+                  {!(r.item && r.quantity === 1 && r.purchased === 0) &&
+                    updateAction}
+                  <ActionMenu name={r.titleSnapshot} label="More actions">
+                    {r.item &&
+                      r.quantity === 1 &&
+                      r.purchased === 0 &&
+                      updateAction}
+                    {!r.exchangeId && r.item && !r.item.archived && (
+                      <button
+                        className="text-button"
+                        onClick={() =>
+                          open(
+                            "Share the cost",
+                            <ShareCostForm reservation={r} />,
                           )
-                            focusView();
-                        }}
+                        }
                       >
-                        <p>
-                          <strong>{r.titleSnapshot}</strong>
-                          {r.item
-                            ? ` · For ${r.item.recipientNames.join(" & ")}`
-                            : ""}
-                        </p>
-                        <Field label="Quantity to cancel">
-                          <input
-                            name="release"
-                            type="number"
-                            min="1"
-                            max={r.quantity}
-                            defaultValue={r.quantity}
-                            required
-                          />
-                        </Field>
-                        <p>
-                          The quantity you cancel becomes available for others
-                          to reserve. This also reduces the quantity marked as
-                          purchased if it is higher than your remaining
-                          reservation. It does not cancel a shop order or refund
-                          a payment.
-                        </p>
-                      </Form>,
-                    )
-                  }
-                >
-                  Cancel reservation
-                </button>
+                        {r.poolTargetCents
+                          ? "Edit contribution goal"
+                          : "Share the cost"}
+                      </button>
+                    )}
+                    <button
+                      className="text-button muted"
+                      onClick={() =>
+                        open(
+                          "Cancel reservation",
+                          <Form
+                            submit="Cancel selected quantity"
+                            onSubmit={async (f) => {
+                              const release = Number(value(f, "release"));
+                              const qty = r.quantity - release;
+                              await mutate("reservations/update", {
+                                id: r.id,
+                                revision: r.revision,
+                                quantity: qty,
+                                purchased: Math.min(r.purchased, qty),
+                              });
+                              close();
+                              if (
+                                !qty ||
+                                !matchesView({
+                                  quantity: qty,
+                                  purchased: Math.min(r.purchased, qty),
+                                })
+                              )
+                                focusView();
+                            }}
+                          >
+                            <p>
+                              <strong>{r.titleSnapshot}</strong>
+                              {r.item
+                                ? ` · For ${r.item.recipientNames.join(" & ")}`
+                                : ""}
+                            </p>
+                            <Field label="Quantity to cancel">
+                              <input
+                                name="release"
+                                type="number"
+                                min="1"
+                                max={r.quantity}
+                                defaultValue={r.quantity}
+                                required
+                              />
+                            </Field>
+                            <p>
+                              The quantity you cancel becomes available for
+                              others to reserve. This also reduces the quantity
+                              marked as purchased if it is higher than your
+                              remaining reservation. It does not cancel a shop
+                              order or refund a payment.
+                            </p>
+                          </Form>,
+                        )
+                      }
+                    >
+                      Cancel reservation
+                    </button>
+                  </ActionMenu>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       ) : reservations.length > 0 ? (
         <Empty
@@ -2042,27 +2060,6 @@ function Exchanges() {
                       ? "Getting ready"
                       : "Cancelled"}
                 </span>
-                {e.canManage && (
-                  <ActionMenu name={e.name}>
-                    <RunButton
-                      run={() =>
-                        mutate("exchanges/archive", {
-                          id: e.id,
-                          revision: e.revision,
-                          archived: !e.archived,
-                        })
-                      }
-                    >
-                      {e.archived ? "Restore exchange" : "Archive exchange"}
-                    </RunButton>
-                    {e.status !== "drawn" && (
-                      <TrashButton kind="exchanges" entry={e} />
-                    )}
-                    {e.status === "drawn" && (
-                      <p>Cancel the exchange before moving it to Trash.</p>
-                    )}
-                  </ActionMenu>
-                )}
               </div>
               <GuidelineLabel amount={e.spendingGuidelineCents} />
               {e.archived && (
@@ -2071,43 +2068,8 @@ function Exchanges() {
                   are kept.
                 </p>
               )}
-              {e.myAssignments.length > 0 && (
-                <div className="assignments">
-                  <h3>Who you’re giving to</h3>
-                  {e.myAssignments.map(([g, r]) => (
-                    <Link to={`/people/${r}`} key={`${g}:${r}`}>
-                      <Avatar
-                        name={
-                          world.people.find((p) => p.id === r)?.name ??
-                          "Recipient"
-                        }
-                        small
-                      />
-                      <span>
-                        {world.people.find((p) => p.id === g)?.name} is giving
-                        to{" "}
-                        <strong>
-                          {world.people.find((p) => p.id === r)?.name}
-                        </strong>
-                      </span>
-                      <ArrowRight size={17} />
-                    </Link>
-                  ))}
-                </div>
-              )}
-              {e.canManage && e.status === "drawn" && (
-                <div className="exchange-notifications">
-                  <p>
-                    Notifications: {e.delivery.sent} processed ·{" "}
-                    {e.delivery.pending} pending · {e.delivery.failed} failed
-                  </p>
-                  <small>
-                    Delivery follows each person’s notification settings.
-                  </small>
-                </div>
-              )}
               {e.canManage && (
-                <div className="actions">
+                <div className="actions exchange-controls">
                   {e.status === "drawn" && !e.archived && (
                     <button
                       className="button secondary"
@@ -2166,31 +2128,97 @@ function Exchanges() {
                       </button>
                     </>
                   )}
-                  {e.status !== "cancelled" && (
-                    <button
-                      className="text-button muted"
-                      onClick={() =>
-                        open(
-                          "Cancel this exchange?",
-                          <Confirm
-                            onConfirm={() =>
-                              mutate("exchanges/cancel", {
-                                id: e.id,
-                                revision: e.revision,
-                              })
-                            }
-                            label="Cancel exchange"
-                          >
-                            People will no longer see who they drew. Purchase
-                            history will be kept.
-                          </Confirm>,
-                        )
+
+                  <ActionMenu name={e.name} label="Exchange actions">
+                    {e.status !== "cancelled" && (
+                      <button
+                        className="text-button muted"
+                        onClick={() =>
+                          open(
+                            "Cancel this exchange?",
+                            <Confirm
+                              onConfirm={() =>
+                                mutate("exchanges/cancel", {
+                                  id: e.id,
+                                  revision: e.revision,
+                                })
+                              }
+                              label="Cancel exchange"
+                            >
+                              People will no longer see who they drew. Purchase
+                              history will be kept.
+                            </Confirm>,
+                          )
+                        }
+                      >
+                        Cancel exchange
+                      </button>
+                    )}
+                    <RunButton
+                      run={() =>
+                        mutate("exchanges/archive", {
+                          id: e.id,
+                          revision: e.revision,
+                          archived: !e.archived,
+                        })
                       }
                     >
-                      Cancel exchange
-                    </button>
-                  )}
+                      {e.archived ? "Restore exchange" : "Archive exchange"}
+                    </RunButton>
+                    {e.status !== "drawn" && (
+                      <TrashButton kind="exchanges" entry={e} />
+                    )}
+                    {e.status === "drawn" && (
+                      <p>Cancel the exchange before moving it to Trash.</p>
+                    )}
+                  </ActionMenu>
                 </div>
+              )}
+              {e.myAssignments.length > 0 && (
+                <div className="assignments">
+                  <h3>Who you’re giving to</h3>
+                  {e.myAssignments.map(([g, r]) => (
+                    <Link to={`/people/${r}`} key={`${g}:${r}`}>
+                      <Avatar
+                        name={
+                          world.people.find((p) => p.id === r)?.name ??
+                          "Recipient"
+                        }
+                        small
+                      />
+                      <span>
+                        {world.people.find((p) => p.id === g)?.name} is giving
+                        to{" "}
+                        <strong>
+                          {world.people.find((p) => p.id === r)?.name}
+                        </strong>
+                      </span>
+                      <ArrowRight size={17} />
+                    </Link>
+                  ))}
+                </div>
+              )}
+              {e.canManage && e.status === "drawn" && (
+                <details
+                  className="exchange-notifications"
+                  open={e.delivery.pending > 0 || e.delivery.failed > 0}
+                >
+                  <summary>
+                    Notification delivery
+                    {e.delivery.failed > 0
+                      ? ` · ${e.delivery.failed} failed`
+                      : e.delivery.pending > 0
+                        ? ` · ${e.delivery.pending} pending`
+                        : ""}
+                  </summary>
+                  <p>
+                    Notifications: {e.delivery.sent} processed ·{" "}
+                    {e.delivery.pending} pending · {e.delivery.failed} failed
+                  </p>
+                  <small>
+                    Delivery follows each person’s notification settings.
+                  </small>
+                </details>
               )}
             </section>
           ))}

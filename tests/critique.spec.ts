@@ -13,6 +13,130 @@ import { command, world } from "../src/server/domain";
 import { emptyState, type List, type Group } from "../src/shared/model";
 import { discoveryConfig } from "./gift-discovery-fixture";
 
+for (const width of [320, 393, 1440]) {
+  test(`purchase and exchange actions stay grouped at ${width}px`, async ({
+    page,
+  }, testInfo) => {
+    const { state, actor } = await preview(page, 1);
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/buying");
+    const row = page
+      .locator(".buying-row")
+      .filter({
+        has: page.getByRole("button", { name: /^Mark .* as purchased$/ }),
+      })
+      .first();
+    await expect(row).toBeVisible();
+    const more = row.locator("summary");
+    await expect(more).toContainText("More actions");
+    await expect(
+      row.getByRole("button", { name: "Cancel reservation", exact: true }),
+    ).not.toBeVisible();
+    await more.focus();
+    await page.keyboard.press("Enter");
+    const menu = row.locator(".entry-actions-content");
+    await expect
+      .poll(async () => (await menu.boundingBox())!.x)
+      .toBeGreaterThanOrEqual(19);
+    expect(
+      (await menu.boundingBox())!.x + (await menu.boundingBox())!.width,
+    ).toBeLessThanOrEqual(width - 19);
+    await row
+      .getByRole("button", { name: "Update purchase", exact: true })
+      .click();
+    await expect(page.getByRole("dialog")).toContainText("Quantity purchased");
+    await page.keyboard.press("Escape");
+    await expect(more).toBeFocused();
+    await page.screenshot({
+      path: testInfo.outputPath(`purchase-actions-${width}.png`),
+      fullPage: true,
+    });
+
+    // This actor is an event leader; delivery visibility follows the same permission.
+    const exchange = world(state, actor).exchanges.find(
+      (e) => e.canManage && e.status === "drawn",
+    )!;
+    await page.route("**/api/v1/world", (route) =>
+      route.fulfill({
+        json: {
+          ...world(state, actor),
+          environment: "development",
+          exchanges: world(state, actor).exchanges.map((e) => ({
+            ...e,
+            delivery: { sent: 4, pending: 0, failed: 0 },
+          })),
+        },
+      }),
+    );
+    await page.goto("/exchanges");
+    const panel = page.locator(`#exchange-${exchange.id}`);
+    const controls = panel.locator(".exchange-controls");
+    const assignment = panel.locator(".assignments");
+    expect(
+      (await controls.boundingBox())!.y +
+        (await controls.boundingBox())!.height,
+    ).toBeLessThanOrEqual((await assignment.boundingBox())!.y);
+    await expect(panel.locator(".exchange-notifications")).not.toHaveAttribute(
+      "open",
+    );
+    await panel
+      .getByLabel(`Exchange actions for ${exchange.name}`, { exact: true })
+      .click();
+    await panel
+      .getByRole("button", { name: "Cancel exchange", exact: true })
+      .click();
+    await expect(page.getByRole("dialog")).toContainText(
+      "Purchase history will be kept.",
+    );
+    await page.keyboard.press("Escape");
+    await expect(
+      panel.getByLabel(`Exchange actions for ${exchange.name}`, {
+        exact: true,
+      }),
+    ).toBeFocused();
+    await panel.locator(".exchange-notifications summary").click();
+    await expect(panel.getByText(/Notifications: 4 processed/)).toBeVisible();
+    for (const theme of ["light", "dark"]) {
+      await page.evaluate(
+        (theme) => (document.documentElement.dataset.theme = theme),
+        theme,
+      );
+      await page.screenshot({
+        path: testInfo.outputPath(`exchange-actions-${width}-${theme}.png`),
+        fullPage: true,
+      });
+    }
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth - innerWidth,
+      ),
+    ).toBeLessThanOrEqual(1);
+    expect(
+      (await new AxeBuilder({ page }).include("#main").analyze()).violations,
+    ).toEqual([]);
+    await page.unroute("**/api/v1/world");
+    await page.route("**/api/v1/world", (route) =>
+      route.fulfill({
+        json: {
+          ...world(state, actor),
+          environment: "development",
+          exchanges: world(state, actor).exchanges.map((e) => ({
+            ...e,
+            delivery: { sent: 2, pending: 1, failed: 1 },
+          })),
+        },
+      }),
+    );
+    await page.reload();
+    await expect(panel.locator(".exchange-notifications")).toHaveAttribute(
+      "open",
+    );
+    await expect(
+      panel.locator(".exchange-notifications summary"),
+    ).toContainText("1 failed");
+  });
+}
+
 async function preview(page: Page, actorIndex = 0, solo = false) {
   const fixture = stagingFixtures();
   const actor = fixture.actors[actorIndex];
@@ -870,7 +994,7 @@ test("secondary actions retain 44px touch targets on phones and desktop", async 
   for (const width of [390, 1280]) {
     await page.setViewportSize({ width, height: 844 });
     for (const [route, selector] of [
-      ["/buying", ".text-button"],
+      ["/buying", ".entry-actions > summary"],
       [`/gift/${gift.id}`, ".back-link"],
       ["/exchanges", ".assignments a"],
       ["/settings?section=profile", 'button[aria-label^="Edit profile"]'],
@@ -3465,6 +3589,11 @@ test("Buying keeps empty views, failed updates, and cancelled history recoverabl
   ).toBeFocused();
   await page
     .getByRole("button", { name: "View gifts to buy", exact: true })
+    .click();
+  await page
+    .getByLabel(`More actions for ${reservation.titleSnapshot}`, {
+      exact: true,
+    })
     .click();
   await page
     .getByRole("button", { name: "Cancel reservation", exact: true })
