@@ -3381,6 +3381,147 @@ test.describe("navigation scroll restoration", () => {
     });
   }
 
+  for (const width of [1440, 390]) {
+    test(`history preserves filters, gift focus, and distinct visits at ${width}px`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 720 });
+      const { state, list } = await longList(page);
+      for (const item of state.items.filter((item) => item.listId === list.id))
+        item.tags = [item.title.endsWith("1") ? "Coffee" : "Travel"];
+      await page.goto(`/lists/${list.id}`);
+      const search = page.getByPlaceholder("Search by name, person, or tag");
+      await search.fill("Scroll test");
+      await page.getByLabel("Filter by tag").selectOption("Travel");
+      await expect(page.locator(".gift-card")).toHaveCount(40);
+      const gift = page.locator(".gift-card").nth(15);
+      const href = await gift.getAttribute("href");
+      await gift.focus();
+      await page.evaluate(() => new Promise(requestAnimationFrame));
+      const position = await page.evaluate(() => scrollY);
+      expect(position).toBeGreaterThan(500);
+      await page.keyboard.press("Enter");
+      await expect(page.locator(".gift-detail")).toBeVisible();
+      await expectScroll(page, 0);
+      await page.goBack();
+      await expect(search).toHaveValue("Scroll test");
+      await expect(page.getByLabel("Filter by tag")).toHaveValue("Travel");
+      await expect(page.locator(".gift-card")).toHaveCount(40);
+      await expect(page.locator(`.gift-card[href="${href}"]`)).toBeFocused();
+      await expectScroll(page, position);
+      await page.keyboard.press("Tab");
+      // Tab continues at the returned card's action menu, without jumping up.
+      await expect(
+        page.locator(".gift-card-entry").nth(15).locator("summary"),
+      ).toBeFocused();
+      await expectScroll(page, position);
+      await page.goForward();
+      await expect(page.locator(".gift-detail")).toBeVisible();
+      await page.getByRole("link", { name: "Back to wish list" }).click();
+      await expect(search).toHaveValue("");
+      await expect(page.getByLabel("Filter by tag")).toHaveValue("");
+      await expect(page.locator(".gift-card")).toHaveCount(46);
+      await expectScroll(page, 0);
+      await search.fill("gift 2");
+      await page.goBack();
+      await expect(page.locator(".gift-detail")).toBeVisible();
+      await page.goBack();
+      await expect(search).toHaveValue("Scroll test");
+      await expectScroll(page, position);
+      await page.goForward();
+      await expect(page.locator(".gift-detail")).toBeVisible();
+      await page.goForward();
+      await expect(search).toHaveValue("gift 2");
+    });
+
+    test(`Buying restores Purchased and the originating gift at ${width}px`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 720 });
+      await preview(page);
+      await page.goto("/buying");
+      const purchased = page.getByRole("button", { name: /^Purchased \(/ });
+      await purchased.click();
+      const gift = page.locator(".buying-row a").first();
+      const href = await gift.getAttribute("href");
+      await gift.click();
+      await expect(page.locator(".gift-detail")).toBeVisible();
+      await page.goBack();
+      await expect(purchased).toHaveAttribute("aria-pressed", "true");
+      await expect(page.locator(`.buying-row a[href="${href}"]`)).toBeFocused();
+      await page.locator('a[href="/people"]:visible').first().click();
+      await expect(
+        page.getByRole("heading", { name: "Your people", exact: true }),
+      ).toBeVisible();
+      await page.locator('a[href="/buying"]:visible').first().click();
+      await expect(
+        page.getByRole("button", { name: /^Needs buying \(/ }),
+      ).toHaveAttribute("aria-pressed", "true");
+    });
+  }
+
+  test("filtered history survives reload and a missing gift falls back to main", async ({
+    page,
+  }) => {
+    const { state, list } = await longList(page);
+    await page.goto(`/lists/${list.id}`);
+    const search = page.getByPlaceholder("Search by name, person, or tag");
+    await search.fill("Scroll test");
+    const gift = page.locator(".gift-card").nth(15);
+    const href = await gift.getAttribute("href");
+    await gift.click();
+    await expect(page.locator(".gift-detail")).toBeVisible();
+    await page.reload();
+    await expect(page.locator(".gift-detail")).toBeVisible();
+    await page.goBack();
+    await expect(search).toHaveValue("Scroll test");
+    await expect(page.locator(`.gift-card[href="${href}"]`)).toBeFocused();
+    await page.goForward();
+    await expect(page.locator(".gift-detail")).toBeVisible();
+    state.items = state.items.filter((item) => `/gift/${item.id}` !== href);
+    await page.reload();
+    await expect(
+      page.getByRole("heading", { name: "Item not found" }),
+    ).toBeVisible();
+    await page.goBack();
+    await expect(search).toHaveValue("Scroll test");
+    await expect(page.locator(".gift-card")).toHaveCount(44);
+    await expect(page.getByRole("main")).toBeFocused();
+  });
+
+  test("archived items and availability choices survive Back without session storage", async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(window, "sessionStorage", {
+        get() {
+          throw new Error("Storage blocked");
+        },
+      });
+    });
+    const { state, list } = await longList(page);
+    const archived = state.items.find((item) => item.listId === list.id)!;
+    archived.archived = true;
+    await page.goto(`/lists/${list.id}`);
+    const archivedTab = page.getByRole("button", {
+      name: "Archived items",
+      exact: true,
+    });
+    await archivedTab.click();
+    await page.locator(".gift-card").click();
+    await expect(page.locator(".gift-detail")).toBeVisible();
+    await page.goBack();
+    await expect(archivedTab).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator(".gift-card")).toHaveCount(1);
+    await page.locator('a[href="/"]:visible').last().click();
+    const available = page.getByLabel("Available to give");
+    await available.check();
+    await page.locator(".gift-card").first().click();
+    await expect(page.locator(".gift-detail")).toBeVisible();
+    await page.goBack();
+    await expect(available).toBeChecked();
+  });
+
   test("mobile bottom navigation always opens the next destination at the top", async ({
     page,
   }) => {

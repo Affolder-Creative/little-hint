@@ -2,7 +2,7 @@ import { Invitations } from "./Invitations";
 import { OfferLinks } from "./OfferLinks";
 import { Action } from "./Action";
 import { PageBoundary } from "./PageBoundary";
-import { NavigationScroll } from "./NavigationScroll";
+import { NavigationScroll, useNavigationState } from "./NavigationScroll";
 import {
   GiftPreferenceOnboarding,
   GiftPreferencePrompt,
@@ -275,17 +275,186 @@ export function App() {
         dark,
       }}
     >
-      <NavigationScroll key={world.me.id} account={world.me.id} />
-      <PushLifecycle />
-      <a className="skip-link" href="#main">
-        Skip to content
-      </a>
-      <div className="app-shell">
-        <aside className="sidebar">
-          <Link to="/" className="brand-link" aria-label="Little Hint home">
-            <Logo dark={dark} />
-          </Link>
-          <nav aria-label="Main navigation">
+      <NavigationScroll key={world.me.id} account={world.me.id}>
+        <PushLifecycle />
+        <a className="skip-link" href="#main">
+          Skip to content
+        </a>
+        <div className="app-shell">
+          <aside className="sidebar">
+            <Link to="/" className="brand-link" aria-label="Little Hint home">
+              <Logo dark={dark} />
+            </Link>
+            <nav aria-label="Main navigation">
+              {nav.map(({ to, label, icon: Icon }) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  end={to === "/"}
+                  className={({ isActive }) =>
+                    isActive ||
+                    (to === "/lists" &&
+                      location.pathname.startsWith("/events/"))
+                      ? "active"
+                      : undefined
+                  }
+                >
+                  <Icon size={21} />
+                  <span>{label}</span>
+                </NavLink>
+              ))}
+            </nav>
+            <div className="sidebar-note">
+              <img
+                src={`/brand/little-hint/symbols/little-hint-tag-${dark ? "dark" : "color"}.svg`}
+                width="31"
+                height="36"
+                alt=""
+              />
+              <p>
+                A little hint.
+                <br />A thoughtful gift.
+              </p>
+            </div>
+            <NavLink className="settings-link" to="/settings">
+              <Avatar name={world.me.name} small />
+              <span>
+                {world.me.name.split(" ")[0]}
+                <small>Settings & your family groups</small>
+              </span>
+              <Settings size={18} />
+            </NavLink>
+          </aside>
+          <div className="main-wrap">
+            <header className="topbar">
+              <Link to="/" className="mobile-brand">
+                <Logo dark={dark} />
+              </Link>
+              <span className="topbar-message">
+                Gift ideas, shared thoughtfully.
+              </span>
+              <div className="actions">
+                <NotificationBell />
+                <button
+                  className="icon-button"
+                  aria-label={
+                    dark ? "Switch to light theme" : "Switch to dark theme"
+                  }
+                  onClick={() => setTheme(dark ? "light" : "dark")}
+                >
+                  {dark ? <Sun size={20} /> : <Moon size={20} />}
+                </button>
+                <Link
+                  className="mobile-settings icon-button"
+                  to="/settings"
+                  aria-label="Settings"
+                >
+                  <Settings size={20} />
+                </Link>
+                <button
+                  aria-label="Add item"
+                  className="button small"
+                  onClick={() =>
+                    world.lists.some((l) => l.canEdit && !l.archived)
+                      ? setModal({
+                          title: "Add item",
+                          body: <GiftForm />,
+                        })
+                      : setModal({
+                          title: "Your first wish list",
+                          body: <ListForm />,
+                        })
+                  }
+                >
+                  <Plus size={18} />
+                  <span>Add item</span>
+                </button>
+              </div>
+            </header>
+            {!online && (
+              <div className="offline-banner">
+                <WifiOff size={17} />
+                You are offline. Lists and gift plans may have changed.
+                Reconnect to reserve gifts, update purchases, or save changes.
+              </div>
+            )}
+            {(world.environment === "staging" ||
+              world.me.email.endsWith("@example.test")) && (
+              <div
+                className="demo-banner"
+                role="region"
+                aria-label="Test environment"
+              >
+                {world.environment === "staging"
+                  ? "Test version · Sample data · Emails go to a test inbox"
+                  : "Demo version · Sample data"}
+              </div>
+            )}
+            <main id="main" tabIndex={-1}>
+              <GiftPreferenceOnboarding key={world.me.id}>
+                <Routes>
+                  <Route path="/" element={<Home />} />
+                  <Route
+                    path="/notifications"
+                    element={<NotificationCenter />}
+                  />
+                  <Route
+                    path="/notifications/batches/:id"
+                    element={<NotificationOpen batch />}
+                  />
+                  <Route
+                    path="/notifications/:id"
+                    element={<NotificationOpen />}
+                  />
+                  <Route path="/people" element={<People />} />
+                  <Route
+                    path="/people/:id/gift-ideas"
+                    element={
+                      <PageBoundary key={location.pathname}>
+                        <GiftDiscoveryPage />
+                      </PageBoundary>
+                    }
+                  />
+                  <Route path="/people/:id" element={<PersonPage />} />
+                  <Route path="/lists" element={<Lists />} />
+                  <Route path="/lists/:id" element={<Lists />} />
+                  <Route path="/events/:id" element={<EventPage />} />
+                  <Route path="/gift/:id" element={<GiftDetail />} />
+                  <Route path="/buying" element={<Buying />} />
+                  <Route path="/exchanges" element={<Exchanges />} />
+                  <Route
+                    path="/settings"
+                    element={
+                      <PageBoundary key="settings">
+                        <SettingsPage theme={theme} setTheme={setTheme} />
+                      </PageBoundary>
+                    }
+                  />
+                  <Route path="/invite/:id" element={<Invitations />} />
+                  <Route
+                    path="*"
+                    element={
+                      <Empty
+                        page
+                        title="This page isn’t here"
+                        action={
+                          <Link className="button" to="/">
+                            Back home
+                          </Link>
+                        }
+                      >
+                        Try opening the link again or return to your lists.
+                      </Empty>
+                    }
+                  />
+                </Routes>
+              </GiftPreferenceOnboarding>
+            </main>
+            <footer className="app-footer">
+              <span>Created by Affolder Creative</span>
+            </footer>
+          </div>
+          <MobileNavigation>
             {nav.map(({ to, label, icon: Icon }) => (
               <NavLink
                 key={to}
@@ -302,185 +471,21 @@ export function App() {
                 <span>{label}</span>
               </NavLink>
             ))}
-          </nav>
-          <div className="sidebar-note">
-            <img
-              src={`/brand/little-hint/symbols/little-hint-tag-${dark ? "dark" : "color"}.svg`}
-              width="31"
-              height="36"
-              alt=""
-            />
-            <p>
-              A little hint.
-              <br />A thoughtful gift.
-            </p>
+          </MobileNavigation>
+        </div>
+        {modal && (
+          <Modal title={modal.title} onClose={() => setModal(null)}>
+            {modal.body}
+          </Modal>
+        )}
+        {message && (
+          <div className="toast" role="status">
+            <Check size={18} />
+            {message}
           </div>
-          <NavLink className="settings-link" to="/settings">
-            <Avatar name={world.me.name} small />
-            <span>
-              {world.me.name.split(" ")[0]}
-              <small>Settings & your family groups</small>
-            </span>
-            <Settings size={18} />
-          </NavLink>
-        </aside>
-        <div className="main-wrap">
-          <header className="topbar">
-            <Link to="/" className="mobile-brand">
-              <Logo dark={dark} />
-            </Link>
-            <span className="topbar-message">
-              Gift ideas, shared thoughtfully.
-            </span>
-            <div className="actions">
-              <NotificationBell />
-              <button
-                className="icon-button"
-                aria-label={
-                  dark ? "Switch to light theme" : "Switch to dark theme"
-                }
-                onClick={() => setTheme(dark ? "light" : "dark")}
-              >
-                {dark ? <Sun size={20} /> : <Moon size={20} />}
-              </button>
-              <Link
-                className="mobile-settings icon-button"
-                to="/settings"
-                aria-label="Settings"
-              >
-                <Settings size={20} />
-              </Link>
-              <button
-                aria-label="Add item"
-                className="button small"
-                onClick={() =>
-                  world.lists.some((l) => l.canEdit && !l.archived)
-                    ? setModal({
-                        title: "Add item",
-                        body: <GiftForm />,
-                      })
-                    : setModal({
-                        title: "Your first wish list",
-                        body: <ListForm />,
-                      })
-                }
-              >
-                <Plus size={18} />
-                <span>Add item</span>
-              </button>
-            </div>
-          </header>
-          {!online && (
-            <div className="offline-banner">
-              <WifiOff size={17} />
-              You are offline. Lists and gift plans may have changed. Reconnect
-              to reserve gifts, update purchases, or save changes.
-            </div>
-          )}
-          {(world.environment === "staging" ||
-            world.me.email.endsWith("@example.test")) && (
-            <div
-              className="demo-banner"
-              role="region"
-              aria-label="Test environment"
-            >
-              {world.environment === "staging"
-                ? "Test version · Sample data · Emails go to a test inbox"
-                : "Demo version · Sample data"}
-            </div>
-          )}
-          <main id="main" tabIndex={-1}>
-            <GiftPreferenceOnboarding key={world.me.id}>
-              <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/notifications" element={<NotificationCenter />} />
-                <Route
-                  path="/notifications/batches/:id"
-                  element={<NotificationOpen batch />}
-                />
-                <Route
-                  path="/notifications/:id"
-                  element={<NotificationOpen />}
-                />
-                <Route path="/people" element={<People />} />
-                <Route
-                  path="/people/:id/gift-ideas"
-                  element={
-                    <PageBoundary key={location.pathname}>
-                      <GiftDiscoveryPage />
-                    </PageBoundary>
-                  }
-                />
-                <Route path="/people/:id" element={<PersonPage />} />
-                <Route path="/lists" element={<Lists />} />
-                <Route path="/lists/:id" element={<Lists />} />
-                <Route path="/events/:id" element={<EventPage />} />
-                <Route path="/gift/:id" element={<GiftDetail />} />
-                <Route path="/buying" element={<Buying />} />
-                <Route path="/exchanges" element={<Exchanges />} />
-                <Route
-                  path="/settings"
-                  element={
-                    <PageBoundary key="settings">
-                      <SettingsPage theme={theme} setTheme={setTheme} />
-                    </PageBoundary>
-                  }
-                />
-                <Route path="/invite/:id" element={<Invitations />} />
-                <Route
-                  path="*"
-                  element={
-                    <Empty
-                      page
-                      title="This page isn’t here"
-                      action={
-                        <Link className="button" to="/">
-                          Back home
-                        </Link>
-                      }
-                    >
-                      Try opening the link again or return to your lists.
-                    </Empty>
-                  }
-                />
-              </Routes>
-            </GiftPreferenceOnboarding>
-          </main>
-          <footer className="app-footer">
-            <span>Created by Affolder Creative</span>
-          </footer>
-        </div>
-        <MobileNavigation>
-          {nav.map(({ to, label, icon: Icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={to === "/"}
-              className={({ isActive }) =>
-                isActive ||
-                (to === "/lists" && location.pathname.startsWith("/events/"))
-                  ? "active"
-                  : undefined
-              }
-            >
-              <Icon size={21} />
-              <span>{label}</span>
-            </NavLink>
-          ))}
-        </MobileNavigation>
-      </div>
-      {modal && (
-        <Modal title={modal.title} onClose={() => setModal(null)}>
-          {modal.body}
-        </Modal>
-      )}
-      {message && (
-        <div className="toast" role="status">
-          <Check size={18} />
-          {message}
-        </div>
-      )}
-      <UpdateNotice />
+        )}
+        <UpdateNotice />
+      </NavigationScroll>
     </AppContext.Provider>
   );
 }
@@ -585,14 +590,16 @@ function Browser({
   listNames?: ReadonlyMap<string, string>;
   listId?: string;
 }) {
-  const [search, setSearch] = useState(""),
-    [tag, setTag] = useState(""),
-    [available, setAvailable] = useState(false);
+  const [search, setSearch] = useNavigationState<string>("search", ""),
+    [tag, setTag] = useNavigationState<string>("tag", ""),
+    [available, setAvailable] = useNavigationState<boolean>("available", false);
   const { world, open, mutate } = useApp();
   const settings = useOrganization(useItemScope(listId));
   const parentList = world.lists.find((l) => l.id === listId);
-  const [itemStatus, setItemStatus] = useState("active");
-  useEffect(() => setItemStatus("active"), [listId]);
+  const [itemStatus, setItemStatus] = useNavigationState<string>(
+    "itemStatus",
+    "active",
+  );
   const canManage = parentList?.canEdit || items.some((i) => i.canEdit);
   const canReorder = !!parentList?.canEdit && !parentList.archived;
   const visibleItems = parentList?.archived
@@ -1534,9 +1541,9 @@ function GiftDetail() {
 function Buying() {
   const { world, open, mutate, toast, close } = useApp();
   const contributions = world.contributionHistory;
-  const [view, setView] = useState<"needs-buying" | "purchased" | "all">(
-    "needs-buying",
-  );
+  const [view, setView] = useNavigationState<
+    "needs-buying" | "purchased" | "all"
+  >("buyingView", "needs-buying");
   const activeView = useRef<HTMLButtonElement>(null);
   const [focusRequest, setFocusRequest] = useState(0);
   useEffect(() => {
@@ -1596,6 +1603,7 @@ function Buying() {
               {r.item ? (
                 <Link
                   to={`/gift/${r.item.id}`}
+                  data-navigation-focus={`reservation-${r.id}`}
                   aria-label={`View ${r.titleSnapshot}`}
                 >
                   <GiftPhoto gift={r.item} />
