@@ -3976,6 +3976,19 @@ for (const width of [320, 393, 1440]) {
       await expect(
         page.getByLabel("Event actions for Family celebration"),
       ).toBeVisible();
+      const eventActions = page.getByLabel(
+        "Event actions for Family celebration",
+      );
+      await eventActions.click();
+      const menu = page.locator(".entry-actions[open] .entry-actions-content");
+      await expect(menu).toBeInViewport();
+      await expect
+        .poll(async () => (await menu.boundingBox())!.x)
+        .toBeGreaterThanOrEqual(19);
+      expect(
+        (await menu.boundingBox())!.x + (await menu.boundingBox())!.width,
+      ).toBeLessThanOrEqual(width - 19);
+      await eventActions.press("Escape");
       await page.screenshot({
         path: testInfo.outputPath(`collections-${width}-${theme}.png`),
         fullPage: true,

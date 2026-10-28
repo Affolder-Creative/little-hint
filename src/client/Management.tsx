@@ -79,6 +79,20 @@ export function ActionMenu({
   return (
     <details
       className="entry-actions"
+      onToggle={(event) => {
+        if (!label || !event.currentTarget.open) return;
+        const menu = event.currentTarget.querySelector<HTMLElement>(
+          ".entry-actions-content",
+        );
+        if (!menu) return;
+        menu.style.translate = "";
+        const bounds = menu.getBoundingClientRect();
+        const shift = Math.max(
+          20 - bounds.left,
+          Math.min(0, innerWidth - 20 - bounds.right),
+        );
+        menu.style.translate = `${shift}px`;
+      }}
       onKeyDown={(event) => {
         if (event.key === "Escape") {
           event.currentTarget.open = false;
