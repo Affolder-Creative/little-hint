@@ -3320,3 +3320,242 @@ test.describe("deferred pages", () => {
     await expect(page).toHaveTitle("Settings · Little Hint");
   });
 });
+
+test.describe("navigation scroll restoration", () => {
+  test.use({ serviceWorkers: "block" });
+  async function longList(page: Page) {
+    const f = await preview(page);
+    const list = f.state.lists.find((l) => l.name === "Alex's wishes")!;
+    for (let i = 0; i < 45; i++)
+      command(f.state, f.actor, "items.create", {
+        listId: list.id,
+        title: `Scroll test gift ${i + 1}`,
+      });
+    return { ...f, list };
+  }
+  async function scroll(page: Page, y: number) {
+    await page.evaluate((top) => window.scrollTo(0, top), y);
+    await expect.poll(() => page.evaluate(() => scrollY)).toBeCloseTo(y, 0);
+    // Let the browser deliver the scroll event before leaving this entry.
+    await page.evaluate(() => new Promise(requestAnimationFrame));
+  }
+  async function expectScroll(page: Page, y: number) {
+    await expect.poll(() => page.evaluate(() => scrollY)).toBeCloseTo(y, 0);
+  }
+
+  for (const width of [1440, 390]) {
+    test(`new pages start at the top and history restores distinct entries at ${width}px`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 720 });
+      const { list } = await longList(page);
+      await page.goto(`/lists/${list.id}`);
+      await expect(page.locator(".gift-card")).toHaveCount(46);
+      const gift = page.locator(".gift-card").nth(15);
+      await gift.scrollIntoViewIfNeeded();
+      await page.evaluate(() => new Promise(requestAnimationFrame));
+      const first = await page.evaluate(() => scrollY);
+      expect(first).toBeGreaterThan(500);
+      await gift.click();
+      await expect(page).toHaveURL(/\/gift\//);
+      await expectScroll(page, 0);
+      await expect(page.getByRole("main")).toBeFocused();
+      // A link creates a second entry for the same list, starting at the top.
+      await page.getByRole("link", { name: "Back to wish list" }).click();
+      await expect(page.locator(".gift-card")).toHaveCount(46);
+      await expectScroll(page, 0);
+      await scroll(page, 500);
+      await page.locator('a[href="/people"]:visible').first().click();
+      await expect(page).toHaveURL(/\/people$/);
+      await expectScroll(page, 0);
+      await page.goBack();
+      await expectScroll(page, 500);
+      await page.goBack();
+      await expectScroll(page, 0);
+      await page.goBack();
+      await expectScroll(page, first);
+      await page.goForward();
+      await expectScroll(page, 0);
+      await page.goForward();
+      await expectScroll(page, 500);
+    });
+  }
+
+  test("mobile bottom navigation always opens the next destination at the top", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 720 });
+    await longList(page);
+    await page.goto("/");
+    const nav = page.locator(".mobile-nav");
+    await expect(nav).toBeVisible();
+    for (const name of ["People", "My lists", "Buying", "Exchanges", "Home"]) {
+      // Give each real page enough content to exercise a scrolled departure,
+      // including the otherwise short fixture's People and Buying pages.
+      await page.locator("main").evaluate((main) => {
+        main.style.minHeight = "2400px";
+      });
+      await scroll(page, 650);
+      await nav.getByRole("link", { name, exact: true }).click();
+      await expectScroll(page, 0);
+      await expect(page.getByRole("main")).toBeFocused();
+    }
+  });
+
+  test("settings query navigation resets and Back restores the prior section", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 720 });
+    await preview(page);
+    await page.goto("/settings?section=notifications");
+    await expect(page.locator(".notification-settings")).toBeVisible();
+    await scroll(page, 250);
+    // Native selection creates a normal router entry, without a separate reset.
+    await page
+      .getByLabel("Settings section", { exact: true })
+      .selectOption("profile");
+    await expectScroll(page, 0);
+    await page.goBack();
+    // Selecting the top-of-page control may scroll it into view first.
+    await expect(page.locator(".notification-settings")).toBeVisible();
+    await expectScroll(page, 250);
+  });
+
+  test("reload waits for delayed content and leaves later manual scrolling alone", async ({
+    page,
+  }) => {
+    const { list } = await longList(page);
+    await page.goto(`/lists/${list.id}`);
+    await expect(page.locator(".gift-card")).toHaveCount(46);
+    await scroll(page, 1100);
+    let release!: () => void;
+    const waiting = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await page.route("**/api/v1/world", async (route) => {
+      await waiting;
+      await route.fallback();
+    });
+    try {
+      await page.reload({ waitUntil: "domcontentloaded" });
+      await expect(
+        page.getByRole("status", { name: "Loading Little Hint" }),
+      ).toBeVisible();
+      release();
+      await expect(page.locator(".gift-card")).toHaveCount(46);
+      await expectScroll(page, 1100);
+      await page.mouse.wheel(0, 300);
+      await expect
+        .poll(() => page.evaluate(() => scrollY))
+        .toBeGreaterThan(1100);
+      const manual = await page.evaluate(() => scrollY);
+      await page
+        .locator("main")
+        .evaluate((main) => main.append(document.createElement("p")));
+      await expectScroll(page, manual);
+    } finally {
+      release();
+    }
+  });
+
+  test("fragment navigation focuses its target and missing targets allow manual scrolling", async ({
+    page,
+  }) => {
+    const { state, list, actor } = await longList(page);
+    const item = world(state, actor).items.find(
+      (gift) => gift.comments !== undefined,
+    )!;
+    for (let i = 0; i < 20; i++)
+      command(state, actor, "comments.create", {
+        itemId: item.id,
+        body: `Private note ${i + 1}`,
+      });
+    const note = world(state, actor)
+      .items.find((gift) => gift.id === item.id)!
+      .comments!.at(-1)!;
+    await page.goto(`/gift/${item.id}#note-${note.id}`);
+    await expect(page.locator(`#note-${note.id}`)).toBeFocused();
+    await expect(page.locator(`#note-${note.id}`)).toBeInViewport();
+    expect(await page.evaluate(() => scrollY)).toBeGreaterThan(0);
+    await page.goto(`/lists/${list.id}#missing-target`);
+    await expect(page.locator(".gift-card")).toHaveCount(46);
+    await page.mouse.wheel(0, 500);
+    await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(0);
+    const manual = await page.evaluate(() => scrollY);
+    // A late matching element must not hijack a viewport the user has moved.
+    await page.locator("main").evaluate((main) => {
+      const target = document.createElement("p");
+      target.id = "missing-target";
+      main.append(target);
+    });
+    await expectScroll(page, manual);
+  });
+
+  for (const interrupt of [false, true]) {
+    test(`Back to a delayed settings page ${interrupt ? "respects user scrolling" : "waits before restoring"}`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width: 390, height: 720 });
+      await preview(page);
+      await page.goto("/settings?section=notifications");
+      await expect(page.locator(".notification-settings")).toBeVisible();
+      await scroll(page, 300);
+      await page.locator('.mobile-nav a[href="/people"]').click();
+      await expect(page).toHaveURL(/\/people$/);
+      let release!: () => void;
+      const waiting = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      await page.route(
+        /\/(?:src\/client\/SettingsPage\.tsx|assets\/SettingsPage-[^/]+\.js)(?:\?.*)?$/,
+        async (route) => {
+          await waiting;
+          await route.continue();
+        },
+      );
+      try {
+        // Reload clears loaded module state while retaining this tab's history.
+        await page.reload();
+        await expect(
+          page.getByRole("heading", { name: "Your people", exact: true }),
+        ).toBeVisible();
+        await page.goBack();
+        await expect(
+          page.getByRole("heading", { name: "Loading page…" }),
+        ).toBeVisible();
+        if (interrupt) {
+          await page.mouse.wheel(0, 200);
+          await page.evaluate(() => new Promise(requestAnimationFrame));
+        }
+        release();
+        await expect(page.locator(".notification-settings")).toBeVisible();
+        await expectScroll(page, interrupt ? 0 : 300);
+      } finally {
+        release();
+      }
+    });
+  }
+
+  test("history works without session storage and skip links stay at main content", async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(window, "sessionStorage", {
+        get() {
+          throw new Error("Storage blocked");
+        },
+      });
+    });
+    const { list } = await longList(page);
+    await page.goto(`/lists/${list.id}`);
+    await expect(page.locator(".gift-card")).toHaveCount(46);
+    await scroll(page, 600);
+    await page.locator('a[href="/people"]:visible').first().click();
+    await page.goBack();
+    await expectScroll(page, 600);
+    await page.locator(".skip-link").focus();
+    await page.keyboard.press("Enter");
+    await expect(page.getByRole("main")).toBeFocused();
+    await expect(page.locator("main h1")).toBeInViewport();
+  });
+});

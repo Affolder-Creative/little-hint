@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-28T00:30:50.063501+00:00",
+  "generatedAt": "2026-10-28T00:46:31.671492+00:00",
   "title": "Design System: Little Hint",
   "extensions": {
     "colorMeta": {
@@ -911,7 +911,8 @@
       "src/client/Households.tsx",
       "src/client/Notifications.tsx",
       "src/client/GiftPreferences.tsx",
-      "src/client/GiftDiscovery.tsx"
+      "src/client/GiftDiscovery.tsx",
+      "src/client/NavigationScroll.tsx"
     ],
     "tonalRampNote": "Synthesized OKLCH previews at constant hue/chroma; these ramps are panel metadata, not additional application tokens.",
     "layout": {
@@ -919,7 +920,8 @@
       "mobileNavigation": "Fixed bottom navigation at z-index 40. Border-box ResizeObserver publishes --mobile-nav-height, including safe-area padding, and removes it on unmount.",
       "bottomClearance": "At 900px and below, shell padding-bottom and toast offset are measured navigation height + 16px; update banner offset equals navigation height. Desktop reserves no navigation space.",
       "forms": "minmax(0, 1fr) grid tracks; min-width: 0 on fields and controls; width/max-width: 100% on controls. Dialog overflow-y: auto and overflow-x: hidden. Native date controls retained.",
-      "settingsNavigation": "Local rail above 1100px; labeled selector at 1100px and below. Hidden sections stay mounted to preserve unsaved fields."
+      "settingsNavigation": "Local rail above 1100px; labeled selector at 1100px and below. Hidden sections stay mounted to preserve unsaved fields.",
+      "navigationScroll": "New history entries start at the top. POP restores per-entry coordinates; new fragment destinations scroll to and focus the target. Resize/mutation observation waits up to ten seconds for content, with cancellation on user input. Account-scoped tab session storage retains at most 100 entries across reloads; clearing personal data removes it."
     },
     "management": {
       "sorting": "Visible Sort by select. Personal collection order and viewer sorting persist per account; wish-list owners share item order.",

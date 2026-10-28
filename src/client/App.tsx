@@ -2,6 +2,7 @@ import { Invitations } from "./Invitations";
 import { OfferLinks } from "./OfferLinks";
 import { Action } from "./Action";
 import { PageBoundary } from "./PageBoundary";
+import { NavigationScroll } from "./NavigationScroll";
 import {
   GiftPreferenceOnboarding,
   GiftPreferencePrompt,
@@ -206,17 +207,6 @@ export function App() {
         subtree: true,
         characterData: true,
       });
-    main?.focus({ preventScroll: true });
-    if (
-      location.hash.startsWith("#note-") ||
-      location.hash.startsWith("#exchange-")
-    ) {
-      requestAnimationFrame(() => {
-        const target = document.getElementById(location.hash.slice(1));
-        target?.scrollIntoView({ block: "center" });
-        target?.focus({ preventScroll: true });
-      });
-    }
     return () => titles.disconnect();
   }, [location.pathname, location.search, location.hash, !!query.data]);
   const mutate = async <T = any,>(path: string, body: unknown): Promise<T> => {
@@ -285,6 +275,7 @@ export function App() {
         dark,
       }}
     >
+      <NavigationScroll key={world.me.id} account={world.me.id} />
       <PushLifecycle />
       <a className="skip-link" href="#main">
         Skip to content
