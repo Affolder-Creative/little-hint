@@ -58,9 +58,6 @@ export default function SettingsPage({
   )
     ? requestedSection!
     : "profile";
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: "instant" });
-  }, [section]);
   const selectedGroup =
     world.groups.find((g) => g.id === params.get("group")) ?? world.groups[0];
   const groupView = ["members", "households", "events"].includes(

@@ -46,6 +46,11 @@ export async function api<T = any>(
   }
 }
 export function clearPersonalData() {
+  try {
+    sessionStorage.removeItem("little-hint:scroll");
+  } catch {
+    // Session storage may be unavailable in restricted browser contexts.
+  }
   for (const k of Object.keys(localStorage))
     if (k.startsWith("little-hint:draft") || k === "little-hint:last-account")
       localStorage.removeItem(k);
