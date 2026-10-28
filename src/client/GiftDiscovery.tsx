@@ -1,7 +1,8 @@
+import { OfferLinks } from "./OfferLinks";
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ExternalLink, Shuffle } from "lucide-react";
+import { ArrowLeft, Shuffle } from "lucide-react";
 import { api, dollars } from "./api";
 import { Field, Form, Header } from "./components";
 import { useApp } from "./context";
@@ -731,24 +732,5 @@ function DiscoveryFlow({
         </p>
       )}
     </div>
-  );
-}
-export function OfferLinks({
-  candidate,
-}: {
-  candidate: Pick<GiftCandidate, "offers">;
-}) {
-  return (
-    <ul className="discovery-offers">
-      {candidate.offers.map((offer) => (
-        <li key={offer.url}>
-          <a href={offer.url} target="_blank" rel="noopener noreferrer">
-            {offer.retailer} · {dollars(offer.priceCents)}{" "}
-            <ExternalLink size={14} aria-hidden="true" />
-          </a>
-          <small>Checked {new Date(offer.checkedAt).toLocaleString()}</small>
-        </li>
-      ))}
-    </ul>
   );
 }

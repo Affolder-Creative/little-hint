@@ -12,6 +12,21 @@ test("static-only offline caching, private draft review, and sign-out cleanup", 
   await page.evaluate(async () => {
     await navigator.serviceWorker.ready;
   });
+  const initialCached = await page.evaluate(async () => {
+    const names = await caches.keys();
+    return (
+      await Promise.all(
+        names.map(async (name) =>
+          (await (await caches.open(name)).keys()).map(
+            (request) => request.url,
+          ),
+        ),
+      )
+    ).flat();
+  });
+  expect(
+    initialCached.some((url) => /\/(SettingsPage|GiftDiscovery)-/.test(url)),
+  ).toBe(false);
   await page.reload();
   await page.goto("/settings?section=device");
   await page
@@ -32,6 +47,8 @@ test("static-only offline caching, private draft review, and sign-out cleanup", 
     ).flat();
   });
   expect(cached).toContain("/");
+  expect(cached.some((p) => /\/SettingsPage-/.test(p))).toBe(true);
+  expect(cached.some((p) => /\/GiftDiscovery-/.test(p))).toBe(false);
   expect(cached.some((p) => p.startsWith("/api/"))).toBe(false);
   await context.setOffline(true);
   await page.reload();

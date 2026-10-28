@@ -770,6 +770,7 @@ test("secondary actions retain 44px touch targets on phones and desktop", async 
       await page.goto(route);
       await expect(page.locator("main h1")).toBeVisible();
       const targets = page.locator(selector).filter({ visible: true });
+      await expect(targets.first()).toBeVisible();
       expect(await targets.count()).toBeGreaterThan(0);
       for (const target of await targets.all()) {
         const box = await target.boundingBox();
@@ -3221,5 +3222,101 @@ test("Buying status controls fit narrow screens with doubled text", async ({
   await page.screenshot({
     path: testInfo.outputPath("buying-320-dark-large-text.png"),
     fullPage: true,
+  });
+});
+
+test.describe("deferred pages", () => {
+  test.use({ serviceWorkers: "block" });
+  test.skip(process.env.E2E_BUILT !== "1", "Requires production chunks.");
+
+  test("settings loads on demand without blocking navigation or losing page titles", async ({
+    page,
+  }, testInfo) => {
+    await preview(page);
+    const scripts: string[] = [];
+    page.on("request", (request) => {
+      if (request.resourceType() === "script") scripts.push(request.url());
+    });
+    let release!: () => void;
+    const waiting = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await page.route(/\/assets\/SettingsPage-[^/]+\.js$/, async (route) => {
+      await waiting;
+      await route.continue();
+    });
+    try {
+      await page.goto("/");
+      await expect(page.locator("main h1")).toBeVisible();
+      expect(
+        scripts.some((url) => /\/(SettingsPage|GiftDiscovery)-/.test(url)),
+      ).toBe(false);
+      await page.locator(".settings-link").click();
+      await expect(
+        page.getByRole("heading", { name: "Loading page…" }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("navigation", { name: "Main navigation" }),
+      ).toBeVisible();
+      await expect(page.getByRole("main")).toBeFocused();
+      for (const width of [1440, 390]) {
+        await page.setViewportSize({ width, height: 900 });
+        await page.screenshot({
+          path: testInfo.outputPath(`loading-${width}.png`),
+        });
+      }
+      release();
+      await expect(
+        page.getByRole("heading", { name: "Settings", exact: true }),
+      ).toBeVisible();
+      await expect(page).toHaveTitle("Settings · Little Hint");
+      await expect(page.getByRole("main")).toBeFocused();
+      expect(scripts.filter((url) => /\/SettingsPage-/.test(url))).toHaveLength(
+        1,
+      );
+      expect(scripts.some((url) => /\/GiftDiscovery-/.test(url))).toBe(false);
+    } finally {
+      release();
+    }
+  });
+
+  test("a failed page download keeps navigation usable and reload recovers", async ({
+    page,
+  }, testInfo) => {
+    await preview(page);
+    await page.route(/\/assets\/SettingsPage-[^/]+\.js$/, (route) =>
+      route.abort(),
+    );
+    await page.goto("/settings");
+    await expect(
+      page.getByRole("heading", { name: "This page couldn't load" }),
+    ).toBeVisible();
+    await expect(page).toHaveTitle("This page couldn't load · Little Hint");
+    for (const width of [1440, 390]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.screenshot({
+        path: testInfo.outputPath(`failed-${width}.png`),
+      });
+    }
+    expect(
+      (await new AxeBuilder({ page }).include("#main").analyze()).violations,
+    ).toEqual([]);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.getByRole("link", { name: "Back home", exact: true }).click();
+    await expect(page.locator("main h1")).not.toHaveText(
+      "This page couldn't load",
+    );
+    await page.locator(".settings-link").click();
+    await expect(
+      page.getByRole("heading", { name: "This page couldn't load" }),
+    ).toBeVisible();
+    await page.unroute(/\/assets\/SettingsPage-[^/]+\.js$/);
+    await page
+      .getByRole("button", { name: "Reload page", exact: true })
+      .click();
+    await expect(
+      page.getByRole("heading", { name: "Settings", exact: true }),
+    ).toBeVisible();
+    await expect(page).toHaveTitle("Settings · Little Hint");
   });
 });
