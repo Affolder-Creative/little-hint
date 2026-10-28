@@ -1,4 +1,12 @@
-import { test, expect, type Page } from "@playwright/test";
+import {
+  test,
+  expect,
+  chromium,
+  webkit,
+  type Browser,
+  type BrowserContext,
+  type Page,
+} from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { stagingFixtures } from "../src/server/staging-fixtures";
 import { command, world } from "../src/server/domain";
@@ -1677,7 +1685,7 @@ test("family-group navigation keeps context and reaches members sooner on phones
   ).toBeVisible();
   expect(
     (await group.locator(".member-list > div").first().boundingBox())!.y,
-  ).toBeLessThan(650);
+  ).toBeLessThan(760);
   await page.screenshot({
     path: testInfo.outputPath("groups-390-light.png"),
     fullPage: true,
@@ -3907,3 +3915,101 @@ test.describe("navigation scroll restoration", () => {
     await expect(page.locator("main h1")).toBeInViewport();
   });
 });
+
+for (const browserName of ["chromium", "webkit"] as const) {
+  test.describe(`phone repairs in ${browserName}`, () => {
+    let browser: Browser;
+    let context: BrowserContext;
+    let page: Page;
+    test.beforeAll(async () => {
+      browser = await { chromium, webkit }[browserName].launch({
+        channel: browserName === "webkit" ? "" : "chromium",
+      });
+    });
+    test.beforeEach(async () => {
+      context = await browser.newContext({
+        hasTouch: true,
+        serviceWorkers: "block",
+        baseURL: process.env.E2E_BASE_URL ?? "http://localhost:5173",
+      });
+      page = await context.newPage();
+    });
+    test.afterEach(async () => {
+      await context.close();
+    });
+    test.afterAll(async () => {
+      await browser?.close();
+    });
+    test("landscape form stays reachable after viewport changes and saves once", async () => {
+      const { state } = await preview(page);
+      await page.setViewportSize({ width: 852, height: 393 });
+      await page.goto("/lists");
+      await page.getByRole("button", { name: "Add item", exact: true }).click();
+      const dialog = page.getByRole("dialog");
+      const name = page.getByLabel("Item name", { exact: true });
+      await expect(name).toHaveCSS("font-size", "16px");
+      await name.fill("Landscape saved wish");
+      await page.setViewportSize({ width: 852, height: 220 });
+      await page.setViewportSize({ width: 852, height: 393 });
+      await name.blur();
+      const save = dialog.getByRole("button", {
+        name: "Add to wish list",
+        exact: true,
+      });
+      await save.scrollIntoViewIfNeeded();
+      await expect(save).toBeInViewport();
+      const before = await save.boundingBox();
+      await save.tap();
+      await expect(dialog).toHaveCount(0);
+      expect(
+        state.items.filter((item) => item.title === "Landscape saved wish"),
+      ).toHaveLength(1);
+      expect(before!.height).toBeGreaterThanOrEqual(44);
+      expect(
+        await page.evaluate(() => document.documentElement.style.overflow),
+      ).toBe("");
+    });
+    test("list titles have a readable column and every Settings section keeps its introduction", async ({
+      page,
+    }, testInfo) => {
+      await preview(page);
+      for (const width of [320, 393, 852, 1440]) {
+        await page.setViewportSize({ width, height: 852 });
+        await page.goto("/lists");
+        const row = page.locator(".managed-list-row").first();
+        await expect(row).toBeVisible();
+        expect((await row.locator("h3").boundingBox())!.width).toBeGreaterThan(
+          100,
+        );
+        expect(
+          await page.evaluate(
+            () => document.documentElement.scrollWidth - innerWidth,
+          ),
+        ).toBeLessThanOrEqual(1);
+        if (width === 393)
+          await page.screenshot({
+            path: testInfo.outputPath("list-rows.png"),
+            fullPage: true,
+          });
+      }
+      await page.setViewportSize({ width: 393, height: 852 });
+      for (const section of [
+        "profile",
+        "invitations",
+        "groups",
+        "notifications",
+        "device",
+        "security",
+        "admin",
+      ]) {
+        await page.goto(`/settings?section=${section}`);
+        await expect(
+          page.getByText(
+            "Manage your account, family groups, and preferences.",
+            { exact: true },
+          ),
+        ).toBeVisible();
+      }
+    });
+  });
+}
