@@ -668,6 +668,10 @@ test("spending guidelines stay advisory for purchases, shared gifts, and drawn e
         exact: true,
       })
       .click();
+    await buyer
+      .getByRole("group", { name: "Gift purchase status" })
+      .getByRole("button", { name: /^Purchased/ })
+      .click();
     await expect(
       buyer
         .locator(".buying-row")
