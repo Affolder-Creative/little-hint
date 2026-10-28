@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.8.1](https://github.com/Affolder-Creative/little-hint/compare/v0.8.0...v0.8.1) (2026-10-28)
+
+
+### Fixes
+
+* clarify notification settings ([#82](https://github.com/Affolder-Creative/little-hint/issues/82)) ([54d5598](https://github.com/Affolder-Creative/little-hint/commit/54d5598372329970100817bd9bb13a6909089ba2))
+* compact mobile list headers and keep Exchanges readable ([#89](https://github.com/Affolder-Creative/little-hint/issues/89)) ([209edc7](https://github.com/Affolder-Creative/little-hint/commit/209edc76cf06d146d8b9ecc29143c5b4c5d37181))
+* load settings and discovery on demand ([#85](https://github.com/Affolder-Creative/little-hint/issues/85)) ([d8d1e8e](https://github.com/Affolder-Creative/little-hint/commit/d8d1e8e4324e9c7eeb38f1fd73c994899e34f491))
+* preserve browsing state and keyboard focus on return ([#88](https://github.com/Affolder-Creative/little-hint/issues/88)) ([01bdd71](https://github.com/Affolder-Creative/little-hint/commit/01bdd716fb32122624612053c37dc5bed1979376))
+* preserve unfinished edits and make onboarding optional ([#79](https://github.com/Affolder-Creative/little-hint/issues/79)) ([2098ebe](https://github.com/Affolder-Creative/little-hint/commit/2098ebed285fc6b17bbeaee568b91c1d800ffe5d))
+* refresh design metadata and marketing scope ([#86](https://github.com/Affolder-Creative/little-hint/issues/86)) ([77324c3](https://github.com/Affolder-Creative/little-hint/commit/77324c3e26583a177d42695e6daf5d3cf98d3181))
+* restore navigation scroll positions ([#87](https://github.com/Affolder-Creative/little-hint/issues/87)) ([da7b3e7](https://github.com/Affolder-Creative/little-hint/commit/da7b3e72dfd3bade14e0239daafb2e86f7b11613))
+* separate unfinished and purchased gifts ([#84](https://github.com/Affolder-Creative/little-hint/issues/84)) ([0c05f49](https://github.com/Affolder-Creative/little-hint/commit/0c05f49a972b3062895d10d0a8d891ade71853a2))
+* show discovery titles after loading ([#83](https://github.com/Affolder-Creative/little-hint/issues/83)) ([07da507](https://github.com/Affolder-Creative/little-hint/commit/07da5078fbbbaefe614cffd052d10702f9366bb2))
+* simplify gift browsing ([#81](https://github.com/Affolder-Creative/little-hint/issues/81)) ([7fa240d](https://github.com/Affolder-Creative/little-hint/commit/7fa240de78c8e566f4c0845be39f618f8d38141d))
+
 ## [0.8.0](https://github.com/Affolder-Creative/little-hint/compare/v0.7.0...v0.8.0) (2026-10-27)
 
 
