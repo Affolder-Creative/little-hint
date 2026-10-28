@@ -2826,9 +2826,6 @@ main {
   font-size: 13px;
 }
 @media (max-width: 700px) {
-  .page-heading:has(+ .settings-layout[data-section="groups"]) > div > p {
-    display: none;
-  }
   .settings-layout[data-section="groups"] .settings-navigation {
     margin-bottom: 16px;
   }

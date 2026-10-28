@@ -179,7 +179,7 @@ test("mobile shell clears safe areas, resizing, and date dialogs", async ({
         .scrollIntoViewIfNeeded();
       if (width !== 1440) {
         expect(
-          await page.getByRole("dialog").evaluate((el) => el.scrollTop),
+          await page.getByRole("dialog").locator(".dialog-body:not([hidden])").evaluate((el) => el.scrollTop),
         ).toBeGreaterThan(0);
       }
       if (width === 320) {

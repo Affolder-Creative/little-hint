@@ -1,4 +1,6 @@
 import { priorityLabels } from "../shared/organization";
+import "./mobile-repairs.css";
+import { useDialogViewport } from "./useDialogViewport";
 import { actionError } from "./copy";
 import {
   useEffect,
@@ -126,6 +128,7 @@ export function Modal({
   onClose: () => void;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
+  useDialogViewport(ref);
   const [discarding, setDiscarding] = useState(false);
   const keepEditing = useRef<HTMLButtonElement>(null);
   const previousFocus = useRef<HTMLElement | null>(null);
