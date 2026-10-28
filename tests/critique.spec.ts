@@ -2536,7 +2536,8 @@ test("compact missing photos preserve mixed grids, real photos, and reading orde
   ]) {
     await page.goto(route);
     const cards = page.locator(".gift-card");
-    expect(await cards.count()).toBeGreaterThan(0);
+    // Navigation can finish before the world query renders the cards.
+    await expect(cards.first()).toBeVisible();
     await expect(cards.locator("img")).toHaveCount(0);
     for (const area of await cards.locator(".without-photo").all())
       expect((await area.boundingBox())!.height).toBeLessThanOrEqual(96);
