@@ -753,7 +753,10 @@ for (const method of ["arrows", "drag"] as const) {
       title: "Second wish",
     });
     await page.goto(`/lists/${list.id}`);
-    const original = await page.locator(".gift-card h3").allTextContents();
+    const titles = page.locator(".gift-card h3");
+    // allTextContents snapshots immediately; wait for the world query to render.
+    await expect(titles).toHaveCount(2);
+    const original = await titles.allTextContents();
     const open = page.getByRole("button", {
       name: "Reorder items",
       exact: true,
