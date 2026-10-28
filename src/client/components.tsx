@@ -441,7 +441,11 @@ export function GiftCard({
   sourceListName?: string;
 }) {
   return (
-    <Link className="gift-card" to={`/gift/${gift.id}`}>
+    <Link
+      className="gift-card"
+      to={`/gift/${gift.id}`}
+      data-navigation-focus={`gift-${gift.id}`}
+    >
       <GiftPhoto gift={gift} />
       <div className="gift-card-content">
         <div className="gift-recipient">
