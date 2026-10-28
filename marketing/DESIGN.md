@@ -10,6 +10,11 @@ colors:
   accent-hover: "#913e2c"
   blush: "#f4e4da"
   line: "#e6d9cf"
+  desktop-bezel: "#645c55"
+  window-bar: "#eee7df"
+  window-control: "#b6aaa0"
+  window-title: "#61544b"
+  phone-bezel: "#39322d"
 typography:
   display:
     fontFamily: "Fraunces, Georgia, serif"
@@ -38,9 +43,36 @@ typography:
     fontSize: "15px"
     fontWeight: 600
     lineHeight: 1.4
+  display-phone:
+    fontSize: "clamp(36px, 9.7vw, 54px)"
+  hero-description:
+    fontSize: "20px"
+  hero-description-phone:
+    fontSize: "17px"
+  section-description:
+    fontSize: "18px"
+  navigation:
+    fontSize: "14px"
+  footer:
+    fontSize: "13px"
+  caption:
+    fontSize: "12px"
+  caption-phone:
+    fontSize: "11px"
+  window-title:
+    fontSize: "10px"
+  title-phone:
+    fontSize: "25px"
+  self-host-title-phone:
+    fontSize: "33px"
 rounded:
   action: "8px"
   screen-detail: "12px"
+  focus: "3px"
+  desktop-frame: "15px"
+  phone-frame: "28px"
+  phone-frame-small: "27px"
+  window-control: "50%"
 spacing:
   compact: "12px"
   action-gap: "14px"
@@ -75,7 +107,7 @@ components:
 
 **Creative North Star: "See it together"**
 
-Copy follows the voice and terminology in `PRODUCT.md`. The headline is “Go ahead.
+Repository paths in this record are relative to the repository root. Copy follows the voice and terminology in `PRODUCT.md`. The headline is “Go ahead.
 Drop a hint.” Setup instructions explain self-hosting plainly. Screenshots and the
 social preview use the same vocabulary as the app.
 
@@ -92,7 +124,7 @@ Ivory backgrounds, sienna actions, blush sections, and Fraunces headings surroun
 
 ## Colors
 
-The palette combines warm neutrals with sienna actions and a blush feature band. Frontmatter records the exact CSS values.
+The palette combines warm neutrals with sienna actions and a blush feature band. Frontmatter records the exact CSS values, including the device-frame exceptions. Their selector scopes live in the sidecar and do not apply to app controls.
 
 ### Primary
 
@@ -114,6 +146,8 @@ The palette combines warm neutrals with sienna actions and a blush feature band.
 **The Fixed Light Rule.** Marketing retains its light palette; the application's dark theme does not propagate into this page.
 
 ## Typography
+
+Component and responsive roles in frontmatter describe the existing page. The sidecar records their selectors; device chrome and caption sizes stay local to those components.
 
 Fraunces, with Georgia and serif fallbacks, supplies every heading. Heading weight, tight tracking, balanced wrapping, and the `SOFT` 65 / `WONK` 1 variable settings remain consistent. The body and controls use the platform sans stack. The logo remains artwork rather than recreated type.
 

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-18T22:33:10.776226+00:00",
+  "generatedAt": "2026-10-28T00:31:57.849465+00:00",
   "title": "Design System: Little Hint marketing",
   "extensions": {
     "colorMeta": {
@@ -115,6 +115,86 @@
           "oklch(0.836 0.0198 60.15)",
           "oklch(0.950 0.0198 60.15)"
         ]
+      },
+      "desktop-bezel": {
+        "displayName": "Desktop bezel",
+        "role": "neutral",
+        "canonical": "#645c55",
+        "tonalRamp": [
+          "oklch(15.00% 0.01513 63.68)",
+          "oklch(26.43% 0.01513 63.68)",
+          "oklch(37.86% 0.01513 63.68)",
+          "oklch(49.29% 0.01513 63.68)",
+          "oklch(60.71% 0.01513 63.68)",
+          "oklch(72.14% 0.01513 63.68)",
+          "oklch(83.57% 0.01513 63.68)",
+          "oklch(95.00% 0.01513 63.68)"
+        ],
+        "purpose": ".desktop-window border"
+      },
+      "window-bar": {
+        "displayName": "Window bar",
+        "role": "neutral",
+        "canonical": "#eee7df",
+        "tonalRamp": [
+          "oklch(15.00% 0.01316 71.33)",
+          "oklch(26.43% 0.01316 71.33)",
+          "oklch(37.86% 0.01316 71.33)",
+          "oklch(49.29% 0.01316 71.33)",
+          "oklch(60.71% 0.01316 71.33)",
+          "oklch(72.14% 0.01316 71.33)",
+          "oklch(83.57% 0.01316 71.33)",
+          "oklch(95.00% 0.01316 71.33)"
+        ],
+        "purpose": ".window-bar background"
+      },
+      "window-control": {
+        "displayName": "Window control",
+        "role": "neutral",
+        "canonical": "#b6aaa0",
+        "tonalRamp": [
+          "oklch(15.00% 0.01984 62.36)",
+          "oklch(26.43% 0.01984 62.36)",
+          "oklch(37.86% 0.01984 62.36)",
+          "oklch(49.29% 0.01984 62.36)",
+          "oklch(60.71% 0.01984 62.36)",
+          "oklch(72.14% 0.01984 62.36)",
+          "oklch(83.57% 0.01984 62.36)",
+          "oklch(95.00% 0.01984 62.36)"
+        ],
+        "purpose": ".window-bar > span:not(.window-title) background"
+      },
+      "window-title": {
+        "displayName": "Window title",
+        "role": "neutral",
+        "canonical": "#61544b",
+        "tonalRamp": [
+          "oklch(15.00% 0.02240 56.80)",
+          "oklch(26.43% 0.02240 56.80)",
+          "oklch(37.86% 0.02240 56.80)",
+          "oklch(49.29% 0.02240 56.80)",
+          "oklch(60.71% 0.02240 56.80)",
+          "oklch(72.14% 0.02240 56.80)",
+          "oklch(83.57% 0.02240 56.80)",
+          "oklch(95.00% 0.02240 56.80)"
+        ],
+        "purpose": ".window-title color"
+      },
+      "phone-bezel": {
+        "displayName": "Phone bezel",
+        "role": "neutral",
+        "canonical": "#39322d",
+        "tonalRamp": [
+          "oklch(15.00% 0.01331 57.79)",
+          "oklch(26.43% 0.01331 57.79)",
+          "oklch(37.86% 0.01331 57.79)",
+          "oklch(49.29% 0.01331 57.79)",
+          "oklch(60.71% 0.01331 57.79)",
+          "oklch(72.14% 0.01331 57.79)",
+          "oklch(83.57% 0.01331 57.79)",
+          "oklch(95.00% 0.01331 57.79)"
+        ],
+        "purpose": ".mobile-window border"
       }
     },
     "typographyMeta": {
@@ -129,6 +209,50 @@
       "title": {
         "displayName": "Feature title",
         "purpose": "Compact feature titles."
+      },
+      "display-phone": {
+        "displayName": "Display phone",
+        "purpose": ".hero h1 at max-width 600px"
+      },
+      "hero-description": {
+        "displayName": "Hero description",
+        "purpose": ".hero-description; line-height 1.55"
+      },
+      "hero-description-phone": {
+        "displayName": "Hero description phone",
+        "purpose": ".hero-description at max-width 600px"
+      },
+      "section-description": {
+        "displayName": "Section description",
+        "purpose": ".section-description and phone .self-host .section-description"
+      },
+      "navigation": {
+        "displayName": "Navigation",
+        "purpose": "Header links, hero note, capabilities and text links"
+      },
+      "footer": {
+        "displayName": "Footer",
+        "purpose": "Footer and phone header links"
+      },
+      "caption": {
+        "displayName": "Caption",
+        "purpose": "Screenshot captions and notes; phone hero note and capabilities"
+      },
+      "caption-phone": {
+        "displayName": "Caption phone",
+        "purpose": ".product-preview figcaption at max-width 600px"
+      },
+      "window-title": {
+        "displayName": "Window title",
+        "purpose": ".window-title, illustrative browser chrome only"
+      },
+      "title-phone": {
+        "displayName": "Title phone",
+        "purpose": ".feature h3 at max-width 600px"
+      },
+      "self-host-title-phone": {
+        "displayName": "Self host title phone",
+        "purpose": ".self-host h2 at max-width 600px"
       }
     },
     "shadows": [
@@ -159,7 +283,29 @@
         "name": "phone",
         "value": "600px"
       }
-    ]
+    ],
+    "roundedMeta": {
+      "focus": {
+        "purpose": "a:focus-visible only"
+      },
+      "desktop-frame": {
+        "purpose": ".desktop-window only"
+      },
+      "phone-frame": {
+        "purpose": ".mobile-window only"
+      },
+      "phone-frame-small": {
+        "purpose": ".mobile-window at max-width 600px only"
+      },
+      "window-control": {
+        "purpose": ".window-bar > span:not(.window-title) only"
+      }
+    },
+    "sourceFiles": [
+      "marketing/index.html",
+      "marketing/style.css"
+    ],
+    "tonalRampNote": "Synthesized OKLCH previews at constant hue/chroma; these ramps are panel metadata, not additional marketing tokens."
   },
   "components": [
     {

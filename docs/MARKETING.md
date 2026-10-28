@@ -2,6 +2,8 @@
 
 The standalone static site is in `marketing/`. GitHub Pages publishes only that directory. It needs no application server, database, npm installation, or build step. The application deployment is unchanged.
 
+The current design record is [`marketing/DESIGN.md`](../marketing/DESIGN.md), with component samples and selector-specific metadata in [`marketing/.impeccable/design.json`](../marketing/.impeccable/design.json). Keeping these beside the page lets design tools resolve its fixed light palette and Fraunces headings separately from the application design. Concept explorations and historical reviews remain in `design/`.
+
 ## Preview and check
 
 ```sh

@@ -5,6 +5,7 @@ primary_target: "src/client/SettingsNavigation.tsx"
 related_targets:
   [
     "src/client/App.tsx",
+    "src/client/SettingsPage.tsx",
     "src/client/Households.tsx",
     "src/client/AccountInvitations.tsx",
   ]

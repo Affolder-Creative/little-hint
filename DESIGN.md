@@ -24,6 +24,32 @@ colors:
   dark-soft: "#49332b"
   dark-green: "#bdd0aa"
   dark-error: "#ffb1a2"
+  gift-placeholder: "#efe7dc"
+  gift-placeholder-ink: "#8b7164"
+  gift-placeholder-peach: "#f0e2d7"
+  gift-placeholder-sage: "#e8eadd"
+  gift-placeholder-sage-ink: "#677358"
+  gift-placeholder-rose: "#eee3e0"
+  gift-placeholder-rose-ink: "#906b68"
+  available: "#e9eddf"
+  avatar-peach: "#ead5c7"
+  avatar-peach-ink: "#754e3e"
+  avatar-sage: "#dfe5d4"
+  avatar-sage-ink: "#536149"
+  avatar-sand: "#eee0d4"
+  avatar-sand-ink: "#805841"
+  avatar-plum: "#e5dbe6"
+  avatar-plum-ink: "#6e526f"
+  dark-gift-placeholder: "#43372e"
+  dark-gift-placeholder-ink: "#ceb9a6"
+  dark-gift-placeholder-peach: "#50372e"
+  dark-gift-placeholder-sage: "#373d30"
+  dark-gift-placeholder-rose: "#44333c"
+  dark-available: "#36412f"
+  dark-available-ink: "#cfddbe"
+  dialog-shadow: "rgba(34, 20, 13, 0.25)"
+  dialog-backdrop: "rgba(35, 25, 20, 0.45)"
+  toast-shadow: "rgba(0, 0, 0, 0.16)"
 typography:
   headline:
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
@@ -55,6 +81,44 @@ typography:
     fontSize: '14px'
     fontWeight: 600
     lineHeight: 1.25
+  caption:
+    fontSize: "12px"
+  compact-label:
+    fontSize: "11px"
+  avatar-initial:
+    fontSize: "15px"
+  avatar-small-initial:
+    fontSize: "10px"
+  avatar-phone-initial:
+    fontSize: "8px"
+  row-title:
+    fontSize: "18px"
+  list-title:
+    fontSize: "19px"
+  panel-title:
+    fontSize: "20px"
+  section-phone:
+    fontSize: "21px"
+  empty-title:
+    fontSize: "25px"
+  empty-title-phone:
+    fontSize: "23px"
+  detail-title:
+    fontSize: "34px"
+  detail-title-phone:
+    fontSize: "29px"
+  page-title-tablet:
+    fontSize: "32px"
+  page-title-phone:
+    fontSize: "30px"
+  login-display:
+    fontSize: "clamp(36px, 4.5vw, 56px)"
+  login-display-tablet:
+    fontSize: "40px"
+  login-title:
+    fontSize: "26px"
+  login-code:
+    fontSize: "24px"
 rounded:
   badge: '4px'
   control: '8px'
@@ -62,6 +126,8 @@ rounded:
   image: '14px'
   dialog: '16px'
   avatar: '50%'
+  toast: "10px"
+  install-icon: "11px"
 spacing:
   compact: '8px'
   small: '12px'
@@ -132,7 +198,7 @@ The approved heart-tag artwork carries the brand. Its outlined Fraunces letterin
 
 ## Colors
 
-The palette uses warm neutrals for reading and sienna for actions. The frontmatter records the actual custom properties in `src/client/style.css`; `dark-` entries are the matching overrides under the dark theme selector.
+The palette uses warm neutrals for reading and sienna for actions. The frontmatter records the theme custom properties and component literals in `src/client/style.css`; `dark-` entries are the matching overrides under the dark theme selector. Component color purposes in the sidecar identify their selectors. Placeholder and avatar colors stay local to those components; shadow and backdrop colors stay local to their effects.
 
 ### Primary
 
@@ -140,7 +206,7 @@ Sienna `accent` identifies primary actions, text actions, selected tabs, and key
 
 ### Secondary
 
-Blush `soft` supports active navigation, notices, invitations, and installation guidance. `green` and `error` are semantic feedback colors, with readable dark-theme counterparts. Availability badges use their own muted green fill and text, recorded in the component sample.
+Blush `soft` supports active navigation, notices, invitations, and installation guidance. `green` and `error` are semantic feedback colors, with readable dark-theme counterparts. Availability badges use their own muted green fill and text, recorded as `available`, `dark-available`, and `dark-available-ink`. The light badge text uses `green`.
 
 ### Neutral
 
@@ -151,6 +217,8 @@ Editable fields use `control-border`, a stronger warm neutral with at least 3:1 
 **The semantic color rule.** Use the theme variables for interface text, controls, and backgrounds so light and dark modes preserve their roles.
 
 ## Typography
+
+Component and responsive type roles record existing CSS sizes. Their selector scopes live in `extensions.typographyMeta` in the sidecar. These are local exceptions, not interchangeable steps for new body copy. In particular, the 8px avatar initials accompany a readable recipient name.
 
 The approved logo has outlined Fraunces artwork. It does not require loading a web font. All interface text uses the system sans stack in the frontmatter, including page headings; this is the user-approved identity.
 
@@ -234,22 +302,7 @@ Transactional emails use a 560px maximum-width, table-based layout with inline s
 
 Browser favicons use the approved micro tag without a surrounding tile. The tag is sienna `#AA4D37` in light mode and blush `#F1BEAD` in dark mode; the heart is a transparent cutout. SVG and ICO links follow the app appearance setting, with a system-adaptive SVG before the app loads. Installed and Apple touch icons retain their platform-safe tiles. Regenerate favicon exports with `node scripts/build-favicons.mjs`.
 
-## Do's and Don'ts
-
-### Do:
-
-- Do use the approved horizontal or tagline artwork and its dark variant where the component supports it.
-- Do keep recipient, gift title, price, and visible availability together.
-- Do contain product images and show the labeled placeholder when an image is missing or fails.
-- Do keep the availability checkbox visible when filters wrap on small screens.
-- Do retain visible keyboard focus, named icon controls, reduced-motion behavior, and mobile safe-area padding.
-
-### Don't:
-
-- Don't reconstruct the logo lettering or substitute a display font for the approved artwork.
-- Don't add shadows to ordinary gift cards or list rows.
-- Don't use invented product photography or present demonstration fixtures as real gifts.
-- Don't rely on color alone to explain availability or list privacy.
+### Optional fields and settings
 
 Optional gift notes, price, quantity, tags and photos share a disclosure below the gift name and destination. Upload progress is announced and saving waits for the photo. Missing-photo placeholders stay compact across screen sizes. Notification delivery setup leads the page, with channel connection status and setup beside its checkbox. Push setup, topic customization, and preview privacy use native disclosures with summaries of their current choices. Collapsed controls remain mounted so saving preserves every selection, including disconnected channels. Notification and follow checkbox rows have 44px targets. Save feedback appears beside the form. Inherited follows name their source choices; person follows explain that the source depends on each wish list. Administration integrations use labeled task groups. Session rows identify this device where available, with readable browser names and expandable details. Loading and failure states never stand in for empty data.
 
@@ -266,3 +319,20 @@ Push titles identify the activity category, such as New invitation, Ownership re
 Use searchable, labeled checkbox categories with visible selection and 44px targets. Likes and things to avoid are optional; selected family groups form one audience for all preference fields. Name the audience in the sharing confirmation. Initial setup appears only on the first Home visit, with Skip for now before the interest fields. Navigation defers setup for the current signed-in visit without publishing unfinished preferences; direct links open their requested page. Explicit Skip persists the skipped state without saving unfinished fields. Preferences remain available in profile settings.
 
 Discovery uses existing typography, colors and open gift rows, with three result columns on desktop and one on narrow phones. Six results appear at a time; Show different ideas changes only the current batch. Keep new-search allowance text beside the explicit paid-search action. Product cards show checked shop prices and linked evidence. Selection editing and final confirmation are separate steps, with focus moved to the confirmation heading. Name destination lists, recipients and visibility before Confirm and add gifts. Prices exclude tax/shipping. Missing or rejected evidence produces an honest empty result, never a fabricated product card.
+
+## Do's and Don'ts
+
+### Do:
+
+- Do use the approved horizontal or tagline artwork and its dark variant where the component supports it.
+- Do keep recipient, gift title, price, and visible availability together.
+- Do contain product images and show the labeled placeholder when an image is missing or fails.
+- Do keep the availability checkbox visible when filters wrap on small screens.
+- Do retain visible keyboard focus, named icon controls, reduced-motion behavior, and mobile safe-area padding.
+
+### Don't:
+
+- Don't reconstruct the logo lettering or substitute a display font for the approved artwork.
+- Don't add shadows to ordinary gift cards or list rows.
+- Don't use invented product photography or present demonstration fixtures as real gifts.
+- Don't rely on color alone to explain availability or list privacy.
