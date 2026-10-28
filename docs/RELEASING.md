@@ -169,10 +169,14 @@ and image access are configured. See the [first-install checklist](DEPLOYMENT.md
 for secret generation, proxy routing, and acceptance checks. Then run:
 
 ```sh
-docker compose --env-file .env.production -f compose.yaml -f compose.ghcr.yaml up -d
-docker compose --env-file .env.production -f compose.yaml -f compose.ghcr.yaml exec app \
+docker compose --env-file .env.production -f compose.production.yaml up -d
+docker compose --env-file .env.production -f compose.production.yaml exec app \
   node dist/server/cli.js bootstrap you@example.com
 ```
+
+`compose.production.yaml` is standalone. Older bundles using `compose.yaml` plus
+`compose.ghcr.yaml` remain supported; use those files together when the standalone
+file is absent. Never merge the standalone file with them.
 
 Configure your HTTPS reverse proxy for app port 3000. For a local loopback port,
 add `-f compose.local.yaml`. Both services use the same image. Back up the database

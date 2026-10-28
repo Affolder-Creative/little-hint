@@ -30,8 +30,8 @@ Choose one installation path:
   download checksums. Private repositories and GHCR packages require access;
   repository visibility alone does not make a package public.
 - **Build from source:** clone the repository, enter its directory, and check out
-  the release tag you intend to install. Run the container deployment commands
-  in the [README](../README.md#container-deployment). The build uses Docker and
+  the release tag you intend to install. Follow the separate build and startup commands
+  in [operations](OPERATIONS.md#optional-source-build-installation). The build uses Docker and
   does not need your runtime secrets. Avoid tracking a moving development branch
   for an installation you rely on.
 
@@ -48,13 +48,14 @@ For either path:
    release bundle that defaults to `backup`. Enable the optional backup sidecar
    only after configuring its repository credentials and image access. You can
    use another backup system; both PostgreSQL and uploaded files need protection.
-3. Configure your HTTPS reverse proxy. `compose.yaml` exposes port 3000 only on
+3. Configure your HTTPS reverse proxy. `compose.production.yaml` exposes port 3000 only on
    the Docker network. A host-based proxy can use `compose.local.yaml`, which
    binds `127.0.0.1:${APP_PORT:-3000}`. Include the same Compose files in every
    startup, status, and bootstrap command. Do not publish the database port.
 4. Start the stack and wait for healthy app, worker, and database services.
-   Use `docker compose --env-file .env.production -f compose.yaml ps`, adding
-   the release and local-port overlays if you selected them. Investigate failed
+   Use `docker compose --env-file .env.production -f compose.production.yaml ps`,
+   adding the local-port overlay if selected. Use the legacy files instead when
+   following the optional source-build path. Investigate failed
    services before continuing; a healthy app alone does not verify email.
 5. Run the documented bootstrap command with your own email address. It creates
    an administrator invitation valid for 24 hours. Open your `APP_URL`, request
@@ -68,20 +69,24 @@ For either path:
 
 ## Coolify installation settings
 
-The settings below build from source. For published images and future staging or
-production upgrades, follow [Coolify release upgrades](COOLIFY_UPGRADES.md). That
-guide preserves the existing production Compose setup while using a verified
-organization release image.
+Use prebuilt registry images for both environments. Follow
+[Coolify release upgrades](COOLIFY_UPGRADES.md) for the existing production
+resource and [persistent staging](STAGING.md) for staging certificates and mail.
+Keep existing production database and uploads volume identities when transitioning.
 
-- Create a Little Hint project in your chosen Coolify team and select its production environment. Add descriptions that identify the app's purpose.
-- Connect your repository and select `main` or your intended release branch. Use the Compose build pack with `/compose.yaml`.
-- Set Custom Build Command to `docker compose --env-file /dev/null -f compose.build.yaml build`. Leave Custom Start Command empty. Build and run on the same Docker host.
+- Connect the repository using the Compose build pack in normal managed mode.
+- Use `/compose.production.yaml` for production or `/compose.staging.yaml` for staging. Each file is standalone.
+- Set Custom Build Command to `true` and leave Custom Start Command empty.
+- Set `LITTLE_HINT_IMAGE` or `LITTLE_HINT_STAGING_IMAGE` to a verified image digest; pin the configuration checkout to its reviewed commit.
 - Keep application variables Runtime-only in production and preview settings; the image build requires no deployment secrets.
-- Set `APP_URL` to your public HTTPS origin and route the app service's internal port 3000 through Coolify. Keep the database and worker private.
+- Set production `APP_URL` or staging `STAGING_APP_URL` to your public HTTPS origin and route the app service's internal port 3000 through Coolify. Keep the database and worker private.
 - Choose the first administrator's email. Bootstrap that account only after verifying SMTP delivery.
 - Use a dedicated sender alias on an existing verified SMTP domain if available. The email domain and app hostname can differ.
 - Store database, authentication, encryption, provider, and backup credentials as runtime secrets. Never include them in source or image build arguments.
-- Keep automatic deployment disabled until configuration and validation are accepted.
+- Keep automatic and preview deployments disabled. Promote releases manually after staging validation.
+
+Optional server-side source builds still use `/compose.yaml` with the separate
+[build command](OPERATIONS.md#optional-source-build-installation).
 
 ## Private operator record
 

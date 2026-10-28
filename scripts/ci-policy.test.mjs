@@ -71,7 +71,13 @@ for (const [description, files, expected] of [
   ["Docker", ["Dockerfile", ".dockerignore"], flags(["containers"])],
   [
     "Compose",
-    ["compose.yaml", "compose.ghcr.yaml", ".env.production.example"],
+    [
+      "compose.yaml",
+      "compose.production.yaml",
+      "compose.staging.yaml",
+      "compose.ghcr.yaml",
+      ".env.production.example",
+    ],
     flags(["containers"]),
   ],
   [

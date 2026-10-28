@@ -1,7 +1,7 @@
 # Coolify release upgrades
 
-This is the release promotion procedure used for v0.3.0. Publish once, verify the
-release in persistent staging, then deploy the same image digest to production.
+Publish once, verify the release in persistent staging, then deploy the same
+image digest to production.
 GitHub Actions publishes artifacts; Coolify deployments remain manual.
 
 | Purpose                                                       | Image                                                    |
@@ -113,39 +113,43 @@ resolve the failure before changing production.
 
 ## 4. Promote the same digest to production
 
-The existing production resource uses `/compose.yaml`. That file runs app and
-worker as `little-hint:local` with `pull_policy: never`. For this setup, a local
-alias points to the verified release image; no source compilation is needed.
+Use the existing production Coolify resource with `/compose.production.yaml`.
+This standalone file pulls `LITTLE_HINT_IMAGE` directly for both app and worker.
+It does not build or depend on the host-wide `little-hint:local` alias.
 
 1. Confirm staging passed, production backups are verified, and the **same**
-   release digest was pulled and inspected on the production Docker host.
-2. Set the repository to `Affolder-Creative/little-hint`, branch `main`, and commit
-   pin to the same release SHA. Keep Compose Location `/compose.yaml`.
-3. Replace Custom Build Command with this single command, substituting the digest:
+   release digest is accessible on the production Docker host.
+2. Pin the configuration checkout to the release SHA containing this file. Set
+   Compose Location to `/compose.production.yaml`, Custom Build Command to
+   `true`, and leave Custom Start Command empty. Use normal Coolify-managed
+   Compose mode, not Raw mode. Keep automatic and preview deployments disabled.
+3. Set Runtime-only `LITTLE_HINT_IMAGE` to the verified release digest from
+   `IMAGE.txt`. Keep `APP_URL` set to the exact public HTTPS origin, without the
+   internal port. Preserve all existing secrets, integration settings, backup
+   profile, domains, and destination.
+4. Before deploying, compare the generated Compose configuration and storage
+   mappings with the saved production record. Keep the **same existing resource**
+   and its actual database/uploads volumes. The source retains project name
+   `little-hint`, services `db`/`app`/`worker`, database and role `little_hint`,
+   volume keys `postgres18`/`uploads`, and the PostgreSQL mount `/var/lib/postgresql`.
+   These source names alone do not prove that Coolify retained its generated
+   volume names. If either actual volume identity differs, stop and resolve the
+   mapping before deploying. Do not create replacement volumes, seed, bootstrap
+   existing users again, or run `down --volumes`.
+5. Read back the saved settings, then deploy app and worker together through
+   Coolify. Verify the running image, existing users and settings, health, and
+   uploaded files using the checks below.
 
-   ```sh
-   docker tag ghcr.io/affolder-creative/little-hint@sha256:<INDEX_DIGEST> little-hint:local
-   ```
+For the first transition from `/compose.yaml`, record the previous custom build
+command and image identity before replacing them. The new settings remove the
+manual pull-and-retag dependency; subsequent upgrades change the digest and
+configuration commit together. Existing production users and configuration stay
+in the current database. Database migrations still run before app startup.
 
-4. Leave Custom Start Command empty so Coolify manages runtime Compose, proxy
-   labels and networking. Preserve runtime-only settings and existing storage.
-   Read back the settings, then deploy app and worker together through Coolify.
-5. Verify the running containers as below. Use read-only production smoke checks;
-   do not seed fixtures, create synthetic users or send test notifications to
-   real users as part of the upgrade.
-
-Perform the pull separately before deployment. Combining `docker pull` and
-`docker tag` with `&&` in the custom command failed to save on the Coolify instance
-used for v0.3.0; the single tag command succeeded. If the digest is absent from the
-correct Docker host, stop and pull it. Do not fall back to a source build or a
-moving tag. The alias is shared on that daemon, so do not concurrently retag
-`little-hint:local` for another application using it.
-
-For installations already using `compose.yaml` plus `compose.ghcr.yaml`, keep
-that arrangement and update `LITTLE_HINT_IMAGE` to the verified release digest.
-The [release-bundle commands](RELEASING.md#deploying-a-release) remain supported.
-Setting `LITTLE_HINT_IMAGE` alone has no effect on the existing production setup
-using only `/compose.yaml`.
+The local-build files and `compose.yaml` plus `compose.ghcr.yaml` remain supported
+for existing installations. Older release bundles without the standalone file
+must use their included definitions. Do not combine the standalone production
+file with either legacy production file or with staging.
 
 ## 5. Verify completion and retain rollback evidence
 
@@ -171,8 +175,8 @@ release until the next intentional staging test.
 
 If rollback is needed, first assess database and record-format compatibility.
 An image-only rollback does not reverse migrations. For a compatible rollback,
-restore the prior source pin and image setting or production tag command, then
-redeploy both app and worker. For incompatible data, stop writers and follow the
+restore the prior source pin and image setting or, for a legacy deployment,
+production tag command, then redeploy both app and worker. For incompatible data, stop writers and follow the
 [restore procedure](OPERATIONS.md#restore-procedure) using a compatible database
 and uploads backup. Restoring loses changes since the snapshot; reconcile them
 before reopening access. Never roll back automatically after a format change.

@@ -86,14 +86,24 @@ For illustrative fixtures on an **empty development database**, run `npm run dem
 
 ```sh
 cp .env.production.example .env.production
-# Fill database/auth/encryption secrets, exact APP_URL, and SMTP credentials.
-docker compose --env-file /dev/null -f compose.build.yaml build
-docker compose --env-file .env.production -f compose.yaml up -d --no-build
-docker compose --env-file .env.production exec app \
+# Fill LITTLE_HINT_IMAGE with a verified release digest, plus runtime settings.
+docker compose --env-file .env.production -f compose.production.yaml up -d
+docker compose --env-file .env.production -f compose.production.yaml exec app \
   node dist/server/cli.js bootstrap you@example.com
 ```
 
-`compose.build.yaml` builds the shared image without loading deployment settings. `compose.yaml` starts that image and validates the required runtime secrets. Keep these commands separate; do not combine the two files with multiple `-f` arguments.
+Use `/compose.production.yaml` for Coolify production and `/compose.staging.yaml`
+for staging. Both are standalone registry deployments. Set Custom Build Command
+to `true`, leave Custom Start Command empty, and configure runtime-only variables.
+Follow [Coolify release upgrades](docs/COOLIFY_UPGRADES.md) to preserve existing
+production data when switching files and to promote the same tested image digest.
+
+Optional local/source builds still use `compose.build.yaml` to build without
+runtime settings, then `compose.yaml` to run the image. Keep those commands
+separate; see [operations](docs/OPERATIONS.md#optional-source-build-installation).
+The existing `compose.ghcr.yaml` registry overlay remains supported with
+`compose.yaml`. Use `compose.local.yaml` only when a loopback host port is needed;
+`compose.preview.yaml` belongs to the preview launcher.
 
 `app` migrates before starting. `worker` waits for app health. Both use the same non-root image. The optional Housewatch Digital backup sidecar has its own image, credentials, health check, and schedules. The example leaves it disabled; configure a backup method and verify a restore before storing important data. PostgreSQL and uploads persist in separate volumes. Configure Coolify's domain/proxy for app port 3000, with HTTPS and your public origin as `APP_URL`, for example `https://littlehint.example.com`. See the operations guide for Coolify environment configuration, provider setup, and backups.
 

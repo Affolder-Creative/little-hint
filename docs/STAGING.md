@@ -31,7 +31,7 @@ Create SMTP certificates once on the staging host, using the checked-out script:
 sudo sh scripts/staging-tls.sh /data/little-hint-staging/tls
 ```
 
-Coolify rejects variable interpolation in bind-mount sources, so the Compose file uses the literal host path `/data/little-hint-staging/tls`. Use short volume syntax with `:ro` because this Coolify version drops `read_only` from long-form bind mounts. Create certificates there before loading the Compose file.
+The Coolify version used for the original staging setup rejected variable interpolation in bind-mount sources and dropped `read_only` from long-form bind mounts. The Compose file retains literal host paths under `/data/little-hint-staging/tls` and short volume syntax with `:ro` for compatibility. These are version-specific workarounds, not universal Compose restrictions. Create certificates there before loading the Compose file and verify read-only mounts in the generated configuration.
 
 The script refuses to overwrite an existing directory. It generates a private CA and a `mailpit` server certificate valid for one year. Only public `ca.crt` is mounted into app and worker through `NODE_EXTRA_CA_CERTS`; only Mailpit receives its server private key. The private CA key stays on the host. Preserve ownership and permissions when transferring these files. Mailpit's pinned image runs as UID 0 with all Linux capabilities dropped. Its private key must belong to host root and stay mode 0600. Running the script with `sudo` sets that ownership. When transferring certificates, verify `mailpit.key` is owned by `root:root`; a mode-0600 key owned by another user is unreadable even to container root.
 
@@ -39,7 +39,7 @@ Schedule certificate maintenance with your normal operations process. Before exp
 
 ## 3. Configure Coolify
 
-Create a `staging` environment in the existing project and a new Git-based Compose application on the staging server. Use `main` as the configuration source and `/compose.staging.yaml` as its Compose location. This is a **standalone** file; do not combine it with production Compose files. Set **Custom build command** to `true` and leave the custom start command empty. Coolify otherwise runs Compose during its build phase without runtime-only variables, which fails on the required secrets. The `true` command skips that unnecessary phase; normal startup receives the runtime variables and pulls missing images. There are no `build` services. Disable automatic deployments and preview deployments on this resource.
+Create a `staging` environment in the existing project and a new Git-based Compose application on the staging server. Use `main` as the configuration source and `/compose.staging.yaml` as its Compose location. Use normal Coolify-managed Compose mode, not Raw mode. This is a **standalone** file; do not combine it with production Compose files. Set **Custom build command** to `true` and leave the custom start command empty. Coolify otherwise runs Compose during its build phase without runtime-only variables, which fails on the required secrets. The `true` command skips that unnecessary phase; normal startup receives the runtime variables and pulls missing images. There are no `build` services. Disable automatic deployments and preview deployments on this resource.
 
 Set the variables from `.env.staging.example` as Runtime-only. Use fresh secrets:
 

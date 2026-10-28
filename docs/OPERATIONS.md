@@ -4,21 +4,40 @@ For feature testing with synthetic data, use the [isolated staging setup](STAGIN
 
 ## Coolify deployment
 
-For published images, follow [Coolify release upgrades](COOLIFY_UPGRADES.md). The
-compilation instructions below apply to installations that build from source;
-keep the release guide's tag command when using the existing production setup.
+Use the standalone `/compose.production.yaml` for production and
+`/compose.staging.yaml` for isolated staging. Both pull prebuilt registry images;
+app and worker use the same digest in each environment. Follow
+[Coolify release upgrades](COOLIFY_UPGRADES.md) for verification, promotion, and
+transitioning the existing production resource without replacing its database.
 
-Create a Little Hint project in your Coolify team and select its production environment. Connect your fork of `YOUR-ACCOUNT/little-hint` and the Compose build pack, with `/compose.yaml`. Set the app service domain to `https://littlehint.example.com:3000` in Coolify's Compose domain mapping. Port 3000 is internal; do not publish the database or worker. Coolify supplies HTTPS through its proxy. `APP_URL` must be `https://littlehint.example.com`, without the port.
+Connect the repository with the Compose build pack in normal Coolify-managed
+mode. Set **Custom Build Command** to `true` and leave **Custom Start Command**
+empty. There are no images to build, and skipping the build phase keeps required
+runtime secrets out of build-time Compose parsing. Keep automatic and preview
+deployments disabled. Configure Runtime-only variables from the matching example
+file, including `LITTLE_HINT_IMAGE` for production or `LITTLE_HINT_STAGING_IMAGE`
+for staging. Use a verified digest, not a moving tag.
 
-### Separate image compilation from runtime configuration
+Set the production app service domain to `https://littlehint.example.com:3000`.
+Coolify supplies HTTPS through its proxy; port 3000 is an internal routing target.
+`APP_URL` must be `https://littlehint.example.com`, without that port. Database and
+worker remain private. Staging also routes a separate authenticated Mailpit domain
+to port 8025; follow its [certificate and setup instructions](STAGING.md).
 
-Keep Docker Compose Location set to `/compose.yaml`. Set Coolify's **Custom Build Command** to:
+These settings use [Coolify's standard Compose deployment](https://coolify.io/docs/applications/builds/docker-compose).
+Review its generated configuration before deployment, especially persistent volume
+identities when changing an existing resource's Compose location.
+
+### Optional source-build installation
+
+For installations intentionally building on the deployment server, keep Docker
+Compose Location set to `/compose.yaml`. Set Coolify's **Custom Build Command** to:
 
 ```sh
 docker compose --env-file /dev/null -f compose.build.yaml build
 ```
 
-Leave Custom Start Command empty so Coolify starts its generated runtime Compose file with the correct domains, labels, networking, and environment. The build file only produces `little-hint:local`; both runtime services use that image with `pull_policy: never`. Build and run on the same Docker host. For registry deployment, use the GHCR overlay and digest-pinned release bundle described in [releasing](RELEASING.md). The local-build commands in this guide remain supported.
+Leave Custom Start Command empty so Coolify starts its generated runtime Compose file with the correct domains, labels, networking, and environment. The build file only produces `little-hint:local`; both runtime services use that image with `pull_policy: never`. Build and run on the same Docker host. For registry deployment, use the standalone production file and digest-pinned release bundle described in [releasing](RELEASING.md). The local-build commands in this guide remain supported.
 
 Set application configuration variables to **Buildtime off, Runtime on**, in production and any preview configuration. This includes database/authentication/encryption secrets, SMTP, notification/import providers, and backups. Coolify-generated URL variables can stay managed by Coolify. The build file has no build arguments, env files, runtime services, or deployment secret references. `/dev/null` prevents Compose from loading a local `.env` while building.
 
@@ -26,7 +45,15 @@ Do not use the runtime file for the build command: Compose evaluates `${VARIABLE
 
 Set runtime environment variables from `.env.production.example`. Generate a random database password and authentication secret, and a 32-byte base64 `SETTINGS_ENCRYPTION_KEY`. Keep these in Coolify's secret environment configuration and an independent password manager. Do not expose them as build arguments. App and worker use the same image. PostgreSQL 18 persists under `/var/lib/postgresql`; do not mount a PostgreSQL 17 data directory there. Major upgrades require dump/restore or a planned PostgreSQL upgrade.
 
-The app applies versioned migrations before it starts. The worker waits for app health, then starts the durable pg-boss queues. `/api/health` checks database connectivity. App and worker health checks run inside their containers. For local Compose access only, add `-f compose.local.yaml` after `-f compose.yaml` to bind localhost port 3000 or `APP_PORT`.
+For source builds outside Coolify, start the built image separately:
+
+```sh
+docker compose --env-file .env.production -f compose.yaml up -d --no-build
+```
+
+### Runtime operations
+
+The app applies versioned migrations before it starts. The worker waits for app health, then starts the durable pg-boss queues. `/api/health` checks database connectivity. App and worker health checks run inside their containers. For local Compose access only, add `-f compose.local.yaml` after your selected production Compose file to bind localhost port 3000 or `APP_PORT`.
 
 Bootstrap the first administrator only after SMTP works, using the app container terminal:
 
@@ -174,7 +201,6 @@ Owners and their existing profile guardians can open Gift summary after the reve
 ## Passkey labels
 
 Add a passkey in Settings and choose a label such as `1Password` or `Work laptop`. Use Rename to change an existing label without registering another credential. Labels identify credentials inside Little Hint; they do not rename the password manager's vault item. Little Hint already supplies its service name and page title. Some password managers derive their item title from the site's parent domain instead, so rename that item in the password manager when needed. Existing passkeys and their domain binding are unchanged.
-
 
 ## Product cache and thumbnails
 
