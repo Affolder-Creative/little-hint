@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-27T15:33:00.801Z",
+  "generatedAt": "2026-10-28T00:30:50.063501+00:00",
   "title": "Design System: Little Hint",
   "extensions": {
     "colorMeta": {
@@ -333,6 +333,422 @@
         ],
         "role": "neutral",
         "displayName": "Dark Control Border"
+      },
+      "gift-placeholder": {
+        "displayName": "Gift placeholder",
+        "role": "neutral",
+        "canonical": "#efe7dc",
+        "tonalRamp": [
+          "oklch(15.00% 0.01709 76.11)",
+          "oklch(26.43% 0.01709 76.11)",
+          "oklch(37.86% 0.01709 76.11)",
+          "oklch(49.29% 0.01709 76.11)",
+          "oklch(60.71% 0.01709 76.11)",
+          "oklch(72.14% 0.01709 76.11)",
+          "oklch(83.57% 0.01709 76.11)",
+          "oklch(95.00% 0.01709 76.11)"
+        ],
+        "purpose": ".gift-photo background"
+      },
+      "gift-placeholder-ink": {
+        "displayName": "Gift placeholder ink",
+        "role": "neutral",
+        "canonical": "#8b7164",
+        "tonalRamp": [
+          "oklch(15.00% 0.03836 48.03)",
+          "oklch(26.43% 0.03836 48.03)",
+          "oklch(37.86% 0.03836 48.03)",
+          "oklch(49.29% 0.03836 48.03)",
+          "oklch(60.71% 0.03836 48.03)",
+          "oklch(72.14% 0.03836 48.03)",
+          "oklch(83.57% 0.03836 48.03)",
+          "oklch(95.00% 0.03836 48.03)"
+        ],
+        "purpose": ".gift-photo color"
+      },
+      "gift-placeholder-peach": {
+        "displayName": "Gift placeholder peach",
+        "role": "neutral",
+        "canonical": "#f0e2d7",
+        "tonalRamp": [
+          "oklch(15.00% 0.02134 60.73)",
+          "oklch(26.43% 0.02134 60.73)",
+          "oklch(37.86% 0.02134 60.73)",
+          "oklch(49.29% 0.02134 60.73)",
+          "oklch(60.71% 0.02134 60.73)",
+          "oklch(72.14% 0.02134 60.73)",
+          "oklch(83.57% 0.02134 60.73)",
+          "oklch(95.00% 0.02134 60.73)"
+        ],
+        "purpose": ".photo-1 background"
+      },
+      "gift-placeholder-sage": {
+        "displayName": "Gift placeholder sage",
+        "role": "neutral",
+        "canonical": "#e8eadd",
+        "tonalRamp": [
+          "oklch(15.00% 0.01742 113.83)",
+          "oklch(26.43% 0.01742 113.83)",
+          "oklch(37.86% 0.01742 113.83)",
+          "oklch(49.29% 0.01742 113.83)",
+          "oklch(60.71% 0.01742 113.83)",
+          "oklch(72.14% 0.01742 113.83)",
+          "oklch(83.57% 0.01742 113.83)",
+          "oklch(95.00% 0.01742 113.83)"
+        ],
+        "purpose": ".photo-2 background"
+      },
+      "gift-placeholder-sage-ink": {
+        "displayName": "Gift placeholder sage ink",
+        "role": "neutral",
+        "canonical": "#677358",
+        "tonalRamp": [
+          "oklch(15.00% 0.04318 127.29)",
+          "oklch(26.43% 0.04318 127.29)",
+          "oklch(37.86% 0.04318 127.29)",
+          "oklch(49.29% 0.04318 127.29)",
+          "oklch(60.71% 0.04318 127.29)",
+          "oklch(72.14% 0.04318 127.29)",
+          "oklch(83.57% 0.04318 127.29)",
+          "oklch(95.00% 0.04318 127.29)"
+        ],
+        "purpose": ".photo-2 color"
+      },
+      "gift-placeholder-rose": {
+        "displayName": "Gift placeholder rose",
+        "role": "neutral",
+        "canonical": "#eee3e0",
+        "tonalRamp": [
+          "oklch(15.00% 0.01272 35.73)",
+          "oklch(26.43% 0.01272 35.73)",
+          "oklch(37.86% 0.01272 35.73)",
+          "oklch(49.29% 0.01272 35.73)",
+          "oklch(60.71% 0.01272 35.73)",
+          "oklch(72.14% 0.01272 35.73)",
+          "oklch(83.57% 0.01272 35.73)",
+          "oklch(95.00% 0.01272 35.73)"
+        ],
+        "purpose": ".photo-3 background"
+      },
+      "gift-placeholder-rose-ink": {
+        "displayName": "Gift placeholder rose ink",
+        "role": "neutral",
+        "canonical": "#906b68",
+        "tonalRamp": [
+          "oklch(15.00% 0.04787 23.98)",
+          "oklch(26.43% 0.04787 23.98)",
+          "oklch(37.86% 0.04787 23.98)",
+          "oklch(49.29% 0.04787 23.98)",
+          "oklch(60.71% 0.04787 23.98)",
+          "oklch(72.14% 0.04787 23.98)",
+          "oklch(83.57% 0.04787 23.98)",
+          "oklch(95.00% 0.04787 23.98)"
+        ],
+        "purpose": ".photo-3 color"
+      },
+      "available": {
+        "displayName": "Available",
+        "role": "neutral",
+        "canonical": "#e9eddf",
+        "tonalRamp": [
+          "oklch(15.00% 0.01906 119.76)",
+          "oklch(26.43% 0.01906 119.76)",
+          "oklch(37.86% 0.01906 119.76)",
+          "oklch(49.29% 0.01906 119.76)",
+          "oklch(60.71% 0.01906 119.76)",
+          "oklch(72.14% 0.01906 119.76)",
+          "oklch(83.57% 0.01906 119.76)",
+          "oklch(95.00% 0.01906 119.76)"
+        ],
+        "purpose": ".status.available background; text uses green"
+      },
+      "avatar-peach": {
+        "displayName": "Avatar peach",
+        "role": "neutral",
+        "canonical": "#ead5c7",
+        "tonalRamp": [
+          "oklch(15.00% 0.03016 55.97)",
+          "oklch(26.43% 0.03016 55.97)",
+          "oklch(37.86% 0.03016 55.97)",
+          "oklch(49.29% 0.03016 55.97)",
+          "oklch(60.71% 0.03016 55.97)",
+          "oklch(72.14% 0.03016 55.97)",
+          "oklch(83.57% 0.03016 55.97)",
+          "oklch(95.00% 0.03016 55.97)"
+        ],
+        "purpose": ".avatar background"
+      },
+      "avatar-peach-ink": {
+        "displayName": "Avatar peach ink",
+        "role": "neutral",
+        "canonical": "#754e3e",
+        "tonalRamp": [
+          "oklch(15.00% 0.05880 43.13)",
+          "oklch(26.43% 0.05880 43.13)",
+          "oklch(37.86% 0.05880 43.13)",
+          "oklch(49.29% 0.05880 43.13)",
+          "oklch(60.71% 0.05880 43.13)",
+          "oklch(72.14% 0.05880 43.13)",
+          "oklch(83.57% 0.05880 43.13)",
+          "oklch(95.00% 0.05880 43.13)"
+        ],
+        "purpose": ".avatar color"
+      },
+      "avatar-sage": {
+        "displayName": "Avatar sage",
+        "role": "neutral",
+        "canonical": "#dfe5d4",
+        "tonalRamp": [
+          "oklch(15.00% 0.02360 122.75)",
+          "oklch(26.43% 0.02360 122.75)",
+          "oklch(37.86% 0.02360 122.75)",
+          "oklch(49.29% 0.02360 122.75)",
+          "oklch(60.71% 0.02360 122.75)",
+          "oklch(72.14% 0.02360 122.75)",
+          "oklch(83.57% 0.02360 122.75)",
+          "oklch(95.00% 0.02360 122.75)"
+        ],
+        "purpose": ".avatar.color-1 background"
+      },
+      "avatar-sage-ink": {
+        "displayName": "Avatar sage ink",
+        "role": "neutral",
+        "canonical": "#536149",
+        "tonalRamp": [
+          "oklch(15.00% 0.04128 132.48)",
+          "oklch(26.43% 0.04128 132.48)",
+          "oklch(37.86% 0.04128 132.48)",
+          "oklch(49.29% 0.04128 132.48)",
+          "oklch(60.71% 0.04128 132.48)",
+          "oklch(72.14% 0.04128 132.48)",
+          "oklch(83.57% 0.04128 132.48)",
+          "oklch(95.00% 0.04128 132.48)"
+        ],
+        "purpose": ".avatar.color-1 color"
+      },
+      "avatar-sand": {
+        "displayName": "Avatar sand",
+        "role": "neutral",
+        "canonical": "#eee0d4",
+        "tonalRamp": [
+          "oklch(15.00% 0.02231 63.19)",
+          "oklch(26.43% 0.02231 63.19)",
+          "oklch(37.86% 0.02231 63.19)",
+          "oklch(49.29% 0.02231 63.19)",
+          "oklch(60.71% 0.02231 63.19)",
+          "oklch(72.14% 0.02231 63.19)",
+          "oklch(83.57% 0.02231 63.19)",
+          "oklch(95.00% 0.02231 63.19)"
+        ],
+        "purpose": ".avatar.color-2 background"
+      },
+      "avatar-sand-ink": {
+        "displayName": "Avatar sand ink",
+        "role": "neutral",
+        "canonical": "#805841",
+        "tonalRamp": [
+          "oklch(15.00% 0.06349 50.68)",
+          "oklch(26.43% 0.06349 50.68)",
+          "oklch(37.86% 0.06349 50.68)",
+          "oklch(49.29% 0.06349 50.68)",
+          "oklch(60.71% 0.06349 50.68)",
+          "oklch(72.14% 0.06349 50.68)",
+          "oklch(83.57% 0.06349 50.68)",
+          "oklch(95.00% 0.06349 50.68)"
+        ],
+        "purpose": ".avatar.color-2 color"
+      },
+      "avatar-plum": {
+        "displayName": "Avatar plum",
+        "role": "neutral",
+        "canonical": "#e5dbe6",
+        "tonalRamp": [
+          "oklch(15.00% 0.01828 322.99)",
+          "oklch(26.43% 0.01828 322.99)",
+          "oklch(37.86% 0.01828 322.99)",
+          "oklch(49.29% 0.01828 322.99)",
+          "oklch(60.71% 0.01828 322.99)",
+          "oklch(72.14% 0.01828 322.99)",
+          "oklch(83.57% 0.01828 322.99)",
+          "oklch(95.00% 0.01828 322.99)"
+        ],
+        "purpose": ".avatar.color-3 background"
+      },
+      "avatar-plum-ink": {
+        "displayName": "Avatar plum ink",
+        "role": "neutral",
+        "canonical": "#6e526f",
+        "tonalRamp": [
+          "oklch(15.00% 0.05732 325.30)",
+          "oklch(26.43% 0.05732 325.30)",
+          "oklch(37.86% 0.05732 325.30)",
+          "oklch(49.29% 0.05732 325.30)",
+          "oklch(60.71% 0.05732 325.30)",
+          "oklch(72.14% 0.05732 325.30)",
+          "oklch(83.57% 0.05732 325.30)",
+          "oklch(95.00% 0.05732 325.30)"
+        ],
+        "purpose": ".avatar.color-3 color"
+      },
+      "dark-gift-placeholder": {
+        "displayName": "Dark gift placeholder",
+        "role": "neutral",
+        "canonical": "#43372e",
+        "tonalRamp": [
+          "oklch(15.00% 0.02288 58.78)",
+          "oklch(26.43% 0.02288 58.78)",
+          "oklch(37.86% 0.02288 58.78)",
+          "oklch(49.29% 0.02288 58.78)",
+          "oklch(60.71% 0.02288 58.78)",
+          "oklch(72.14% 0.02288 58.78)",
+          "oklch(83.57% 0.02288 58.78)",
+          "oklch(95.00% 0.02288 58.78)"
+        ],
+        "purpose": "[data-theme=\"dark\"] .gift-photo background"
+      },
+      "dark-gift-placeholder-ink": {
+        "displayName": "Dark gift placeholder ink",
+        "role": "neutral",
+        "canonical": "#ceb9a6",
+        "tonalRamp": [
+          "oklch(15.00% 0.03557 64.44)",
+          "oklch(26.43% 0.03557 64.44)",
+          "oklch(37.86% 0.03557 64.44)",
+          "oklch(49.29% 0.03557 64.44)",
+          "oklch(60.71% 0.03557 64.44)",
+          "oklch(72.14% 0.03557 64.44)",
+          "oklch(83.57% 0.03557 64.44)",
+          "oklch(95.00% 0.03557 64.44)"
+        ],
+        "purpose": "[data-theme=\"dark\"] .gift-photo color"
+      },
+      "dark-gift-placeholder-peach": {
+        "displayName": "Dark gift placeholder peach",
+        "role": "neutral",
+        "canonical": "#50372e",
+        "tonalRamp": [
+          "oklch(15.00% 0.03920 40.64)",
+          "oklch(26.43% 0.03920 40.64)",
+          "oklch(37.86% 0.03920 40.64)",
+          "oklch(49.29% 0.03920 40.64)",
+          "oklch(60.71% 0.03920 40.64)",
+          "oklch(72.14% 0.03920 40.64)",
+          "oklch(83.57% 0.03920 40.64)",
+          "oklch(95.00% 0.03920 40.64)"
+        ],
+        "purpose": "[data-theme=\"dark\"] .photo-1 background"
+      },
+      "dark-gift-placeholder-sage": {
+        "displayName": "Dark gift placeholder sage",
+        "role": "neutral",
+        "canonical": "#373d30",
+        "tonalRamp": [
+          "oklch(15.00% 0.02335 127.76)",
+          "oklch(26.43% 0.02335 127.76)",
+          "oklch(37.86% 0.02335 127.76)",
+          "oklch(49.29% 0.02335 127.76)",
+          "oklch(60.71% 0.02335 127.76)",
+          "oklch(72.14% 0.02335 127.76)",
+          "oklch(83.57% 0.02335 127.76)",
+          "oklch(95.00% 0.02335 127.76)"
+        ],
+        "purpose": "[data-theme=\"dark\"] .photo-2 background"
+      },
+      "dark-gift-placeholder-rose": {
+        "displayName": "Dark gift placeholder rose",
+        "role": "neutral",
+        "canonical": "#44333c",
+        "tonalRamp": [
+          "oklch(15.00% 0.02840 345.62)",
+          "oklch(26.43% 0.02840 345.62)",
+          "oklch(37.86% 0.02840 345.62)",
+          "oklch(49.29% 0.02840 345.62)",
+          "oklch(60.71% 0.02840 345.62)",
+          "oklch(72.14% 0.02840 345.62)",
+          "oklch(83.57% 0.02840 345.62)",
+          "oklch(95.00% 0.02840 345.62)"
+        ],
+        "purpose": "[data-theme=\"dark\"] .photo-3 background"
+      },
+      "dark-available": {
+        "displayName": "Dark available",
+        "role": "neutral",
+        "canonical": "#36412f",
+        "tonalRamp": [
+          "oklch(15.00% 0.03342 133.49)",
+          "oklch(26.43% 0.03342 133.49)",
+          "oklch(37.86% 0.03342 133.49)",
+          "oklch(49.29% 0.03342 133.49)",
+          "oklch(60.71% 0.03342 133.49)",
+          "oklch(72.14% 0.03342 133.49)",
+          "oklch(83.57% 0.03342 133.49)",
+          "oklch(95.00% 0.03342 133.49)"
+        ],
+        "purpose": "[data-theme=\"dark\"] .status.available background"
+      },
+      "dark-available-ink": {
+        "displayName": "Dark available ink",
+        "role": "neutral",
+        "canonical": "#cfddbe",
+        "tonalRamp": [
+          "oklch(15.00% 0.04428 127.15)",
+          "oklch(26.43% 0.04428 127.15)",
+          "oklch(37.86% 0.04428 127.15)",
+          "oklch(49.29% 0.04428 127.15)",
+          "oklch(60.71% 0.04428 127.15)",
+          "oklch(72.14% 0.04428 127.15)",
+          "oklch(83.57% 0.04428 127.15)",
+          "oklch(95.00% 0.04428 127.15)"
+        ],
+        "purpose": "[data-theme=\"dark\"] .status.available color"
+      },
+      "dialog-shadow": {
+        "displayName": "Dialog shadow",
+        "role": "neutral",
+        "canonical": "rgba(34, 20, 13, 0.25)",
+        "tonalRamp": [
+          "oklch(15.00% 0.02674 47.37)",
+          "oklch(26.43% 0.02674 47.37)",
+          "oklch(37.86% 0.02674 47.37)",
+          "oklch(49.29% 0.02674 47.37)",
+          "oklch(60.71% 0.02674 47.37)",
+          "oklch(72.14% 0.02674 47.37)",
+          "oklch(83.57% 0.02674 47.37)",
+          "oklch(95.00% 0.02674 47.37)"
+        ],
+        "purpose": "dialog shadow only"
+      },
+      "dialog-backdrop": {
+        "displayName": "Dialog backdrop",
+        "role": "neutral",
+        "canonical": "rgba(35, 25, 20, 0.45)",
+        "tonalRamp": [
+          "oklch(15.00% 0.01869 47.87)",
+          "oklch(26.43% 0.01869 47.87)",
+          "oklch(37.86% 0.01869 47.87)",
+          "oklch(49.29% 0.01869 47.87)",
+          "oklch(60.71% 0.01869 47.87)",
+          "oklch(72.14% 0.01869 47.87)",
+          "oklch(83.57% 0.01869 47.87)",
+          "oklch(95.00% 0.01869 47.87)"
+        ],
+        "purpose": "dialog::backdrop only"
+      },
+      "toast-shadow": {
+        "displayName": "Toast shadow",
+        "role": "neutral",
+        "canonical": "rgba(0, 0, 0, 0.16)",
+        "tonalRamp": [
+          "oklch(15.00% 0.00000 0.00)",
+          "oklch(26.43% 0.00000 0.00)",
+          "oklch(37.86% 0.00000 0.00)",
+          "oklch(49.29% 0.00000 0.00)",
+          "oklch(60.71% 0.00000 0.00)",
+          "oklch(72.14% 0.00000 0.00)",
+          "oklch(83.57% 0.00000 0.00)",
+          "oklch(95.00% 0.00000 0.00)"
+        ],
+        "purpose": ".toast shadow only"
       }
     },
     "typographyMeta": {
@@ -343,6 +759,82 @@
       "gift-title": {
         "displayName": "Gift title",
         "purpose": "Primary gift-card label."
+      },
+      "caption": {
+        "displayName": "Caption",
+        "purpose": "small, supporting copy, item priority; small uses line-height 1.5"
+      },
+      "compact-label": {
+        "displayName": "Compact label",
+        "purpose": "Gift recipients, tags, status, privacy, mobile navigation and notification counts"
+      },
+      "avatar-initial": {
+        "displayName": "Avatar initial",
+        "purpose": ".avatar initials"
+      },
+      "avatar-small-initial": {
+        "displayName": "Avatar small initial",
+        "purpose": ".avatar.small initials; also demo banner and phone footer"
+      },
+      "avatar-phone-initial": {
+        "displayName": "Avatar phone initial",
+        "purpose": ".gift-recipient .avatar at max-width 650px only; adjacent recipient names remain 12px"
+      },
+      "row-title": {
+        "displayName": "Row title",
+        "purpose": ".person-row h2, .buying-row h2 and .discovery-product h3"
+      },
+      "list-title": {
+        "displayName": "List title",
+        "purpose": ".list-row h2 and .event-entry-heading h3"
+      },
+      "panel-title": {
+        "displayName": "Panel title",
+        "purpose": ".reserve-panel h2, preference summary and discovery search; phone intro and exchange panel"
+      },
+      "section-phone": {
+        "displayName": "Section phone",
+        "purpose": "Dialog and settings section headings at max-width 650px"
+      },
+      "empty-title": {
+        "displayName": "Empty title",
+        "purpose": ".empty h1 and .empty h2"
+      },
+      "empty-title-phone": {
+        "displayName": "Empty title phone",
+        "purpose": ".empty headings at max-width 650px; also desktop .detail-price"
+      },
+      "detail-title": {
+        "displayName": "Detail title",
+        "purpose": ".gift-detail h1"
+      },
+      "detail-title-phone": {
+        "displayName": "Detail title phone",
+        "purpose": ".gift-detail h1 at max-width 650px"
+      },
+      "page-title-tablet": {
+        "displayName": "Page title tablet",
+        "purpose": ".page-heading h1 at max-width 900px"
+      },
+      "page-title-phone": {
+        "displayName": "Page title phone",
+        "purpose": ".page-heading h1 at max-width 650px"
+      },
+      "login-display": {
+        "displayName": "Login display",
+        "purpose": ".login-story h1"
+      },
+      "login-display-tablet": {
+        "displayName": "Login display tablet",
+        "purpose": ".login-story h1 at max-width 900px"
+      },
+      "login-title": {
+        "displayName": "Login title",
+        "purpose": ".login-form-panel h2"
+      },
+      "login-code": {
+        "displayName": "Login code",
+        "purpose": ".login-form .code-input; also phone login form heading"
       }
     },
     "shadows": [
@@ -379,16 +871,20 @@
         "value": "1200px"
       },
       {
+        "name": "settings-selector",
+        "value": "1100px"
+      },
+      {
         "name": "mobile-navigation",
         "value": "900px"
       },
       {
-        "name": "phone",
-        "value": "650px"
+        "name": "compact-group-settings",
+        "value": "700px"
       },
       {
-        "name": "compact-logo",
-        "value": "460px"
+        "name": "phone",
+        "value": "650px"
       }
     ],
     "backdrop": {
@@ -408,14 +904,22 @@
       "src/client/forms.tsx",
       "src/client/Management.tsx",
       "src/client/ListIndex.tsx",
-      "src/client/GroupEvents.tsx"
+      "src/client/GroupEvents.tsx",
+      "src/client/SettingsPage.tsx",
+      "src/client/SettingsNavigation.tsx",
+      "src/client/AccountInvitations.tsx",
+      "src/client/Households.tsx",
+      "src/client/Notifications.tsx",
+      "src/client/GiftPreferences.tsx",
+      "src/client/GiftDiscovery.tsx"
     ],
     "tonalRampNote": "Synthesized OKLCH previews at constant hue/chroma; these ramps are panel metadata, not additional application tokens.",
     "layout": {
       "mobileHeader": "Opaque sticky header at top: 0, z-index 30. Content height 78px, 76px at 650px and below, plus --safe-area-top. Side padding respects landscape safe areas.",
       "mobileNavigation": "Fixed bottom navigation at z-index 40. Border-box ResizeObserver publishes --mobile-nav-height, including safe-area padding, and removes it on unmount.",
       "bottomClearance": "At 900px and below, shell padding-bottom and toast offset are measured navigation height + 16px; update banner offset equals navigation height. Desktop reserves no navigation space.",
-      "forms": "minmax(0, 1fr) grid tracks; min-width: 0 on fields and controls; width/max-width: 100% on controls. Dialog overflow-y: auto and overflow-x: hidden. Native date controls retained."
+      "forms": "minmax(0, 1fr) grid tracks; min-width: 0 on fields and controls; width/max-width: 100% on controls. Dialog overflow-y: auto and overflow-x: hidden. Native date controls retained.",
+      "settingsNavigation": "Local rail above 1100px; labeled selector at 1100px and below. Hidden sections stay mounted to preserve unsaved fields."
     },
     "management": {
       "sorting": "Visible Sort by select. Personal collection order and viewer sorting persist per account; wish-list owners share item order.",
@@ -423,6 +927,14 @@
       "actions": "Named 44px overflow disclosure, text actions, and native confirmation dialogs. Reorder dialog supports drag handles and move-up/down buttons with Save and Cancel.",
       "lifecycle": "Active, Archived, and Trash views are distinct. Group events preserve participant lists on removal. Permanent deletion requires an explicit second confirmation.",
       "footer": "Created by Affolder Creative, one unlinked attribution."
+    },
+    "roundedMeta": {
+      "toast": {
+        "purpose": ".toast only"
+      },
+      "install-icon": {
+        "purpose": ".install > img only"
+      }
     }
   },
   "components": [
@@ -432,7 +944,7 @@
       "refersTo": "button-primary",
       "description": "Save or confirm an action.",
       "html": "<button class=\"ds-button-primary\">Save gift</button>",
-      "css": ".ds-button-primary{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 18px;border:1px solid transparent;border-radius:8px;font-size:14px;font-weight:600;line-height:1.25;min-height:44px;cursor:pointer;font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;background:var(--accent, #aa4d37);color:var(--on-accent, #fff8f0);}.ds-button-primary:hover{filter:brightness(.94)}.ds-button-primary:focus-visible{outline:3px solid var(--accent, #aa4d37);outline-offset:3px;}.ds-button-primary:disabled{opacity:.55;cursor:not-allowed}"
+      "css": ".ds-button-primary{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 18px;border:1px solid transparent;border-radius:8px;font-size:14px;font-weight:600;line-height:1.25;min-height:44px;min-width:44px;max-width:100%;overflow-wrap:anywhere;cursor:pointer;font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;background:var(--accent, #aa4d37);color:var(--on-accent, #fff8f0);}.ds-button-primary:hover{filter:brightness(.94)}.ds-button-primary:focus-visible{outline:3px solid var(--accent, #aa4d37);outline-offset:3px;}.ds-button-primary:disabled{opacity:.55;cursor:not-allowed}"
     },
     {
       "name": "Secondary button",
@@ -440,7 +952,7 @@
       "refersTo": "button-secondary",
       "description": "A supporting action.",
       "html": "<button class=\"ds-button-secondary\">Save gift</button>",
-      "css": ".ds-button-secondary{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 18px;border:1px solid transparent;border-radius:8px;font-size:14px;font-weight:600;line-height:1.25;min-height:44px;cursor:pointer;font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;background:var(--paper, #fffdf9);color:var(--text, #2b201d);border-color:var(--border, #e6d9cf);}.ds-button-secondary:hover{filter:brightness(.94)}.ds-button-secondary:focus-visible{outline:3px solid var(--accent, #aa4d37);outline-offset:3px;}.ds-button-secondary:disabled{opacity:.55;cursor:not-allowed}"
+      "css": ".ds-button-secondary{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 18px;border:1px solid transparent;border-radius:8px;font-size:14px;font-weight:600;line-height:1.25;min-height:44px;min-width:44px;max-width:100%;overflow-wrap:anywhere;cursor:pointer;font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;background:var(--paper, #fffdf9);color:var(--text, #2b201d);border-color:var(--border, #e6d9cf);}.ds-button-secondary:hover{filter:brightness(.94)}.ds-button-secondary:focus-visible{outline:3px solid var(--accent, #aa4d37);outline-offset:3px;}.ds-button-secondary:disabled{opacity:.55;cursor:not-allowed}"
     },
     {
       "name": "Text button",
@@ -448,7 +960,7 @@
       "refersTo": "button-text",
       "description": "A quieter action.",
       "html": "<button class=\"ds-text-button\">View people</button>",
-      "css": ".ds-text-button{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;display:inline-flex;align-items:center;gap:7px;background:transparent;border:0;padding:8px 0;min-height:44px;font-size:13px;font-weight:550;color:var(--accent, #aa4d37);cursor:pointer}.ds-text-button:hover{text-decoration:underline}.ds-text-button:focus-visible{outline:3px solid var(--accent, #aa4d37);outline-offset:3px;}"
+      "css": ".ds-text-button{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;display:inline-flex;align-items:center;gap:7px;background:transparent;border:0;padding:8px 0;min-height:44px;min-width:44px;max-width:100%;overflow-wrap:anywhere;font-size:13px;font-weight:550;color:var(--accent, #aa4d37);cursor:pointer}.ds-text-button:hover{text-decoration:underline}.ds-text-button:focus-visible{outline:3px solid var(--accent, #aa4d37);outline-offset:3px;}"
     },
     {
       "name": "Icon button",
@@ -494,8 +1006,8 @@
       "name": "Group event entry",
       "kind": "custom",
       "description": "One occasion with separate wish-list and event-management links, explicit sharing, and privacy.",
-      "html": "<section class=\"ds-event-entry\"><div class=\"ds-event-heading\"><div><h3>Family celebration</h3><p>Shared with: Morgan family · 2 participants</p></div><span class=\"ds-privacy\"><svg aria-hidden=\"true\" width=\"13\" height=\"13\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><rect x=\"3\" y=\"11\" width=\"18\" height=\"11\" rx=\"2\"/><path d=\"M7 11V7a5 5 0 0 1 10 0v4\"/></svg>Keep it a surprise</span></div><div class=\"ds-event-links\"><a href=\"#wish-list\">Your wish list <span aria-hidden=\"true\">→</span></a><a href=\"#event\">Manage event <span aria-hidden=\"true\">→</span></a></div></section>",
-      "css": ".ds-privacy{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;display:inline-flex;align-items:center;gap:5px;padding:6px 8px;border:1px solid var(--border, #e6d9cf);border-radius:5px;font-size:11px;white-space:nowrap;color:var(--muted, #746057)}.ds-event-entry{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;color:var(--text,#2b201d);padding:24px 0;border-bottom:1px solid var(--border,#e6d9cf)}.ds-event-heading{display:flex;flex-wrap:wrap;align-items:center;gap:16px}.ds-event-heading>div{flex:1;min-width:0;overflow-wrap:anywhere}.ds-event-heading h3{margin:0 0 4px;font-size:19px}.ds-event-heading p{margin:0;color:var(--muted,#746057);font-size:13px}.ds-event-links{margin-top:16px;display:flex;flex-wrap:wrap;align-items:center;gap:8px 24px}.ds-event-links a{display:flex;align-items:center;gap:12px;padding:10px 0;min-height:44px;font-weight:600;color:var(--accent,#aa4d37);text-decoration:none}.ds-event-links a:last-child{font-size:13px;font-weight:550}.ds-event-links a:hover{text-decoration:underline;text-underline-offset:4px}.ds-event-links a:focus-visible{outline:3px solid var(--accent,#aa4d37);outline-offset:3px}"
+      "html": "<section class=\"ds-event-entry\"><div class=\"ds-event-heading\"><div><h3>Family celebration</h3><p>Shared with: Morgan family \u00b7 2 participants</p></div><span class=\"ds-privacy\"><svg aria-hidden=\"true\" width=\"13\" height=\"13\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><rect x=\"3\" y=\"11\" width=\"18\" height=\"11\" rx=\"2\"/><path d=\"M7 11V7a5 5 0 0 1 10 0v4\"/></svg>Keep it a surprise</span></div><div class=\"ds-event-links\"><a href=\"#wish-list\">Your wish list <span aria-hidden=\"true\">\u2192</span></a><a href=\"#event\">Manage event <span aria-hidden=\"true\">\u2192</span></a></div></section>",
+      "css": ".ds-privacy{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;display:inline-flex;align-items:center;gap:5px;padding:6px 8px;border:1px solid var(--border, #e6d9cf);border-radius:4px;font-size:11px;white-space:nowrap;color:var(--muted, #746057)}.ds-event-entry{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;color:var(--text,#2b201d);padding:24px 0;border-bottom:1px solid var(--border,#e6d9cf)}.ds-event-heading{display:flex;flex-wrap:wrap;align-items:center;gap:16px}.ds-event-heading>div{flex:1;min-width:0;overflow-wrap:anywhere}.ds-event-heading h3{margin:0 0 4px;font-size:19px}.ds-event-heading p{margin:0;color:var(--muted,#746057);font-size:13px}.ds-event-links{margin-top:16px;display:flex;flex-wrap:wrap;align-items:center;gap:8px 24px}.ds-event-links a{display:flex;align-items:center;gap:12px;padding:10px 0;min-height:44px;font-weight:600;color:var(--accent,#aa4d37);text-decoration:none}.ds-event-links a:last-child{font-size:13px;font-weight:550}.ds-event-links a:hover{text-decoration:underline;text-underline-offset:4px}.ds-event-links a:focus-visible{outline:3px solid var(--accent,#aa4d37);outline-offset:3px}"
     },
     {
       "name": "Mobile navigation",
@@ -503,7 +1015,7 @@
       "refersTo": "nav-mobile",
       "description": "Five destinations with icons and labels. Shown in isolation here; the app fixes this navigation to the bottom and measures its full height for content clearance.",
       "html": "<nav class=\"ds-mobile-nav\" aria-label=\"Sample mobile navigation\"><a href=\"#home\" aria-current=\"page\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"21\" height=\"21\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M2 9.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5\"></path></svg><span>Home</span></a><a href=\"#people\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"21\" height=\"21\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2\"></path><path d=\"M16 3.128a4 4 0 0 1 0 7.744\"></path><path d=\"M22 21v-2a4 4 0 0 0-3-3.87\"></path><circle cx=\"9\" cy=\"7\" r=\"4\"></circle></svg><span>People</span></a><a href=\"#lists\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"21\" height=\"21\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M13 5h8\"></path><path d=\"M13 12h8\"></path><path d=\"M13 19h8\"></path><path d=\"m3 17 2 2 4-4\"></path><path d=\"m3 7 2 2 4-4\"></path></svg><span>My lists</span></a><a href=\"#buying\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"21\" height=\"21\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M16 10a4 4 0 0 1-8 0\"></path><path d=\"M3.103 6.034h17.794\"></path><path d=\"M3.4 5.467a2 2 0 0 0-.4 1.2V20a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6.667a2 2 0 0 0-.4-1.2l-2-2.667A2 2 0 0 0 17 2H7a2 2 0 0 0-1.6.8z\"></path></svg><span>Buying</span></a><a href=\"#exchanges\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"21\" height=\"21\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m18 14 4 4-4 4\"></path><path d=\"m18 2 4 4-4 4\"></path><path d=\"M2 18h1.973a4 4 0 0 0 3.3-1.7l5.454-8.6a4 4 0 0 1 3.3-1.7H22\"></path><path d=\"M2 6h1.972a4 4 0 0 1 3.6 2.2\"></path><path d=\"M22 18h-6.041a4 4 0 0 1-3.3-1.8l-.359-.45\"></path></svg><span>Exchanges</span></a></nav>",
-      "css": ".ds-mobile-nav{display:flex;justify-content:space-around;padding:9px 14px calc(9px + var(--safe-area-bottom,0px));border-top:1px solid var(--border,#e6d9cf);background:var(--paper,#fffdf9);font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif}.ds-mobile-nav a{display:flex;flex:1;align-items:center;gap:5px;flex-direction:column;color:var(--muted,#746057);font-size:11px;padding:4px 2px;min-width:0;text-align:center;text-decoration:none}.ds-mobile-nav a[aria-current]{color:var(--accent,#aa4d37)}.ds-mobile-nav a:focus-visible{outline:3px solid var(--accent,#aa4d37);outline-offset:3px}.ds-mobile-nav a span{max-width:100%;overflow-wrap:anywhere}"
+      "css": ".ds-mobile-nav{display:flex;justify-content:space-around;padding:9px max(14px,env(safe-area-inset-right,0px)) calc(9px + var(--safe-area-bottom,0px)) max(14px,env(safe-area-inset-left,0px));border-top:1px solid var(--border,#e6d9cf);background:var(--paper,#fffdf9);font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif}.ds-mobile-nav a{display:flex;flex:1;align-items:center;gap:5px;flex-direction:column;color:var(--muted,#746057);font-size:11px;padding:4px 2px;min-width:0;text-align:center;text-decoration:none}.ds-mobile-nav a[aria-current]{color:var(--accent,#aa4d37)}.ds-mobile-nav a:focus-visible{outline:3px solid var(--accent,#aa4d37);outline-offset:3px}.ds-mobile-nav a span{max-width:100%;overflow-wrap:anywhere}"
     }
   ],
   "narrative": {
