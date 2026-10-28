@@ -25,7 +25,7 @@ function config(file, variables = {}, interpolate = true) {
       emptyFile,
       ...[file].flat().flatMap((name) => ["-f", name]),
       "config",
-      ...(!interpolate ? ["--no-interpolate"] : []),
+      ...(!interpolate ? ["--no-interpolate", "--no-env-resolution"] : []),
       "--format",
       "json",
     ],
@@ -264,3 +264,45 @@ for (const [file, variables] of [
       );
   }
 }
+
+// Preview never uses .env, publishes only a Docker-assigned loopback gateway,
+// and keeps the database, inbox SMTP, app, and worker on an internal network.
+const preview = config("compose.preview.yaml", {}, false);
+assert.equal(preview.status, 0, preview.stderr);
+const previewConfig = JSON.parse(preview.stdout);
+for (const [name, service] of Object.entries(previewConfig.services)) {
+  if (name !== "gateway") assert.equal(service.ports, undefined);
+  if (name !== "app" && name !== "worker")
+    assert.match(service.image, /(?:@sha256:[a-f0-9]{64}|:[0-9v][0-9.]+)$/);
+}
+const gateway = previewConfig.services.gateway;
+assert.equal(gateway.ports.length, 1);
+assert.equal(gateway.ports[0].host_ip, "127.0.0.1");
+assert.equal(gateway.ports[0].published, "0");
+assert.equal(previewConfig.networks.private.internal, true);
+for (const name of ["db", "mailpit", "app", "worker"])
+  assert.deepEqual(Object.keys(previewConfig.services[name].networks), [
+    "private",
+  ]);
+assert.deepEqual(previewConfig.services.tunnel.profiles, ["share"]);
+assert.equal(
+  previewConfig.services.mailpit.environment.MP_WEBROOT,
+  "/__preview/inbox/",
+);
+assert.equal(
+  previewConfig.services.mailpit.environment.MP_SMTP_REQUIRE_STARTTLS,
+  "true",
+);
+assert.ok(
+  !previewConfig.services.mailpit.volumes.some((v) =>
+    v.target.includes("ca.key"),
+  ),
+);
+assert.deepEqual(Object.keys(previewConfig.volumes).sort(), [
+  "database",
+  "mail",
+  "uploads",
+]);
+console.log(
+  "Preview Compose checks passed: isolated network/data, pinned tools, optional tunnel, and loopback gateway only.",
+);

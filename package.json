@@ -28,7 +28,14 @@
     "marketing:check": "node scripts/check-marketing.mjs",
     "marketing:test": "node scripts/test-marketing.mjs",
     "marketing:capture": "tsx scripts/capture-marketing.ts",
-    "marketing:social": "node scripts/capture-marketing-social.mjs"
+    "marketing:social": "node scripts/capture-marketing-social.mjs",
+    "preview": "node scripts/preview.mjs start",
+    "preview:status": "node scripts/preview.mjs status",
+    "preview:logs": "node scripts/preview.mjs logs",
+    "preview:stop": "node scripts/preview.mjs stop",
+    "preview:reset": "node scripts/preview.mjs reset",
+    "test:preview": "node --test scripts/preview.test.mjs",
+    "test:preview-smoke": "node scripts/preview/smoke.mjs"
   },
   "dependencies": {
     "@better-auth/passkey": "^1.7.12",

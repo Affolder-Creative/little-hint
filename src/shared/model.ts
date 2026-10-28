@@ -427,7 +427,7 @@ export interface World {
   giftPreferences?: GiftPreferenceView[];
   giftDiscovery?: DiscoveryConfig;
   organization?: Organization[];
-  environment?: "production" | "staging" | "development" | "test";
+  environment?: "production" | "staging" | "preview" | "development" | "test";
   me: Actor & { admin: boolean };
   contributionHistory: Array<{
     contribution: Contribution;

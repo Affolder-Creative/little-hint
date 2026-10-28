@@ -17,7 +17,8 @@ import {
 import type { Actor, Notice, PushDevice, State } from "../shared/model";
 
 export function pushConfiguration() {
-  if (["staging", "test"].includes(deploymentEnvironment())) return null;
+  if (["staging", "preview", "test"].includes(deploymentEnvironment()))
+    return null;
   const publicKey = process.env.VAPID_PUBLIC_KEY;
   const privateKey = process.env.VAPID_PRIVATE_KEY;
   const subject = process.env.VAPID_SUBJECT;

@@ -101,6 +101,24 @@ Configure the SMTP sender independently from the app URL. An alias on an existin
 
 See [notification setup and behavior](docs/NOTIFICATIONS.md) for browser push, inbox preferences, mentions, following, and device badges.
 
+## Synthetic preview
+
+With Node.js 24+ and Docker with Compose running, start a built preview from the
+repository root. No local application dependencies or `.env` setup are needed.
+
+```sh
+npm run preview                # Local app and test inbox
+npm run preview -- --share     # Fresh public HTTPS link for iPhone/device testing
+npm run preview:status         # URLs, accounts, and service health
+npm run preview:stop           # Stop; keep data
+```
+
+Sign in as `alex@example.test` or `sam@example.test` and retrieve the email code
+from the printed inbox URL. Each checkout has isolated synthetic data that survives
+restarts. Run `npm run preview:reset` to confirm a reset. Shared links also expose
+the test inbox, so use only synthetic data. Keep your Mac and Docker running.
+See [the preview guide](docs/PREVIEW.md) for logs, persistence, limitations, and troubleshooting.
+
 ## Development checks
 
 ```sh

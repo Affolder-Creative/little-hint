@@ -86,7 +86,9 @@ export function classifyPaths(paths) {
       continue;
     }
     if (
-      /^tests\/(?:integration|staging-seed\.integration)\.test\.ts$/.test(file)
+      /^tests\/(?:integration|staging-seed\.integration|preview-seed\.integration)\.test\.ts$/.test(
+        file,
+      )
     ) {
       selected.integration = true;
       continue;

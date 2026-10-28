@@ -121,6 +121,13 @@ jobs:
       - run: npm run test:staging-integration
         env:
           STAGING_TEST_DATABASE_URL: postgres://little_hint_staging:ci-staging-only@localhost:5432/little_hint_staging
+      - name: Create isolated preview test database
+        run: |
+          docker exec $(docker ps -q --filter ancestor=postgres:18-alpine) psql -U little_hint -d little_hint_test -v ON_ERROR_STOP=1 -c "CREATE ROLE little_hint_preview LOGIN PASSWORD 'ci-preview-only'" -c "CREATE DATABASE little_hint_preview OWNER little_hint_preview"
+      - name: Preview seed transactions and guards
+        run: npx vitest run tests/preview-seed.integration.test.ts
+        env:
+          PREVIEW_TEST_DATABASE_URL: postgres://little_hint_preview:ci-preview-only@localhost:5432/little_hint_preview
   browser:
     needs: changes
     if: needs.changes.outputs.browser == 'true'
@@ -233,6 +240,13 @@ jobs:
         env:
           LITTLE_HINT_STAGING_IMAGE: little-hint:ci
         run: bash scripts/smoke-staging.sh
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        if: matrix.arch == 'amd64'
+        with:
+          node-version: "24"
+      - name: Preview launcher and container smoke test without a public tunnel
+        if: matrix.arch == 'amd64'
+        run: npm run test:preview-smoke
       - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: little-hint:ci
