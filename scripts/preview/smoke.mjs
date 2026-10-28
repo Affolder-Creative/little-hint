@@ -27,6 +27,15 @@ const root = await realpath(
 );
 const project = checkoutIdentity(root);
 const env = dockerEnvironment();
+// Docker can reuse the same ephemeral port after stop/start. Synchronous CLI
+// calls block delivery of socket-close events, so never pool a test connection
+// across the gateway recreation. Fail HTTP errors normally; do not retry writes.
+const fetch = (url, options = {}) =>
+  globalThis.fetch(url, {
+    ...options,
+    headers: { Connection: "close", ...options.headers },
+    signal: AbortSignal.timeout(10_000),
+  });
 function run(command, args, options = {}) {
   const result = spawnSync(command, args, {
     cwd: root,
