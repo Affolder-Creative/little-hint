@@ -1827,14 +1827,14 @@ main {
   }
   .mobile-nav a {
     display: flex;
-    flex: 1;
+    flex: 1 1 auto;
     align-items: center;
     gap: 5px;
     flex-direction: column;
     color: var(--muted);
     font-size: 11px;
     padding: 4px 2px;
-    min-width: 0;
+    min-width: 44px;
     text-align: center;
   }
   .mobile-nav a span {
@@ -3324,6 +3324,47 @@ main {
 .list-heading .entry-actions-content .button {
   width: 100%;
   justify-content: start;
+}
+.list-privacy {
+  margin-bottom: 16px;
+}
+.list-privacy > summary {
+  cursor: pointer;
+  min-height: 44px;
+  padding-block: 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.list-privacy > summary .privacy {
+  margin-inline-end: 8px;
+  max-width: 100%;
+  white-space: normal;
+}
+.list-privacy .privacy-note {
+  margin: 8px 0 0;
+}
+@media (max-width: 650px) {
+  .back-link:has(+ .list-heading) {
+    margin-bottom: 12px;
+  }
+  .page-heading.list-heading {
+    position: relative;
+    margin-bottom: 8px;
+  }
+  .list-heading:has(.entry-actions) h1 {
+    padding-inline-end: 56px;
+  }
+  .list-heading > .actions > .entry-actions {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-end: 0;
+  }
+  .list-heading ~ .tabs {
+    margin-bottom: 12px;
+  }
+  .list-heading ~ .item-organization {
+    margin-block: 12px;
+  }
 }
 .gift-preference-empty:has(button) {
   margin-bottom: 12px;
