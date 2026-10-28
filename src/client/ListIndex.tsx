@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useNavigationState } from "./NavigationScroll";
 import { Link, useSearchParams } from "react-router-dom";
 import { ArrowRight, ListChecks, Plus } from "lucide-react";
 import { ordered } from "../shared/organization";
@@ -21,8 +21,8 @@ export function ListIndex() {
   const status = params.get("view") ?? "active";
   const setStatus = (view: string) =>
     setParams(view === "active" ? {} : { view });
-  const [search, setSearch] = useState(""),
-    [group, setGroup] = useState("");
+  const [search, setSearch] = useNavigationState<string>("listSearch", ""),
+    [group, setGroup] = useNavigationState<string>("listGroup", "");
   const settings = useOrganization("lists");
   const archived = status === "archived";
   const rows = world.lists.filter(
@@ -123,7 +123,7 @@ export function ListIndex() {
                   <ArrowRight size={18} />
                 </Link>
                 {l.canManageSettings && (
-                  <ActionMenu name={l.name}>
+                  <ActionMenu name={l.name} label="List actions">
                     <button
                       className="text-button"
                       onClick={() =>

@@ -1,0 +1,173 @@
+.browse-tools {
+  margin-block: 16px 20px;
+}
+.browse-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.browse-toolbar > .search {
+  min-width: min(180px, 100%);
+}
+.browse-toolbar > .button {
+  flex-shrink: 0;
+}
+.browse-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: 8px;
+}
+.browse-options {
+  display: grid;
+  gap: 20px;
+}
+.browse-options > label {
+  display: grid;
+  gap: 8px;
+}
+.browse-options > label.check {
+  display: flex;
+  min-height: 44px;
+}
+.browse-options .sort-control select {
+  width: 100%;
+}
+.browse-options > .button {
+  justify-self: start;
+}
+.browse-dialog-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 24px;
+}
+.browse-options input,
+.browse-options select {
+  font-size: 16px;
+}
+.list-privacy > summary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  list-style: none;
+}
+.list-privacy > summary::-webkit-details-marker {
+  display: none;
+}
+.list-privacy > summary .privacy {
+  margin: 0;
+}
+.privacy-disclosure-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.privacy-disclosure-label svg {
+  transition: transform 0.15s ease;
+}
+.list-privacy[open] .privacy-disclosure-label svg {
+  transform: rotate(90deg);
+}
+.managed-list-row:has(.entry-actions-label) {
+  display: block;
+  padding-bottom: 16px;
+}
+.managed-list-row:has(.entry-actions-label) > .list-row {
+  padding-bottom: 12px;
+}
+.managed-list-row:has(.entry-actions-label) > .entry-actions {
+  margin-inline-start: 64px;
+  width: fit-content;
+}
+.event-entry .event-entry-heading {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  align-items: start;
+  gap: 8px 16px;
+}
+.event-entry .event-entry-heading > .list-symbol {
+  grid-row: 1 / span 2;
+}
+.event-entry .event-entry-heading > div {
+  grid-column: 2;
+}
+.event-entry .event-entry-heading > .privacy {
+  grid-column: 2;
+  margin: 0;
+  justify-self: start;
+  max-width: 100%;
+  white-space: normal;
+}
+.event-entry .event-entry-links {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 16px 0 0 68px;
+  gap: 8px 16px;
+}
+.event-entry .event-entry-links .text-button {
+  text-decoration: none;
+}
+@media (max-width: 650px) {
+  .page-heading.list-heading:has(.entry-actions) h1 {
+    padding-inline-end: 0;
+  }
+  .page-heading.list-heading > .actions > .entry-actions {
+    position: static;
+    margin: 0;
+  }
+  .event-entry .event-entry-links {
+    margin-left: 0;
+  }
+  .group-events-section > .section-heading {
+    flex-wrap: wrap;
+    align-items: start;
+    gap: 12px;
+  }
+  .group-events-section > .section-heading > div {
+    flex: 1 1 220px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .privacy-disclosure-label svg {
+    transition: none;
+  }
+}
+
+/* Privacy belongs below the title, never in competition with its text column. */
+.managed-list-row > .list-row {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) 18px;
+  gap: 8px 12px;
+}
+.managed-list-row .list-symbol {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+}
+.managed-list-row .list-row > div {
+  grid-column: 2;
+}
+.managed-list-row .list-row > .privacy {
+  grid-column: 2;
+  grid-row: 2;
+  margin: 0;
+  justify-self: start;
+  max-width: 100%;
+  white-space: normal;
+}
+.managed-list-row .list-row > svg {
+  grid-column: 3;
+  grid-row: 1 / span 2;
+  margin: 0;
+}
+
+@media (max-width: 650px) {
+  .list-heading ~ .browse-tools {
+    margin-block: 8px 12px;
+  }
+}

@@ -46,6 +46,7 @@ test("priorities, shared ordering, Trash, and event preservation", async ({
     .getByRole("button", { name: "Save priority", exact: true })
     .click();
   await expect(page.getByRole("dialog")).not.toBeVisible();
+  await page.getByRole("button", { name: /^Sort & filter/ }).click();
   await page.getByLabel("Sort by", { exact: true }).selectOption("priority");
   await expect(page.locator(".gift-card h3").first()).toHaveText("Ceramic mug");
   await page.getByRole("button", { name: "Reorder items" }).click();
@@ -64,11 +65,15 @@ test("priorities, shared ordering, Trash, and event preservation", async ({
       .filter({ hasText: "Ceramic mug" })
       .getByText("Most wanted"),
   ).toBeVisible();
+  await page.getByRole("button", { name: /^Sort & filter/ }).click();
   await page.getByLabel("Sort by", { exact: true }).selectOption("price-desc");
+  await page.getByRole("button", { name: "Done", exact: true }).click();
   await page.reload();
+  await page.getByRole("button", { name: /^Sort & filter/ }).click();
   await expect(page.getByLabel("Sort by", { exact: true })).toHaveValue(
     "price-desc",
   );
+  await page.getByRole("button", { name: "Done", exact: true }).click();
   await expect(page.locator(".gift-card h3").last()).toHaveText("Poetry book");
   await page.getByLabel("Actions for Ceramic mug", { exact: true }).click();
   await page.getByRole("button", { name: "Archive item", exact: true }).click();
@@ -117,7 +122,9 @@ test("priorities, shared ordering, Trash, and event preservation", async ({
   await expect(
     entry.getByText(`Shared with: ${group.name}`, { exact: false }),
   ).toBeVisible();
-  await entry.getByLabel(`Actions for ${eventName}`, { exact: true }).click();
+  await entry
+    .getByLabel(`Event actions for ${eventName}`, { exact: true })
+    .click();
   await entry
     .getByRole("button", { name: "Move to Trash", exact: true })
     .click();

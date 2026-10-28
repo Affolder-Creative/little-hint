@@ -1,0 +1,84 @@
+/* A single modal scroll area keeps the header and touch targets stable. */
+dialog.dialog {
+  --dialog-gap: 20px;
+  position: fixed;
+  top: calc(var(--dialog-viewport-top, 0px) + var(--dialog-gap));
+  bottom: max(
+    var(--dialog-gap),
+    calc(
+      100dvh - var(--dialog-viewport-top, 0px) -
+        var(--dialog-viewport-height, 100dvh) + var(--dialog-gap)
+    )
+  );
+  height: fit-content;
+  max-height: calc(
+    var(--dialog-viewport-height, 100dvh) - 2 * var(--dialog-gap)
+  );
+  overflow: hidden;
+}
+dialog.dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+.dialog > .dialog-heading {
+  flex: none;
+  position: static;
+}
+.dialog > .dialog-body {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scroll-padding-block: 16px;
+  padding-bottom: max(24px, env(safe-area-inset-bottom, 0px));
+}
+.dialog > .dialog-body[hidden] {
+  display: none;
+}
+@media (max-width: 650px), (max-height: 500px) {
+  dialog.dialog {
+    --dialog-gap: 12px;
+    max-width: calc(
+      100vw - max(20px, env(safe-area-inset-left, 0px)) -
+        max(20px, env(safe-area-inset-right, 0px))
+    );
+  }
+}
+@media (any-pointer: coarse) {
+  :root input:not([type="checkbox"]):not([type="radio"]),
+  :root textarea,
+  :root select,
+  :root .field input,
+  :root .field textarea,
+  :root .field select,
+  :root .search input,
+  :root .filters select {
+    font-size: max(16px, 1em);
+  }
+}
+
+/* Privacy belongs below the title, never in competition with its text column. */
+.managed-list-row > .list-row {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) 18px;
+  gap: 8px 12px;
+}
+.managed-list-row .list-symbol {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+}
+.managed-list-row .list-row > div {
+  grid-column: 2;
+}
+.managed-list-row .list-row > .privacy {
+  grid-column: 2;
+  grid-row: 2;
+  margin: 0;
+  justify-self: start;
+  max-width: 100%;
+  white-space: normal;
+}
+.managed-list-row .list-row > svg {
+  grid-column: 3;
+  grid-row: 1 / span 2;
+  margin: 0;
+}

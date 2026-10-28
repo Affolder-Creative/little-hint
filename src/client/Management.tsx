@@ -24,6 +24,7 @@ import { Confirm } from "./Confirm";
 import { Empty, Field, Form, useModalDismiss } from "./components";
 import { GiftForm } from "./forms";
 import { actionError } from "./copy";
+import { BrowseTools, useBrowseSaving } from "./BrowseTools";
 
 export function RunButton({
   children,
@@ -376,10 +377,11 @@ export function SortSelect({
   items?: boolean;
   manualLabel?: string;
 }) {
+  const saving = useBrowseSaving();
   const [busy, setBusy] = useState(false),
     [error, setError] = useState("");
   return (
-    <div className="sort-control">
+    <div className="sort-control" data-busy={busy}>
       <label>
         Sort by
         <select
@@ -389,6 +391,7 @@ export function SortSelect({
           onChange={async (e) => {
             const value = e.target.value as SortOrder;
             setBusy(true);
+            saving.setBusy(true);
             setError("");
             try {
               await change(value);
@@ -396,6 +399,7 @@ export function SortSelect({
               setError(actionError(error));
             } finally {
               setBusy(false);
+              saving.setBusy(false);
             }
           }}
         >
@@ -433,6 +437,8 @@ export function CollectionTools({
   setSearch,
   group,
   setGroup,
+  status,
+  setStatus,
 }: {
   scope: "lists" | "events" | "exchanges";
   rows: Array<Base & { name: string }>;
@@ -440,20 +446,37 @@ export function CollectionTools({
   setSearch: (value: string) => void;
   group: string;
   setGroup: (value: string) => void;
+  status?: string;
+  setStatus?: (value: string) => void;
 }) {
   const { world, open } = useApp();
   const settings = useOrganization(scope);
   return (
-    <div className="collection-tools">
-      <label className="search">
-        <Search size={18} />
-        <input
-          aria-label={`Search ${scope}`}
-          placeholder="Search by name"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-      </label>
+    <BrowseTools
+      search={search}
+      setSearch={setSearch}
+      searchLabel={`Search ${scope}`}
+      activeCount={Number(!!group) + Number(!!status)}
+      summary={[
+        ...(settings.sort !== "manual" ? [sortLabels[settings.sort]] : []),
+        ...(group
+          ? [world.groups.find((g) => g.id === group)?.name ?? "Family group"]
+          : []),
+        ...(status
+          ? [
+              status === "drawn"
+                ? "Names drawn"
+                : status === "draft"
+                  ? "Getting ready"
+                  : "Cancelled",
+            ]
+          : []),
+      ]}
+      clear={() => {
+        setGroup("");
+        setStatus?.("");
+      }}
+    >
       {world.groups.length > 1 && (
         <label>
           Shared with
@@ -468,8 +491,20 @@ export function CollectionTools({
         </label>
       )}
       <SortSelect sort={settings.sort} change={(sort) => settings.save(sort)} />
+      {setStatus && (
+        <label>
+          Status
+          <select value={status} onChange={(e) => setStatus(e.target.value)}>
+            <option value="">All statuses</option>
+            <option value="draft">Getting ready</option>
+            <option value="drawn">Names drawn</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </label>
+      )}
       {rows.length > 1 && (
         <button
+          data-browse-reorder
           className="button secondary small"
           onClick={() =>
             open(
@@ -507,7 +542,7 @@ export function CollectionTools({
           Reorder
         </button>
       )}
-    </div>
+    </BrowseTools>
   );
 }
 export function TrashView({ kinds }: { kinds: TrashKind[] }) {
