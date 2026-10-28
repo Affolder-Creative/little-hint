@@ -3929,6 +3929,9 @@ for (const browserName of ["chromium", "webkit"] as const) {
     test.beforeEach(async () => {
       context = await browser.newContext({
         hasTouch: true,
+        // The isolated CI server uses HTTP. WebKit otherwise upgrades its
+        // assets to HTTPS through Helmet's production CSP before React loads.
+        bypassCSP: true,
         serviceWorkers: "block",
         baseURL: process.env.E2E_BASE_URL ?? "http://localhost:5173",
       });
@@ -3969,9 +3972,7 @@ for (const browserName of ["chromium", "webkit"] as const) {
         await page.evaluate(() => document.documentElement.style.overflow),
       ).toBe("");
     });
-    test("list titles have a readable column and every Settings section keeps its introduction", async ({
-      page,
-    }, testInfo) => {
+    test("list titles have a readable column and every Settings section keeps its introduction", async ({}, testInfo) => {
       await preview(page);
       for (const width of [320, 393, 852, 1440]) {
         await page.setViewportSize({ width, height: 852 });
