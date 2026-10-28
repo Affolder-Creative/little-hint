@@ -77,6 +77,100 @@ async function preview(page: Page, actorIndex = 0, solo = false) {
   return { ...fixture, actor };
 }
 
+for (const width of [320, 393, 1440]) {
+  test(`compact browsing applies immediately and exposes active choices at ${width}px`, async ({
+    page,
+  }, testInfo) => {
+    const { state } = await preview(page);
+    await page.setViewportSize({ width, height: 852 });
+    await page.goto("/");
+    const toolbar = page.getByRole("button", { name: /^Sort & filter/ });
+    await expect(page.getByLabel("Search items and gift ideas")).toBeVisible();
+    await expect(page.getByLabel("Filter by tag")).toHaveCount(0);
+    await toolbar.click();
+    const dialog = page.getByRole("dialog");
+    await page.getByLabel("Available to give", { exact: true }).check();
+    await page
+      .getByLabel("Sort by", { exact: true })
+      .selectOption("price-desc");
+    await page.getByRole("button", { name: "Done", exact: true }).click();
+    await expect(dialog).toHaveCount(0);
+    await expect(toolbar).toBeFocused();
+    await expect(toolbar).toHaveText(/\(1\)/);
+    await expect(page.locator(".browse-summary")).toContainText(
+      "Price high–low",
+    );
+    await expect(page.locator(".browse-summary")).toContainText(
+      "Available to give",
+    );
+    await page
+      .getByRole("button", { name: "Clear filters", exact: true })
+      .click();
+    await expect(page.locator(".browse-summary")).not.toContainText(
+      "Available to give",
+    );
+    await expect(page.locator(".browse-summary")).toContainText(
+      "Price high–low",
+    );
+    await toolbar.click();
+    await page.route("**/api/v1/organization/update", (route) =>
+      route.fulfill({ status: 503, json: { error: "Please try again" } }),
+    );
+    await page.getByLabel("Sort by", { exact: true }).selectOption("name-asc");
+    await expect(dialog.getByRole("alert")).toBeVisible();
+    await expect(page.getByLabel("Sort by", { exact: true })).toHaveValue(
+      "price-desc",
+    );
+    await page.getByRole("button", { name: "Done", exact: true }).click();
+    for (const theme of ["light", "dark"]) {
+      await page.evaluate(
+        (theme) => localStorage.setItem("little-hint:theme", theme),
+        theme,
+      );
+      await page.goto("/lists");
+      await page.reload();
+      await expect(
+        page.getByLabel("Event actions for Family celebration"),
+      ).toBeVisible();
+      const eventActions = page.getByLabel(
+        "Event actions for Family celebration",
+      );
+      await eventActions.click();
+      const menu = page.locator(".entry-actions[open] .entry-actions-content");
+      await expect(menu).toBeInViewport();
+      await expect
+        .poll(async () => (await menu.boundingBox())!.x)
+        .toBeGreaterThanOrEqual(19);
+      expect(
+        (await menu.boundingBox())!.x + (await menu.boundingBox())!.width,
+      ).toBeLessThanOrEqual(width - 19);
+      await eventActions.press("Escape");
+      await page.screenshot({
+        path: testInfo.outputPath(`collections-${width}-${theme}.png`),
+        fullPage: true,
+      });
+      const list = state.lists.find((list) => list.name === "Alex's wishes")!;
+      await page.goto(`/lists/${list.id}`);
+      await toolbar.click();
+      await page.screenshot({
+        path: testInfo.outputPath(`filters-${width}-${theme}.png`),
+      });
+      await expect(
+        page.getByRole("dialog").getByLabel("Filter by tag"),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("dialog").locator("select").first(),
+      ).toBeInViewport();
+      await page.getByRole("button", { name: "Done", exact: true }).click();
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth - innerWidth,
+        ),
+      ).toBeLessThanOrEqual(1);
+    }
+  });
+}
+
 for (const width of [1440, 390]) {
   test(`notification disclosures preserve choices and fit at ${width}px`, async ({
     page,
@@ -3920,97 +4014,3 @@ test.describe("navigation scroll restoration", () => {
     await expect(page.locator("main h1")).toBeInViewport();
   });
 });
-
-for (const width of [320, 393, 1440]) {
-  test(`compact browsing applies immediately and exposes active choices at ${width}px`, async ({
-    page,
-  }, testInfo) => {
-    const { state } = await preview(page);
-    await page.setViewportSize({ width, height: 852 });
-    await page.goto("/");
-    const toolbar = page.getByRole("button", { name: /^Sort & filter/ });
-    await expect(page.getByLabel("Search items and gift ideas")).toBeVisible();
-    await expect(page.getByLabel("Filter by tag")).toHaveCount(0);
-    await toolbar.click();
-    const dialog = page.getByRole("dialog");
-    await page.getByLabel("Available to give", { exact: true }).check();
-    await page
-      .getByLabel("Sort by", { exact: true })
-      .selectOption("price-desc");
-    await page.getByRole("button", { name: "Done", exact: true }).click();
-    await expect(dialog).toHaveCount(0);
-    await expect(toolbar).toBeFocused();
-    await expect(toolbar).toHaveText(/\(1\)/);
-    await expect(page.locator(".browse-summary")).toContainText(
-      "Price high–low",
-    );
-    await expect(page.locator(".browse-summary")).toContainText(
-      "Available to give",
-    );
-    await page
-      .getByRole("button", { name: "Clear filters", exact: true })
-      .click();
-    await expect(page.locator(".browse-summary")).not.toContainText(
-      "Available to give",
-    );
-    await expect(page.locator(".browse-summary")).toContainText(
-      "Price high–low",
-    );
-    await toolbar.click();
-    await page.route("**/api/v1/organization/update", (route) =>
-      route.fulfill({ status: 503, json: { error: "Please try again" } }),
-    );
-    await page.getByLabel("Sort by", { exact: true }).selectOption("name-asc");
-    await expect(dialog.getByRole("alert")).toBeVisible();
-    await expect(page.getByLabel("Sort by", { exact: true })).toHaveValue(
-      "price-desc",
-    );
-    await page.getByRole("button", { name: "Done", exact: true }).click();
-    for (const theme of ["light", "dark"]) {
-      await page.evaluate(
-        (theme) => localStorage.setItem("little-hint:theme", theme),
-        theme,
-      );
-      await page.goto("/lists");
-      await page.reload();
-      await expect(
-        page.getByLabel("Event actions for Family celebration"),
-      ).toBeVisible();
-      const eventActions = page.getByLabel(
-        "Event actions for Family celebration",
-      );
-      await eventActions.click();
-      const menu = page.locator(".entry-actions[open] .entry-actions-content");
-      await expect(menu).toBeInViewport();
-      await expect
-        .poll(async () => (await menu.boundingBox())!.x)
-        .toBeGreaterThanOrEqual(19);
-      expect(
-        (await menu.boundingBox())!.x + (await menu.boundingBox())!.width,
-      ).toBeLessThanOrEqual(width - 19);
-      await eventActions.press("Escape");
-      await page.screenshot({
-        path: testInfo.outputPath(`collections-${width}-${theme}.png`),
-        fullPage: true,
-      });
-      const list = state.lists.find((list) => list.name === "Alex's wishes")!;
-      await page.goto(`/lists/${list.id}`);
-      await toolbar.click();
-      await page.screenshot({
-        path: testInfo.outputPath(`filters-${width}-${theme}.png`),
-      });
-      await expect(
-        page.getByRole("dialog").getByLabel("Filter by tag"),
-      ).toBeVisible();
-      await expect(
-        page.getByRole("dialog").locator("select").first(),
-      ).toBeInViewport();
-      await page.getByRole("button", { name: "Done", exact: true }).click();
-      expect(
-        await page.evaluate(
-          () => document.documentElement.scrollWidth - innerWidth,
-        ),
-      ).toBeLessThanOrEqual(1);
-    }
-  });
-}

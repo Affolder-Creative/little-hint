@@ -274,6 +274,13 @@ Availability labels use text as well as color. Available gifts use a muted green
 
 Gift cards are unboxed links. A contained image or labeled fallback leads, followed by recipient, title, price, availability, and up to two tags. The title underlines on hover. Actual images use a 1.13 aspect ratio on desktop and become square on narrow screens. Missing or failed photos use a compact 32px icon and in-flow label with an 80px minimum area that grows for enlarged text. Desktop gift details give the no-photo area a narrow 144px column beside the gift information; phones stack it above the information with a 96px minimum height. Actual photos retain their full detail layout. Replacing a failed image URL restores the photo. People, lists, purchases, and settings use open rows with bottom dividers. Invitations and installation prompts use soft rounded panels.
 
+### Collection actions
+
+List and event management menus have visible List actions and Event actions labels.
+Event metadata and privacy form one heading group; wish-list links, Manage/View
+event, and the action menu share a wrapping action row. List privacy places the
+disclosure caret immediately beside Privacy details, separately from its badge.
+
 ### Inputs / Fields
 
 Fields have a paper background, text color, thin border, 8px corners, and a 44px minimum height. Visible labels and optional hints stay with their inputs. Search adds a leading icon and transparent fill. Forms show errors in text; busy submission disables the fieldset and changes the action label. Changed dialogs require an explicit discard decision before closing, including departures to gift discovery and arrow or drag reordering. Returning entries to their original order clears the reorder warning. Saving keeps dismissal disabled. First sharing uses a focused review of audience and visibility while preserving editable form values. The global focus outline applies to inputs, selects, and textareas. Single-column form grids use shrinkable tracks; two-column rows use equal shrinkable tracks. Fields and native date inputs can shrink to their container width. Dialogs scroll vertically, with horizontal containment after controls have been sized to fit. Keep the native date picker and 16px phone input text.
@@ -338,10 +345,3 @@ Discovery uses existing typography, colors and open gift rows, with three result
 - Don't add shadows to ordinary gift cards or list rows.
 - Don't use invented product photography or present demonstration fixtures as real gifts.
 - Don't rely on color alone to explain availability or list privacy.
-
-### Collection actions
-
-List and event management menus have visible List actions and Event actions labels.
-Event metadata and privacy form one heading group; wish-list links, Manage/View
-event, and the action menu share a wrapping action row. List privacy places the
-disclosure caret immediately beside Privacy details, separately from its badge.
