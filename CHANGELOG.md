@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.10.0](https://github.com/Affolder-Creative/little-hint/compare/v0.9.0...v0.10.0) (2026-10-28)
+
+
+### Features
+
+* add standalone Coolify production deployment ([#99](https://github.com/Affolder-Creative/little-hint/issues/99)) ([1236d7b](https://github.com/Affolder-Creative/little-hint/commit/1236d7b3177c1e8e592a406c1c8ddbb2053bee9f))
+* make private gift ideas easier to find and relocate attribution ([#96](https://github.com/Affolder-Creative/little-hint/issues/96)) ([70b7690](https://github.com/Affolder-Creative/little-hint/commit/70b7690278b8ac2b21ee4603823d1bd59f8b7149))
+
+
+### Fixes
+
+* align interface spacing and improve gift browsing ([#100](https://github.com/Affolder-Creative/little-hint/issues/100)) ([080b57b](https://github.com/Affolder-Creative/little-hint/commit/080b57b0450ec7da8c48135e48b3996018e9457b))
+* polish UI for the stable release ([#98](https://github.com/Affolder-Creative/little-hint/issues/98)) ([8209132](https://github.com/Affolder-Creative/little-hint/commit/8209132d6a553e61af63698d703c83226b6c1c98))
+
 ## [0.9.0](https://github.com/Affolder-Creative/little-hint/compare/v0.8.1...v0.9.0) (2026-10-28)
 
 
