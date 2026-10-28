@@ -345,3 +345,14 @@ Discovery uses existing typography, colors and open gift rows, with three result
 - Don't add shadows to ordinary gift cards or list rows.
 - Don't use invented product photography or present demonstration fixtures as real gifts.
 - Don't rely on color alone to explain availability or list privacy.
+
+### Touch dialogs and list rows
+
+Touch-device editing fields use at least 16px text in either orientation. Dialogs
+fit the visible viewport while the keyboard opens or closes, with a fixed heading
+and one scrollable body. Pinch zoom remains available. The page behind a dialog
+cannot scroll, and normal scrolling resumes when it closes.
+
+Wish-list rows reserve a text column for the title and sharing description. Privacy
+sits below that copy rather than competing for its width. The Settings introduction
+remains visible in every section, including Family groups.
