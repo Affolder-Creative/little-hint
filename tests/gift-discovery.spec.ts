@@ -510,3 +510,71 @@ test("own-list discovery confirms each destination and saves the batch together"
     second.id,
   );
 });
+
+test("discovery titles follow delayed content, failures, retries, and navigation", async ({
+  page,
+}) => {
+  const f = await preview(page);
+  let release: () => void = () => {};
+  let ready = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let fail = false;
+  await page.route("**/api/v1/gift-discovery/context/*", async (route) => {
+    await ready;
+    if (fail)
+      return route.fulfill({
+        status: 400,
+        json: { error: "Please try again." },
+      });
+    await route.fallback();
+  });
+  const path = `/people/${f.people[0].id}/gift-ideas`;
+  await page.goto(path);
+  await expect(
+    page.getByRole("status").filter({ hasText: "Loading gift preferences" }),
+  ).toBeVisible();
+  release();
+  await expect(page).toHaveTitle(
+    `Find gift ideas for ${f.people[0].name} · Little Hint`,
+  );
+  const interests = page.getByLabel("Specific interests", { exact: true });
+  await interests.focus();
+  await expect(interests).toBeFocused();
+  await expect(page).toHaveTitle(
+    `Find gift ideas for ${f.people[0].name} · Little Hint`,
+  );
+
+  fail = true;
+  await page.reload();
+  await expect(page).toHaveTitle(
+    "Gift suggestions are unavailable · Little Hint",
+  );
+  fail = false;
+  await page.getByRole("button", { name: "Retry", exact: true }).click();
+  await expect(page).toHaveTitle(
+    `Find gift ideas for ${f.people[0].name} · Little Hint`,
+  );
+  ready = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.reload();
+  await expect(
+    page.getByRole("status").filter({ hasText: "Loading gift preferences" }),
+  ).toBeVisible();
+  await page
+    .getByRole("navigation", { name: "Main navigation", exact: true })
+    .getByRole("link", { name: "Buying", exact: true })
+    .click();
+  await expect(page).toHaveTitle("Your gift plans · Little Hint");
+  const response = page.waitForResponse((r) =>
+    r.url().includes("gift-discovery/context/"),
+  );
+  release();
+  await response;
+  await expect(page).toHaveTitle("Your gift plans · Little Hint");
+  await page.goBack();
+  await expect(page).toHaveTitle(
+    `Find gift ideas for ${f.people[0].name} · Little Hint`,
+  );
+});
