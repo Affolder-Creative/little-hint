@@ -25,6 +25,8 @@ import {
 } from "./domain";
 import { listIsArchived } from "../shared/list-dates";
 import { itemTrashed } from "../shared/organization";
+import { discoveryUserOverrides } from "./gift-discovery-limits";
+import { syntheticEnvironment } from "./deployment";
 
 const uuid = z.string().uuid();
 const ids = z
@@ -199,10 +201,22 @@ export function quotaKeys(userId: string, now = new Date()) {
   return {
     week: `discovery:week:${week.toISOString().slice(0, 10)}:${userId}`,
     month: `discovery:month:${now.toISOString().slice(0, 7)}`,
+    monthExempt: `discovery:month-exempt:${now.toISOString().slice(0, 7)}`,
     weekResetsAt: new Date(week.getTime() + 7 * 86400000).toISOString(),
     monthResetsAt: new Date(
       Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1),
     ).toISOString(),
+  };
+}
+export function discoveryMonthlyUsage(s: State, now = new Date()) {
+  const keys = quotaKeys("", now);
+  const searches = s.usage.find((u) => u.key === keys.month)?.count ?? 0;
+  const exemptSearches =
+    s.usage.find((u) => u.key === keys.monthExempt)?.count ?? 0;
+  return {
+    searches,
+    exemptSearches,
+    quotaSearches: Math.max(0, searches - exemptSearches),
   };
 }
 export function discoveryAllowance(
@@ -212,16 +226,25 @@ export function discoveryAllowance(
   now = new Date(),
 ) {
   const keys = quotaKeys(a.id, now);
+  const override = syntheticEnvironment()
+    ? undefined
+    : discoveryUserOverrides().get(a.id);
+  const weeklyLimit = override?.weeklyLimit ?? cfg.weeklyLimit;
   return {
-    weeklyRemaining: Math.max(
-      0,
-      cfg.weeklyLimit - (s.usage.find((u) => u.key === keys.week)?.count ?? 0),
-    ),
-    monthlyRemaining: Math.max(
-      0,
-      cfg.monthlyLimit -
-        (s.usage.find((u) => u.key === keys.month)?.count ?? 0),
-    ),
+    weeklyRemaining:
+      weeklyLimit === "unlimited"
+        ? null
+        : Math.max(
+            0,
+            weeklyLimit -
+              (s.usage.find((u) => u.key === keys.week)?.count ?? 0),
+          ),
+    monthlyRemaining: override?.bypassMonthlyLimit
+      ? null
+      : Math.max(
+          0,
+          cfg.monthlyLimit - discoveryMonthlyUsage(s, now).quotaSearches,
+        ),
     weekResetsAt: keys.weekResetsAt,
     monthResetsAt: keys.monthResetsAt,
   };
@@ -330,7 +353,7 @@ export function createDiscovery(
   )
     fail(409, "Wait for your current search or price check to finish.");
   const allowance = discoveryAllowance(s, a, cfg, now);
-  if (!allowance.weeklyRemaining || !allowance.monthlyRemaining)
+  if (allowance.weeklyRemaining === 0 || allowance.monthlyRemaining === 0)
     fail(
       429,
       "The search allowance has been used. You can still browse your recent results.",
@@ -358,11 +381,13 @@ export function startDiscovery(
   const j = discoveryJob(s, a, cfg, id, now);
   if (j.status !== "pending") return undefined;
   const allowance = discoveryAllowance(s, a, cfg, now);
-  if (!allowance.weeklyRemaining || !allowance.monthlyRemaining)
+  if (allowance.weeklyRemaining === 0 || allowance.monthlyRemaining === 0)
     fail(429, "The search allowance has been used. Try again after it resets.");
   const keys = quotaKeys(a.id, now);
   addDiscoveryUsage(s, keys.week, 1);
   addDiscoveryUsage(s, keys.month, 1);
+  j.monthlyQuotaExempt = allowance.monthlyRemaining === null;
+  if (j.monthlyQuotaExempt) addDiscoveryUsage(s, keys.monthExempt, 1);
   j.startedAt = now.toISOString();
   j.status = "running";
   j.revision++;

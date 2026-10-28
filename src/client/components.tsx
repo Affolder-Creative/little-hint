@@ -108,8 +108,19 @@ export function Avatar({
 export function Privacy({ mode }: { mode: "surprise" | "transparent" }) {
   return (
     <span className={`privacy ${mode}`}>
-      {mode === "surprise" ? <LockKeyhole size={13} /> : <Eye size={13} />}{" "}
-      {mode === "surprise" ? "Keep it a surprise" : "See the plans"}
+      {mode === "surprise" ? (
+        <LockKeyhole size={13} aria-hidden="true" />
+      ) : (
+        <Eye size={13} aria-hidden="true" />
+      )}
+      <span className="privacy-label">
+        {mode === "surprise" ? "Keep it a surprise" : "See the plans"}
+      </span>
+      {mode === "surprise" && (
+        <span className="privacy-short-label" aria-hidden="true">
+          Surprise
+        </span>
+      )}
     </span>
   );
 }

@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   mode: "both",
   configReads: 0,
   disableBeforeDispatch: false,
+  clearOverridesBeforeDispatch: false,
   check: vi.fn(),
   image: vi.fn(),
   photos: false,
@@ -22,6 +23,8 @@ vi.mock("../src/server/db", () => ({
 vi.mock("../src/server/settings", () => ({
   config: async () => {
     mocks.configReads++;
+    if (mocks.clearOverridesBeforeDispatch && mocks.configReads === 3)
+      vi.stubEnv("GIFT_DISCOVERY_USER_OVERRIDES", "");
     if (mocks.disableBeforeDispatch && mocks.configReads === 3)
       mocks.mode = "off";
     return {
@@ -64,6 +67,9 @@ import { processDiscovery } from "../src/server/gift-discovery-worker";
 import {
   createDiscovery,
   discoveryAllowance,
+  discoveryMonthlyUsage,
+  addDiscoveryUsage,
+  quotaKeys,
   prepareDiscoveryReview,
 } from "../src/server/gift-discovery";
 import {
@@ -104,10 +110,13 @@ function proposal() {
   };
 }
 beforeEach(() => {
+  vi.stubEnv("APP_ENV", "test");
+  vi.stubEnv("GIFT_DISCOVERY_USER_OVERRIDES", "");
   vi.clearAllMocks();
   mocks.mode = "both";
   mocks.configReads = 0;
   mocks.disableBeforeDispatch = false;
+  mocks.clearOverridesBeforeDispatch = false;
   mocks.photos = false;
   f = discoveryFixture();
   mocks.state = f.state;
@@ -126,7 +135,52 @@ beforeEach(() => {
     vi.fn(async () => response()),
   );
 });
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
+});
+it("honors account-ID exceptions in the worker, including failures and duplicate delivery", async () => {
+  vi.stubEnv(
+    "GIFT_DISCOVERY_USER_OVERRIDES",
+    JSON.stringify({
+      [f.actors[1].id]: { weeklyLimit: "unlimited", bypassMonthlyLimit: true },
+    }),
+  );
+  addDiscoveryUsage(mocks.state, quotaKeys(f.actors[1].id).month, 100);
+  vi.mocked(fetch).mockRejectedValue(new Error("ambiguous network failure"));
+  await processDiscovery(id);
+  await processDiscovery(id);
+  expect(fetch).toHaveBeenCalledTimes(1);
+  expect(mocks.state.giftDiscoveryJobs[0]).toMatchObject({
+    status: "failed",
+    monthlyQuotaExempt: true,
+  });
+  expect(discoveryMonthlyUsage(mocks.state)).toEqual({
+    searches: 101,
+    exemptSearches: 1,
+    quotaSearches: 100,
+  });
+});
+it("refunds the reserved exemption after policy changes before dispatch", async () => {
+  vi.stubEnv(
+    "GIFT_DISCOVERY_USER_OVERRIDES",
+    JSON.stringify({
+      [f.actors[1].id]: { weeklyLimit: "unlimited", bypassMonthlyLimit: true },
+    }),
+  );
+  mocks.disableBeforeDispatch = true;
+  mocks.clearOverridesBeforeDispatch = true;
+  await processDiscovery(id);
+  expect(fetch).not.toHaveBeenCalled();
+  expect(discoveryMonthlyUsage(mocks.state)).toEqual({
+    searches: 0,
+    exemptSearches: 0,
+    quotaSearches: 0,
+  });
+  expect(
+    discoveryAllowance(mocks.state, f.actors[1], cfg).weeklyRemaining,
+  ).toBe(3);
+});
 it("dispatches one bounded request without identity, records usage, and never replays a finished job", async () => {
   await processDiscovery(id);
   await processDiscovery(id);

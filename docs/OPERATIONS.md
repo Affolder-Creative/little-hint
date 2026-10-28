@@ -121,9 +121,27 @@ Admin settings offer **Off throughout the app**, **For others only**, **For own 
 | `GIFT_DISCOVERY_MONTHLY_LIMIT`     | `100`                                           |
 | `GIFT_DISCOVERY_MODEL`             | `gpt-6-luna`                                    |
 
-A configured `OPENAI_API_KEY` is also required. A zero search limit blocks new paid searches while existing eligible batches remain usable. Staging forces discovery off regardless of saved/provider settings. `.env.production.example` starts with `GIFT_DISCOVERY_MODE=off`; leave it off during rollout. Remove that override to use the admin toggle, or change it and recreate **both** app and worker containers. Admin changes take effect without restart; clients learn the change on their normal refresh, and server guards apply immediately. Already dispatched work may still be billed. Disabling clears unsaved batches, and re-enabling does not restore them.
+A configured `OPENAI_API_KEY` is also required. A zero search limit blocks new paid searches for accounts without an applicable exception while existing eligible batches remain usable. Staging and preview force discovery off regardless of saved/provider settings. `.env.production.example` starts with `GIFT_DISCOVERY_MODE=off`; leave it off during rollout. Remove that override to use the admin toggle, or change it and recreate **both** app and worker containers. Admin changes take effect without restart; clients learn the change on their normal refresh, and server guards apply immediately. Already dispatched work may still be billed. Disabling clears unsaved batches, and re-enabling does not restore them.
 
 Usage resets Monday 00:00 UTC for accounts and the first of each month 00:00 UTC for the installation. Limits count dispatched attempts across all recipients/modes, including failures, rather than shuffles or direct price refreshes. Each attempt permits at most two web-search calls and 4,000 output tokens. Admin usage reports returned input/output tokens, search calls and a standard-rate estimate, plus attempts with unknown usage. Estimates are not a provider billing cap; reconcile actual invoices and recheck pricing before changing models. Discovery does not use `PAID_DAILY_LIMIT` or paid scraping: its weekly/monthly controls are separate.
+
+### Per-account search exceptions
+
+Set `GIFT_DISCOVERY_USER_OVERRIDES` on the server to a JSON object keyed by the stable authentication account ID. It is separate from editable admin settings and is never sent to browsers. Empty or `{}` means no exceptions; administrators receive no automatic exemption.
+
+```dotenv
+GIFT_DISCOVERY_USER_OVERRIDES='{"ACCOUNT_ID":{"weeklyLimit":"unlimited","bypassMonthlyLimit":true},"ANOTHER_ACCOUNT_ID":{"weeklyLimit":20}}'
+```
+
+Replace the example IDs with real account IDs. While signed in as the account, open `/api/v1/world` on the app's origin and copy `me.id`. Use the account ID, not a person's profile ID, email, or name. For another account, its user can retrieve its own ID the same way. This read requires an authenticated session.
+
+`weeklyLimit` accepts an integer from 0 through 999999, or the string `"unlimited"`. Omitting it keeps the configured default. `bypassMonthlyLimit` accepts a boolean and defaults to false. Weekly exceptions alone still consume and obey the shared monthly allowance. A monthly exemption allows searches after the shared allowance is exhausted, including when that limit is zero. It does not waive a finite weekly limit. Exceptions cover the account's searches for all recipients, including managed profiles.
+
+Monthly-exempt searches do not consume the shared monthly allowance. Admin reports show shared usage, exempt searches, and total searches separately. Every dispatched attempt still counts in total usage and provider reporting, including failures. Existing usage is not retroactively reclassified. Removing an exception restores normal enforcement against the account's recorded weekly usage. Only known failures before dispatch are refunded; their original exemption classification determines the refund.
+
+The global Off switch, staging/preview isolation, audience and recipient permissions, one active search per account, and provider request bounds still apply. Unlimited means no application quota for that account, not free provider requests. The client displays the effective allowance; `null` in its weekly/monthly remaining fields means that cap does not apply.
+
+Pass the same value to both app and worker and recreate both containers after changes. Compose forwards this variable to both services. In a hosting environment-value field, enter the JSON object without the surrounding dotenv single quotes. Invalid configuration prevents either service from starting and reports the variable name without echoing its value. No SQL migration is required; older jobs remain non-exempt, and current-month counters are preserved. Deploy the new app, worker, and client together.
 
 Deploy app and worker from the **same image** together. Stop old writers before starting the new release: the full-state writer removes unknown application-record kinds, so an old binary can delete `giftPreferences` or `giftDiscoveryJobs`. No SQL backfill is needed, but take a database/upload backup. Before rollback, set off, stop both services, export these two kinds and retain the backup. Restore them only with a compatible binary; do not run old and new workers concurrently. Saved item offer fields are optional, and existing manual lists/items continue to work.
 

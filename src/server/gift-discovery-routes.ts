@@ -16,6 +16,7 @@ import {
   prepareDiscoveryReview,
   saveDiscoveryReview,
   quotaKeys,
+  discoveryMonthlyUsage,
 } from "./gift-discovery";
 
 export function registerGiftDiscovery(
@@ -101,13 +102,14 @@ export function registerGiftDiscovery(
       rows
         .filter((u) => u.key.endsWith(`:${metric}`))
         .reduce((sum, u) => sum + u.count, 0);
-    const searches = s.usage.find((u) => u.key === keys.month)?.count ?? 0;
+    const usage = discoveryMonthlyUsage(s);
+    const { searches } = usage;
     const unknownModel = rows.some(
       (u) => !u.key.startsWith(`discovery:metrics:${month}:gpt-6-luna:`),
     );
     return {
       config: cfg,
-      searches,
+      ...usage,
       searchCalls: total("searches"),
       inputTokens: total("input"),
       outputTokens: total("output"),
