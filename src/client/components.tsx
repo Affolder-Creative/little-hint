@@ -144,7 +144,7 @@ export function Modal({
     setDiscarding(false);
   };
   const requestClose = (afterClose?: () => void) => {
-    if (ref.current?.querySelector('form[data-busy="true"]')) return;
+    if (ref.current?.querySelector('[data-busy="true"]')) return;
     afterDismiss.current = afterClose;
     if (ref.current?.querySelector('form[data-dirty="true"]')) {
       previousFocus.current = document.activeElement as HTMLElement;

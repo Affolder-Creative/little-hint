@@ -343,9 +343,11 @@ test("desktop and mobile screens are usable without overflow", async ({
     .selectOption("profile");
   await page.getByLabel("Appearance", { exact: true }).selectOption("dark");
   await page.goto("/");
+  await page.getByRole("button", { name: /^Sort & filter/ }).click();
   await expect(
     page.getByLabel("Available to give", { exact: true }),
   ).toBeVisible();
+  await page.getByRole("button", { name: "Done", exact: true }).click();
   expect(
     (
       await new AxeBuilder({ page })

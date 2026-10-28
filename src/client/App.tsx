@@ -1,3 +1,4 @@
+import { BrowseTools } from "./BrowseTools";
 import { Invitations } from "./Invitations";
 import { OfferLinks } from "./OfferLinks";
 import { Action } from "./Action";
@@ -23,7 +24,7 @@ import {
   spendingGuideline,
 } from "../shared/spending-guidance";
 import { ListIndex } from "./ListIndex";
-import { priorityLabels, ordered } from "../shared/organization";
+import { priorityLabels, ordered, sortLabels } from "../shared/organization";
 import {
   ActionMenu,
   CollectionTools,
@@ -68,7 +69,7 @@ import {
   Shuffle,
   Settings,
   Plus,
-  Search,
+  ChevronRight,
   ArrowRight,
   ArrowLeft,
   Check,
@@ -637,7 +638,24 @@ function Browser({
       )}
       {items.length > 0 && (
         <>
-          <div className="item-organization">
+          <BrowseTools
+            search={search}
+            setSearch={setSearch}
+            searchLabel={searchLabel}
+            placeholder="Search by name, person, or tag"
+            activeCount={Number(!!tag) + Number(showAvailability && available)}
+            summary={[
+              ...(settings.sort !== "manual"
+                ? [sortLabels[settings.sort]]
+                : []),
+              ...(tag ? [tag] : []),
+              ...(showAvailability && available ? ["Available to give"] : []),
+            ]}
+            clear={() => {
+              setTag("");
+              setAvailable(false);
+            }}
+          >
             <SortSelect
               items
               manualLabel={parentList ? "List order" : "Default order"}
@@ -646,6 +664,7 @@ function Browser({
             />
             {canReorder && items.filter((i) => !i.archived).length > 1 && (
               <button
+                data-browse-reorder
                 className="button secondary small"
                 onClick={() =>
                   open(
@@ -671,27 +690,19 @@ function Browser({
                 Reorder items
               </button>
             )}
-          </div>
-          <div className="filters">
-            <label className="search">
-              <Search size={18} />
-              <input
-                aria-label={searchLabel}
-                placeholder="Search by name, person, or tag"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
+            <label>
+              Tag
+              <select
+                aria-label="Filter by tag"
+                value={tag}
+                onChange={(e) => setTag(e.target.value)}
+              >
+                <option value="">All tags</option>
+                {tags.map((t) => (
+                  <option key={t}>{t}</option>
+                ))}
+              </select>
             </label>
-            <select
-              aria-label="Filter by tag"
-              value={tag}
-              onChange={(e) => setTag(e.target.value)}
-            >
-              <option value="">All tags</option>
-              {tags.map((t) => (
-                <option key={t}>{t}</option>
-              ))}
-            </select>
             {showAvailability && (
               <label className="check filter-check">
                 <input
@@ -702,7 +713,7 @@ function Browser({
                 Available to give
               </label>
             )}
-          </div>
+          </BrowseTools>
         </>
       )}
       {filtered.length ? (
@@ -1128,7 +1139,7 @@ function Lists() {
             />
           )}
           {list.canManageSettings ? (
-            <ActionMenu name={list.name}>
+            <ActionMenu name={list.name} label="List actions">
               <button
                 className="text-button"
                 onClick={() => open("List settings", <ListForm list={list} />)}
@@ -1167,7 +1178,11 @@ function Lists() {
           onToggle={(event) => setPrivacyOpen(event.currentTarget.open)}
         >
           <summary>
-            <Privacy mode={list.mode} /> <span>Privacy details</span>
+            <Privacy mode={list.mode} />{" "}
+            <span className="privacy-disclosure-label">
+              <ChevronRight size={16} aria-hidden="true" />
+              Privacy details
+            </span>
           </summary>
           <RevealPolicy list={list} />
         </details>
@@ -1932,10 +1947,10 @@ function Buying() {
 }
 function Exchanges() {
   const { world, open, mutate, toast, close } = useApp();
-  const [view, setView] = useState("active"),
-    [search, setSearch] = useState(""),
-    [group, setGroup] = useState(""),
-    [status, setStatus] = useState("");
+  const [view, setView] = useNavigationState<string>("exchangeView", "active"),
+    [search, setSearch] = useNavigationState<string>("exchangeSearch", ""),
+    [group, setGroup] = useNavigationState<string>("exchangeGroup", ""),
+    [status, setStatus] = useNavigationState<string>("exchangeStatus", "");
   const settings = useOrganization("exchanges");
   const canCreate = world.groups.some((g) =>
     canManageGroupEvents(g, world.me.id),
@@ -1996,16 +2011,9 @@ function Exchanges() {
             setSearch={setSearch}
             group={group}
             setGroup={setGroup}
+            status={status}
+            setStatus={setStatus}
           />
-          <label className="exchange-status-filter">
-            Status
-            <select value={status} onChange={(e) => setStatus(e.target.value)}>
-              <option value="">All statuses</option>
-              <option value="draft">Getting ready</option>
-              <option value="drawn">Names drawn</option>
-              <option value="cancelled">Cancelled</option>
-            </select>
-          </label>
         </>
       )}
       {view === "trash" ? (

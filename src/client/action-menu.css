@@ -1,0 +1,17 @@
+.entry-actions > summary:has(.entry-actions-label) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: auto;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 550;
+}
+.entry-actions-label {
+  overflow-wrap: normal;
+}

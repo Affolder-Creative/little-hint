@@ -1,3 +1,4 @@
+import { useNavigationState } from "./NavigationScroll";
 import {
   GuidelineField,
   GuidelineLabel,
@@ -321,8 +322,8 @@ export function GroupEventSettings({ group }: { group: Group }) {
 
 export function GroupEventsSection({ archived }: { archived: boolean }) {
   const { world, open } = useApp();
-  const [search, setSearch] = useState(""),
-    [group, setGroup] = useState("");
+  const [search, setSearch] = useNavigationState<string>("eventSearch", ""),
+    [group, setGroup] = useNavigationState<string>("eventGroup", "");
   const settings = useOrganization("events");
   const ownedLists = world.lists.filter(
     (l) => l.canEdit && l.archived === archived,
@@ -410,32 +411,6 @@ export function GroupEventsSection({ archived }: { archived: boolean }) {
                 </p>
               </div>
               <Privacy mode={event.mode} />
-              {event.canManage && (
-                <ActionMenu name={event.name}>
-                  <button
-                    className="text-button"
-                    onClick={() =>
-                      open("Edit group event", <EventForm event={event} />)
-                    }
-                  >
-                    Edit event
-                  </button>
-                  <button
-                    className="text-button"
-                    onClick={() =>
-                      open(
-                        event.archived
-                          ? "Restore group event"
-                          : "Archive group event",
-                        <EventArchiveForm event={event} />,
-                      )
-                    }
-                  >
-                    {event.archived ? "Restore event" : "Archive event"}
-                  </button>
-                  <TrashButton kind="group-events" entry={event} />
-                </ActionMenu>
-              )}
             </div>
             <div className="event-entry-links">
               {mine.map((list) => {
@@ -464,7 +439,33 @@ export function GroupEventsSection({ archived }: { archived: boolean }) {
               <Link className="text-button" to={`/events/${event.id}`}>
                 {event.canManage ? "Manage event" : "View event"}
                 <ArrowRight size={16} />
-              </Link>
+              </Link>{" "}
+              {event.canManage && (
+                <ActionMenu name={event.name} label="Event actions">
+                  <button
+                    className="text-button"
+                    onClick={() =>
+                      open("Edit group event", <EventForm event={event} />)
+                    }
+                  >
+                    Edit event
+                  </button>
+                  <button
+                    className="text-button"
+                    onClick={() =>
+                      open(
+                        event.archived
+                          ? "Restore group event"
+                          : "Archive group event",
+                        <EventArchiveForm event={event} />,
+                      )
+                    }
+                  >
+                    {event.archived ? "Restore event" : "Archive event"}
+                  </button>
+                  <TrashButton kind="group-events" entry={event} />
+                </ActionMenu>
+              )}
             </div>
           </article>
         );
