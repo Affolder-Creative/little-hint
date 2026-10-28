@@ -246,6 +246,8 @@ export function Form({
   resetOnSuccess = false,
   allowOffline = false,
   dirty: controlledDirty,
+  cancel,
+  busyLabel = "Saving…",
 }: {
   onSubmit: (data: FormData) => Promise<unknown>;
   children: ReactNode;
@@ -257,6 +259,8 @@ export function Form({
   allowOffline?: boolean;
   // Non-field editors can supply their actual unsaved state, including resets.
   dirty?: boolean;
+  cancel?: () => void;
+  busyLabel?: string;
 }) {
   const [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
@@ -267,6 +271,12 @@ export function Form({
     content: ReactNode;
   } | null>(null);
   const online = useOnline();
+  const submitting = useRef(false);
+  const errorRef = useRef<HTMLParagraphElement>(null);
+  const errorId = useId();
+  useEffect(() => {
+    if (error) errorRef.current?.focus();
+  }, [error]);
   const reviewRef = useRef<HTMLDivElement>(null);
   const fieldsRef = useRef<HTMLFieldSetElement>(null);
   const wasReviewing = useRef(false);
@@ -296,7 +306,7 @@ export function Form({
   async function send(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = e.currentTarget;
-    if (!online && !allowOffline) return;
+    if (submitting.current || disabled || (!online && !allowOffline)) return;
     const data = pending?.data ?? new FormData(form);
     if (!pending && review) {
       const content = review(data);
@@ -305,6 +315,7 @@ export function Form({
         return;
       }
     }
+    submitting.current = true;
     setBusy(true);
     setError("");
     try {
@@ -314,6 +325,7 @@ export function Form({
     } catch (e) {
       setError(actionError(e));
     } finally {
+      submitting.current = false;
       setBusy(false);
     }
   }
@@ -324,6 +336,8 @@ export function Form({
       onChange={() => setDirty(true)}
       data-dirty={dirty}
       data-busy={busy}
+      aria-busy={busy}
+      aria-describedby={error ? errorId : undefined}
       onClick={(event) => {
         if ((event.target as Element).closest("[data-form-change]"))
           setDirty(true);
@@ -346,21 +360,39 @@ export function Form({
         </div>
       )}
       {error && (
-        <p role="alert" className="error">
+        <p
+          ref={errorRef}
+          id={errorId}
+          tabIndex={-1}
+          role="alert"
+          className="error form-error"
+        >
           {error}
         </p>
       )}
       {!online && !allowOffline && (
         <p role="status">Reconnect to save these changes.</p>
       )}
-      <button
-        disabled={busy || disabled || (!online && !allowOffline)}
-        className="button"
-        type="submit"
-      >
-        {busy ? <LoaderCircle className="spin" size={17} /> : null}
-        {busy ? "Saving…" : pending ? "Confirm and save" : submit}
-      </button>
+      <div className="form-actions">
+        <button
+          disabled={busy || disabled || (!online && !allowOffline)}
+          className="button"
+          type="submit"
+        >
+          {busy ? <LoaderCircle className="spin" size={17} /> : null}
+          {busy ? busyLabel : pending ? "Confirm and save" : submit}
+        </button>
+        {cancel && (
+          <button
+            type="button"
+            className="button secondary"
+            disabled={busy}
+            onClick={cancel}
+          >
+            Cancel
+          </button>
+        )}
+      </div>
     </form>
   );
 }
@@ -374,12 +406,19 @@ export function Field({
   hint?: ReactNode;
 }) {
   const id = useId();
+  const child = children as ReactElement<Record<string, unknown>>;
+  const description = [
+    child.props["aria-describedby"],
+    hint ? `${id}-hint` : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
   return (
     <div className="field">
       <label htmlFor={id}>{label}</label>
-      {cloneElement(children as ReactElement<Record<string, unknown>>, {
+      {cloneElement(child, {
         id,
-        "aria-describedby": hint ? `${id}-hint` : undefined,
+        "aria-describedby": description || undefined,
       })}
       {hint && <small id={`${id}-hint`}>{hint}</small>}
     </div>
@@ -472,10 +511,13 @@ export function PrivateIdeaBadge({ gift }: { gift?: GiftView }) {
 export function GiftCard({
   gift,
   sourceListName,
+  headingLevel = 2,
 }: {
   gift: GiftView;
   sourceListName?: string;
+  headingLevel?: 2 | 3;
 }) {
+  const Heading = headingLevel === 2 ? "h2" : "h3";
   return (
     <Link
       className="gift-card"
@@ -489,7 +531,7 @@ export function GiftCard({
           <span>For {gift.recipientNames.join(" & ")}</span>
           <ArrowUpRight size={15} />
         </div>
-        <h3>{gift.title}</h3>
+        <Heading className="gift-title">{gift.title}</Heading>
         <PrivateIdeaBadge gift={gift} />
         {gift.listId && gift.priority && (
           <span className={`item-priority priority-${gift.priority}`}>

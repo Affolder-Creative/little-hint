@@ -599,6 +599,7 @@ function Browser({
   searchLabel = "Search items and gift ideas",
   listNames,
   listId,
+  headingLevel = 2,
 }: {
   items: GiftView[];
   emptyTitle?: string;
@@ -607,6 +608,7 @@ function Browser({
   searchLabel?: string;
   listNames?: ReadonlyMap<string, string>;
   listId?: string;
+  headingLevel?: 2 | 3;
 }) {
   const [search, setSearch] = useNavigationState<string>("search", ""),
     [tag, setTag] = useNavigationState<string>("tag", ""),
@@ -739,6 +741,7 @@ function Browser({
             <div className="gift-card-entry" key={i.id}>
               <GiftCard
                 gift={i}
+                headingLevel={headingLevel}
                 sourceListName={i.listId ? listNames?.get(i.listId) : undefined}
               />
               <ItemActions gift={i} />
@@ -842,7 +845,7 @@ function Home() {
           family group.
         </Empty>
       ) : (
-        <Browser items={items} />
+        <Browser items={items} headingLevel={3} />
       )}
       <GiftPreferencePrompt />
       {solo && (

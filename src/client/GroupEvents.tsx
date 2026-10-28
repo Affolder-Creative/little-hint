@@ -488,6 +488,7 @@ function EventArchiveForm({ event }: { event: GroupEvent }) {
   return (
     <Form
       submit={event.archived ? "Restore event" : "Archive event"}
+      cancel={close}
       onSubmit={async () => {
         await mutate("group-events/update", {
           ...event,

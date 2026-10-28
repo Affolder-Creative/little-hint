@@ -24,6 +24,7 @@ export function Action({
         aria-label={label}
         title={!online ? "Reconnect to complete this action" : undefined}
         disabled={busy || !online}
+        aria-busy={busy}
         onClick={async () => {
           setBusy(true);
           setError("");

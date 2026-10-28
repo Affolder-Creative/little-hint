@@ -45,6 +45,7 @@ export function RunButton({
         type="button"
         className={className}
         disabled={busy || disabled}
+        aria-busy={busy}
         onClick={async () => {
           setBusy(true);
           setError("");
@@ -80,7 +81,7 @@ export function ActionMenu({
     <details
       className="entry-actions"
       onToggle={(event) => {
-        if (!label || !event.currentTarget.open) return;
+        if (!event.currentTarget.open) return;
         const menu = event.currentTarget.querySelector<HTMLElement>(
           ".entry-actions-content",
         );

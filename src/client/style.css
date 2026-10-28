@@ -26,6 +26,41 @@
 body {
   margin: 0;
 }
+
+/* User names, gift notes and translated labels must not widen the page. */
+h1,
+h2,
+h3,
+h4,
+p,
+legend,
+label,
+summary {
+  overflow-wrap: anywhere;
+}
+
+summary {
+  cursor: pointer;
+  min-height: 44px;
+  align-content: center;
+}
+
+summary::marker {
+  color: var(--muted);
+}
+
+:where(p, small, li) > a:not([class]),
+.notice a:not([class]),
+.discovery-product p a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+}
+
+:where(p, small, li) > a:not([class]):hover {
+  text-decoration-thickness: 2px;
+}
 [hidden] {
   display: none !important;
 }
@@ -202,8 +237,11 @@ main:focus {
   overflow-wrap: anywhere;
   text-align: center;
 }
-.button:hover {
+.button:hover:not(:disabled) {
   filter: brightness(0.94);
+}
+.button:active:not(:disabled) {
+  filter: brightness(0.88);
 }
 .button.secondary {
   background: var(--paper);
@@ -285,6 +323,7 @@ main:focus {
   flex: 0 0 242px;
   border-right: 1px solid var(--border);
   padding: 30px 22px 20px;
+  overflow-y: auto;
   background: var(--paper);
   position: fixed;
   inset: 0 auto 0 0;
@@ -341,6 +380,8 @@ main:focus {
 }
 .settings-link > span:nth-child(2) {
   flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .settings-link small {
   display: block;
@@ -382,6 +423,7 @@ main {
 }
 .page-heading {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
   gap: 24px;
@@ -389,6 +431,13 @@ main {
 }
 .page-heading > div:first-child {
   min-width: 0;
+}
+.page-heading:not(.list-heading) > div:first-child {
+  flex: 1 1 280px;
+}
+.page-heading > .actions {
+  min-width: 0;
+  max-width: 100%;
 }
 .page-heading p {
   color: var(--muted);
@@ -449,11 +498,16 @@ main {
   font-size: 13px;
 }
 .check {
+  min-height: 44px;
+  cursor: pointer;
   display: flex;
   align-items: center;
   gap: 9px;
   font-size: 14px;
   line-height: 1.5;
+}
+.check input {
+  margin: 0;
 }
 .check small {
   color: var(--muted);
@@ -474,7 +528,7 @@ main {
   row-gap: 0;
   min-width: 0;
 }
-.gift-card:hover h3 {
+.gift-card:hover .gift-title {
   text-decoration: underline;
   text-underline-offset: 4px;
 }
@@ -530,7 +584,7 @@ main {
 .gift-recipient > svg:last-child {
   margin-left: auto;
 }
-.gift-card h3 {
+.gift-card .gift-title {
   font-size: 16px;
   line-height: 1.4;
   margin-bottom: 9px;
@@ -649,6 +703,9 @@ main {
   max-width: 580px;
   margin: auto;
 }
+.empty > .actions {
+  justify-content: center;
+}
 .empty > img {
   margin-bottom: 20px;
   opacity: 0.85;
@@ -677,6 +734,7 @@ main {
 }
 .person-row > div {
   flex: 1;
+  min-width: 0;
 }
 .person-row h2 {
   font-size: 18px;
@@ -702,11 +760,17 @@ main {
 }
 .tabs {
   display: flex;
-  gap: 26px;
+  flex-wrap: wrap;
+  gap: 4px 26px;
   border-bottom: 1px solid var(--border);
   margin-bottom: 24px;
 }
 .tabs button {
+  min-height: 44px;
+  min-width: 44px;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  text-align: start;
   border: 0;
   border-bottom: 2px solid transparent;
   background: none;
@@ -799,9 +863,12 @@ main {
 }
 .gift-detail {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 42px;
   align-items: start;
+}
+.gift-detail > section {
+  min-width: 0;
 }
 .gift-detail > .gift-photo {
   position: sticky;
@@ -906,6 +973,9 @@ main {
   gap: 12px;
   margin: 24px 0;
 }
+.comment > div {
+  min-width: 0;
+}
 .comment strong {
   font-size: 13px;
 }
@@ -1006,6 +1076,22 @@ main {
 .form .button[type="submit"] {
   justify-self: start;
 }
+.form-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.form-error {
+  padding: 12px 16px;
+  border: 1px solid var(--error);
+  border-radius: 8px;
+  scroll-margin-block: 20px;
+}
+.form-error:focus {
+  outline: 2px solid var(--error);
+  outline-offset: 3px;
+}
 .field {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -1031,7 +1117,7 @@ main {
 .choice-group {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 13px;
+  gap: 8px;
 }
 .choice-group legend {
   font-weight: 550;
@@ -1044,7 +1130,7 @@ main {
 .list-form > fieldset {
   gap: 16px;
 }
-.list-form > .button[type="submit"] {
+.list-form .button[type="submit"] {
   max-width: 100%;
   white-space: normal;
 }
@@ -1194,6 +1280,12 @@ main {
   padding: 16px;
   font-size: 13px;
 }
+.notice a:not([class]),
+.duplicate a,
+.install .text-button,
+.gift-preference-prompt .text-button {
+  color: var(--text);
+}
 .notice svg {
   margin-right: 8px;
 }
@@ -1218,6 +1310,7 @@ main {
 }
 .invitation > div {
   flex: 1;
+  min-width: 0;
 }
 .invitation p {
   font-size: 13px;
@@ -1464,6 +1557,8 @@ main {
   margin: 0 7px;
 }
 .toast {
+  overflow-wrap: anywhere;
+  width: max-content;
   position: fixed;
   bottom: 25px;
   left: calc(50% + 100px);
@@ -1615,7 +1710,8 @@ main {
   font-size: 14px;
   color: var(--muted);
 }
-.login-form-panel .form > .button {
+.login-form-panel .form > .button,
+.login-form-panel .form-actions > .button {
   width: 100%;
 }
 .login-form-panel > p {
@@ -1759,7 +1855,7 @@ main {
     align-items: flex-start;
   }
   .page-heading > .actions {
-    justify-content: flex-end;
+    justify-content: flex-start;
   }
   .login-layout {
     gap: 40px;
@@ -1849,7 +1945,10 @@ main {
     overflow-wrap: anywhere;
   }
   .mobile-nav a.active {
-    color: var(--accent);
+    color: var(--text);
+    background: var(--soft);
+    border-radius: 8px;
+    font-weight: 600;
   }
   main {
     padding: 24px 24px 32px;
@@ -1873,7 +1972,7 @@ main {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 26px 18px;
   }
-  .gift-card h3 {
+  .gift-card .gift-title {
     font-size: 15px;
   }
   .gift-recipient {
@@ -1945,6 +2044,9 @@ main {
   .page-heading {
     display: block;
   }
+  .page-heading:not(.list-heading) > div:first-child {
+    flex-basis: auto;
+  }
   .page-heading > .actions {
     justify-content: flex-start;
     margin-top: 16px;
@@ -1969,8 +2071,8 @@ main {
     font-size: 12px;
   }
   .home-intro > .text-button {
-    font-size: 11px;
-    max-width: 95px;
+    font-size: 13px;
+    max-width: 110px;
     line-height: 1.5;
     text-align: right;
   }
@@ -2024,7 +2126,7 @@ main {
   .gift-recipient > svg:last-child {
     display: none;
   }
-  .gift-card h3 {
+  .gift-card .gift-title {
     font-size: 14px;
   }
   .gift-meta {
@@ -2185,7 +2287,7 @@ main {
     gap: 14px;
   }
   .invitation > div {
-    min-width: 200px;
+    min-width: min(200px, 100%);
   }
   .invitation .action-wrap {
     margin-left: 36px;
@@ -2194,7 +2296,7 @@ main {
     flex-wrap: wrap;
   }
   .member-list .text-button {
-    font-size: 11px;
+    font-size: 13px;
   }
   .member-list > div > span:nth-child(2) {
     min-width: 100px;
@@ -2206,7 +2308,7 @@ main {
     font-size: 21px;
   }
   .integration-settings summary {
-    font-size: 12px;
+    font-size: 14px;
   }
   .integration-settings summary small {
     font-size: 12px;
@@ -2284,7 +2386,7 @@ main {
     max-width: 90vw;
   }
   .tabs {
-    gap: 22px;
+    gap: 4px 22px;
   }
   .tabs button {
     font-size: 13px;
@@ -2927,9 +3029,14 @@ main {
   gap: 4px;
 }
 .entry-actions-content .text-button {
+  padding-inline: 8px;
+  border-radius: 4px;
   text-align: start;
   justify-content: start;
   width: 100%;
+}
+.entry-actions-content .text-button:hover:not(:disabled) {
+  background: var(--soft);
 }
 .entry-actions-content p {
   max-width: 24ch;
@@ -3167,6 +3274,9 @@ main {
   border-radius: 8px;
   align-items: start;
 }
+.gift-interest-options .check input {
+  margin-top: 2px;
+}
 .gift-interest-options .check:has(input:checked) {
   background: var(--soft);
 }
@@ -3219,6 +3329,13 @@ main {
   aspect-ratio: 1.13;
   object-fit: contain;
   border-radius: 14px;
+}
+.discovery-product:has(input:checked) {
+  border-bottom-color: var(--accent);
+}
+.discovery-product .check:has(input:checked) {
+  color: var(--accent);
+  font-weight: 600;
 }
 .discovery-product h3 {
   font-size: 18px;

@@ -59,6 +59,7 @@ export function AsyncButton({
         type="button"
         className={className}
         disabled={busy}
+        aria-busy={busy}
         aria-label={label}
         onClick={async () => {
           setBusy(true);
