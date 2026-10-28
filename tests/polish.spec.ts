@@ -60,7 +60,9 @@ test("main views and email templates retain readable responsive layouts", async 
   ).toHaveCount(0);
   await expect(page.locator(".gift-card").first()).toBeVisible();
   await page.goto("/");
+  await page.getByRole("button", { name: /^Sort & filter/ }).click();
   await page.getByLabel("Available to give", { exact: true }).check();
+  await page.getByRole("button", { name: "Done", exact: true }).click();
   await page
     .getByRole("link", { name: "My lists", exact: true })
     .last()

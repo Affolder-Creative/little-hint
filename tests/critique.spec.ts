@@ -545,6 +545,7 @@ for (const method of ["arrows", "drag"] as const) {
           .last()
           .dragTo(dialog.locator(".reorder-list > li").first());
     };
+    await page.getByRole("button", { name: /^Sort & filter/ }).click();
     await open.click();
     await move();
     await expect(names).toHaveText([...original].reverse());
@@ -560,9 +561,12 @@ for (const method of ["arrows", "drag"] as const) {
       .click();
     await page.keyboard.press("Escape");
     await expect(dialog).toHaveCount(0);
-    await expect(open).toBeFocused();
+    await expect(
+      page.getByRole("button", { name: /^Sort & filter/ }),
+    ).toBeFocused();
 
     for (const dismissal of ["Cancel", "Close dialog"]) {
+      await page.getByRole("button", { name: /^Sort & filter/ }).click();
       await open.click();
       await move();
       await page.getByRole("button", { name: dismissal, exact: true }).click();
@@ -573,6 +577,7 @@ for (const method of ["arrows", "drag"] as const) {
       await expect(dialog).toHaveCount(0);
       await expect(page.locator(".gift-card h3")).toHaveText(original);
     }
+    await page.getByRole("button", { name: /^Sort & filter/ }).click();
     await open.click();
     await move();
     await page.getByRole("button", { name: "Save order", exact: true }).click();
@@ -2883,7 +2888,9 @@ for (const width of [1440, 390]) {
     await expect(
       page.getByRole("heading", { name: "No matches found" }),
     ).toBeVisible();
-    await expect(page.getByLabel("Filter by tag")).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: /^Sort & filter/ }),
+    ).toBeVisible();
     await page.getByLabel("Search items", { exact: true }).fill("");
     await page.screenshot({
       path: testInfo.outputPath(`browsing-list-${width}.png`),
@@ -3579,7 +3586,9 @@ test.describe("navigation scroll restoration", () => {
       await page.goto(`/lists/${list.id}`);
       const search = page.getByPlaceholder("Search by name, person, or tag");
       await search.fill("Scroll test");
+      await page.getByRole("button", { name: /^Sort & filter/ }).click();
       await page.getByLabel("Filter by tag").selectOption("Travel");
+      await page.getByRole("button", { name: "Done", exact: true }).click();
       await expect(page.locator(".gift-card")).toHaveCount(40);
       const gift = page.locator(".gift-card").nth(15);
       const href = await gift.getAttribute("href");
@@ -3592,7 +3601,7 @@ test.describe("navigation scroll restoration", () => {
       await expectScroll(page, 0);
       await page.goBack();
       await expect(search).toHaveValue("Scroll test");
-      await expect(page.getByLabel("Filter by tag")).toHaveValue("Travel");
+      await expect(page.locator(".browse-summary")).toContainText("Travel");
       await expect(page.locator(".gift-card")).toHaveCount(40);
       await expect(page.locator(`.gift-card[href="${href}"]`)).toBeFocused();
       await expectScroll(page, position);
@@ -3606,7 +3615,7 @@ test.describe("navigation scroll restoration", () => {
       await expect(page.locator(".gift-detail")).toBeVisible();
       await page.getByRole("link", { name: "Back to wish list" }).click();
       await expect(search).toHaveValue("");
-      await expect(page.getByLabel("Filter by tag")).toHaveValue("");
+      await expect(page.locator(".browse-summary")).toHaveCount(0);
       await expect(page.locator(".gift-card")).toHaveCount(46);
       await expectScroll(page, 0);
       await search.fill("gift 2");
@@ -3722,11 +3731,15 @@ test.describe("navigation scroll restoration", () => {
     await expect(page.locator(".gift-card")).toHaveCount(1);
     await page.locator('a[href="/"]:visible').last().click();
     const available = page.getByLabel("Available to give");
+    await page.getByRole("button", { name: /^Sort & filter/ }).click();
     await available.check();
+    await page.getByRole("button", { name: "Done", exact: true }).click();
     await page.locator(".gift-card").first().click();
     await expect(page.locator(".gift-detail")).toBeVisible();
     await page.goBack();
-    await expect(available).toBeChecked();
+    await expect(page.locator(".browse-summary")).toContainText(
+      "Available to give",
+    );
   });
 
   test("mobile bottom navigation always opens the next destination at the top", async ({
@@ -3907,3 +3920,84 @@ test.describe("navigation scroll restoration", () => {
     await expect(page.locator("main h1")).toBeInViewport();
   });
 });
+
+for (const width of [320, 393, 1440]) {
+  test(`compact browsing applies immediately and exposes active choices at ${width}px`, async ({
+    page,
+  }, testInfo) => {
+    const { state } = await preview(page);
+    await page.setViewportSize({ width, height: 852 });
+    await page.goto("/");
+    const toolbar = page.getByRole("button", { name: /^Sort & filter/ });
+    await expect(page.getByLabel("Search items and gift ideas")).toBeVisible();
+    await expect(page.getByLabel("Filter by tag")).toHaveCount(0);
+    await toolbar.click();
+    const dialog = page.getByRole("dialog");
+    await page.getByLabel("Available to give", { exact: true }).check();
+    await page
+      .getByLabel("Sort by", { exact: true })
+      .selectOption("price-desc");
+    await page.getByRole("button", { name: "Done", exact: true }).click();
+    await expect(dialog).toHaveCount(0);
+    await expect(toolbar).toBeFocused();
+    await expect(toolbar).toHaveText(/\(1\)/);
+    await expect(page.locator(".browse-summary")).toContainText(
+      "Price high–low",
+    );
+    await expect(page.locator(".browse-summary")).toContainText(
+      "Available to give",
+    );
+    await page
+      .getByRole("button", { name: "Clear filters", exact: true })
+      .click();
+    await expect(page.locator(".browse-summary")).not.toContainText(
+      "Available to give",
+    );
+    await expect(page.locator(".browse-summary")).toContainText(
+      "Price high–low",
+    );
+    await toolbar.click();
+    await page.route("**/api/v1/organization/update", (route) =>
+      route.fulfill({ status: 503, json: { error: "Please try again" } }),
+    );
+    await page.getByLabel("Sort by", { exact: true }).selectOption("name-asc");
+    await expect(dialog.getByRole("alert")).toBeVisible();
+    await expect(page.getByLabel("Sort by", { exact: true })).toHaveValue(
+      "price-desc",
+    );
+    await page.getByRole("button", { name: "Done", exact: true }).click();
+    for (const theme of ["light", "dark"]) {
+      await page.evaluate(
+        (theme) => localStorage.setItem("little-hint:theme", theme),
+        theme,
+      );
+      await page.goto("/lists");
+      await page.reload();
+      await expect(
+        page.getByLabel("Event actions for Family celebration"),
+      ).toBeVisible();
+      await page.screenshot({
+        path: testInfo.outputPath(`collections-${width}-${theme}.png`),
+        fullPage: true,
+      });
+      const list = state.lists.find((list) => list.name === "Alex's wishes")!;
+      await page.goto(`/lists/${list.id}`);
+      await toolbar.click();
+      await page.screenshot({
+        path: testInfo.outputPath(`filters-${width}-${theme}.png`),
+      });
+      await expect(
+        page.getByRole("dialog").getByLabel("Filter by tag"),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("dialog").locator("select").first(),
+      ).toBeInViewport();
+      await page.getByRole("button", { name: "Done", exact: true }).click();
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth - innerWidth,
+        ),
+      ).toBeLessThanOrEqual(1);
+    }
+  });
+}

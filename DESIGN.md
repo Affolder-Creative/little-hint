@@ -242,7 +242,7 @@ Home, People, My lists, Buying, and Exchanges are the persistent navigation dest
 
 Gift browsing uses three equal columns, then two at 650px and below. Cards share image and content row heights so mixed photo and no-photo rows align. A row with a real photo keeps its full image area; rows containing only missing photos stay compact. Reading and keyboard order remain unchanged. Desktop gaps are 28px vertically and 22px horizontally; narrow-screen gaps are 28px and 15px. People use two columns before becoming a single list. Gift details use two columns before stacking on narrow screens. Recurring gaps and padding use the spacing steps in frontmatter, alongside local layout measurements.
 
-Search, tag filtering, and the availability checkbox can wrap. At 1200px and below, availability occupies a full row and remains visible on phones. Profile avatars keep their fixed size while adjacent settings copy can grow.
+Search stays visible beside a labeled Sort & filter button at all viewport sizes. Sorting, tags, availability, group, and exchange-status choices use a focused dialog and apply immediately. Active choices remain summarized beside results. Clear filters preserves search and saved sorting. Profile avatars keep their fixed size while adjacent settings copy can grow.
 
 Page titles sit 8px above their descriptions. Headers leave 24px before content on desktop and 20px on mobile; filters leave 20px before gift grids. Section breaks use 32px on desktop and 24px on mobile. Security and administration subheadings have explicit space above them, and gift quantity controls leave 16px before the reservation action. Mobile gift recipients use 12px text; tags, status labels, and navigation labels use at least 11px.
 
@@ -329,7 +329,7 @@ Discovery uses existing typography, colors and open gift rows, with three result
 - Do use the approved horizontal or tagline artwork and its dark variant where the component supports it.
 - Do keep recipient, gift title, price, and visible availability together.
 - Do contain product images and show the labeled placeholder when an image is missing or fails.
-- Do keep the availability checkbox visible when filters wrap on small screens.
+- Do keep active availability and other filters visible in the results summary when the filter dialog is closed.
 - Do retain visible keyboard focus, named icon controls, reduced-motion behavior, and mobile safe-area padding.
 
 ### Don't:
@@ -338,3 +338,10 @@ Discovery uses existing typography, colors and open gift rows, with three result
 - Don't add shadows to ordinary gift cards or list rows.
 - Don't use invented product photography or present demonstration fixtures as real gifts.
 - Don't rely on color alone to explain availability or list privacy.
+
+### Collection actions
+
+List and event management menus have visible List actions and Event actions labels.
+Event metadata and privacy form one heading group; wish-list links, Manage/View
+event, and the action menu share a wrapping action row. List privacy places the
+disclosure caret immediately beside Privacy details, separately from its badge.
