@@ -3929,11 +3929,21 @@ for (const browserName of ["chromium", "webkit"] as const) {
     test.beforeEach(async () => {
       context = await browser.newContext({
         hasTouch: true,
-        // The isolated CI server uses HTTP. WebKit otherwise upgrades its
-        // assets to HTTPS through Helmet's production CSP before React loads.
-        bypassCSP: true,
         serviceWorkers: "block",
         baseURL: process.env.E2E_BASE_URL ?? "http://localhost:5173",
+      });
+      // Keep the production CSP except its HTTPS upgrade: this isolated
+      // fixture server deliberately uses HTTP, including in WebKit.
+      await context.route("**/*", async (route) => {
+        if (route.request().resourceType() !== "document")
+          return route.continue();
+        const response = await route.fetch();
+        const headers = response.headers();
+        if (headers["content-security-policy"])
+          headers["content-security-policy"] = headers[
+            "content-security-policy"
+          ].replace(/upgrade-insecure-requests;?/g, "");
+        await route.fulfill({ response, headers });
       });
       page = await context.newPage();
     });
