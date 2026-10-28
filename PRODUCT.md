@@ -44,7 +44,7 @@ wordplay sparingly. Instructions, privacy choices, errors, and purchases stay pl
 - An **item** goes on a wish list, including lists shared by several people and
   lists managed for someone else. Use Add item, Item name, Edit item, and Search items.
 - A **gift idea** is something saved for another person outside their wish list.
-  Use Add gift idea, Gift idea name, and Edit gift idea.
+  Use Add gift idea, Gift idea name, and Edit gift idea. Givers can start from a shared wish list; the idea stays with its recipient. Only me remains the default and covers reservation and purchase activity.
 - A **gift** is something someone plans to give. Use Reserve gift and Mark as purchased.
 - **Wish list** names the collection. **Hint** adds personality, not a new data type.
 - Keep navigation and headings recognizable. Use short sentences and name the next

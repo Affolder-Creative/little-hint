@@ -396,10 +396,6 @@ main {
   margin: 0;
   max-width: 65ch;
 }
-.settings-version {
-  color: var(--muted);
-  font-size: 13px;
-}
 .home-intro,
 .section-heading {
   display: flex;
@@ -646,14 +642,6 @@ main {
   .privacy-short-label {
     display: inline;
   }
-}
-.app-footer {
-  display: flex;
-  justify-content: space-between;
-  border-top: 1px solid var(--border);
-  padding: 22px 44px;
-  font-size: 11px;
-  color: var(--muted);
 }
 .empty {
   padding: 64px 24px;
@@ -1789,9 +1777,6 @@ main {
   .buying-row .actions {
     max-width: 160px;
   }
-  .app-footer {
-    padding: 22px 28px;
-  }
 }
 @media (max-width: 900px) {
   html {
@@ -1868,9 +1853,6 @@ main {
   }
   main {
     padding: 24px 24px 32px;
-  }
-  .app-footer {
-    padding: 20px 24px;
   }
   .toast {
     left: 50%;
@@ -2059,14 +2041,6 @@ main {
   .tags span {
     font-size: 11px;
     padding: 3px 5px;
-  }
-  .app-footer {
-    padding: 18px 20px;
-    font-size: 10px;
-  }
-  .app-footer span:last-child {
-    max-width: 145px;
-    text-align: right;
   }
   .empty {
     padding: 48px 10px;
@@ -3119,10 +3093,6 @@ main {
 .exchange-notifications p {
   margin-bottom: 4px;
 }
-.app-footer span:only-child {
-  max-width: none;
-  text-align: start;
-}
 @media (max-width: 650px) {
   .event-entry-heading {
     flex-wrap: wrap;
@@ -3390,4 +3360,58 @@ main {
 }
 .gift-preference-prompt {
   margin-top: 28px;
+}
+
+/* Private ideas keep their audience visible through browsing and Buying. */
+.private-idea-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: var(--soft);
+  color: var(--text);
+  font-size: 12px;
+}
+.private-idea-badge svg {
+  flex-shrink: 0;
+}
+.list-gift-ideas {
+  margin: -8px 0 24px;
+}
+.list-gift-ideas p {
+  margin: 0 0 8px;
+}
+.list-gift-ideas nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+}
+.settings-about .logo {
+  display: block;
+  width: 240px;
+  max-width: 100%;
+  margin: 24px 0 16px;
+}
+.settings-about .creator-credit {
+  font-weight: 600;
+  color: var(--text);
+}
+.app-loading-screen {
+  justify-content: space-between;
+  padding-bottom: max(24px, env(safe-area-inset-bottom));
+}
+.app-loading-screen::before {
+  content: "";
+}
+.loading-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+.app-loading-screen .loading-credit {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
 }

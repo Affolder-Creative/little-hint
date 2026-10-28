@@ -51,7 +51,14 @@ import { actionError, contributionStatus } from "./copy";
 import { Confirm } from "./Confirm";
 import { canManageGroupEvents } from "../shared/group-events";
 /* Little Hint operates as a quiet, practical gift notebook. Approved heart-tag artwork anchors the shell; product content leads. */
-import { lazy, useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  lazy,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   NavLink,
@@ -60,6 +67,8 @@ import {
   Routes,
   useLocation,
   useParams,
+  useNavigate,
+  useSearchParams,
 } from "react-router-dom";
 import {
   Heart,
@@ -95,6 +104,9 @@ import {
   Empty,
   GiftPhoto,
   GiftCard,
+  PrivateIdeaBadge,
+  isPrivateIdea,
+  privateIdeaDescription,
   Header,
   MobileNavigation,
 } from "./components";
@@ -235,13 +247,16 @@ export function App() {
     );
   if (query.isPending)
     return (
-      <div
-        className="loading-screen"
-        role="status"
-        aria-label="Loading Little Hint"
-      >
-        <Logo dark={dark} />
-        <LoaderCircle className="spin" aria-label="Loading Little Hint" />
+      <div className="loading-screen app-loading-screen">
+        <div
+          className="loading-content"
+          role="status"
+          aria-label="Loading Little Hint"
+        >
+          <Logo dark={dark} />
+          <LoaderCircle className="spin" aria-hidden="true" />
+        </div>
+        <p className="loading-credit">Created by Affolder Creative</p>
       </div>
     );
   if (query.data === null)
@@ -456,9 +471,6 @@ export function App() {
                 </Routes>
               </GiftPreferenceOnboarding>
             </main>
-            <footer className="app-footer">
-              <span>Created by Affolder Creative</span>
-            </footer>
           </div>
           <MobileNavigation>
             {nav.map(({ to, label, icon: Icon }) => (
@@ -898,7 +910,31 @@ function People() {
 function PersonPage() {
   const { id } = useParams();
   const { world, open } = useApp();
-  const [tab, setTab] = useState("wishes");
+  const [params, setParams] = useSearchParams();
+  const tab = params.get("tab") === "ideas" ? "ideas" : "wishes";
+  const tabNavigation = useRef<{ tab: string; x: number; y: number } | null>(
+    null,
+  );
+  useLayoutEffect(() => {
+    const pending = tabNavigation.current;
+    if (!pending || pending.tab !== tab) return;
+    tabNavigation.current = null;
+    // A tab change updates history without behaving like a new page visit.
+    document
+      .getElementById(`person-tab-${tab}`)
+      ?.focus({ preventScroll: true });
+    window.scrollTo({ left: pending.x, top: pending.y, behavior: "instant" });
+  }, [tab]);
+  const setTab = (next: string) => {
+    if (next === tab) return;
+    tabNavigation.current = { tab: next, x: window.scrollX, y: window.scrollY };
+    setParams((current) => {
+      const updated = new URLSearchParams(current);
+      if (next === "ideas") updated.set("tab", "ideas");
+      else updated.delete("tab");
+      return updated;
+    });
+  };
   const person = world.people.find((p) => p.id === id);
   if (!person)
     return (
@@ -983,13 +1019,13 @@ function PersonPage() {
                   ? "ideas"
                   : "wishes";
           setTab(next);
-          document.getElementById(`person-tab-${next}`)?.focus();
         }}
       >
         {["wishes", "ideas"].map((key) => (
           <button
             key={key}
             id={`person-tab-${key}`}
+            data-navigation-focus={`person-tab-${key}`}
             role="tab"
             aria-controls="person-gifts"
             tabIndex={tab === key ? 0 : -1}
@@ -1083,9 +1119,16 @@ function PersonPage() {
 function Lists() {
   const { id } = useParams();
   const { world, open, mutate } = useApp();
+  const navigate = useNavigate();
   const [showSummary, setShowSummary] = useState(false);
   useEffect(() => setShowSummary(false), [id]);
   const list = world.lists.find((l) => l.id === id);
+  const ideaRecipients = world.people.filter(
+    (person) =>
+      list?.ownerIds.includes(person.id) &&
+      person.userId !== world.me.id &&
+      !person.guardians.includes(world.me.id),
+  );
   const [privacyOpen, setPrivacyOpen] = useNavigationState<boolean>(
     `listPrivacy:${list?.revealAfter ?? "unscheduled"}`,
     !!list?.revealAfter,
@@ -1130,6 +1173,24 @@ function Lists() {
               <Plus size={17} /> Add item
             </button>
           )}
+          {!list.canEdit && !list.archived && ideaRecipients.length > 0 && (
+            <button
+              className="button secondary"
+              onClick={() =>
+                open(
+                  ideaRecipients.length === 1
+                    ? `Gift idea for ${ideaRecipients[0].name}`
+                    : "Add gift idea",
+                  <GiftForm
+                    recipientOptions={ideaRecipients.map((person) => person.id)}
+                    onSaved={(gift) => navigate(`/gift/${gift.id}`)}
+                  />,
+                )
+              }
+            >
+              <Plus size={17} /> Add gift idea
+            </button>
+          )}
           {list.canEdit && !list.archived && (
             <DiscoveryLink
               personId={list.ownerIds.find((id) =>
@@ -1170,6 +1231,20 @@ function Lists() {
             <FollowButton target="list" targetId={list.id} />
           )}
         </Header>
+        {!list.canEdit && ideaRecipients.length > 0 && (
+          <div className="list-gift-ideas">
+            <p className="muted">
+              Gift ideas are saved for a person, separately from this wish list.
+            </p>
+            <nav aria-label="Saved gift ideas">
+              {ideaRecipients.map((person) => (
+                <Link key={person.id} to={`/people/${person.id}?tab=ideas`}>
+                  View gift ideas for {person.name}
+                </Link>
+              ))}
+            </nav>
+          </div>
+        )}
         {list.archived && (
           <p className="notice">
             This list is archived. Existing purchase history is preserved.
@@ -1254,6 +1329,9 @@ function GiftDetail() {
         It may no longer be shared with you.
       </Empty>
     );
+  const ideaRecipientId = gift.recipientIds.find((id) =>
+    world.people.some((person) => person.id === id),
+  );
   const myReservations =
     gift.reservations?.filter((reservation) => reservation.mine) ?? [];
   const myReserved = myReservations.reduce(
@@ -1290,10 +1368,20 @@ function GiftDetail() {
     <>
       <Link
         className="back-link"
-        to={gift.listId ? `/lists/${gift.listId}` : "/"}
+        to={
+          gift.listId
+            ? `/lists/${gift.listId}`
+            : ideaRecipientId
+              ? `/people/${ideaRecipientId}?tab=ideas`
+              : "/"
+        }
       >
         <ArrowLeft size={16} />
-        {gift.listId ? "Back to wish list" : "Back to Home"}
+        {gift.listId
+          ? "Back to wish list"
+          : ideaRecipientId
+            ? "Back to gift ideas"
+            : "Back to Home"}
       </Link>
       <div className="gift-detail">
         <GiftPhoto gift={gift} size="full" />
@@ -1306,6 +1394,7 @@ function GiftDetail() {
             <h1>{gift.title}</h1>
             <ItemActions gift={gift} />
           </div>
+          <PrivateIdeaBadge gift={gift} />
           {gift.listId && gift.priority && (
             <span className={`item-priority priority-${gift.priority}`}>
               {priorityLabels[gift.priority]}
@@ -1411,9 +1500,11 @@ function GiftDetail() {
                 />
               )}
               <p>
-                {gift.available
-                  ? `${gift.available} available to reserve. Let your people know you have this one covered.`
-                  : "All requested items have been reserved."}
+                {isPrivateIdea(gift)
+                  ? privateIdeaDescription
+                  : gift.available
+                    ? `${gift.available} available to reserve. Let your people know you have this one covered.`
+                    : "All requested items have been reserved."}
               </p>
               {!!gift.available && (
                 <>
@@ -1675,7 +1766,9 @@ function Buying() {
                         />
                       </Field>
                       <p>
-                        Mark what you have bought so others know it is covered.
+                        {isPrivateIdea(r.item)
+                          ? privateIdeaDescription
+                          : "Mark what you have bought so others know it is covered."}{" "}
                         If your plans change, choose Cancel reservation.
                       </p>
                     </Form>,
@@ -1700,6 +1793,7 @@ function Buying() {
                 )}
                 <div>
                   <h2>{r.titleSnapshot}</h2>
+                  <PrivateIdeaBadge gift={r.item} />
                   <p>
                     {r.item
                       ? `For ${r.item.recipientNames.join(" & ")}`
@@ -1712,6 +1806,9 @@ function Buying() {
                         ? `${r.purchased} of ${r.quantity} purchased`
                         : "Reserved"}
                   </span>
+                  {isPrivateIdea(r.item) && (
+                    <p className="muted">{privateIdeaDescription}</p>
+                  )}
                   {r.exchangeId && (
                     <p className="muted">Secret gift exchange</p>
                   )}

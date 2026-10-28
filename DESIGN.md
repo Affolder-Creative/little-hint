@@ -295,6 +295,26 @@ Person pages keep all wish-list items together and show compact, wrapping links 
 
 Family-group settings keep the wrapping selected-group name and the viewer’s role together above Members, Households, and Events. A group selector appears only when there is more than one group. Phones omit the generic Settings description on this section and use tighter header spacing; first-time guidance remains when no groups exist. Pending invitations and ownership requests remain visible before the group controls.
 
+### Private gift ideas
+
+Givers viewing an active wish list can choose Add gift idea. Ideas remain saved
+for a person rather than attached to that wish list. Joint lists require an
+explicit recipient choice. Links to saved ideas use `/people/:id?tab=ideas`,
+which preserves the selected tab across reloads and browser navigation.
+
+The idea form puts Who can see this idea? before product entry and defaults new
+ideas to Only me. Existing sharing choices remain editable. A lock with Only me
+identifies private ideas on cards, detail pages, and Buying entries. Reservation
+and purchase guidance explains that the idea and its buying activity stay
+visible only to its creator. Wish-list item visibility does not use this badge.
+
+### Attribution
+
+Everyday pages have no attribution footer or bottom divider. Settings → About
+contains the approved logo, tagline, version, and readable Created by Affolder
+Creative credit. The app-rendered loading screen carries a quieter credit near
+the bottom, outside the loading status announcement and above mobile safe areas.
+
 ### Privacy and feedback
 
 Privacy badges combine a lock or eye SVG with Keep it a surprise or See the plans. At 650px and below, the surprise badge displays the lock and Surprise, retaining Keep it a surprise as its sole screen-reader label. Privacy choices and explanations always retain the full wording; See the plans is unchanged. Decorative badge icons are hidden from assistive technology. Native modal dialogs have a sticky title and close control. Long titles wrap within the space beside the close control, including with enlarged text. Closing restores keyboard focus to the invoking control; if that control disappears, focus moves to the main content unless the next view has already chosen a focus target. Returning from a sharing review focuses the first visible editable field and preserves the entered values. New lists and events require an explicit Keep it a surprise or See the plans choice. Optional archive and reveal dates are collapsed until needed. Reveal-date guidance applies to all lists; the exchange checkbox clearly adds secret exchange purchases and giver names to the summary. Labels keep their help text accessible through described-by relationships. Empty states reuse the approved heart tag with a heading, explanation, and optional action. The artwork follows the active theme. Page-level missing states use an h1 and a descriptive browser title; empty sections keep an h2. Installation guidance uses the approved app icon and normal action controls. Reduced-motion preference disables animations and transitions; normal motion is limited to a loading spinner and a brief toast arrival.

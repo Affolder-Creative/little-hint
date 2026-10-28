@@ -33,6 +33,7 @@ test("mobile shell clears safe areas, resizing, and date dialogs", async ({
     await page.emulateMedia({ colorScheme });
     await page.goto("/");
     await expect(page.locator(".topbar")).toBeVisible();
+    await expect(page.locator(".app-footer")).toHaveCount(0);
     for (const [width, height, top, bottom] of [
       [393, 852, 59, 34],
       [320, 740, 0, 0],
@@ -54,7 +55,7 @@ test("mobile shell clears safe areas, resizing, and date dialogs", async ({
         },
         { top, bottom },
       );
-      const expectFooterClear = async () => {
+      const expectContentClear = async () => {
         await expect
           .poll(async () =>
             page.evaluate(() => {
@@ -62,15 +63,15 @@ test("mobile shell clears safe areas, resizing, and date dialogs", async ({
               const nav = document
                 .querySelector(".mobile-nav")!
                 .getBoundingClientRect();
-              const footer = document
-                .querySelector(".app-footer")!
+              const content = document
+                .querySelector("main")!
                 .getBoundingClientRect();
-              return nav.top - footer.bottom;
+              return nav.top - content.bottom;
             }),
           )
           .toBeGreaterThanOrEqual(15);
       };
-      await expectFooterClear();
+      await expectContentClear();
       if (width === 393) {
         await page.evaluate(() => window.scrollTo(0, 0));
         await page.screenshot({
@@ -80,7 +81,7 @@ test("mobile shell clears safe areas, resizing, and date dialogs", async ({
       await page
         .locator("main")
         .evaluate((el) => (el.style.minHeight = "1600px"));
-      await expectFooterClear();
+      await expectContentClear();
       await expect(page.locator(".topbar")).toHaveCSS("position", "sticky");
       const headerControls = await page
         .locator(".topbar .logo, .topbar .actions > *")
@@ -102,14 +103,14 @@ test("mobile shell clears safe areas, resizing, and date dialogs", async ({
       ).toBe(true);
       if (width === 393) {
         await page.screenshot({
-          path: `test-results/visual/mobile-footer-${colorScheme}.png`,
+          path: `test-results/visual/mobile-content-bottom-${colorScheme}.png`,
         });
       }
       // The observer must also respond to text growth, not just viewport width.
       await page
         .locator(".mobile-nav")
         .evaluate((el) => (el.style.paddingBottom = "70px"));
-      await expectFooterClear();
+      await expectContentClear();
       await page
         .locator(".mobile-nav")
         .evaluate((el) => el.style.removeProperty("padding-bottom"));
@@ -120,7 +121,7 @@ test("mobile shell clears safe areas, resizing, and date dialogs", async ({
             (link) => ((link as HTMLElement).style.fontSize = "16px"),
           ),
         );
-      await expectFooterClear();
+      await expectContentClear();
       const labels = await page
         .locator(".mobile-nav a span")
         .evaluateAll((elements) =>
@@ -179,7 +180,10 @@ test("mobile shell clears safe areas, resizing, and date dialogs", async ({
         .scrollIntoViewIfNeeded();
       if (width !== 1440) {
         expect(
-          await page.getByRole("dialog").locator(".dialog-body:not([hidden])").evaluate((el) => el.scrollTop),
+          await page
+            .getByRole("dialog")
+            .locator(".dialog-body:not([hidden])")
+            .evaluate((el) => el.scrollTop),
         ).toBeGreaterThan(0);
       }
       if (width === 320) {

@@ -9,6 +9,7 @@ export const settingsSections = [
   { id: "device", label: "Device & drafts" },
   { id: "security", label: "Sign-in & security" },
   { id: "admin", label: "Administration" },
+  { id: "about", label: "About" },
 ] as const;
 
 export function SettingsNavigation({

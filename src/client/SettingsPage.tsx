@@ -29,7 +29,7 @@ import {
 import type { World } from "../shared/model";
 import { api, authClient, clearPersonalData } from "./api";
 import { useApp } from "./context";
-import { Avatar, Form, Field, Header } from "./components";
+import { Avatar, Form, Field, Header, Logo } from "./components";
 import {
   GroupForm,
   PersonForm,
@@ -49,7 +49,7 @@ export default function SettingsPage({
   theme: string;
   setTheme: (v: string) => void;
 }) {
-  const { world, open, mutate, close, toast } = useApp();
+  const { world, open, mutate, close, toast, dark } = useApp();
   const client = useQueryClient();
   const [params, setParams] = useSearchParams();
   const requestedSection = params.get("section");
@@ -105,9 +105,7 @@ export default function SettingsPage({
       <Header
         title="Settings"
         description="Manage your account, family groups, and preferences."
-      >
-        <span className="settings-version">Version {__APP_VERSION__}</span>
-      </Header>
+      />
       <div className="settings-layout" data-section={section}>
         <SettingsNavigation
           section={section}
@@ -756,6 +754,17 @@ export default function SettingsPage({
               <Admin />
             </div>
           )}
+          <section
+            className="settings-section settings-about"
+            hidden={section !== "about"}
+            aria-labelledby="settings-about-title"
+          >
+            <h2 id="settings-about-title">About Little Hint</h2>
+            <Logo dark={dark} />
+            <p>Gift ideas, shared thoughtfully.</p>
+            <p className="creator-credit">Created by Affolder Creative</p>
+            <p className="muted">Version {__APP_VERSION__}</p>
+          </section>
           <section
             className="settings-sign-out"
             id="settings-sign-out"

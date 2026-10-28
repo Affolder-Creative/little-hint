@@ -10,6 +10,7 @@ import {
   stamp,
   command,
   giftView,
+  giftSummary,
   itemVisible,
   world,
   idempotent,
@@ -22,7 +23,7 @@ function fixture() {
     ...stamp(),
     name,
     userId: `user-${n}`,
-    guardians: [],
+    guardians: [] as string[],
   }));
   s.people.push(...people);
   const actors = people.map((p) => ({
@@ -502,4 +503,85 @@ it("keeps the retailer checked time when refreshed details are saved on an exist
   });
   expect(f.item.importedAt).toBeUndefined();
   expect(f.item.source).toBeUndefined();
+});
+
+describe("private gift ideas through purchasing", () => {
+  it("excludes an idea and every buying stage from other members, recipients and guardians", () => {
+    const f = fixture();
+    f.people[0].guardians.push(f.actors[3].id);
+    f.s.groups.push({
+      ...stamp(),
+      name: "Another family",
+      ownerId: f.actors[2].id,
+      memberIds: f.actors.map((a) => a.id),
+    });
+    f.list.revealAfter = "2000-01-01";
+    f.list.timeZone = "America/Indiana/Indianapolis";
+    const idea = command(f.s, f.actors[1], "items.create", {
+      title: "Private pottery class",
+      recipientIds: [f.people[0].id],
+      // Even membership in every selected group cannot expose a private idea.
+      groupIds: f.s.groups.map((g) => g.id),
+    }) as ReturnType<typeof giftView>;
+    expect(idea.visibility).toBe("private");
+    expect(idea.listId).toBeUndefined();
+    const others = [f.actors[0], f.actors[2], f.actors[3]];
+    const assertPrivate = () => {
+      for (const actor of others) {
+        const data = world(f.s, actor);
+        expect(JSON.stringify(data)).not.toContain(idea.id);
+        expect(JSON.stringify(data)).not.toContain(idea.title);
+        expect(() =>
+          command(f.s, actor, "reservations.create", {
+            itemId: idea.id,
+            quantity: 1,
+          }),
+        ).toThrow("Item not found");
+        expect(() =>
+          command(f.s, actor, "comments.create", {
+            itemId: idea.id,
+            body: "Try reading this gift",
+          }),
+        ).toThrow("Item not found");
+        expect(
+          f.s.notices.filter(
+            (n) => n.userId === actor.id && n.itemId === idea.id,
+          ),
+        ).toHaveLength(0);
+      }
+      expect(giftSummary(f.s, f.actors[0], f.list.id).gifts).toEqual([]);
+      expect(world(f.s, f.actors[1]).items.some((i) => i.id === idea.id)).toBe(
+        true,
+      );
+    };
+    assertPrivate();
+    const { id } = command(f.s, f.actors[1], "reservations.create", {
+      itemId: idea.id,
+      quantity: 1,
+    }) as { id: string };
+    assertPrivate();
+    const reservation = f.s.reservations.find((r) => r.id === id)!;
+    command(f.s, f.actors[1], "reservations.update", {
+      id,
+      revision: reservation.revision,
+      quantity: 1,
+      purchased: 1,
+    });
+    assertPrivate();
+    expect(
+      world(f.s, f.actors[1]).buying.find((r) => r.id === id)?.purchased,
+    ).toBe(1);
+    for (const actor of others) {
+      const copy = structuredClone(f.s);
+      const result = command(
+        copy,
+        actor,
+        "items.create",
+        actor.id === f.actors[2].id
+          ? { title: idea.title, recipientIds: [f.people[0].id] }
+          : { title: idea.title, listId: f.list.id },
+      );
+      expect(result).not.toHaveProperty("duplicate");
+    }
+  });
 });
