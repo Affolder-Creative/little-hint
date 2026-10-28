@@ -1070,6 +1070,10 @@ function Lists() {
   const [showSummary, setShowSummary] = useState(false);
   useEffect(() => setShowSummary(false), [id]);
   const list = world.lists.find((l) => l.id === id);
+  const [privacyOpen, setPrivacyOpen] = useNavigationState<boolean>(
+    `listPrivacy:${list?.revealAfter ?? "unscheduled"}`,
+    !!list?.revealAfter,
+  );
   if (id && !list)
     return (
       <Empty
@@ -1123,7 +1127,6 @@ function Lists() {
               listId={list.id}
             />
           )}
-          <Privacy mode={list.mode} />
           {list.canManageSettings ? (
             <ActionMenu name={list.name}>
               <button
@@ -1157,7 +1160,17 @@ function Lists() {
           </p>
         )}
         {list.groupEventId && <ManagedEventNotice list={list} />}
-        <RevealPolicy list={list} />
+        <details
+          className="list-privacy"
+          key={list.id}
+          open={privacyOpen}
+          onToggle={(event) => setPrivacyOpen(event.currentTarget.open)}
+        >
+          <summary>
+            <Privacy mode={list.mode} /> <span>Privacy details</span>
+          </summary>
+          <RevealPolicy list={list} />
+        </details>
         {list.canEdit && list.revealAvailable && (
           <div className="tabs" role="group" aria-label="List view">
             <button

@@ -3,6 +3,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { stagingFixtures } from "../src/server/staging-fixtures";
 import { command, world } from "../src/server/domain";
 import { emptyState, type List, type Group } from "../src/shared/model";
+import { discoveryConfig } from "./gift-discovery-fixture";
 
 async function preview(page: Page, actorIndex = 0, solo = false) {
   const fixture = stagingFixtures();
@@ -2942,6 +2943,192 @@ for (const width of [1440, 390]) {
     ).toBeLessThanOrEqual(1);
   });
 }
+
+for (const width of [320, 390, 900, 1440]) {
+  test(`compact list headers keep privacy and navigation usable at ${width}px`, async ({
+    page,
+  }, testInfo) => {
+    const { state, actor } = await preview(page);
+    const list = world(state, actor).lists.find(
+      (list) =>
+        list.canManageSettings &&
+        !list.archived &&
+        state.items.some((item) => item.listId === list.id),
+    )!;
+    command(state, actor, "items.create", {
+      listId: list.id,
+      title: "A second gift",
+    });
+    await page.route("**/api/v1/world", (route) =>
+      route.fulfill({
+        json: {
+          ...world(state, actor),
+          giftDiscovery: discoveryConfig,
+          environment: "development",
+        },
+      }),
+    );
+    await page.setViewportSize({ width, height: 844 });
+    for (const theme of ["light", "dark"]) {
+      await page.goto(`/lists/${list.id}`);
+      await page.evaluate(
+        (theme) => localStorage.setItem("little-hint:theme", theme),
+        theme,
+      );
+      await page.reload();
+      const privacy = page.locator(".list-privacy");
+      const disclosure = privacy.locator("summary");
+      await expect(disclosure.locator(".privacy")).toHaveText(
+        "Keep it a surprise",
+      );
+      await expect(privacy.locator(".privacy-note")).not.toBeVisible();
+      await expect(
+        page
+          .getByRole("main")
+          .getByRole("button", { name: "Add item", exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("link", { name: "Find gift ideas", exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByLabel("Search items", { exact: true }),
+      ).toBeVisible();
+      if (width <= 390) {
+        const title = await page.locator(".gift-card h3").first().boundingBox();
+        const nav = await page.locator(".mobile-nav").boundingBox();
+        expect(title!.y + title!.height).toBeLessThan(nav!.y);
+      }
+      if (width <= 900) {
+        const links = page.locator(".mobile-nav a");
+        for (const link of await links.all()) {
+          const box = (await link.boundingBox())!;
+          expect(box.width).toBeGreaterThanOrEqual(44);
+          expect(box.height).toBeGreaterThanOrEqual(44);
+        }
+        const label = page
+          .locator(".mobile-nav")
+          .getByRole("link", { name: "Exchanges", exact: true })
+          .locator("span");
+        expect(
+          await label.evaluate((label) => {
+            const range = document.createRange();
+            range.selectNodeContents(label);
+            return range.getClientRects().length;
+          }),
+        ).toBe(1);
+      }
+      await page.screenshot({
+        path: testInfo.outputPath(`compact-list-${width}-${theme}.png`),
+      });
+      await disclosure.focus();
+      await page.keyboard.press("Enter");
+      await expect(
+        privacy.getByText(
+          /Contribution amounts and private notes stay private/,
+        ),
+      ).toBeVisible();
+      await page.keyboard.press("Enter");
+      await expect(privacy.locator(".privacy-note")).not.toBeVisible();
+      const menu = page.locator(".list-heading .entry-actions > summary");
+      await menu.click();
+      await page
+        .getByRole("button", { name: "List settings", exact: true })
+        .click();
+      await expect(page.getByRole("dialog")).toBeVisible();
+      await page
+        .getByRole("button", { name: "Close dialog", exact: true })
+        .click();
+      if (theme === "dark" && width <= 390) {
+        await page.evaluate(() => {
+          const sizes = Array.from(
+            document.querySelectorAll<HTMLElement>("body *"),
+          ).map(
+            (el) => [el, parseFloat(getComputedStyle(el).fontSize)] as const,
+          );
+          for (const [el, size] of sizes) el.style.fontSize = `${size * 2}px`;
+        });
+        await page.screenshot({
+          path: testInfo.outputPath(`compact-list-${width}-enlarged.png`),
+          fullPage: true,
+        });
+        for (const link of await page.locator(".mobile-nav a").all()) {
+          expect(
+            await link.evaluate((el) => el.scrollWidth - el.clientWidth),
+          ).toBeLessThanOrEqual(1);
+        }
+      }
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth - innerWidth,
+        ),
+      ).toBeLessThanOrEqual(1);
+      expect(
+        (
+          await new AxeBuilder({ page })
+            .include("main")
+            .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+            .analyze()
+        ).violations,
+      ).toEqual([]);
+    }
+  });
+}
+
+test("privacy disclosure stays expanded when returning from a gift", async ({
+  page,
+}) => {
+  const { state, actor } = await preview(page);
+  const list = world(state, actor).lists.find(
+    (list) =>
+      list.canEdit && state.items.some((item) => item.listId === list.id),
+  )!;
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`/lists/${list.id}`);
+  const disclosure = page.locator(".list-privacy > summary");
+  await disclosure.click();
+  await expect(page.locator(".list-privacy .privacy-note")).toBeVisible();
+  const gift = page.locator(".gift-card").first();
+  await gift.scrollIntoViewIfNeeded();
+  await page.evaluate(() => new Promise(requestAnimationFrame));
+  const position = await page.evaluate(() => scrollY);
+  await gift.click();
+  await expect(page.locator(".gift-detail")).toBeVisible();
+  await page.goBack();
+  await expect(page.locator(".list-privacy .privacy-note")).toBeVisible();
+  await expect(gift).toBeFocused();
+  await expect
+    .poll(() => page.evaluate(() => scrollY))
+    .toBeCloseTo(position, 0);
+});
+
+test("scheduled summaries remain expanded and both list privacy modes stay visible", async ({
+  page,
+}) => {
+  const { state, actor } = await preview(page);
+  const list = state.lists.find((list) =>
+    world(state, actor).lists.some(
+      (view) => view.id === list.id && view.canEdit,
+    ),
+  )!;
+  await page.setViewportSize({ width: 320, height: 844 });
+  for (const mode of ["surprise", "transparent"] as const) {
+    list.mode = mode;
+    list.revealAfter = "2099-12-25";
+    await page.goto(`/lists/${list.id}`);
+    await expect(page.locator(".list-privacy .privacy")).toHaveText(
+      mode === "surprise" ? "Keep it a surprise" : "See the plans",
+    );
+    await expect(page.locator(".list-privacy .privacy-note")).toBeVisible();
+    await expect(page.locator(".list-privacy .privacy-note")).toContainText(
+      "2099-12-25",
+    );
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth - innerWidth,
+      ),
+    ).toBeLessThanOrEqual(1);
+  }
+});
 
 test("archived-only collections keep their navigation while truly empty lists omit tools", async ({
   page,
