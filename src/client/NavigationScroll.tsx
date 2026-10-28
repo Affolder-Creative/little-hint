@@ -133,8 +133,11 @@ function RestoreNavigation({ account }: { account: string }) {
     const read = () => ({ url, x: window.scrollX, y: window.scrollY });
     const remember = () => {
       if (pending && !restore) return;
+      const previous = positions.get(location.key);
       rememberEntry(positions, location.key, {
-        ...positions.get(location.key),
+        // Full document navigations can reuse the router's default key.
+        // Never carry another URL's view choices into this entry on unload.
+        ...(previous?.url === url ? previous : undefined),
         ...(current.current ?? read()),
         focus: focused,
       });

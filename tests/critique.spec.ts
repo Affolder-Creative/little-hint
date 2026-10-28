@@ -3460,6 +3460,26 @@ test.describe("navigation scroll restoration", () => {
     });
   }
 
+  test("full document visits do not leak another entry's filters on reload", async ({
+    page,
+  }) => {
+    await preview(page);
+    await page.goto("/buying");
+    await page.getByRole("button", { name: /^Purchased \(/ }).click();
+    const giftPath = await page
+      .locator(".buying-row a")
+      .first()
+      .getAttribute("href");
+    // Unlike router links, full navigations can reuse the default history key.
+    await page.goto(giftPath!);
+    await expect(page.locator(".gift-detail")).toBeVisible();
+    await page.goto("/buying");
+    const needsBuying = page.getByRole("button", { name: /^Needs buying \(/ });
+    await expect(needsBuying).toHaveAttribute("aria-pressed", "true");
+    await page.reload();
+    await expect(needsBuying).toHaveAttribute("aria-pressed", "true");
+  });
+
   test("filtered history survives reload and a missing gift falls back to main", async ({
     page,
   }) => {
