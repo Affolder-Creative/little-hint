@@ -1,3 +1,5 @@
+import { discoveryUserOverrides } from "./gift-discovery-limits";
+
 export function deploymentEnvironment(env = process.env) {
   const value = env.APP_ENV || env.NODE_ENV || "development";
   if (
@@ -30,6 +32,7 @@ export function assertStagingSeed(env = process.env) {
 }
 
 export function validateDeployment(env = process.env) {
+  discoveryUserOverrides(env);
   productPhotoOverride(env);
   cloudflareWebAnalyticsEnabled(env);
   productImportCacheEnabled(env);

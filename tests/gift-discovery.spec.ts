@@ -1,5 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
+import type { DiscoveryAllowance } from "../src/shared/gift-discovery";
 import { command, world } from "../src/server/domain";
 import {
   createDiscovery,
@@ -16,7 +17,11 @@ import {
   candidate,
 } from "./gift-discovery-fixture";
 
-async function preview(page: Page, own = false) {
+async function preview(
+  page: Page,
+  own = false,
+  allowance: Partial<DiscoveryAllowance> = {},
+) {
   const f = discoveryFixture(),
     actor = f.actors[own ? 0 : 1];
   const cfg = {
@@ -37,9 +42,18 @@ async function preview(page: Page, own = false) {
           giftDiscovery: cfg,
           environment: "development",
         };
-      else if (path.startsWith("gift-discovery/context/"))
-        value = discoveryContext(f.state, actor, cfg, path.split("/").at(-1)!);
-      else if (path === "gift-discovery") {
+      else if (path.startsWith("gift-discovery/context/")) {
+        const context = discoveryContext(
+          f.state,
+          actor,
+          cfg,
+          path.split("/").at(-1)!,
+        );
+        value = {
+          ...context,
+          allowance: { ...context.allowance, ...allowance },
+        };
+      } else if (path === "gift-discovery") {
         counts.search++;
         const j = createDiscovery(
           f.state,
@@ -97,6 +111,78 @@ async function preview(page: Page, own = false) {
     }
   });
   return { ...f, cfg, counts };
+}
+for (const [weeklyRemaining, monthlyRemaining] of [
+  [null, null],
+  [null, 0],
+  [20, null],
+  [0, null],
+] as const) {
+  test(`effective allowances render and gate searches: weekly ${weeklyRemaining}, monthly ${monthlyRemaining}`, async ({
+    page,
+  }, info) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    const f = await preview(page, false, { weeklyRemaining, monthlyRemaining });
+    await page.goto(`/people/${f.people[0].id}/gift-ideas`);
+    const submit = page.getByRole("button", {
+      name: "Find gift ideas",
+      exact: true,
+    });
+    const blocked = weeklyRemaining === 0 || monthlyRemaining === 0;
+    if (blocked) await expect(submit).toBeDisabled();
+    else await expect(submit).toBeEnabled();
+    if (weeklyRemaining === null) {
+      await expect(page.getByText(/No weekly search limit\./)).toBeVisible();
+      await expect(page.getByText(/Resets /)).toHaveCount(0);
+    } else
+      await expect(
+        page.getByText(`${weeklyRemaining} new searches left this week.`, {
+          exact: false,
+        }),
+      ).toBeVisible();
+    if (monthlyRemaining === null)
+      await expect(
+        page.getByText(
+          /Your searches are exempt from the shared monthly allowance/,
+        ),
+      ).toBeVisible();
+    if (blocked)
+      await expect(page.getByRole("status")).toContainText(
+        monthlyRemaining === 0
+          ? "monthly allowance is used"
+          : "weekly allowance is used",
+      );
+    else {
+      await page
+        .getByLabel("Maximum price per gift", { exact: true })
+        .fill("50");
+      await submit.click();
+      await expect(page.locator(".discovery-product")).toHaveCount(6);
+      await page
+        .getByText("Interests and price limit", { exact: true })
+        .click();
+      await expect(
+        page.getByRole("button", {
+          name:
+            weeklyRemaining === null
+              ? "Search for new ideas"
+              : `Search for new ideas · ${weeklyRemaining} left this week`,
+          exact: true,
+        }),
+      ).toBeEnabled();
+      expect(f.counts.search).toBe(1);
+    }
+    expect(await page.locator("main").innerText()).not.toContain("null");
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth - innerWidth,
+      ),
+    ).toBeLessThanOrEqual(1);
+    await page.screenshot({
+      path: info.outputPath("allowance.png"),
+      fullPage: true,
+    });
+  });
 }
 for (const width of [1440, 390]) {
   test(`gift suggestions, free shuffle and explicit confirmation at ${width}px`, async ({

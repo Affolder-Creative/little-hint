@@ -206,8 +206,8 @@ function DiscoveryFlow({
     setSelected((v) => ({ ...v, [id]: { ...v[id], ...fields } }));
   }
   const noAllowance =
-    context.allowance.weeklyRemaining <= 0 ||
-    context.allowance.monthlyRemaining <= 0;
+    context.allowance.weeklyRemaining === 0 ||
+    context.allowance.monthlyRemaining === 0;
   const visible = job?.candidates.slice(page * 6, page * 6 + 6) ?? [];
   const count = Object.keys(selected).length;
   return (
@@ -248,7 +248,9 @@ function DiscoveryFlow({
             <Form
               submit={
                 jobId
-                  ? `Search for new ideas · ${context.allowance.weeklyRemaining} left this week`
+                  ? context.allowance.weeklyRemaining === null
+                    ? "Search for new ideas"
+                    : `Search for new ideas · ${context.allowance.weeklyRemaining} left this week`
                   : "Find gift ideas"
               }
               disabled={working || noAllowance}
@@ -281,14 +283,17 @@ function DiscoveryFlow({
               )}
               <p className="muted">
                 Searching sends these interests and notes to the configured AI
-                service. It uses one search allowance. Choosing interests,
-                browsing results, and shuffling do not use AI.
+                service. Each new search is recorded in usage. Choosing
+                interests, browsing results, and shuffling do not use AI.
               </p>
             </Form>
           </details>
           <p className="muted">
-            {context.allowance.weeklyRemaining} new searches left this week.
-            Resets {new Date(context.allowance.weekResetsAt).toLocaleString()}.
+            {context.allowance.weeklyRemaining === null
+              ? "No weekly search limit."
+              : `${context.allowance.weeklyRemaining} new searches left this week. Resets ${new Date(context.allowance.weekResetsAt).toLocaleString()}.`}
+            {context.allowance.monthlyRemaining === null &&
+              " Your searches are exempt from the shared monthly allowance."}
           </p>
           {noAllowance && (
             <p role="status">

@@ -33,7 +33,11 @@ import {
   saveSetting,
   settingsSummary,
 } from "../src/server/settings";
-import { createDiscovery } from "../src/server/gift-discovery";
+import {
+  createDiscovery,
+  addDiscoveryUsage,
+  quotaKeys,
+} from "../src/server/gift-discovery";
 import {
   discoveryFixture,
   discoveryConfig as cfg,
@@ -52,6 +56,7 @@ beforeEach(async () => {
   vi.stubEnv("GIFT_DISCOVERY_MODE", "");
   vi.stubEnv("GIFT_DISCOVERY_USER_WEEKLY_LIMIT", "");
   vi.stubEnv("GIFT_DISCOVERY_MONTHLY_LIMIT", "");
+  vi.stubEnv("GIFT_DISCOVERY_USER_OVERRIDES", "");
   f = discoveryFixture();
   mocks.state = f.state;
   mocks.actor = f.actors[1];
@@ -60,6 +65,73 @@ beforeEach(async () => {
 afterEach(async () => {
   await app?.close();
   vi.unstubAllEnvs();
+});
+it("returns only the requesting account's effective allowance and never exposes the override map", async () => {
+  const overrides = {
+    [f.actors[1].id]: { weeklyLimit: "unlimited", bypassMonthlyLimit: true },
+    "private-override-account": { weeklyLimit: 20 },
+  };
+  vi.stubEnv("GIFT_DISCOVERY_USER_OVERRIDES", JSON.stringify(overrides));
+  const context = await app.inject(
+    `/api/v1/gift-discovery/context/${f.people[0].id}`,
+  );
+  expect(context.statusCode).toBe(200);
+  expect(context.json().allowance).toMatchObject({
+    weeklyRemaining: null,
+    monthlyRemaining: null,
+  });
+  expect(context.body).not.toContain("private-override-account");
+  expect((await app.inject("/api/v1/world")).body).not.toContain(
+    "private-override-account",
+  );
+  mocks.actor = f.actors[2];
+  expect(
+    (
+      await app.inject(`/api/v1/gift-discovery/context/${f.people[0].id}`)
+    ).json().allowance,
+  ).toMatchObject({ weeklyRemaining: 3, monthlyRemaining: 100 });
+  mocks.actor = f.actors[0];
+  mocks.state.people.find((p) => p.userId === mocks.actor!.id)!.admin = true;
+  const settings = await app.inject("/api/v1/admin/settings");
+  expect(settings.body).not.toContain("GIFT_DISCOVERY_USER_OVERRIDES");
+  expect((await app.inject("/api/v1/admin/gift-discovery")).body).not.toContain(
+    "private-override-account",
+  );
+  const save = await app.inject({
+    method: "POST",
+    url: "/api/v1/admin/settings",
+    headers,
+    payload: { key: "GIFT_DISCOVERY_USER_OVERRIDES", value: "{}" },
+  });
+  expect(save.statusCode).toBe(400);
+  for (const environment of ["staging", "preview"]) {
+    vi.stubEnv("APP_ENV", environment);
+    expect(
+      (await app.inject(`/api/v1/gift-discovery/context/${f.people[0].id}`))
+        .statusCode,
+    ).toBe(403);
+  }
+});
+it("reports total and exempt attempts separately without losing unknown provider usage", async () => {
+  mocks.actor = f.actors[0];
+  mocks.state.people.find((p) => p.userId === mocks.actor!.id)!.admin = true;
+  const keys = quotaKeys(mocks.actor.id);
+  addDiscoveryUsage(mocks.state, keys.month, 103);
+  addDiscoveryUsage(mocks.state, keys.monthExempt, 5);
+  const month = new Date().toISOString().slice(0, 7);
+  addDiscoveryUsage(
+    mocks.state,
+    `discovery:metrics:${month}:gpt-6-luna:reported`,
+    2,
+  );
+  const response = await app.inject("/api/v1/admin/gift-discovery");
+  expect(response.statusCode).toBe(200);
+  expect(response.json()).toMatchObject({
+    searches: 103,
+    exemptSearches: 5,
+    quotaSearches: 98,
+    unreportedAttempts: 101,
+  });
 });
 it("requires authentication, scopes jobs and reauthorizes idempotent replays", async () => {
   const create = () =>

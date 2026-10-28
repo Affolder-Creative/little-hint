@@ -103,6 +103,8 @@ export interface GiftDiscoveryJob extends Base {
     "pending" | "running" | "complete" | "failed" | "cancelled" | "reviewing";
   expiresAt: string;
   startedAt?: string;
+  // Classification at reservation time; absent on older, non-exempt jobs.
+  monthlyQuotaExempt?: boolean;
   error?: string;
   candidates: GiftCandidate[];
   review?: DiscoveryReview;
@@ -120,8 +122,9 @@ export interface DiscoveryConfig {
   model: string;
 }
 export interface DiscoveryAllowance {
-  weeklyRemaining: number;
-  monthlyRemaining: number;
+  // null means this account is exempt from the corresponding cap.
+  weeklyRemaining: number | null;
+  monthlyRemaining: number | null;
   weekResetsAt: string;
   monthResetsAt: string;
 }

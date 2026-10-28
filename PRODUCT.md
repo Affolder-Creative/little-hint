@@ -49,7 +49,7 @@ wordplay sparingly. Instructions, privacy choices, errors, and purchases stay pl
 - **Wish list** names the collection. **Hint** adds personality, not a new data type.
 - Keep navigation and headings recognizable. Use short sentences and name the next
   action. Match screen-reader labels to the visible actions.
-- Say Keep it a surprise or See the plans. Explain summary dates and sharing
+- Say Keep it a surprise or See the plans. On phones, status badges may shorten the first label to Surprise with the lock icon; privacy choices and explanations retain the full wording. Explain summary dates and sharing
   restrictions without promising permanent secrecy when a reveal is scheduled.
 - Family groups share lists. Households prevent exchange matches when that rule is
   enabled and can be followed for additions to member-owned lists shared with their family group. Keep those concepts distinct. Shared ownership is different from viewing.
@@ -90,3 +90,5 @@ Givers must enter a maximum USD price per item, excluding tax/shipping. Own-list
 Users select gifts, edit public notes, choose destinations and confirm before saving. Own-list gifts support a default list and per-item overrides. Giver suggestions become independent ideas, private by default, using existing sharing choices. Offers older than fifteen minutes are refreshed without AI; current prices appear in final review. Unverifiable or over-budget offers cannot be saved. Duplicate checks use visible gifts only and require an explicit separate-entry choice. Batch saves are atomic and never reserve or purchase gifts. Private search notes and matching reasons stay out of saved item descriptions.
 
 Off hides discovery controls and unsaved results, blocks endpoints, cancels pending work and discards in-flight results. Already dispatched requests may still be charged. Saved gifts and preferences remain available. Staging disables external AI discovery.
+
+Selected accounts may receive server-configured higher or unlimited weekly AI allowances and a separate monthly exemption. Monthly-exempt searches remain in total usage reports without consuming the shared allowance. Exceptions never override Off, staging/preview isolation, or recipient permissions.

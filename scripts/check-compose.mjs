@@ -82,7 +82,12 @@ for (const missing of Object.keys(required)) {
     );
   }
 }
-const runtimeResult = config("compose.yaml", required);
+const discoveryOverrides =
+  '{"account-id":{"weeklyLimit":"unlimited","bypassMonthlyLimit":true}}';
+const runtimeResult = config("compose.yaml", {
+  ...required,
+  GIFT_DISCOVERY_USER_OVERRIDES: discoveryOverrides,
+});
 assert.equal(
   runtimeResult.status,
   0,
@@ -108,6 +113,10 @@ for (const name of ["app", "worker"]) {
   assert.equal(
     runtime.services[name].environment.BETTER_AUTH_SECRET,
     required.BETTER_AUTH_SECRET,
+  );
+  assert.equal(
+    runtime.services[name].environment.GIFT_DISCOVERY_USER_OVERRIDES,
+    discoveryOverrides,
   );
 }
 assert.equal(

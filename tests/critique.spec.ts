@@ -3177,7 +3177,7 @@ for (const width of [1440, 390]) {
   });
 }
 
-for (const width of [320, 390, 900, 1440]) {
+for (const width of [320, 390, 650, 900, 1440]) {
   test(`compact list headers keep privacy and navigation usable at ${width}px`, async ({
     page,
   }, testInfo) => {
@@ -3211,9 +3211,16 @@ for (const width of [320, 390, 900, 1440]) {
       await page.reload();
       const privacy = page.locator(".list-privacy");
       const disclosure = privacy.locator("summary");
-      await expect(disclosure.locator(".privacy")).toHaveText(
+      await expect(disclosure.locator(".privacy-label")).toHaveText(
         "Keep it a surprise",
       );
+      await expect(disclosure).toHaveAccessibleName(
+        "Keep it a surprise Privacy details",
+      );
+      const shortLabel = disclosure.locator(".privacy-short-label");
+      await expect(shortLabel).toHaveText("Surprise");
+      if (width <= 650) await expect(shortLabel).toBeVisible();
+      else await expect(shortLabel).not.toBeVisible();
       await expect(privacy.locator(".privacy-note")).not.toBeVisible();
       await expect(
         page
@@ -3268,6 +3275,9 @@ for (const width of [320, 390, 900, 1440]) {
         .getByRole("button", { name: "List settings", exact: true })
         .click();
       await expect(page.getByRole("dialog")).toBeVisible();
+      await expect(
+        page.getByRole("radio", { name: /Keep it a surprise/ }),
+      ).toBeVisible();
       await page
         .getByRole("button", { name: "Close dialog", exact: true })
         .click();
@@ -3348,7 +3358,7 @@ test("scheduled summaries remain expanded and both list privacy modes stay visib
     list.mode = mode;
     list.revealAfter = "2099-12-25";
     await page.goto(`/lists/${list.id}`);
-    await expect(page.locator(".list-privacy .privacy")).toHaveText(
+    await expect(page.locator(".list-privacy .privacy-label")).toHaveText(
       mode === "surprise" ? "Keep it a surprise" : "See the plans",
     );
     await expect(page.locator(".list-privacy .privacy-note")).toBeVisible();

@@ -16,6 +16,8 @@ export function GiftDiscoveryAdmin({
       api<{
         config: DiscoveryConfig;
         searches: number;
+        quotaSearches: number;
+        exemptSearches: number;
         searchCalls: number;
         inputTokens: number;
         outputTokens: number;
@@ -29,7 +31,7 @@ export function GiftDiscoveryAdmin({
   const labels: Record<string, string> = {
     GIFT_DISCOVERY_MODE: "AI gift suggestions",
     GIFT_DISCOVERY_USER_WEEKLY_LIMIT: "New searches per account each week",
-    GIFT_DISCOVERY_MONTHLY_LIMIT: "New searches for the app each month",
+    GIFT_DISCOVERY_MONTHLY_LIMIT: "Shared new-search allowance each month",
     GIFT_DISCOVERY_MODEL: "Discovery model",
   };
   return (
@@ -101,8 +103,12 @@ export function GiftDiscoveryAdmin({
         <div>
           <h4>This month's usage</h4>
           <p>
-            {usage.data.searches} of {usage.data.config.monthlyLimit} searches
-            used. {usage.data.searchCalls} reported web-search calls.
+            {usage.data.quotaSearches} of {usage.data.config.monthlyLimit}{" "}
+            shared searches used. {usage.data.exemptSearches} exempt searches.
+          </p>
+          <p>
+            {usage.data.searches} total searches. {usage.data.searchCalls}{" "}
+            reported web-search calls.
           </p>
           <p>
             {usage.data.inputTokens.toLocaleString()} input tokens ·{" "}

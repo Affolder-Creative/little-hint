@@ -97,6 +97,7 @@ export async function processDiscovery(id: string) {
   const actor = { id: initial.userId, name: "", email: "" };
   const images: string[] = [];
   let reservedAt: string | undefined;
+  let monthlyQuotaExempt = false;
   let dispatched = false;
   const deadline = Date.now() + 180000;
   const guard = async () => {
@@ -118,6 +119,7 @@ export async function processDiscovery(id: string) {
     );
     if (!job) return;
     reservedAt = job.startedAt;
+    monthlyQuotaExempt = job.monthlyQuotaExempt ?? false;
     // The persisted running state is the dispatch fence. A crashed/ambiguous paid
     // request is never resubmitted by queue redelivery.
     await guard();
@@ -318,6 +320,7 @@ export async function processDiscovery(id: string) {
         const keys = quotaKeys(actor.id, new Date(reservedAt));
         addDiscoveryUsage(s, keys.week, -1);
         addDiscoveryUsage(s, keys.month, -1);
+        if (monthlyQuotaExempt) addDiscoveryUsage(s, keys.monthExempt, -1);
       }
       const row = s.giftDiscoveryJobs.find((j) => j.id === id);
       if (!row) return;
