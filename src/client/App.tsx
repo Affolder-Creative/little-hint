@@ -210,10 +210,23 @@ export function App() {
   useEffect(() => {
     if (!query.data) return;
     const main = document.getElementById("main");
-    const heading = main?.querySelector<HTMLElement>("h1");
-    document.title = heading?.textContent
-      ? `${heading.textContent} · Little Hint`
-      : "Little Hint";
+    const updateTitle = () => {
+      const heading = main?.querySelector<HTMLElement>("h1");
+      const title = heading?.textContent
+        ? `${heading.textContent} · Little Hint`
+        : "Little Hint";
+      if (document.title !== title) document.title = title;
+    };
+    updateTitle();
+    // Async pages can replace their loading state after route effects run.
+    // Refresh the title without moving focus away from the user's work.
+    const titles = new MutationObserver(updateTitle);
+    if (main)
+      titles.observe(main, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+      });
     main?.focus({ preventScroll: true });
     if (
       location.hash.startsWith("#note-") ||
@@ -225,6 +238,7 @@ export function App() {
         target?.focus({ preventScroll: true });
       });
     }
+    return () => titles.disconnect();
   }, [location.pathname, location.search, location.hash, !!query.data]);
   const mutate = async <T = any,>(path: string, body: unknown): Promise<T> => {
     if (!navigator.onLine)
