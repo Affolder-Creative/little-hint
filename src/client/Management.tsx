@@ -1,3 +1,4 @@
+import "./action-menu.css";
 import { useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -67,14 +68,30 @@ export function RunButton({
 }
 export function ActionMenu({
   name,
+  label,
   children,
 }: {
   name: string;
+  label?: string;
   children: ReactNode;
 }) {
   return (
     <details
       className="entry-actions"
+      onToggle={(event) => {
+        if (!label || !event.currentTarget.open) return;
+        const menu = event.currentTarget.querySelector<HTMLElement>(
+          ".entry-actions-content",
+        );
+        if (!menu) return;
+        menu.style.translate = "";
+        const bounds = menu.getBoundingClientRect();
+        const shift = Math.max(
+          20 - bounds.left,
+          Math.min(0, innerWidth - 20 - bounds.right),
+        );
+        menu.style.translate = `${shift}px`;
+      }}
       onKeyDown={(event) => {
         if (event.key === "Escape") {
           event.currentTarget.open = false;
@@ -86,8 +103,9 @@ export function ActionMenu({
           event.currentTarget.open = false;
       }}
     >
-      <summary aria-label={`Actions for ${name}`}>
+      <summary aria-label={`${label ?? "Actions"} for ${name}`}>
         <MoreHorizontal size={20} />
+        {label && <span className="entry-actions-label">{label}</span>}
       </summary>
       <div className="entry-actions-content">{children}</div>
     </details>

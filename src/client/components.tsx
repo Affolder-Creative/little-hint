@@ -160,7 +160,14 @@ export function Modal({
       el.close();
       // Close before React removes the dialog so native focus restoration can
       // run. Explicitly restore the opener for browsers that lose it on removal.
-      if (opener?.isConnected) opener.focus({ preventScroll: true });
+      if (opener?.isConnected) {
+        const disclosure = opener.closest("details");
+        const target =
+          disclosure && !disclosure.open
+            ? disclosure.querySelector("summary")
+            : opener;
+        target?.focus({ preventScroll: true });
+      }
       queueMicrotask(() => {
         // A successful action may also remove the opener or change routes.
         // Keep any focus chosen by that next view or a replacement dialog.

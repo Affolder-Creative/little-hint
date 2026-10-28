@@ -316,6 +316,12 @@ Person, list, and family-group headers and household rows offer follow controls.
 
 Push titles identify the activity category, such as New invitation, Ownership request, or Exchange update. The platform supplies the app attribution, so the title does not repeat Little Hint. Normal notification bodies say “Open Little Hint to see the details.” Test notifications use Notifications are ready with “This test notification reached your device.” Missing or unrecognized categories use New activity. With the per-channel Show details in notifications option enabled, wish-list previews may show names, list names, and priorities. These options default off and include examples and a lock-screen disclosure. Item titles, amounts, buying plans, and private note text remain excluded. Other categories remain generic.
 
+### Purchase and exchange actions
+
+Buying rows keep their primary purchase action beside a labeled **More actions** disclosure. On narrow screens this group spans the row below the photo and gift details. Update purchase remains available when Mark as purchased is primary; sharing and cancellation live in More actions. Keep destructive confirmation and quantity controls intact.
+
+Exchange status stays with its title. Organizer controls follow the heading and spending guideline, ahead of assignments. Use **Exchange actions** for cancellation, archival, restoration, and trash. Notification delivery details follow assignments in a disclosure; pending or failed delivery opens the details and appears in its summary.
+
 ### Gift preferences and discovery
 
 Use searchable, labeled checkbox categories with visible selection and 44px targets. Likes and things to avoid are optional; selected family groups form one audience for all preference fields. Name the audience in the sharing confirmation. Initial setup appears only on the first Home visit, with Skip for now before the interest fields. Navigation defers setup for the current signed-in visit without publishing unfinished preferences; direct links open their requested page. Explicit Skip persists the skipped state without saving unfinished fields. Preferences remain available in profile settings.

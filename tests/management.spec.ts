@@ -242,7 +242,7 @@ test("management screens remain clear on desktop and mobile in both themes", asy
           .locator(".exchange-notifications")
           .boundingBox();
         const actions = await panel.locator(":scope > .actions").boundingBox();
-        expect(status!.y + status!.height).toBeLessThanOrEqual(actions!.y);
+        expect(actions!.y + actions!.height).toBeLessThanOrEqual(status!.y);
       }
     }
   }
@@ -266,7 +266,9 @@ test("exchange archive, Trash, and restore remain separate actions", async ({
   });
   await page.goto("/exchanges");
   const panel = page.locator(`#exchange-${exchange.id}`);
-  await panel.getByLabel(`Actions for ${name}`, { exact: true }).click();
+  await panel
+    .getByLabel(`Exchange actions for ${name}`, { exact: true })
+    .click();
   await panel
     .getByRole("button", { name: "Archive exchange", exact: true })
     .click();
@@ -276,13 +278,17 @@ test("exchange archive, Trash, and restore remain separate actions", async ({
   await expect(
     panel.getByRole("button", { name: "Draw names", exact: true }),
   ).toHaveCount(0);
-  await panel.getByLabel(`Actions for ${name}`, { exact: true }).click();
+  await panel
+    .getByLabel(`Exchange actions for ${name}`, { exact: true })
+    .click();
   await panel
     .getByRole("button", { name: "Restore exchange", exact: true })
     .click();
   await expect(panel).toHaveCount(0);
   await page.getByRole("button", { name: "Current", exact: true }).click();
-  await panel.getByLabel(`Actions for ${name}`, { exact: true }).click();
+  await panel
+    .getByLabel(`Exchange actions for ${name}`, { exact: true })
+    .click();
   await panel
     .getByRole("button", { name: "Move to Trash", exact: true })
     .click();

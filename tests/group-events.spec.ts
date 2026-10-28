@@ -697,6 +697,9 @@ test("spending guidelines stay advisory for purchases, shared gifts, and drawn e
       .locator(".buying-row")
       .filter({ hasText: "Guideline shared gift" });
     await sharedRow
+      .getByLabel("More actions for Guideline shared gift", { exact: true })
+      .click();
+    await sharedRow
       .getByRole("button", { name: "Share the cost", exact: true })
       .click();
     await buyer.getByLabel("Target amount in USD", { exact: true }).fill("90");
