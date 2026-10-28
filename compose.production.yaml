@@ -1,0 +1,158 @@
+# Standalone registry deployment for Coolify. Do not merge with compose.yaml.
+# Keep service and volume names compatible with existing production resources.
+name: little-hint
+x-app: &app
+  image: ${LITTLE_HINT_IMAGE:?Set LITTLE_HINT_IMAGE to a release image digest}
+  pull_policy: missing
+  restart: unless-stopped
+  environment:
+    NODE_ENV: production
+    APP_ENV: production
+    APP_URL: ${APP_URL:?Set APP_URL to the production HTTPS origin}
+    CLOUDFLARE_WEB_ANALYTICS: ${CLOUDFLARE_WEB_ANALYTICS:-false}
+    DATABASE_URL: postgresql://little_hint:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@db:5432/little_hint
+    BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?Set BETTER_AUTH_SECRET}
+    SETTINGS_ENCRYPTION_KEY: ${SETTINGS_ENCRYPTION_KEY:?Set SETTINGS_ENCRYPTION_KEY}
+    PORT: 3000
+    UPLOAD_DIR: /data/uploads
+    AUTO_IMPORT_PRODUCT_PHOTOS: ${AUTO_IMPORT_PRODUCT_PHOTOS:-}
+    PRODUCT_IMPORT_CACHE_ENABLED: ${PRODUCT_IMPORT_CACHE_ENABLED:-true}
+    SMTP_HOST: ${SMTP_HOST:-}
+    SMTP_PORT: ${SMTP_PORT:-465}
+    SMTP_USER: ${SMTP_USER:-}
+    SMTP_PASS: ${SMTP_PASS:-}
+    SMTP_FROM: ${SMTP_FROM:-Little Hint <littlehint@example.com>}
+    VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+    VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+    VAPID_SUBJECT: ${VAPID_SUBJECT:-}
+    TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+    TELEGRAM_BOT_NAME: ${TELEGRAM_BOT_NAME:-}
+    TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+    TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+    TWILIO_FROM: ${TWILIO_FROM:-}
+    TWILIO_VERIFY_SERVICE_SID: ${TWILIO_VERIFY_SERVICE_SID:-}
+    OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    OPENAI_MODEL: ${OPENAI_MODEL:-gpt-6-luna}
+    GIFT_DISCOVERY_MODE: ${GIFT_DISCOVERY_MODE:-}
+    GIFT_DISCOVERY_USER_WEEKLY_LIMIT: ${GIFT_DISCOVERY_USER_WEEKLY_LIMIT:-}
+    GIFT_DISCOVERY_USER_OVERRIDES: ${GIFT_DISCOVERY_USER_OVERRIDES:-}
+    GIFT_DISCOVERY_MONTHLY_LIMIT: ${GIFT_DISCOVERY_MONTHLY_LIMIT:-}
+    GIFT_DISCOVERY_MODEL: ${GIFT_DISCOVERY_MODEL:-}
+    SCRAPING_PROVIDER: ${SCRAPING_PROVIDER:-}
+    SCRAPINGFISH_API_KEY: ${SCRAPINGFISH_API_KEY:-}
+    SCRAPEDO_API_KEY: ${SCRAPEDO_API_KEY:-}
+    SCRAPINGDOG_API_KEY: ${SCRAPINGDOG_API_KEY:-}
+    SCRAPINGBEE_API_KEY: ${SCRAPINGBEE_API_KEY:-}
+    PAID_DAILY_LIMIT: ${PAID_DAILY_LIMIT:-50}
+  volumes:
+    - uploads:/data/uploads
+  read_only: true
+  tmpfs:
+    - /tmp:size=128M,mode=1777
+  security_opt:
+    - no-new-privileges:true
+  cap_drop: [ALL]
+services:
+  db:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: little_hint
+      POSTGRES_USER: little_hint
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+    volumes:
+      - postgres18:/var/lib/postgresql
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U little_hint -d little_hint]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+  app:
+    <<: *app
+    command:
+      [
+        sh,
+        -c,
+        "node dist/server/cli.js migrate && exec node dist/server/index.js",
+      ]
+    expose: ["3000"]
+    healthcheck:
+      test:
+        [
+          CMD,
+          node,
+          -e,
+          "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+    depends_on:
+      db:
+        condition: service_healthy
+  worker:
+    <<: *app
+    command: [node, dist/server/worker.js]
+    depends_on:
+      app:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          CMD,
+          node,
+          -e,
+          "const fs=require('node:fs');try{process.exit(Date.now()-Number(fs.readFileSync('/tmp/little-hint-worker-heartbeat','utf8'))<60000?0:1)}catch{process.exit(1)}",
+        ]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+  backup:
+    image: ghcr.io/housewatch-digital/backup-sidecar:0.3.0-postgres18
+    profiles: [backup]
+    restart: unless-stopped
+    init: true
+    read_only: true
+    command: [idle]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      BACKUP_NAME: ${BACKUP_NAME:-little-hint-production}
+      SQLITE_DATABASES: ""
+      POSTGRES_DATABASES: little_hint
+      POSTGRES_REQUIRE_MATCHING_MAJOR: "true"
+      PGHOST: db
+      PGPORT: 5432
+      PGUSER: little_hint
+      PGPASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      RESTIC_REPOSITORY: ${RESTIC_REPOSITORY:-}
+      RESTIC_PASSWORD: ${RESTIC_PASSWORD:-}
+      RESTIC_KEEP_DAILY: ${RESTIC_KEEP_DAILY:-30}
+      RESTIC_KEEP_WEEKLY: ${RESTIC_KEEP_WEEKLY:-0}
+      RESTIC_KEEP_MONTHLY: ${RESTIC_KEEP_MONTHLY:-0}
+      BACKUP_MAX_AGE_SECONDS: ${BACKUP_MAX_AGE_SECONDS:-93600}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-}
+      B2_ACCOUNT_ID: ${B2_ACCOUNT_ID:-}
+      B2_ACCOUNT_KEY: ${B2_ACCOUNT_KEY:-}
+    volumes:
+      - uploads:/source/uploads:ro
+      - backup-cache:/cache
+      - backup-stage:/stage
+      - backup-state:/state
+      - backup-restore:/restore
+    tmpfs:
+      - /tmp:size=128M,noexec,nosuid,nodev
+    security_opt:
+      - no-new-privileges:true
+volumes:
+  postgres18:
+  uploads:
+  backup-cache:
+  backup-stage:
+  backup-state:
+  backup-restore:

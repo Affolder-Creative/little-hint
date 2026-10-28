@@ -151,7 +151,62 @@ console.log(
   "Compose checks passed: secret-free build, required runtime secrets, and shared local/registry app-worker images.",
 );
 
-// Coolify validates bind sources before Docker interpolates environment values.
+const productionVars = {
+  ...required,
+  APP_URL: "https://production.example.test",
+  LITTLE_HINT_IMAGE: registryImage,
+};
+for (const missing of Object.keys(productionVars)) {
+  for (const value of [undefined, ""]) {
+    const variables = { ...productionVars };
+    if (value === undefined) delete variables[missing];
+    else variables[missing] = value;
+    const result = config("compose.production.yaml", variables);
+    assert.notEqual(result.status, 0, `Production must require ${missing}.`);
+    assert.ok(result.stderr.includes(missing));
+  }
+}
+// Compare fully resolved definitions, including backup-profile services and
+// actual Compose volume names. Only the explicit production marker differs.
+for (const profiles of ["", "backup"]) {
+  const variables = {
+    ...productionVars,
+    COMPOSE_PROFILES: profiles,
+    GIFT_DISCOVERY_USER_OVERRIDES: discoveryOverrides,
+  };
+  const productionResult = config("compose.production.yaml", variables);
+  const legacyResult = config(registryFiles, variables);
+  assert.equal(productionResult.status, 0, productionResult.stderr);
+  assert.equal(legacyResult.status, 0, legacyResult.stderr);
+  const production = JSON.parse(productionResult.stdout);
+  const legacy = JSON.parse(legacyResult.stdout);
+  // Extensions are YAML templates, not runtime configuration. The legacy
+  // overlay overrides services without rewriting the base x-app template.
+  for (const definition of [production, legacy])
+    for (const key of Object.keys(definition))
+      if (key.startsWith("x-")) delete definition[key];
+  for (const name of ["app", "worker"])
+    legacy.services[name].environment.APP_ENV = "production";
+  assert.deepEqual(
+    production,
+    legacy,
+    "Production must preserve the existing stack and storage identities.",
+  );
+  assert.equal(Boolean(production.services.backup), profiles === "backup");
+  for (const service of Object.values(production.services)) {
+    assert.equal(
+      service.ports,
+      undefined,
+      "Production must not publish host ports.",
+    );
+    assert.equal(service.build, undefined, "Production uses prebuilt images.");
+  }
+}
+console.log(
+  "Production checks passed: required image/origin, legacy configuration and volume parity, optional backups.",
+);
+
+// Retain literal bind sources for compatibility with the original Coolify setup.
 const unexpandedStaging = config("compose.staging.yaml", {}, false);
 assert.equal(unexpandedStaging.status, 0, unexpandedStaging.stderr);
 for (const service of Object.values(
@@ -181,13 +236,14 @@ const stagingVars = {
   STAGING_MAILPIT_UI_AUTH: "tester:staging-only",
 };
 for (const missing of Object.keys(stagingVars)) {
-  const variables = { ...stagingVars };
-  delete variables[missing];
-  assert.notEqual(
-    config("compose.staging.yaml", variables).status,
-    0,
-    `Staging must require ${missing}.`,
-  );
+  for (const value of [undefined, ""]) {
+    const variables = { ...stagingVars };
+    if (value === undefined) delete variables[missing];
+    else variables[missing] = value;
+    const result = config("compose.staging.yaml", variables);
+    assert.notEqual(result.status, 0, `Staging must require ${missing}.`);
+    assert.ok(result.stderr.includes(missing));
+  }
 }
 const stagingResult = config("compose.staging.yaml", stagingVars);
 assert.equal(stagingResult.status, 0, stagingResult.stderr);
@@ -248,9 +304,35 @@ console.log(
   "Staging checks passed: dedicated data, fixed mail capture, bounded memory, no build or published ports.",
 );
 
+for (const [file, variables] of [
+  ["compose.production.yaml", productionVars],
+  ["compose.staging.yaml", stagingVars],
+]) {
+  const result = config(file, variables);
+  assert.equal(result.status, 0, result.stderr);
+  const { services } = JSON.parse(result.stdout);
+  assert.equal(services.app.depends_on.db.condition, "service_healthy");
+  assert.equal(services.worker.depends_on.app.condition, "service_healthy");
+  assert.deepEqual(services.app.healthcheck.test.slice(0, 3), [
+    "CMD",
+    "node",
+    "-e",
+  ]);
+  assert.match(
+    services.app.healthcheck.test[3],
+    /http:\/\/127\.0\.0\.1:3000\/api\/health/,
+  );
+  assert.match(
+    services.worker.healthcheck.test[3],
+    /little-hint-worker-heartbeat/,
+  );
+  assert.ok(services.db.healthcheck.test.join(" ").includes("pg_isready"));
+}
+
 // Blank leaves UI control available; explicit false must reach both processes.
 for (const [file, variables] of [
   ["compose.yaml", required],
+  ["compose.production.yaml", productionVars],
   ["compose.staging.yaml", stagingVars],
 ]) {
   for (const value of ["", "true", "false"]) {

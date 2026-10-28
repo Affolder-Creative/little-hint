@@ -50,11 +50,19 @@ docker buildx imagetools inspect "$IMAGE:$VERSION" --raw > .local/release-assets
 digest=$(docker buildx imagetools inspect "$IMAGE:$VERSION" --format '{{.Manifest.Digest}}')
 [[ "$digest" =~ ^sha256:[a-f0-9]{64}$ ]]
 IMAGE_DIGEST="$digest" node scripts/release-assets.mjs
-cp compose.yaml compose.ghcr.yaml compose.local.yaml .env.production.example LICENSE .local/deployment/
+cp compose.production.yaml compose.yaml compose.ghcr.yaml compose.local.yaml .env.production.example LICENSE .local/deployment/
 cp docs/RELEASING.md docs/LICENSING.md docs/DEPLOYMENT.md .local/deployment/
 # Public deployment samples do not activate an unlicensed optional component.
 sed -i 's/^COMPOSE_PROFILES=backup$/COMPOSE_PROFILES=/' .local/deployment/.env.production.example
-printf 'LITTLE_HINT_IMAGE=%s@%s\n' "$IMAGE" "$digest" >> .local/deployment/.env.production.example
+IMAGE_DIGEST="$digest" node --input-type=module -e '
+  import { readFileSync, writeFileSync } from "node:fs";
+  const file = ".local/deployment/.env.production.example";
+  const source = readFileSync(file, "utf8");
+  if ((source.match(/^LITTLE_HINT_IMAGE=.*$/gm) ?? []).length !== 1)
+    throw new Error("Expected exactly one LITTLE_HINT_IMAGE in the environment example.");
+  writeFileSync(file, source.replace(/^LITTLE_HINT_IMAGE=.*$/m,
+    () => `LITTLE_HINT_IMAGE=${process.env.IMAGE}@${process.env.IMAGE_DIGEST}`));
+'
 tar -czf ".local/release-assets/little-hint-$VERSION-deploy.tar.gz" -C .local/deployment .
 (
   cd .local/release-assets
