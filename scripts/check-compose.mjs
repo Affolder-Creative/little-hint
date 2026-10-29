@@ -356,6 +356,24 @@ for (const [file, variables] of [
   }
 }
 
+// Group policy overrides reach both processes; blank preserves the UI setting.
+for (const [file, variables] of [
+  ["compose.yaml", required],
+  ["compose.production.yaml", productionVars],
+  ["compose.staging.yaml", stagingVars],
+]) {
+  for (const value of ["", "everyone", "admins"]) {
+    const parsed = config(file, { ...variables, FAMILY_GROUP_CREATION: value });
+    assert.equal(parsed.status, 0, parsed.stderr);
+    for (const name of ["app", "worker"])
+      assert.equal(
+        JSON.parse(parsed.stdout).services[name].environment
+          .FAMILY_GROUP_CREATION,
+        value,
+      );
+  }
+}
+
 // Preview never uses .env, publishes only a Docker-assigned loopback gateway,
 // and keeps the database, inbox SMTP, app, and worker on an internal network.
 const preview = config("compose.preview.yaml", {}, false);

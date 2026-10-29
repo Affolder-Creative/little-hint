@@ -189,7 +189,11 @@ export function ListForm({ list }: { list?: List }) {
               </label>
             ))
           ) : (
-            <p>Create a family group in Settings to share this list.</p>
+            <p>
+              {world.canCreateGroups === false
+                ? "Accept a family-group invitation to share this list, or ask an app administrator to create a group."
+                : "Create a family group in Settings to share this list."}
+            </p>
           )}
           <small>
             Leaving every family group unchecked keeps the list private.

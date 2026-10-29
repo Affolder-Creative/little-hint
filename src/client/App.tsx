@@ -1,5 +1,5 @@
 import { BrowseTools } from "./BrowseTools";
-import { ProfileEditor } from "./ProfileEditor";
+import { ProfileEditor, GiftPreferencesShortcut } from "./ProfileEditor";
 import { Invitations } from "./Invitations";
 import { OfferLinks } from "./OfferLinks";
 import { Action } from "./Action";
@@ -925,13 +925,21 @@ function Home() {
       {solo && (
         <p>
           Ready to share?{" "}
-          <button
-            className="text-button"
-            onClick={() => open("Create a family group", <GroupForm />)}
-          >
-            Create a family group
-          </button>{" "}
-          or accept an invitation from someone you know.
+          {world.canCreateGroups !== false && (
+            <>
+              <button
+                className="text-button"
+                onClick={() => open("Create a family group", <GroupForm />)}
+              >
+                Create a family group
+              </button>{" "}
+              or{" "}
+            </>
+          )}
+          accept an invitation from someone you know
+          {world.canCreateGroups === false
+            ? ", or ask an app administrator to create a group."
+            : "."}
         </p>
       )}
     </>
@@ -1057,14 +1065,17 @@ function PersonPage() {
         <DiscoveryLink personId={person.id} />
         <FollowButton target="person" targetId={person.id} />
         {own ? (
-          <button
-            className="button secondary"
-            onClick={() =>
-              open("Edit profile", <ProfileEditor personId={person.id} />)
-            }
-          >
-            Edit profile
-          </button>
+          <>
+            <button
+              className="button secondary"
+              onClick={() =>
+                open("Edit profile", <ProfileEditor personId={person.id} />)
+              }
+            >
+              Edit profile
+            </button>
+            <GiftPreferencesShortcut personId={person.id} name={person.name} />
+          </>
         ) : (
           <button
             className="button"

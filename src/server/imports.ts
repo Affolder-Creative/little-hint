@@ -1,4 +1,6 @@
 import { lookup } from "node:dns/promises";
+import { transact } from "./db";
+import { recordProductTokens } from "./usage";
 import { isIP } from "node:net";
 import { Agent, fetch as request } from "undici";
 import ipaddr from "ipaddr.js";
@@ -327,7 +329,7 @@ async function supplement(
   key: string,
   model: string,
 ) {
-  await spend("openai");
+  const startedAt = await spend("openai");
   const schema = {
     type: "object",
     properties: {
@@ -372,6 +374,7 @@ async function supplement(
   });
   if (!r.ok) throw new Error("AI unavailable");
   const body = (await r.json()) as any;
+  await transact((s) => recordProductTokens(s, startedAt, model, body.usage));
   const text = (body.output ?? [])
     .flatMap((o: any) => o.content ?? [])
     .filter((c: any) => c.type === "output_text")

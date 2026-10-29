@@ -1,12 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-const mocks = vi.hoisted(() => ({ direct: vi.fn() }));
+import { emptyState, type State } from "../src/shared/model";
+const mocks = vi.hoisted(() => ({ direct: vi.fn(), state: {} as State }));
 vi.mock("undici", () => ({ Agent: class {}, fetch: mocks.direct }));
 vi.mock("../src/server/settings", () => ({
   config: vi.fn(),
   spend: vi.fn(),
   automaticallyImportProductPhotos: vi.fn(async () => false),
 }));
-vi.mock("../src/server/db", () => ({ transact: vi.fn() }));
+vi.mock("../src/server/db", () => ({
+  transact: vi.fn(async (run) => run(mocks.state)),
+}));
 vi.mock("node:dns/promises", () => ({
   lookup: vi.fn(async () => [{ address: "93.184.216.34", family: 4 }]),
 }));
@@ -24,10 +27,11 @@ const keys = Object.fromEntries(
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.direct.mockReset();
+  mocks.state = emptyState();
   vi.mocked(config).mockResolvedValue(
     keys as Awaited<ReturnType<typeof config>>,
   );
-  vi.mocked(spend).mockResolvedValue(undefined);
+  vi.mocked(spend).mockResolvedValue(new Date().toISOString());
 });
 afterEach(() => vi.unstubAllGlobals());
 
@@ -255,4 +259,70 @@ describe("full import fallback flow", () => {
     expect(fetcher).toHaveBeenCalledTimes(1);
     expect(spend).toHaveBeenCalledExactlyOnceWith("scrapingfish");
   });
+});
+
+describe("product-detail AI accounting", () => {
+  it.each(["valid", "invalid content", "missing usage", "request failure"])(
+    "records returned tokens before content parsing: %s",
+    async (outcome) => {
+      vi.mocked(config).mockResolvedValue({
+        OPENAI_API_KEY: "test-key",
+        OPENAI_MODEL: "gpt-6-luna",
+        SCRAPING_PROVIDER: "none",
+      } as Awaited<ReturnType<typeof config>>);
+      vi.mocked(spend).mockResolvedValue("2026-10-31T23:59:59.000Z");
+      mocks.direct.mockResolvedValue(
+        new Response("<title>Retailer title</title>"),
+      );
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async () => {
+          if (outcome === "request failure") throw new Error("Timeout");
+          return new Response(
+            JSON.stringify({
+              ...(outcome === "missing usage"
+                ? {}
+                : { usage: { input_tokens: 80, output_tokens: 20 } }),
+              output: [
+                {
+                  content: [
+                    {
+                      type: "output_text",
+                      text:
+                        outcome === "invalid content"
+                          ? "invalid"
+                          : JSON.stringify({
+                              title: "Clean title",
+                              description: "Plain description",
+                              tags: ["Home", "Gift", "Kitchen"],
+                            }),
+                    },
+                  ],
+                },
+              ],
+            }),
+          );
+        }),
+      );
+      const result = await importProduct(target, "owner");
+      expect(result.title).toBe(
+        ["invalid content", "request failure"].includes(outcome)
+          ? "Retailer title"
+          : "Clean title",
+      );
+      expect(spend).toHaveBeenCalledExactlyOnceWith("openai");
+      if (["missing usage", "request failure"].includes(outcome))
+        expect(mocks.state.usage).toHaveLength(0);
+      else {
+        expect(
+          mocks.state.usage.find(
+            (u) => u.key === "imports:metrics:2026-10:gpt-6-luna:input",
+          )?.count,
+        ).toBe(80);
+        expect(
+          mocks.state.usage.find((u) => u.key.endsWith(":reported"))?.count,
+        ).toBe(1);
+      }
+    },
+  );
 });

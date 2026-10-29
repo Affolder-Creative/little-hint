@@ -1,3 +1,4 @@
+import { adminUsage } from "./usage";
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { z } from "zod";
 import type { Actor } from "../shared/model";
@@ -15,8 +16,6 @@ import {
   discoveryIdempotent,
   prepareDiscoveryReview,
   saveDiscoveryReview,
-  quotaKeys,
-  discoveryMonthlyUsage,
 } from "./gift-discovery";
 
 export function registerGiftDiscovery(
@@ -92,35 +91,21 @@ export function registerGiftDiscovery(
     const a = await actor(req),
       s = await readState();
     if (!isAdmin(s, a)) fail(403, "Administrator access required.");
-    const cfg = discoveryConfiguration(await config()),
-      keys = quotaKeys(a.id),
-      month = new Date().toISOString().slice(0, 7);
-    const rows = s.usage.filter((u) =>
-      u.key.startsWith(`discovery:metrics:${month}:`),
-    );
-    const total = (metric: string) =>
-      rows
-        .filter((u) => u.key.endsWith(`:${metric}`))
-        .reduce((sum, u) => sum + u.count, 0);
-    const usage = discoveryMonthlyUsage(s);
-    const { searches } = usage;
-    const unknownModel = rows.some(
-      (u) => !u.key.startsWith(`discovery:metrics:${month}:gpt-6-luna:`),
-    );
+    const cfg = await config();
+    const report = adminUsage(s, cfg);
+    const u = report.suggestions;
     return {
-      config: cfg,
-      ...usage,
-      searchCalls: total("searches"),
-      inputTokens: total("input"),
-      outputTokens: total("output"),
-      unreportedAttempts: Math.max(0, searches - total("reported")),
-      resetsAt: keys.monthResetsAt,
-      estimatedUsd: unknownModel
-        ? null
-        : total("searches") * 0.01 +
-          (total("input") * 0.1) / 1e6 +
-          (total("output") * 0.5) / 1e6,
-      pricingAsOf: "2026-10-27",
+      config: discoveryConfiguration(cfg),
+      searches: u.requests,
+      quotaSearches: u.quotaSearches,
+      exemptSearches: u.exemptSearches,
+      searchCalls: u.searchCalls,
+      inputTokens: u.inputTokens,
+      outputTokens: u.outputTokens,
+      unreportedAttempts: u.unreported,
+      resetsAt: report.resetsAt,
+      estimatedUsd: u.estimatedUsd,
+      pricingAsOf: report.pricingAsOf,
     };
   });
 }

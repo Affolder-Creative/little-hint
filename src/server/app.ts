@@ -4,6 +4,7 @@ import {
   recordWishlistSmsFailure,
 } from "./wishlist-delivery";
 import { registerGiftDiscovery } from "./gift-discovery-routes";
+import { adminUsage } from "./usage";
 import { discoveryJob } from "./gift-discovery";
 import { managementActions, trash } from "./management";
 import {
@@ -45,6 +46,8 @@ import {
   config,
   settingsSummary,
   saveSetting,
+  saveDiscoverySettings,
+  canCreateGroups,
   discoveryConfiguration,
 } from "./settings";
 import { mediaDir, saveImage } from "./imports";
@@ -217,8 +220,10 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
   app.get("/api/v1/world", async (req) => {
     const a = await actor(req);
     const notificationAsOf = Date.now();
+    const state = await readState();
     return {
-      ...world(await readState(), a),
+      ...world(state, a),
+      canCreateGroups: canCreateGroups(state, a),
       giftDiscovery: discoveryConfiguration(await config()),
       notificationAsOf,
       environment: deploymentEnvironment(),
@@ -401,6 +406,11 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
             ).rows[0]?.id
           : undefined;
       return transact((s) => {
+        if (action === "groups.create" && !canCreateGroups(s, a))
+          fail(
+            403,
+            "Only app administrators can create family groups. Ask an administrator to create one or accept an invitation.",
+          );
         const result = idempotent(
           s,
           a,
@@ -497,6 +507,27 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
       .parse(req.body);
     await saveSetting(b.key, b.value);
     return { ok: true };
+  });
+  app.post("/api/v1/admin/settings/batch", async (req) => {
+    const a = await actor(req);
+    if (!isAdmin(await readState(), a))
+      fail(403, "Administrator access required.");
+    const body = z
+      .object({
+        settings: z
+          .array(z.object({ key: z.string(), value: z.string().max(100) }))
+          .min(1)
+          .max(4),
+      })
+      .parse(req.body);
+    await saveDiscoverySettings(body.settings);
+    return { ok: true };
+  });
+  app.get("/api/v1/admin/usage", async (req) => {
+    const a = await actor(req);
+    const state = await readState();
+    if (!isAdmin(state, a)) fail(403, "Administrator access required.");
+    return adminUsage(state, await config());
   });
   app.get("/api/v1/admin/jobs", async (req) => {
     const a = await actor(req),

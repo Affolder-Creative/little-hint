@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-28T19:24:49.709873Z",
+  "generatedAt": "2026-10-29T04:47:12.837939Z",
   "title": "Design System: Little Hint",
   "extensions": {
     "colorMeta": {
@@ -947,6 +947,7 @@
       "src/client/ListIndex.tsx",
       "src/client/GroupEvents.tsx",
       "src/client/SettingsPage.tsx",
+      "src/client/KyleSignature.tsx",
       "src/client/SettingsNavigation.tsx",
       "src/client/AccountInvitations.tsx",
       "src/client/Households.tsx",
@@ -960,7 +961,9 @@
       "src/client/action-menu.css",
       "src/client/useDialogViewport.ts",
       "src/client/Confirm.tsx",
-      "src/client/ProfileEditor.tsx"
+      "src/client/ProfileEditor.tsx",
+      "src/client/AdminUsage.tsx",
+      "src/client/GiftDiscoveryAdmin.tsx"
     ],
     "tonalRampNote": "Synthesized OKLCH previews at constant hue/chroma; these ramps are panel metadata, not additional application tokens.",
     "layout": {
@@ -974,15 +977,17 @@
       "pageHeadings": "Page headings and actions wrap with a 280px text basis. List detail headings stack title and actions without a fixed text height. Long names and labels wrap within their columns.",
       "privateGiftIdeas": "Active wish lists offer Add gift idea to givers. Ideas belong to a person; joint lists require an explicit recipient. The form places Who can see this idea? before product entry and defaults to Only me. Private cards, detail pages, and Buying entries show a lock with Only me. Saved idea links use /people/:id?tab=ideas to preserve the selected tab.",
       "paragraphRhythm": "Metadata uses 4px; headings and related explanations 8px; ordinary prose 12px; controls 16px; sections 32px, reduced to 24px at 650px. Text stacks own spacing and reset child margins. Form groups use 16px; adjacent explanations use 8px. Intentional hero and card compositions retain their own spacing.",
-      "profileEditor": "Person pages and Settings open one Edit profile dialog with Profile and Gift preferences tabs. Both drafts stay mounted. Saves are independent and keep the dialog open. Done and Close protect dirty forms in either tab; successful saves clear their confirmation state.",
-      "giftDetails": "Recipient, title, status, price and quantity use a 12px stack. The phone image gap is 16px, and the back-link gap is 8px. Reservation and detail-section headings match at 22px desktop and 21px phone; explanations use 14px/1.5 with a 65ch maximum."
+      "profileEditor": "Person pages and Settings open one Edit profile dialog with Profile and Gift preferences tabs. Both drafts stay mounted. Saves are independent and keep the dialog open. Done and Close protect dirty forms in either tab; successful saves clear their confirmation state. Quiet underlined Gift preferences text actions appear in Settings and owned/managed person pages. In Settings the shortcut sits below account details, leaving the outlined Edit profile button as the main action. Interest choices use one column at widths up to 360px.",
+      "giftDetails": "Recipient, title, status, price and quantity use a 12px stack. The phone image gap is 16px, and the back-link gap is 8px. Reservation and detail-section headings match at 22px desktop and 21px phone; explanations use 14px/1.5 with a 65ch maximum.",
+      "administration": "Gift suggestion settings share one atomic save; entirely server-managed forms omit the save button. Monthly usage uses flat feature groups and 13px labels with 18px tabular counts. Tokens, models, and estimates use expandable details.",
+      "groupActions": "Follow sits outside group navigation with a 32px horizontal gap and wraps independently on narrow screens."
     },
     "management": {
       "sorting": "Search stays beside Sort & filter, wrapping on the narrowest screens. Mixed-recipient gift views offer a People checkbox disclosure; person pages omit it. Selections match any recipient and combine with search, tag and availability. Empty selection means everyone. People counts as one active filter, and selected names remain summarized. Per-history-entry filter state restores through reload and browser navigation. Clear filters preserves search and saved sorting.",
       "priority": "Optional Most wanted, Would love, and Nice to have labels. No implied numeric rank; labels remain attached when sorting changes.",
       "actions": "List, event, exchange and purchase menus have visible action labels; gift-card overflow controls have accessible names. All controls retain 44px targets. Menus stay within viewport edges and close on Escape or focus departure. Confirmation dialogs offer Cancel; reorder dialogs support drag handles and move-up/down buttons with Save and Cancel.",
       "lifecycle": "Active, Archived, and Trash views are distinct. Group events preserve participant lists on removal. Permanent deletion requires an explicit second confirmation.",
-      "footer": "Everyday pages have no attribution footer or bottom divider. Settings → About contains the approved logo, tagline, version, and readable Created by Affolder Creative credit. The loading screen carries a quieter credit outside the loading status announcement and above mobile safe areas."
+      "footer": "Everyday pages have no attribution footer or bottom divider. Settings → About contains the approved logo, tagline, version, and readable Created by Affolder Creative credit. The loading screen carries a quieter credit outside the loading status announcement and above mobile safe areas. About includes Kyle’s approved family-origin story at 15px within 62ch and a theme-aware SVG sign-off traced from Kyle’s selected screenshot with a matching dash, 76px wide at its original proportions."
     },
     "roundedMeta": {
       "toast": {

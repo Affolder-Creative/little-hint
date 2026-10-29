@@ -303,3 +303,14 @@ it("refreshes a changed price for confirmation without AI, then rejects a lost r
   expect(mocks.state.giftDiscoveryJobs[0].review).toBeUndefined();
   expect(mocks.state.giftDiscoveryJobs[0].candidates[0].offers).toEqual([]);
 });
+
+it("keeps missing provider usage unreported instead of recording zero tokens as reported", async () => {
+  const original = await response().json();
+  delete original.usage;
+  vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify(original)));
+  await processDiscovery(id);
+  expect(
+    mocks.state.usage.find((u) => u.key.endsWith(":reported"))?.count ?? 0,
+  ).toBe(0);
+  expect(discoveryMonthlyUsage(mocks.state).searches).toBe(1);
+});

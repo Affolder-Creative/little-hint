@@ -53,6 +53,7 @@ wordplay sparingly. Instructions, privacy choices, errors, and purchases stay pl
   restrictions without promising permanent secrecy when a reveal is scheduled.
 - Family groups share lists. Households prevent exchange matches when that rule is
   enabled and can be followed for additions to member-owned lists shared with their family group. Keep those concepts distinct. Shared ownership is different from viewing.
+- Family-group creation defaults to every signed-in account. Administrators can restrict new groups to app administrators; FAMILY_GROUP_CREATION=everyone|admins overrides and locks that preference. Existing group ownership, membership, invitations, and events retain their permissions.
 - Settings → Invitations lets any signed-in user invite someone to their own account without a family group. Solo users start with private wish lists and can accept separate group invitations later. An account invitation does not connect profiles or share lists.
 - Never imply that a reservation buys something, a contribution sends money, or
   cancelling a reservation cancels a shop order. Invitations waiting for delivery
@@ -81,7 +82,7 @@ Keyboard access, readable contrast, reduced motion, screen readers, text enlarge
 
 ## Gift discovery
 
-Recipient interests and likes/avoid notes are private by default, editable by owners and guardians, and shareable with selected family groups after confirmation. New accounts get skippable setup on their initial Home visit. Navigation defers setup for the current signed-in visit, and direct links remain accessible. Existing accounts get a dismissible prompt. Preferences remain usable when AI is off.
+Recipient interests and likes/avoid notes are private by default, editable by owners and guardians, and shareable with selected family groups after confirmation. New accounts get skippable setup on their initial Home visit. Navigation defers setup for the current signed-in visit, and direct links remain accessible. Existing accounts get a dismissible prompt. Preferences remain usable when AI is off. Edit profile includes Profile and Gift preferences tabs, with direct Gift preferences shortcuts on owned/managed person pages and in Settings.
 
 AI suggestions default to givers only, with admin modes Off / For others / For own lists / Both and a locking environment override. Managed profiles count as own lists. Each search targets one person; a joint list can be a save destination. Without shared preferences, users review locally inferred interests from visible, active wish-list titles and tags before searching.
 
@@ -92,3 +93,5 @@ Users select gifts, edit public notes, choose destinations and confirm before sa
 Off hides discovery controls and unsaved results, blocks endpoints, cancels pending work and discards in-flight results. Already dispatched requests may still be charged. Saved gifts and preferences remain available. Staging disables external AI discovery.
 
 Selected accounts may receive server-configured higher or unlimited weekly AI allowances and a separate monthly exemption. Monthly-exempt searches remain in total usage reports without consuming the shared allowance. Exceptions never override Off, staging/preview isolation, or recipient permissions.
+
+Administration saves gift-suggestion mode, limits, and model together. Monthly usage separates gift suggestions, product-detail AI, and paid shop lookups. It appears when a service is enabled or usage exists in the current UTC month, and retains historical counts after disabling services. Unknown or older token usage is labeled as unavailable; estimates cover recorded usage at known rates and are not a complete bill.

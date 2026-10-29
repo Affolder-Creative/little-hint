@@ -4,11 +4,17 @@ import { GiftPreferencesForm } from "./GiftPreferences";
 import { useModalDismiss } from "./components";
 import { useApp } from "./context";
 
-export function ProfileEditor({ personId }: { personId: string }) {
+export function ProfileEditor({
+  personId,
+  initialTab = "profile",
+}: {
+  personId: string;
+  initialTab?: "profile" | "preferences";
+}) {
   const { world, toast } = useApp();
   const dismiss = useModalDismiss();
   const id = useId();
-  const [tab, setTab] = useState("profile");
+  const [tab, setTab] = useState(initialTab);
   const [profileBusy, setProfileBusy] = useState(false);
   const [preferencesBusy, setPreferencesBusy] = useState(false);
   const person = world.people.find((p) => p.id === personId);
@@ -18,7 +24,7 @@ export function ProfileEditor({ personId }: { personId: string }) {
   )
     return null;
   const busy = profileBusy || preferencesBusy;
-  const tabs = ["profile", "preferences"];
+  const tabs = ["profile", "preferences"] as const;
   return (
     <div className="profile-editor">
       <div className="tabs" role="tablist" aria-label="Profile settings">
@@ -91,5 +97,29 @@ export function ProfileEditor({ personId }: { personId: string }) {
         </button>
       </div>
     </div>
+  );
+}
+
+export function GiftPreferencesShortcut({
+  personId,
+  name,
+}: {
+  personId: string;
+  name: string;
+}) {
+  const { open } = useApp();
+  return (
+    <button
+      className="text-button gift-preferences-shortcut"
+      aria-label={`Gift preferences for ${name}`}
+      onClick={() =>
+        open(
+          "Edit profile",
+          <ProfileEditor personId={personId} initialTab="preferences" />,
+        )
+      }
+    >
+      Gift preferences
+    </button>
   );
 }

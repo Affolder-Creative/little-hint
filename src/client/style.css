@@ -3628,3 +3628,134 @@ main {
     --space-section: 24px;
   }
 }
+
+/* Follow is an action alongside the group's local navigation. */
+.group-settings-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 32px;
+  margin: 20px 0 24px;
+  border-bottom: 1px solid var(--border);
+}
+.group-settings-controls .group-settings-nav {
+  margin: 0;
+  border: 0;
+}
+.group-settings-controls > button {
+  margin-left: auto;
+}
+.about-story {
+  max-width: 62ch;
+  margin-block: 24px;
+}
+.settings-about .about-story p {
+  font-size: 15px;
+  color: var(--text);
+}
+.about-signature {
+  display: block;
+  width: 76px;
+  height: auto;
+  margin-top: 8px;
+  color: var(--accent);
+}
+.admin-fields {
+  display: grid;
+  gap: var(--space-controls);
+}
+.admin-explanation {
+  margin-top: var(--space-controls);
+}
+.admin-explanation > p,
+.usage-details > p {
+  font-size: 13px;
+  color: var(--muted);
+  max-width: 65ch;
+}
+.admin-explanation > summary,
+.usage-details > summary {
+  min-height: 44px;
+  padding-block: 10px;
+  font-size: 14px;
+}
+.admin-group-policy,
+.admin-usage {
+  margin-bottom: var(--space-section);
+}
+.admin-usage {
+  margin-top: var(--space-section);
+}
+.usage-group {
+  padding-block: 20px;
+  border-top: 1px solid var(--border);
+}
+.usage-group h4 {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  font-size: 17px;
+  margin-bottom: 8px;
+}
+.usage-state {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--muted);
+}
+.usage-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 32px;
+  margin: 12px 0;
+}
+.usage-metrics > div {
+  min-width: 120px;
+}
+.usage-metrics dt {
+  color: var(--muted);
+  font-size: 13px;
+}
+.usage-metrics dd {
+  margin: 4px 0 0;
+  font-size: 18px;
+  font-weight: 550;
+  font-variant-numeric: tabular-nums;
+}
+.usage-group > p {
+  font-size: 13px;
+}
+.usage-details .usage-metrics dd {
+  font-size: 15px;
+}
+@media (max-width: 650px) {
+  .group-settings-controls {
+    margin-block: 12px 16px;
+    gap: 8px 32px;
+  }
+  .family-groups-section .group-settings-controls .group-settings-nav {
+    margin: 0;
+  }
+  .group-settings-controls > button {
+    margin-left: 0;
+  }
+}
+@media (max-width: 360px) {
+  .profile-editor .gift-interest-options {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.profile-setting-row > .avatar {
+  align-self: flex-start;
+  margin-top: 4px;
+}
+.profile-setting-row > .button {
+  align-self: flex-start;
+}
+.gift-preferences-shortcut {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  font-size: 13px;
+  font-weight: 500;
+}

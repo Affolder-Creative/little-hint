@@ -1,3 +1,4 @@
+import { returnedTokens } from "./usage";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { readState, transact } from "./db";
@@ -179,14 +180,9 @@ export async function processDiscovery(id: string) {
     const searchCalls = outputs.filter(
       (x: any) => x.type === "web_search_call",
     ).length;
-    const inputTokens = Math.max(
-      0,
-      Math.floor(Number(data.usage?.input_tokens) || 0),
-    );
-    const outputTokens = Math.max(
-      0,
-      Math.floor(Number(data.usage?.output_tokens) || 0),
-    );
+    const tokens = returnedTokens(data.usage);
+    const inputTokens = tokens?.input ?? 0;
+    const outputTokens = tokens?.output ?? 0;
     await transact((s) => {
       const row = s.giftDiscoveryJobs.find((j) => j.id === id);
       if (row) Object.assign(row, { inputTokens, outputTokens, searchCalls });
@@ -195,7 +191,7 @@ export async function processDiscovery(id: string) {
         input: inputTokens,
         output: outputTokens,
         searches: searchCalls,
-        reported: 1,
+        reported: tokens ? 1 : 0,
       }))
         addDiscoveryUsage(
           s,

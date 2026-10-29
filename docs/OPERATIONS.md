@@ -137,6 +137,12 @@ Before accepting production backups, execute `backup-sidecar doctor`, `backup-si
 8. Reconcile membership removals, guardianship changes, purchases, contribution payments, and cancelled exchanges that happened after the snapshot. A database restore can resurrect permissions revoked after the snapshot; session invalidation does not repair membership history. Keep the site closed until that review is complete. Reissue needed invitations and resume only reviewed jobs.
 9. Start app and worker, verify authorized login and representative privacy views, then reopen access. Take a fresh off-host backup and record the drill date, snapshot, and checks. Preserve the previous volumes until recovery is accepted.
 
+## Family-group creation
+
+Settings → Administration → Family-group creation defaults to **Everyone signed in**. Choose **Administrators only** to restrict new groups. Existing group owners keep all management permissions, and invitations and ownership transfers remain available.
+
+`FAMILY_GROUP_CREATION=everyone|admins` overrides and locks the UI preference. Leave it empty or unset to use the saved choice. Invalid values stop startup. Recreate app and worker containers after changing the environment override; UI changes take effect without restart. This application preference is also editable in staging without enabling external integrations. A non-administrator can ask an administrator to create a group and transfer ownership through the existing acceptance flow.
+
 ## AI gift suggestion controls and rollout
 
 Admin settings offer **Off throughout the app**, **For others only**, **For own lists only** and **Both**, plus account/week and app/month search limits and the discovery model. Nonempty environment values override and lock the corresponding controls on both app and worker:
@@ -147,6 +153,8 @@ Admin settings offer **Off throughout the app**, **For others only**, **For own 
 | `GIFT_DISCOVERY_USER_WEEKLY_LIMIT` | `3`                                             |
 | `GIFT_DISCOVERY_MONTHLY_LIMIT`     | `100`                                           |
 | `GIFT_DISCOVERY_MODEL`             | `gpt-6-luna`                                    |
+
+Editable gift-suggestion fields save together through one atomic request. Environment-controlled fields are excluded; if every field is locked, no save button is shown. A failed save preserves edits and changes no fields.
 
 A configured `OPENAI_API_KEY` is also required. A zero search limit blocks new paid searches for accounts without an applicable exception while existing eligible batches remain usable. Staging and preview force discovery off regardless of saved/provider settings. `.env.production.example` starts with `GIFT_DISCOVERY_MODE=off`; leave it off during rollout. Remove that override to use the admin toggle, or change it and recreate **both** app and worker containers. Admin changes take effect without restart; clients learn the change on their normal refresh, and server guards apply immediately. Already dispatched work may still be billed. Disabling clears unsaved batches, and re-enabling does not restore them.
 
@@ -228,3 +236,13 @@ the rendition. No bulk thumbnail migration or startup conversion is required.
 
 See [caching measurements](PERFORMANCE.md) for the repeatable synthetic benchmark
 and the limits of the recorded results.
+
+## Monthly service usage
+
+Administration separates gift-suggestion searches, product-detail AI requests made by Get details, and paid shop lookup attempts by provider. The report is visible if any relevant service is enabled or current-month activity exists. Disabling a service does not hide its recorded activity. Periods use UTC.
+
+Request totals include dispatched failures. Cached results and direct website lookups do not increment paid counters. A single Get details operation may use both a scraping provider and AI cleanup, so these counts are not counts of unique gifts. Suggestion web-search calls belong to discovery, not the paid scraping providers.
+
+Product-detail AI token tracking starts with this release. Historical request counters remain visible, but missing token information cannot be backfilled. Returned tokens are recorded before validating generated content and attributed to the request's start month. Unknown model costs are unavailable, not zero. Estimates use the existing versioned model rates and cover only recorded usage; partial estimates and missing reports are explicitly labeled. Scraping credit prices depend on the provider plan and are not estimated. Reconcile actual charges in provider billing.
+
+`GET /api/v1/admin/usage` returns the grouped report to administrators only. `POST /api/v1/admin/settings/batch` accepts a nonempty `settings` array of distinct `{key, value}` entries restricted to the four gift-discovery settings. It validates every entry and override before committing all changes. Existing single-setting clients remain supported. Both features reuse the existing settings and usage stores without a database migration.

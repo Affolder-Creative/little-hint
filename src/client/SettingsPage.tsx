@@ -1,7 +1,9 @@
 import { Invitations } from "./Invitations";
 import { FollowingSettings } from "./FollowSettings";
 import { GiftDiscoveryAdmin } from "./GiftDiscoveryAdmin";
-import { ProfileEditor } from "./ProfileEditor";
+import { AdminUsage } from "./AdminUsage";
+import { KyleSignature } from "./KyleSignature";
+import { ProfileEditor, GiftPreferencesShortcut } from "./ProfileEditor";
 import {
   FollowButton,
   NotificationTopics,
@@ -130,20 +132,21 @@ export default function SettingsPage({
             <h2 id="settings-profile-title">Profile &amp; appearance</h2>
             <p>Edit your details and the profiles you manage.</p>
             {mine.map((p) => (
-              <div className="setting-row" key={p.id}>
+              <div className="setting-row profile-setting-row" key={p.id}>
                 <Avatar name={p.name} small />
                 <div>
                   <strong>{p.name}</strong>
                   <p>{p.userId ? "Your account" : "Managed profile"}</p>
+                  <GiftPreferencesShortcut personId={p.id} name={p.name} />
                 </div>
                 <button
-                  className="text-button"
+                  className="button secondary"
                   aria-label={`Edit profile for ${p.name}`}
                   onClick={() =>
                     open("Edit profile", <ProfileEditor personId={p.id} />)
                   }
                 >
-                  Edit
+                  Edit profile
                 </button>
                 {!p.userId && (
                   <button
@@ -220,26 +223,28 @@ export default function SettingsPage({
           >
             <div className="section-heading">
               <h2 id="settings-groups-title">Family groups</h2>
-              <button
-                className="text-button"
-                onClick={() =>
-                  open(
-                    "Create a family group",
-                    <GroupForm
-                      onCreated={(id) =>
-                        setParams({
-                          section: "groups",
-                          group: id,
-                          view: "members",
-                        })
-                      }
-                    />,
-                  )
-                }
-              >
-                <Plus size={16} />
-                Create family group
-              </button>
+              {world.canCreateGroups !== false && (
+                <button
+                  className="text-button"
+                  onClick={() =>
+                    open(
+                      "Create a family group",
+                      <GroupForm
+                        onCreated={(id) =>
+                          setParams({
+                            section: "groups",
+                            group: id,
+                            view: "members",
+                          })
+                        }
+                      />,
+                    )
+                  }
+                >
+                  <Plus size={16} />
+                  Create family group
+                </button>
+              )}
             </div>
             {!selectedGroup && (
               <p className="muted">
@@ -293,8 +298,9 @@ export default function SettingsPage({
             )}
             {!selectedGroup && (
               <p>
-                No family groups yet. Create one or accept an invitation to get
-                started.
+                {world.canCreateGroups === false
+                  ? "No family groups yet. Ask an app administrator to create one, or accept an invitation."
+                  : "No family groups yet. Create one or accept an invitation to get started."}
               </p>
             )}
             {world.groups.map((g) => (
@@ -312,25 +318,27 @@ export default function SettingsPage({
                       : "You’re a member"}
                   </span>
                 </div>
-                <nav
-                  className="group-settings-nav"
-                  aria-label="Family group settings"
-                >
-                  {[
-                    ["members", "Members"],
-                    ["households", "Households"],
-                    ["events", "Events"],
-                  ].map(([id, label]) => (
-                    <Link
-                      key={id}
-                      to={groupDestination(id)}
-                      aria-current={groupView === id ? "page" : undefined}
-                    >
-                      {label}
-                    </Link>
-                  ))}
+                <div className="group-settings-controls">
+                  <nav
+                    className="group-settings-nav"
+                    aria-label="Family group settings"
+                  >
+                    {[
+                      ["members", "Members"],
+                      ["households", "Households"],
+                      ["events", "Events"],
+                    ].map(([id, label]) => (
+                      <Link
+                        key={id}
+                        to={groupDestination(id)}
+                        aria-current={groupView === id ? "page" : undefined}
+                      >
+                        {label}
+                      </Link>
+                    ))}
+                  </nav>
                   <FollowButton target="group" targetId={g.id} compact />
-                </nav>
+                </div>
                 <div hidden={groupView !== "households"}>
                   <HouseholdSettings group={g} />
                 </div>
@@ -756,6 +764,25 @@ export default function SettingsPage({
             <h2 id="settings-about-title">About Little Hint</h2>
             <Logo dark={dark} />
             <p>Gift ideas, shared thoughtfully.</p>
+            <div className="about-story">
+              <p>
+                Little Hint started with Mom asking the same Christmas question
+                every year: “What do you boys want?” My brother and I were
+                reliably unhelpful. Money? Maybe a gift card? Mom was
+                understandably over it.
+              </p>
+              <p>
+                Eventually, our family started sharing a note full of gift
+                ideas. It helped with the shopping, but over the years, some of
+                the surprise went missing.
+              </p>
+              <p>
+                So I made Little Hint: a place to give your people a few good
+                ideas and leave a little mystery under the tree. This one’s for
+                you, Mom.
+              </p>
+              <KyleSignature />
+            </div>
             <p className="creator-credit">Created by Affolder Creative</p>
             <p className="muted">Version {__APP_VERSION__}</p>
           </section>
@@ -1248,6 +1275,9 @@ function Admin() {
         }>;
       }>("admin/jobs"),
   });
+  const groupPolicy = settings.data?.find(
+    (s) => s.key === "FAMILY_GROUP_CREATION",
+  );
   const photos = settings.data?.find(
     (s) => s.key === "AUTO_IMPORT_PRODUCT_PHOTOS",
   );
@@ -1256,6 +1286,46 @@ function Admin() {
       <h2>Administration</h2>
       {settings.isPending && (
         <p role="status">Loading administration settings…</p>
+      )}
+      {groupPolicy && (
+        <section
+          className="admin-group-policy"
+          aria-label="Family-group creation"
+        >
+          <h3>Family-group creation</h3>
+          <p>
+            Choose who can start a family group. Existing groups and their
+            owners keep their permissions.
+          </p>
+          {groupPolicy.source === "environment" ? (
+            <p className="muted">
+              {groupPolicy.value === "admins"
+                ? "Administrators only"
+                : "Everyone signed in"}
+              . Set on the server with FAMILY_GROUP_CREATION.
+            </p>
+          ) : (
+            <Form
+              key={groupPolicy.value}
+              submit="Save group creation setting"
+              onSubmit={async (f) => {
+                await api("admin/settings", {
+                  key: "FAMILY_GROUP_CREATION",
+                  value: value(f, "policy"),
+                });
+                await client.invalidateQueries();
+                toast("Family-group creation setting saved.");
+              }}
+            >
+              <Field label="Who can create family groups?">
+                <select name="policy" defaultValue={groupPolicy.value}>
+                  <option value="everyone">Everyone signed in</option>
+                  <option value="admins">Administrators only</option>
+                </select>
+              </Field>
+            </Form>
+          )}
+        </section>
       )}
       <h3>Details from shop links</h3>
       {photos && (
@@ -1297,6 +1367,7 @@ function Admin() {
         </Form>
       )}
       <GiftDiscoveryAdmin settings={settings.data ?? []} />
+      <AdminUsage />
       <h3>Connected services</h3>
       <p>
         Connect services for email, text messages, and shop details. Secret keys
@@ -1316,6 +1387,7 @@ function Admin() {
             settings.data?.filter(
               (s) =>
                 s.key !== "AUTO_IMPORT_PRODUCT_PHOTOS" &&
+                s.key !== "FAMILY_GROUP_CREATION" &&
                 !s.key.startsWith("GIFT_DISCOVERY_") &&
                 integrationGroup(s.key) === group,
             ) ?? [];
