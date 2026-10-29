@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.2](https://github.com/Affolder-Creative/little-hint/compare/v0.10.1...v0.10.2) (2026-10-29)
+
+
+### Features
+
+* add hybrid gift preference onboarding ([#103](https://github.com/Affolder-Creative/little-hint/issues/103)) ([50dafa1](https://github.com/Affolder-Creative/little-hint/commit/50dafa1429aaa7fe954e7ceae952d4b1916dc32d))
+
 ## [0.10.1](https://github.com/Affolder-Creative/little-hint/compare/v0.10.0...v0.10.1) (2026-10-29)
 
 
