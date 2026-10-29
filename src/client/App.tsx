@@ -877,6 +877,7 @@ function Home() {
             : "A few hints from your favorite people."
         }
       />
+      <GiftPreferencePrompt />
       <Install />
       {incoming && <Invitations />}
       <div className="home-intro">
@@ -921,7 +922,6 @@ function Home() {
       ) : (
         <Browser items={items} headingLevel={3} />
       )}
-      <GiftPreferencePrompt />
       {solo && (
         <p>
           Ready to share?{" "}

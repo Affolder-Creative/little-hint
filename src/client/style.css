@@ -3361,14 +3361,20 @@ main {
 .gift-preference-summary p:last-child {
   margin-bottom: 0;
 }
-.gift-preference-prompt {
+.gift-preference-prompt,
+.gift-preference-welcome {
   padding: 20px;
-  margin-bottom: 28px;
   background: var(--soft);
   border-radius: 12px;
 }
-.gift-preference-prompt .text-button {
-  margin-left: 16px;
+.gift-preference-prompt {
+  margin-bottom: 28px;
+}
+.gift-preference-welcome p {
+  max-width: 65ch;
+}
+.gift-preference-welcome > .button {
+  margin-top: var(--space-controls);
 }
 .discovery-search {
   margin: 24px 0;

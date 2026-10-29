@@ -115,18 +115,19 @@ export function GiftPreferencesForm({
   const [skipError, setSkipError] = useState("");
   const [skipping, setSkipping] = useState(false);
   const newlyShared = groups.some((g) => !existing?.groupIds?.includes(g));
-  async function save(setup: "done" | "skipped") {
+  const ReviewHeading = onboarding ? "h1" : "h2";
+  async function save() {
     await mutate("gift-preferences", {
       personId,
       revision: existing?.revision,
       ...data,
       groupIds: groups,
-      setup,
-      confirmSharing: setup === "done",
+      setup: "done",
+      confirmSharing: true,
     });
     if (onSaved) onSaved();
     else if (!onboarding) close();
-    if (setup === "done") toast("Gift preferences saved.");
+    toast("Gift preferences saved.");
   }
   return (
     <>
@@ -137,7 +138,7 @@ export function GiftPreferencesForm({
         review={() =>
           newlyShared ? (
             <>
-              <h2>Share these gift preferences?</h2>
+              <ReviewHeading>Share these gift preferences?</ReviewHeading>
               <p>
                 Your interests and notes will be visible to members of{" "}
                 {world.groups
@@ -149,37 +150,44 @@ export function GiftPreferencesForm({
             </>
           ) : null
         }
-        onSubmit={() => save("done")}
+        onSubmit={save}
       >
         {onboarding && (
-          <button
-            type="button"
-            className="text-button"
-            disabled={skipping}
-            onClick={async () => {
-              setSkipping(true);
-              setSkipError("");
-              try {
-                // Skipping never publishes edits made during this optional step.
-                await mutate("gift-preferences", {
-                  personId,
-                  revision: existing?.revision,
-                  categoryIds: existing?.categoryIds ?? [],
-                  interests: existing?.interests ?? "",
-                  likes: existing?.likes ?? "",
-                  avoid: existing?.avoid ?? "",
-                  groupIds: existing?.groupIds ?? [],
-                  setup: "skipped",
-                });
-              } catch (e) {
-                setSkipError((e as Error).message);
-              } finally {
-                setSkipping(false);
-              }
-            }}
-          >
-            {skipping ? "Skipping…" : "Skip for now"}
-          </button>
+          <div className="gift-preference-welcome">
+            <h1>What would you love?</h1>
+            <p>
+              Choose a few interests to help your people find gifts. You can
+              skip this and come back any time.
+            </p>
+            <button
+              type="button"
+              className="button secondary wide"
+              disabled={skipping}
+              onClick={async () => {
+                setSkipping(true);
+                setSkipError("");
+                try {
+                  // Skipping never publishes edits made during this optional step.
+                  await mutate("gift-preferences", {
+                    personId,
+                    revision: existing?.revision,
+                    categoryIds: existing?.categoryIds ?? [],
+                    interests: existing?.interests ?? "",
+                    likes: existing?.likes ?? "",
+                    avoid: existing?.avoid ?? "",
+                    groupIds: existing?.groupIds ?? [],
+                    setup: "deferred",
+                  });
+                } catch (e) {
+                  setSkipError((e as Error).message);
+                } finally {
+                  setSkipping(false);
+                }
+              }}
+            >
+              {skipping ? "Skipping…" : "Skip for now"}
+            </button>
+          </div>
         )}
         {skipError && (
           <p className="error" role="alert">
@@ -254,11 +262,6 @@ export function GiftPreferenceOnboarding({
   if (!showing) return children;
   return (
     <section className="gift-discovery-page">
-      <h1>What would you love?</h1>
-      <p>
-        Choose a few interests to help your people find gifts. You can skip this
-        and come back in profile settings.
-      </p>
       <GiftPreferencesForm personId={preference.personId} onboarding />
     </section>
   );
@@ -335,42 +338,54 @@ export function GiftPreferencePrompt() {
   const person = world.people.find((p) => p.userId === world.me.id);
   const pref = world.giftPreferences?.find((p) => p.personId === person?.id);
   const [error, setError] = useState("");
-  if (!person || pref?.setup) return null;
+  const [dismissing, setDismissing] = useState(false);
+  if (!person || pref?.setup === "done" || pref?.setup === "skipped")
+    return null;
   return (
     <section className="gift-preference-prompt">
       <h2>Give your people a few hints</h2>
       <p>Share interests and things to avoid. You can change them any time.</p>
-      <button
-        className="button secondary"
-        onClick={() =>
-          open(
-            "Your gift preferences",
-            <GiftPreferencesForm personId={person.id} />,
-          )
-        }
-      >
-        Choose gift preferences
-      </button>
-      <button
-        className="text-button"
-        onClick={async () => {
-          try {
-            await mutate("gift-preferences", {
-              personId: person.id,
-              categoryIds: [],
-              interests: "",
-              likes: "",
-              avoid: "",
-              groupIds: [],
-              setup: "skipped",
-            });
-          } catch (e) {
-            setError((e as Error).message);
+      <div className="actions">
+        <button
+          className="button secondary"
+          disabled={dismissing}
+          onClick={() =>
+            open(
+              "Your gift preferences",
+              <GiftPreferencesForm personId={person.id} />,
+            )
           }
-        }}
-      >
-        Not now
-      </button>
+        >
+          Choose gift preferences
+        </button>
+        <button
+          className="text-button"
+          disabled={dismissing}
+          onClick={async () => {
+            setDismissing(true);
+            setError("");
+            try {
+              await mutate("gift-preferences", {
+                personId: person.id,
+                revision: pref?.revision,
+                categoryIds: pref?.categoryIds ?? [],
+                interests: pref?.interests ?? "",
+                likes: pref?.likes ?? "",
+                avoid: pref?.avoid ?? "",
+                groupIds: pref?.groupIds ?? [],
+                setup: "skipped",
+              });
+              document.getElementById("main")?.focus({ preventScroll: true });
+            } catch (e) {
+              setError((e as Error).message);
+            } finally {
+              setDismissing(false);
+            }
+          }}
+        >
+          {dismissing ? "Dismissing…" : "Not now"}
+        </button>
+      </div>
       {error && <p role="alert">{error}</p>}
     </section>
   );
