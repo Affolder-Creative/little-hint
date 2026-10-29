@@ -117,14 +117,19 @@ test("install reminders respect dismissal and standalone mode", async ({
   await page
     .getByRole("button", { name: "Add to wish list", exact: true })
     .click();
+  const install = page.getByRole("region", { name: "Install Little Hint" });
+  const preferences = page.locator(".gift-preference-prompt");
   await expect(
-    page.getByRole("heading", { name: "Keep Little Hint handy" }),
+    install.getByRole("heading", { name: "Keep Little Hint handy" }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Not now", exact: true }).click();
+  await expect(preferences).toBeVisible();
+  await install.getByRole("button", { name: "Not now", exact: true }).click();
+  await expect(preferences).toBeVisible();
   await page.reload();
   await expect(
     page.getByRole("heading", { name: "Keep Little Hint handy" }),
   ).toHaveCount(0);
+  await expect(preferences).toBeVisible();
   const until = await page.evaluate(() =>
     Number(localStorage.getItem("little-hint:install")),
   );
@@ -135,7 +140,12 @@ test("install reminders respect dismissal and standalone mode", async ({
   ).toBeVisible();
   await page.evaluate(() => localStorage.removeItem("little-hint:install"));
   await page.goto("/");
-  await page
+  await preferences
+    .getByRole("button", { name: "Not now", exact: true })
+    .click();
+  await expect(preferences).toHaveCount(0);
+  await expect(install).toBeVisible();
+  await install
     .getByRole("button", { name: "Don’t remind me", exact: true })
     .click();
   expect(
