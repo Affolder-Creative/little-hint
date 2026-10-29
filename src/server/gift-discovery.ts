@@ -125,7 +125,7 @@ export function updateGiftPreferences(s: State, a: Actor, raw: unknown) {
       revision: z.number().int().positive().optional(),
       ...notes,
       groupIds: ids,
-      setup: z.enum(["done", "skipped"]).default("done"),
+      setup: z.enum(["done", "deferred", "skipped"]).default("done"),
       confirmSharing: z.boolean().default(false),
     })
     .parse(raw);

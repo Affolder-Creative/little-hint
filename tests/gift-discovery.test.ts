@@ -11,6 +11,7 @@ import {
   quotaKeys,
   prepareDiscoveryReview,
   saveDiscoveryReview,
+  newPreference,
   pruneDiscovery,
   discoveryIdempotent,
 } from "../src/server/gift-discovery";
@@ -22,6 +23,40 @@ import {
 } from "./gift-discovery-fixture";
 
 describe("gift preferences and visibility", () => {
+  it("persists deferred setup separately from dismissal with revision checks", () => {
+    const f = discoveryFixture();
+    const preference = newPreference(f.people[0].id);
+    f.state.giftPreferences.push(preference);
+    const body = {
+      personId: preference.personId,
+      revision: preference.revision,
+      categoryIds: [],
+      interests: "",
+      likes: "",
+      avoid: "",
+      groupIds: [],
+      setup: "deferred",
+    };
+    expect(() => updateGiftPreferences(f.state, f.actors[1], body)).toThrow(
+      "Profile not found",
+    );
+    updateGiftPreferences(f.state, f.actors[0], body);
+    expect(preferenceViews(f.state, f.actors[0])[0].setup).toBe("deferred");
+    expect(preferenceViews(f.state, f.actors[1])).toEqual([]);
+    expect(() =>
+      updateGiftPreferences(f.state, f.actors[0], {
+        ...body,
+        setup: "skipped",
+      }),
+    ).toThrow("changed");
+    updateGiftPreferences(f.state, f.actors[0], {
+      ...body,
+      revision: preference.revision,
+      setup: "skipped",
+    });
+    expect(preference.setup).toBe("skipped");
+  });
+
   it("requires explicit sharing confirmation, revision checks and current group membership", () => {
     const f = discoveryFixture(),
       [owner, giver] = f.actors;

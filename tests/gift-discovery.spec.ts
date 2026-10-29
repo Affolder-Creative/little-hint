@@ -309,11 +309,178 @@ test("new users can skip preferences without sharing unfinished edits", async ({
     page.getByRole("heading", { name: "Hi, Receiver." }),
   ).toBeVisible();
   expect(f.state.giftPreferences[0]).toMatchObject({
-    setup: "skipped",
+    setup: "deferred",
     categoryIds: [],
     groupIds: [],
   });
+  const reminder = page.locator(".gift-preference-prompt");
+  await expect(reminder).toBeInViewport();
+  await page.reload();
+  await expect(reminder).toBeInViewport();
+  await expect(
+    page.getByRole("heading", { name: "What would you love?" }),
+  ).toHaveCount(0);
+  await reminder.getByRole("button", { name: "Not now", exact: true }).click();
+  await expect(reminder).toHaveCount(0);
+  await expect(page.getByRole("main")).toBeFocused();
+  expect(f.state.giftPreferences[0].setup).toBe("skipped");
+  await page.reload();
+  await expect(reminder).toHaveCount(0);
 });
+
+for (const setup of [undefined, "deferred"] as const) {
+  test(`Home reminder opens preferences and disappears only after saving (${setup ?? "no record"})`, async ({
+    page,
+  }) => {
+    const f = await preview(page, true);
+    if (setup)
+      f.state.giftPreferences.push({ ...newPreference(f.people[0].id), setup });
+    await page.goto("/");
+    const reminder = page.locator(".gift-preference-prompt");
+    const choose = reminder.getByRole("button", {
+      name: "Choose gift preferences",
+    });
+    await choose.click();
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: "Close dialog", exact: true })
+      .click();
+    await expect(reminder).toBeVisible();
+    await expect(choose).toBeFocused();
+    await choose.click();
+    await page
+      .getByRole("checkbox", { name: "Coffee & tea", exact: true })
+      .check();
+    await page.getByRole("checkbox", { name: "Family", exact: true }).check();
+    await page.getByRole("button", { name: "Save gift preferences" }).click();
+    await expect(
+      page.getByRole("heading", { name: "Share these gift preferences?" }),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Confirm and save" }).click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(reminder).toHaveCount(0);
+    expect(f.state.giftPreferences[0]).toMatchObject({
+      setup: "done",
+      categoryIds: ["coffee"],
+      groupIds: [f.group.id],
+    });
+    await page.reload();
+    await expect(reminder).toHaveCount(0);
+  });
+}
+
+for (const setup of ["skipped", "done"] as const) {
+  test(`existing ${setup} preferences never resurface setup or the Home reminder`, async ({
+    page,
+  }) => {
+    const f = await preview(page, true);
+    f.state.giftPreferences.push({ ...newPreference(f.people[0].id), setup });
+    await page.goto("/");
+    await expect(
+      page.getByRole("heading", { name: "Hi, Receiver." }),
+    ).toBeVisible();
+    await expect(page.locator(".gift-preference-prompt")).toHaveCount(0);
+    await expect(
+      page.getByRole("heading", { name: "What would you love?" }),
+    ).toHaveCount(0);
+  });
+}
+
+test("failed Home dismissal can retry without clearing saved preferences or sharing", async ({
+  page,
+}) => {
+  const f = await preview(page, true);
+  const preference = {
+    ...newPreference(f.people[0].id),
+    setup: "deferred" as const,
+    categoryIds: ["coffee"],
+    interests: "Pour-over",
+    likes: "Ceramics",
+    avoid: "Plastic",
+    groupIds: [f.group.id],
+  };
+  f.state.giftPreferences.push(preference);
+  await page.goto("/");
+  await page.route(
+    "**/api/v1/gift-preferences",
+    (route) =>
+      route.fulfill({ status: 503, json: { error: "Please try again." } }),
+    { times: 1 },
+  );
+  const reminder = page.locator(".gift-preference-prompt");
+  await reminder.getByRole("button", { name: "Not now", exact: true }).click();
+  await expect(reminder.getByRole("alert")).toHaveText("Please try again.");
+  expect(preference.setup).toBe("deferred");
+  const saved = structuredClone(preference);
+  await reminder.getByRole("button", { name: "Not now", exact: true }).click();
+  await expect(reminder).toHaveCount(0);
+  expect(f.state.giftPreferences[0]).toMatchObject({
+    ...saved,
+    setup: "skipped",
+    revision: saved.revision + 1,
+  });
+});
+
+for (const width of [390, 1280]) {
+  for (const colorScheme of ["light", "dark"] as const) {
+    test(`hybrid preferences stay above a populated Home at ${width}px in ${colorScheme}`, async ({
+      page,
+    }, info) => {
+      const f = await preview(page, true);
+      f.state.giftPreferences.push(newPreference(f.people[0].id));
+      const familyList = command(f.state, f.actors[1], "lists.create", {
+        name: "Family wishes",
+        ownerIds: [f.people[1].id],
+        groupIds: [f.group.id],
+        mode: "surprise",
+      }) as typeof f.list;
+      for (let i = 0; i < 30; i++) {
+        command(f.state, f.actors[1], "items.create", {
+          title: `Family wish ${i + 1}`,
+          listId: familyList.id,
+        });
+      }
+      await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
+      await page.emulateMedia({ colorScheme });
+      await page.goto("/");
+      const banner = page.locator(".gift-preference-welcome");
+      await expect(
+        banner.getByRole("heading", { name: "What would you love?" }),
+      ).toBeVisible();
+      const skip = banner.getByRole("button", { name: "Skip for now" });
+      await expect(skip).toBeInViewport();
+      await page.screenshot({
+        path: info.outputPath(`hybrid-setup-${width}-${colorScheme}.png`),
+      });
+      await skip.click();
+      const reminder = page.locator(".gift-preference-prompt");
+      await expect(reminder).toBeInViewport();
+      await expect(
+        reminder.getByRole("button", { name: "Choose gift preferences" }),
+      ).toBeInViewport();
+      await expect(
+        page.locator(".page-heading + .gift-preference-prompt"),
+      ).toHaveCount(1);
+      await expect(
+        page.getByRole("heading", { name: "From your people", exact: true }),
+      ).toBeVisible();
+      await page.screenshot({
+        path: info.outputPath(`hybrid-home-${width}-${colorScheme}.png`),
+      });
+      expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+      await page.addStyleTag({
+        content: "main p, main button { font-size: 22px !important; }",
+      });
+      if (width === 390)
+        await page.setViewportSize({ width: 320, height: 844 });
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= window.innerWidth,
+        ),
+      ).toBe(true);
+    });
+  }
+}
 
 test("discovery departure preserves item edits until discard is confirmed", async ({
   page,
@@ -459,6 +626,7 @@ for (const width of [1280, 390]) {
     await expect(
       page.getByRole("heading", { name: "What would you love?" }),
     ).toHaveCount(0);
+    await expect(page.locator(".gift-preference-prompt")).toBeVisible();
     expect(f.state.giftPreferences[0]).toMatchObject({
       setup: "new",
       categoryIds: [],
@@ -488,6 +656,7 @@ test("new-account deep links open directly and preference setup remains availabl
   await expect(
     page.getByRole("heading", { name: "Hi, Receiver." }),
   ).toBeVisible();
+  await expect(page.locator(".gift-preference-prompt")).toBeVisible();
   await page.goto("/settings?section=profile");
   await page.getByRole("button", { name: /^Edit profile/ }).click();
   await page
@@ -526,7 +695,7 @@ test("failed onboarding skip keeps edits and retry never shares them", async ({
   await expect(page).toHaveTitle("Hi, Receiver. · Little Hint");
   await expect(page.getByRole("main")).toBeFocused();
   expect(f.state.giftPreferences[0]).toMatchObject({
-    setup: "skipped",
+    setup: "deferred",
     interests: "",
     groupIds: [],
   });
@@ -566,6 +735,7 @@ test("onboarding still reviews sharing and completes after saving preferences", 
     categoryIds: ["coffee"],
     groupIds: [f.group.id],
   });
+  await expect(page.locator(".gift-preference-prompt")).toHaveCount(0);
 });
 test("own-list discovery confirms each destination and saves the batch together", async ({
   page,

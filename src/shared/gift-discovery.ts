@@ -37,7 +37,7 @@ export interface GiftPreferences extends Base {
   likes: string;
   avoid: string;
   groupIds: string[];
-  setup: "new" | "done" | "skipped";
+  setup: "new" | "deferred" | "done" | "skipped";
 }
 export type GiftPreferenceView = Omit<GiftPreferences, "groupIds" | "setup"> & {
   canEdit: boolean;
