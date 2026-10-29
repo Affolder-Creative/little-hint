@@ -330,7 +330,7 @@ AI gift suggestion mode, limits, and model share one form and one save button. L
 
 ### Attribution
 
-Everyday pages have no attribution footer or bottom divider. The About story uses 15px body text within 62ch, followed by a theme-aware handwritten SVG sign-off traced from Kyle’s selected screenshot, with a matching dash and accessible text. Its compact 104px width preserves the signature’s original proportions. Settings → About
+Everyday pages have no attribution footer or bottom divider. The About story uses 15px body text within 62ch, followed by a theme-aware handwritten SVG sign-off traced from Kyle’s selected screenshot, with a matching dash and accessible text. Its compact 76px width preserves the signature’s original proportions. Settings → About
 contains the approved logo, tagline, version, and readable Created by Affolder
 Creative credit. The app-rendered loading screen carries a quieter credit near
 the bottom, outside the loading status announcement and above mobile safe areas.

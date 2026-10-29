@@ -302,6 +302,17 @@ test.describe("settings visual review", () => {
           path: info.outputPath(`${section}.png`),
           fullPage: true,
         });
+        if (section === "about" && width < 1100) {
+          await page.locator(".settings-about").evaluate((element) => {
+            window.scrollTo({
+              top: window.scrollY + element.getBoundingClientRect().top - 100,
+              behavior: "instant",
+            });
+          });
+          await page.screenshot({
+            path: info.outputPath("about-viewport.png"),
+          });
+        }
         if (section === "about" || section === "admin")
           expect((await new AxeBuilder({ page }).analyze()).violations).toEqual(
             [],
