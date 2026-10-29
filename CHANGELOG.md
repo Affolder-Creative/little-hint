@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.1](https://github.com/Affolder-Creative/little-hint/compare/v0.10.0...v0.10.1) (2026-10-29)
+
+
+### Fixes
+
+* simplify Settings and clarify service usage ([#101](https://github.com/Affolder-Creative/little-hint/issues/101)) ([379449e](https://github.com/Affolder-Creative/little-hint/commit/379449e48b984cd786820435f0d22d02c8b96006))
+
 ## [0.10.0](https://github.com/Affolder-Creative/little-hint/compare/v0.9.0...v0.10.0) (2026-10-28)
 
 
