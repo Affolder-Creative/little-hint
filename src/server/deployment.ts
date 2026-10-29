@@ -34,6 +34,7 @@ export function assertStagingSeed(env = process.env) {
 export function validateDeployment(env = process.env) {
   discoveryUserOverrides(env);
   productPhotoOverride(env);
+  familyGroupCreationOverride(env);
   cloudflareWebAnalyticsEnabled(env);
   productImportCacheEnabled(env);
   if (deploymentEnvironment(env) === "preview") {
@@ -98,6 +99,18 @@ export function productPhotoOverride(env = process.env): boolean | undefined {
 
 export function syntheticEnvironment(env = process.env) {
   return ["staging", "preview"].includes(deploymentEnvironment(env));
+}
+
+export function familyGroupCreationOverride(
+  env = process.env,
+): "everyone" | "admins" | undefined {
+  const value = env.FAMILY_GROUP_CREATION;
+  if (value === undefined || value === "") return undefined;
+  if (value !== "everyone" && value !== "admins")
+    throw new Error(
+      "FAMILY_GROUP_CREATION must be everyone, admins, or empty.",
+    );
+  return value;
 }
 
 export function assertPreviewDatabase(env = process.env) {

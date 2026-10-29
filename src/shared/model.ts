@@ -424,6 +424,7 @@ export interface GiftView extends Omit<Item, "creatorId"> {
   }>;
 }
 export interface World {
+  canCreateGroups?: boolean;
   giftPreferences?: GiftPreferenceView[];
   giftDiscovery?: DiscoveryConfig;
   organization?: Organization[];

@@ -261,3 +261,117 @@ it("blocks unsaved discovery images immediately when an environment override dis
   vi.stubEnv("GIFT_DISCOVERY_MODE", "off");
   expect((await app.inject(`/api/v1/media/${id}`)).statusCode).toBe(404);
 });
+
+it("saves discovery settings together and leaves all values intact on invalid or locked fields", async () => {
+  mocks.state.people.find((p) => p.userId === mocks.actor!.id)!.admin = true;
+  const save = (settings: Array<{ key: string; value: string }>) =>
+    app.inject({
+      method: "POST",
+      url: "/api/v1/admin/settings/batch",
+      headers,
+      payload: { settings },
+    });
+  expect(
+    (
+      await save([
+        { key: "GIFT_DISCOVERY_MODE", value: "both" },
+        { key: "GIFT_DISCOVERY_MONTHLY_LIMIT", value: "24" },
+      ])
+    ).statusCode,
+  ).toBe(200);
+  expect(await config()).toMatchObject({
+    GIFT_DISCOVERY_MODE: "both",
+    GIFT_DISCOVERY_MONTHLY_LIMIT: "24",
+  });
+  expect(
+    (
+      await save([
+        { key: "GIFT_DISCOVERY_MODE", value: "off" },
+        { key: "GIFT_DISCOVERY_MONTHLY_LIMIT", value: "-1" },
+      ])
+    ).statusCode,
+  ).toBe(400);
+  expect((await config()).GIFT_DISCOVERY_MODE).toBe("both");
+  vi.stubEnv("GIFT_DISCOVERY_MONTHLY_LIMIT", "99");
+  expect(
+    (
+      await save([
+        { key: "GIFT_DISCOVERY_MODE", value: "off" },
+        { key: "GIFT_DISCOVERY_MONTHLY_LIMIT", value: "25" },
+      ])
+    ).statusCode,
+  ).toBe(409);
+  expect((await config()).GIFT_DISCOVERY_MODE).toBe("both");
+  expect(
+    (await save([{ key: "OPENAI_API_KEY", value: "must-not-save" }]))
+      .statusCode,
+  ).toBe(400);
+  expect(
+    (
+      await save([
+        { key: "GIFT_DISCOVERY_MODE", value: "off" },
+        { key: "GIFT_DISCOVERY_MODE", value: "both" },
+      ])
+    ).statusCode,
+  ).toBe(400);
+});
+it("protects usage and batch settings from non-administrators", async () => {
+  expect((await app.inject("/api/v1/admin/usage")).statusCode).toBe(403);
+  expect(
+    (
+      await app.inject({
+        method: "POST",
+        url: "/api/v1/admin/settings/batch",
+        headers,
+        payload: { settings: [{ key: "GIFT_DISCOVERY_MODE", value: "off" }] },
+      })
+    ).statusCode,
+  ).toBe(403);
+});
+it("gates group creation and idempotent replays while preserving membership and ownership", async () => {
+  vi.stubEnv("FAMILY_GROUP_CREATION", "");
+  const create = () =>
+    app.inject({
+      method: "POST",
+      url: "/api/v1/groups",
+      headers,
+      payload: { name: "New family" },
+    });
+  expect((await app.inject("/api/v1/world")).json().canCreateGroups).toBe(true);
+  const created = await create();
+  expect(created.statusCode).toBe(200);
+  await saveSetting("FAMILY_GROUP_CREATION", "admins");
+  expect((await app.inject("/api/v1/world")).json().canCreateGroups).toBe(
+    false,
+  );
+  expect((await create()).statusCode).toBe(403);
+  expect(
+    mocks.state.groups.find((g) => g.id === created.json().id)?.ownerId,
+  ).toBe(mocks.actor!.id);
+  mocks.state.people.find((p) => p.userId === mocks.actor!.id)!.admin = true;
+  expect((await create()).statusCode).toBe(200);
+  vi.stubEnv("FAMILY_GROUP_CREATION", "everyone");
+  await expect(saveSetting("FAMILY_GROUP_CREATION", "admins")).rejects.toThrow(
+    "set on the server",
+  );
+  mocks.state.people.find((p) => p.userId === mocks.actor!.id)!.admin = false;
+  expect((await app.inject("/api/v1/world")).json().canCreateGroups).toBe(true);
+});
+it("allows group policy in staging without enabling integrations and rejects invalid policy", async () => {
+  vi.stubEnv("FAMILY_GROUP_CREATION", "");
+  vi.stubEnv("APP_ENV", "staging");
+  await saveSetting("FAMILY_GROUP_CREATION", "admins");
+  expect(await settingsSummary()).toContainEqual(
+    expect.objectContaining({
+      key: "FAMILY_GROUP_CREATION",
+      value: "admins",
+      source: "settings",
+    }),
+  );
+  expect((await config()).OPENAI_API_KEY).toBe("");
+  await expect(saveSetting("FAMILY_GROUP_CREATION", "anyone")).rejects.toThrow(
+    "Choose everyone",
+  );
+  vi.stubEnv("FAMILY_GROUP_CREATION", "invalid");
+  await expect(makeApp()).rejects.toThrow("FAMILY_GROUP_CREATION");
+});
