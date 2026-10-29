@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-29T04:42:20.520337Z",
+  "generatedAt": "2026-10-29T04:45:14.485615Z",
   "title": "Design System: Little Hint",
   "extensions": {
     "colorMeta": {
@@ -987,7 +987,7 @@
       "priority": "Optional Most wanted, Would love, and Nice to have labels. No implied numeric rank; labels remain attached when sorting changes.",
       "actions": "List, event, exchange and purchase menus have visible action labels; gift-card overflow controls have accessible names. All controls retain 44px targets. Menus stay within viewport edges and close on Escape or focus departure. Confirmation dialogs offer Cancel; reorder dialogs support drag handles and move-up/down buttons with Save and Cancel.",
       "lifecycle": "Active, Archived, and Trash views are distinct. Group events preserve participant lists on removal. Permanent deletion requires an explicit second confirmation.",
-      "footer": "Everyday pages have no attribution footer or bottom divider. Settings → About contains the approved logo, tagline, version, and readable Created by Affolder Creative credit. The loading screen carries a quieter credit outside the loading status announcement and above mobile safe areas. About includes Kyle’s approved family-origin story at 15px within 62ch and a theme-aware SVG sign-off traced from Kyle’s selected screenshot with a matching dash, 142px wide at its original proportions."
+      "footer": "Everyday pages have no attribution footer or bottom divider. Settings → About contains the approved logo, tagline, version, and readable Created by Affolder Creative credit. The loading screen carries a quieter credit outside the loading status announcement and above mobile safe areas. About includes Kyle’s approved family-origin story at 15px within 62ch and a theme-aware SVG sign-off traced from Kyle’s selected screenshot with a matching dash, 104px wide at its original proportions."
     },
     "roundedMeta": {
       "toast": {
