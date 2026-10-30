@@ -1266,7 +1266,7 @@ function Admin() {
         <h3>App settings</h3>
         {groupPolicy && (
           <section
-            className="admin-group-policy"
+            className="admin-preference"
             aria-label="Family-group creation"
           >
             <h4>Family-group creation</h4>
@@ -1304,46 +1304,53 @@ function Admin() {
             )}
           </section>
         )}
-        <h4>Details from shop links</h4>
-        {photos && (
-          <Form
-            key={`${photos.source}-${photos.value}`}
-            submit="Save photo preference"
-            disabled={photos.source === "environment"}
-            onSubmit={async (f) => {
-              await api("admin/settings", {
-                key: photos.key,
-                value: String(f.has("automaticPhotos")),
-              });
-              await client.invalidateQueries({ queryKey: ["admin-settings"] });
-              toast("Photo preference saved.");
-            }}
-          >
-            <label className="check">
-              <input
-                type="checkbox"
-                name="automaticPhotos"
-                defaultChecked={photos.value === "true"}
-                disabled={photos.source === "environment"}
-                aria-describedby="automatic-photos-help"
-              />
-              Add photos from shop links automatically
-            </label>
-            <p id="automatic-photos-help" className="muted">
-              Save a photo when looking up a shop link. Turn this off to save
-              storage space. You can still upload photos yourself. Existing
-              photos are kept, and lookups already running may still add a
-              photo.
-            </p>
-            <p className="muted">
-              {photos.source === "environment"
-                ? "Managed in hosting configuration. Change it there to update this choice."
-                : photos.source === "default"
-                  ? "Off by default. This choice applies to everyone using this Little Hint app."
-                  : "Saved. This choice applies to everyone using this Little Hint app."}
-            </p>
-          </Form>
-        )}
+        <section
+          className="admin-preference admin-photo-preference"
+          aria-label="Details from shop links"
+        >
+          <h4>Details from shop links</h4>
+          {photos && (
+            <Form
+              key={`${photos.source}-${photos.value}`}
+              submit="Save photo preference"
+              disabled={photos.source === "environment"}
+              onSubmit={async (f) => {
+                await api("admin/settings", {
+                  key: photos.key,
+                  value: String(f.has("automaticPhotos")),
+                });
+                await client.invalidateQueries({
+                  queryKey: ["admin-settings"],
+                });
+                toast("Photo preference saved.");
+              }}
+            >
+              <label className="check">
+                <input
+                  type="checkbox"
+                  name="automaticPhotos"
+                  defaultChecked={photos.value === "true"}
+                  disabled={photos.source === "environment"}
+                  aria-describedby="automatic-photos-help"
+                />
+                Add photos from shop links automatically
+              </label>
+              <p id="automatic-photos-help" className="muted">
+                Save a photo when looking up a shop link. Turn this off to save
+                storage space. You can still upload photos yourself. Existing
+                photos are kept, and lookups already running may still add a
+                photo.
+              </p>
+              <p className="muted">
+                {photos.source === "environment"
+                  ? "Managed in hosting configuration. Change it there to update this choice."
+                  : photos.source === "default"
+                    ? "Off by default. This choice applies to everyone using this Little Hint app."
+                    : "Saved. This choice applies to everyone using this Little Hint app."}
+              </p>
+            </Form>
+          )}
+        </section>
       </section>
       <AdminUsage />
       <section className="admin-panel" aria-label="Service status">
@@ -1365,7 +1372,7 @@ function Admin() {
           </div>
         ) : (
           services.data?.map((service) => (
-            <div className="setting-row" key={service.id}>
+            <div className="setting-row admin-service-row" key={service.id}>
               <div>
                 <strong>{service.label}</strong>
                 {service.detail && <p>{service.detail}</p>}
@@ -1419,7 +1426,7 @@ function Admin() {
         {jobs.data?.imports
           .filter((j) => j.status === "failed")
           .map((j) => (
-            <div className="setting-row" key={j.id}>
+            <div className="setting-row admin-job-row" key={j.id}>
               <span>
                 {j.error ?? "Shop lookup failed."} You can enter the gift
                 details manually.
@@ -1429,7 +1436,7 @@ function Admin() {
         {jobs.data?.notifications
           .filter((j) => j.status === "failed")
           .map((j) => (
-            <div className="setting-row" key={j.id}>
+            <div className="setting-row admin-job-row" key={j.id}>
               <span>
                 {j.error ?? "Delivery failed"} · {j.attempts} attempts
               </span>

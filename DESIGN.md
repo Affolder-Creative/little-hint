@@ -331,7 +331,11 @@ visible only to its creator. Wish-list item visibility does not use this badge. 
 
 ### Administration
 
+Administration contains App settings, This month's usage, Service status, and Background jobs. Only family-group creation and automatic product photos are editable, with optional locking ENV overrides. All service credentials, providers, models, limits, and AI availability are deployment-only. Service status reports configuration presence, not verified connectivity. Preserve usage after disabling services, notification retries, failed shop lookups, and the note that backup status is unavailable.
+
 Related administration controls share paper panels with panel-radius corners and no shadow. Panels use 20px padding, reduced to 16px at 650px and below, and 24px separation. Their headings use the panel-title size; internal headings use 17px. Keep every top-level group visible. Service status uses flat divided rows with readable capability names and configuration status. Disabled fields retain full opacity, muted text, the page background, and a decorative border.
+
+Preference groups use a single divider with 24px of space on each side. Service and job rows have 16px vertical padding and top dividers only; the last row ends at the panel inset without an extra rule or bottom padding. Status aligns with the first line of its label and stacks below the description at 360px and narrower. Panel introductions leave 16px before the next block; final paragraphs do not add trailing space. Photo explanations use 8px gaps. Usage groups leave 16px after their top divider and 8px below the final disclosure, whose 44px target supplies the remaining optical breathing room.
 
 Family-group creation is an app-wide choice with Everyone signed in and Administrators only options. Environment overrides show a readable locked value. Follow sits outside group navigation with a 32px gap, wrapping onto its own row when needed.
 
@@ -411,5 +415,3 @@ remains visible in every section, including Family groups.
 - Don't add shadows to ordinary gift cards or list rows.
 - Don't use invented product photography or present demonstration fixtures as real gifts.
 - Don't rely on color alone to explain availability or list privacy.
-
-Administration contains App settings, This month's usage, Service status, and Background jobs. Only family-group creation and automatic product photos are editable, with optional locking ENV overrides. All service credentials, providers, models, limits, and AI availability are deployment-only. Service status reports configuration presence, not verified connectivity. Preserve usage after disabling services, notification retries, failed shop lookups, and the note that backup status is unavailable.

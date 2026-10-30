@@ -31,3 +31,5 @@ related_targets:
 - About adds Kyle's approved short family-origin story and an SVG signature traced from Kyle’s selected screenshot with a matching dash before the existing attribution and version.
 
 Administration contains App settings, This month's usage, Service status, and Background jobs. Only family-group creation and automatic product photos are editable, with optional locking ENV overrides. All service credentials, providers, models, limits, and AI availability are deployment-only. Service status reports configuration presence, not verified connectivity. Preserve usage after disabling services, notification retries, failed shop lookups, and the note that backup status is unavailable.
+
+- Administration spacing follows the shared 8px related-content and 16px controls steps. Separate app preferences with a divider and 24px on either side. Service/job rows use top dividers and 16px padding, with no trailing rule or last-row bottom padding. Status aligns at the top and stacks below its description at 360px and narrower. Usage groups retain 44px disclosures with 16px top and 8px bottom padding.

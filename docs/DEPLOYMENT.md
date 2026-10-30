@@ -109,3 +109,30 @@ After upgrading, confirm that a group owner can appoint an event leader, create 
 ### Deployment settings and app preferences
 
 Configure email, Telegram, Twilio, scraping providers, AI credentials/models, gift-suggestion availability and allowances, and paid-request limits in the hosting environment. Empty values use built-in defaults, not saved database configuration. Recreate both app and worker containers after changes. Administration edits only family-group creation and automatic product photos, unless ENV overrides lock them. It also reports service configuration status, usage, and background jobs.
+
+
+### Coolify environment checklist
+
+For `compose.production.yaml`, keep application variables Runtime-only. The shared Compose configuration passes them to both app and worker. Existing deployment secrets must be retained, not regenerated for this change. This checklist describes repository requirements; it does not inspect the values saved in Coolify.
+
+| Purpose | Variables to check | Requirement/default |
+| --- | --- | --- |
+| Deployment | `LITTLE_HINT_IMAGE`, `APP_URL` | Required release image digest and public HTTPS origin. |
+| Existing secrets | `POSTGRES_PASSWORD`, `BETTER_AUTH_SECRET`, `SETTINGS_ENCRYPTION_KEY` | Required. Retain existing values. The settings key remains necessary for app preferences and must decode to 32 bytes from base64. |
+| Email | `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`, `SMTP_USER`, `SMTP_PASS` | Production email-code sign-in needs working SMTP. Port defaults to `465`; set a real authorized sender. User/password are required if your SMTP server requires authentication. |
+| AI access | `OPENAI_API_KEY`, `OPENAI_MODEL` | Key required only for AI. Product-detail model defaults to `gpt-6-luna`. |
+| Gift suggestions | `GIFT_DISCOVERY_MODE`, `GIFT_DISCOVERY_USER_WEEKLY_LIMIT`, `GIFT_DISCOVERY_MONTHLY_LIMIT`, `GIFT_DISCOVERY_MODEL` | Choose mode explicitly: `off`, `givers`, `receivers`, or `both`. Unset defaults are `givers`, `3`, `100`, and `gpt-6-luna`. The production example explicitly uses `off`. An OpenAI key is also required. |
+| AI allowance exceptions | `GIFT_DISCOVERY_USER_OVERRIDES` | Optional JSON keyed by account ID. Empty means no exceptions. |
+| Paid shop lookups | `SCRAPING_PROVIDER` and the corresponding `SCRAPINGFISH_API_KEY`, `SCRAPINGBEE_API_KEY`, `SCRAPEDO_API_KEY`, or `SCRAPINGDOG_API_KEY` | Only configure providers you use. Selection defaults to `auto`, preferring Fish, then Bee, Scrape.do, Dog. `none` disables paid scraping; direct shop lookup remains available. |
+| Daily paid-request cap | `PAID_DAILY_LIMIT` | Defaults to `50` per service per UTC day. Applies to product-detail AI and paid shop lookups, not gift-suggestion allowances. `0` blocks those paid requests. This is a request count, not a dollar budget. |
+| Telegram | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_NAME` | Optional; both needed for Telegram setup. |
+| Text messages | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM`, `TWILIO_VERIFY_SERVICE_SID` | Optional; configure all four for verified SMS. |
+| Browser push | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | Optional; a matching key pair and valid `mailto:` or HTTPS subject are needed. Keep the pair stable across deployments. |
+| In-app preferences | `FAMILY_GROUP_CREATION`, `AUTO_IMPORT_PRODUCT_PHOTOS` | Leave empty/unset to keep the PWA controls editable. Explicit `everyone`/`admins` and `true`/`false` values lock the respective controls. |
+| Other options | `PRODUCT_IMPORT_CACHE_ENABLED`, `CLOUDFLARE_WEB_ANALYTICS` | Defaults: `true`, `false`. These were already deployment settings. |
+
+Compose supplies `DATABASE_URL`, `NODE_ENV`, `APP_ENV`, `PORT`, and `UPLOAD_DIR`; they do not need separate Coolify entries with this production file. `APP_PORT` belongs to optional port-publishing configurations, not this standalone file.
+
+If you use the optional backup sidecar, retain `COMPOSE_PROFILES=backup`, `RESTIC_REPOSITORY`, `RESTIC_PASSWORD`, and credentials for your storage backend. S3-compatible storage uses `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and `AWS_DEFAULT_REGION`; native B2 uses `B2_ACCOUNT_ID` and `B2_ACCOUNT_KEY`. The existing backup name, retention, and age defaults are listed in [.env.production.example](../.env.production.example). This change does not alter backup configuration.
+
+After updating values and selecting an image containing this feature, recreate both app and worker. Check email sign-in, the worker, and Administration's service status. A “Configured” label confirms setup presence, not a successful delivery or connection test.
