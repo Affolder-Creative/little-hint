@@ -4,6 +4,7 @@ description: Gift ideas, shared thoughtfully.
 colors:
   bg: "#fff8f0"
   paper: "#fffdf9"
+  admin-panel: "#faeee5"
   text: "#2b201d"
   muted: "#746057"
   border: "#e6d9cf"
@@ -15,6 +16,7 @@ colors:
   error: "#9f3327"
   dark-bg: "#2b201d"
   dark-paper: "#342722"
+  dark-admin-panel: "#342722"
   dark-text: "#fff8f0"
   dark-muted: "#cbb6aa"
   dark-border: "#59453b"
@@ -188,7 +190,7 @@ components:
     textColor: '{colors.muted}'
     padding: '6px 8px'
   admin-panel:
-    backgroundColor: '{colors.paper}'
+    backgroundColor: '{colors.admin-panel}'
     textColor: '{colors.text}'
     rounded: '{rounded.panel}'
     padding: '20px'
@@ -333,7 +335,7 @@ visible only to its creator. Wish-list item visibility does not use this badge. 
 
 Administration contains App settings, This month's usage, Service status, and Background jobs. Only family-group creation and automatic product photos are editable, with optional locking ENV overrides. All service credentials, providers, models, limits, and AI availability are deployment-only. Service status reports configuration presence, not verified connectivity. Preserve usage after disabling services, notification retries, failed shop lookups, and the note that backup status is unavailable.
 
-Related administration controls share paper panels with panel-radius corners and no shadow. Panels use 20px padding, reduced to 16px at 650px and below, and 24px separation. Their headings use the panel-title size; internal headings use 17px. Keep every top-level group visible. Service status uses flat divided rows with readable capability names and configuration status. Disabled fields retain full opacity, muted text, the page background, and a decorative border.
+Related administration controls share warm beige panels (`#faeee5`) slightly darker than the page in light mode, retaining the paper background in dark mode. Panels have panel-radius corners and no shadow. Panels use 20px padding, reduced to 16px at 650px and below, and 24px separation. Their headings use the panel-title size; internal headings use 17px. Keep every top-level group visible. Service status uses flat divided rows with readable capability names and configuration status. Disabled fields retain full opacity, muted text, the page background, and a decorative border.
 
 Preference groups use a single divider with 24px of space on each side. Service and job rows have 16px vertical padding and top dividers only; the last row ends at the panel inset without an extra rule or bottom padding. Status aligns with the first line of its label and stacks below the description at 360px and narrower. Panel introductions leave 16px before the next block; final paragraphs do not add trailing space. Photo explanations use 8px gaps. Usage groups leave 16px after their top divider and 8px below the final disclosure, whose 44px target supplies the remaining optical breathing room.
 
