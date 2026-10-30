@@ -1,3 +1,4 @@
+import { notificationConsent, transportBlocked } from "./sms-policy";
 import { managementActions, managementCommand } from "./management";
 import {
   preferenceViews,
@@ -731,10 +732,10 @@ function reconcileAccess(s: State) {
       r.quantity = r.purchased;
       r.former = true;
       touch(r);
-      notify(s, "access", [r.buyerId]);
+      notify(s, "access", [r.buyerId], { action: "access-lost" });
       for (const c of s.contributions.filter((c) => c.reservationId === r.id)) {
         if (c.status === "pledged") c.status = "cancelled";
-        notify(s, "access", [c.userId]);
+        notify(s, "access", [c.userId], { action: "access-lost" });
         touch(c);
       }
     }
@@ -1916,6 +1917,7 @@ export function command(
           recipientUpdates: z.boolean().default(false),
           telegram: z.boolean(),
           sms: z.boolean(),
+          smsConsentAcknowledged: z.boolean().optional(),
           events: z
             .array(
               z.enum([
@@ -1951,14 +1953,38 @@ export function command(
         })
         .parse(b);
       const prefs = preferences(s, a);
-      if (p.sms && (!prefs.phoneVerified || prefs.smsOptOut))
+      if (
+        p.sms &&
+        (!prefs.phoneVerified ||
+          prefs.smsOptOut ||
+          !prefs.phone ||
+          transportBlocked(s, prefs.phone))
+      )
         fail(
           400,
           "Verify your phone number and agree to receive text messages first.",
         );
       if (p.telegram && !prefs.chatId)
         fail(400, "Link Telegram before enabling notifications.");
-      Object.assign(prefs, p);
+      if (
+        !notificationConsent(
+          s,
+          prefs,
+          p.sms,
+          p.smsConsentAcknowledged === true,
+          Number(
+            ((process.env.APP_ENV || process.env.NODE_ENV) === "staging"
+              ? process.env.STAGING_SMS_USER_DAILY_LIMIT
+              : process.env.SMS_USER_DAILY_LIMIT) || 2,
+          ),
+        )
+      )
+        fail(
+          400,
+          "Agree to recurring SMS updates before enabling text messages.",
+        );
+      const { smsConsentAcknowledged, ...values } = p;
+      Object.assign(prefs, values);
       touch(prefs);
       if (!s.preferences.some((x) => x.id === prefs.id))
         s.preferences.push(prefs);

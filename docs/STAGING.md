@@ -56,7 +56,7 @@ Do not attach production or shared external volumes. Coolify must create distinc
 
 Keep only you authorized to read Mailpit: its messages include sign-in codes for all synthetic accounts. The UI and API require the configured login. STARTTLS is required for internal SMTP; app and worker trust the staging CA. Mailpit has no relay or forwarding configured.
 
-App and worker run with `NODE_ENV=production` and `APP_ENV=staging`. They require the dedicated `little_hint_staging` database and role. Staging settings force mail to `mailpit:1025`, disable SMS/Telegram and default to direct shop lookups, and reject integration edits. Stored credentials and unprefixed external provider environment variables are ignored. Direct product-page import remains available. AI and paid scraping can be enabled with dedicated staging environment variables as described below. The signed-in app displays a staging banner using runtime metadata.
+App and worker run with `NODE_ENV=production` and `APP_ENV=staging`. They require the dedicated `little_hint_staging` database and role. Staging settings force mail to `mailpit:1025`, disable Telegram and default to direct shop lookups, and reject integration edits. Stored credentials and unprefixed external provider environment variables are ignored. Direct product-page import remains available. AI, paid scraping, and SMS can be enabled with dedicated staging environment variables. See [SMS setup](SMS.md#staging-with-real-sms) for real staging texts, phone sign-in, consent, and quota testing. The signed-in app displays a staging banner using runtime metadata.
 
 ## 4. Seed synthetic scenarios
 
@@ -133,8 +133,7 @@ changed. Deploy app and worker together. Test OFF → ON → OFF with a controll
 public product fixture, checking image requests, media records/files, manual
 uploads, existing photos, and persistence after restart. Verify an environment
 override locks both the UI and write API, then remove it to restore UI testing.
-Keep real provider credentials disabled in staging; use mocked provider tests
-for paid-fallback behavior. Leave staging OFF when testing finishes.
+Use dedicated staging credentials only when testing real paid integrations; use mocked provider tests for routine paid-fallback checks. Leave staging OFF when testing finishes.
 
 A rollback to code predating this preference restores automatic photo importing,
 even if the environment says false. No migration or media deletion is part of
@@ -170,7 +169,12 @@ but use account IDs from the staging database. For example, in a hosting
 runtime-value field:
 
 ```json
-{"staging-account-id":{"weeklyLimit":"unlimited","bypassMonthlyLimit":true}}
+{
+  "staging-account-id": {
+    "weeklyLimit": "unlimited",
+    "bypassMonthlyLimit": true
+  }
+}
 ```
 
 Omit either property to retain its shared limit. A numeric `weeklyLimit` from
@@ -185,12 +189,12 @@ enabled discovery mode. Exempt searches still incur OpenAI charges.
 Set `STAGING_SCRAPING_PROVIDER=auto` and configure only the provider keys you use
 in the staging host's runtime secrets:
 
-| Provider | Staging variable |
-| --- | --- |
+| Provider      | Staging variable               |
+| ------------- | ------------------------------ |
 | Scraping Fish | `STAGING_SCRAPINGFISH_API_KEY` |
-| ScrapingBee | `STAGING_SCRAPINGBEE_API_KEY` |
-| Scrape.do | `STAGING_SCRAPEDO_API_KEY` |
-| Scrapingdog | `STAGING_SCRAPINGDOG_API_KEY` |
+| ScrapingBee   | `STAGING_SCRAPINGBEE_API_KEY`  |
+| Scrape.do     | `STAGING_SCRAPEDO_API_KEY`     |
+| Scrapingdog   | `STAGING_SCRAPINGDOG_API_KEY`  |
 
 Use dedicated staging credentials. Ordinary `SCRAPING_PROVIDER` and unprefixed
 provider keys, along with saved database credentials, remain ignored in staging.

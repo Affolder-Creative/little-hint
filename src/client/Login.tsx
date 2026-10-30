@@ -1,3 +1,6 @@
+import { SmsLogin } from "./SmsLogin";
+import { api } from "./api";
+import type { SmsInfo } from "../shared/sms";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   Heart,
@@ -43,6 +46,13 @@ export function Login({
   online: boolean;
   onSuccess: () => unknown;
 }) {
+  const [smsMode, setSmsMode] = useState(false);
+  const [smsAvailable, setSmsAvailable] = useState(false);
+  useEffect(() => {
+    api<SmsInfo>("sms-info")
+      .then((v) => setSmsAvailable(v.available))
+      .catch(() => {});
+  }, []);
   const [pending, setPending] = useState(readPendingSignIn);
   const [email, setEmail] = useState(pending?.email ?? "");
   const [code, setCode] = useState("");
@@ -139,9 +149,9 @@ export function Login({
   }
   return (
     <div className="login-page">
-      <div className="login-brand">
+      <header className="login-brand">
         <Logo tagline dark={dark} />
-      </div>
+      </header>
       <main className="login-layout">
         <section className="login-story">
           <h1>
@@ -169,141 +179,163 @@ export function Login({
           </div>
         </section>
         <section className="login-form-panel">
-          <h2>{sent ? "Check for a sign-in code" : "Come on in"}</h2>
-          <p>
-            {sent
-              ? `If ${email} has an account or active invitation, we’ll email a sign-in code. Enter it below.`
-              : "Use your account email or the address on your invitation."}
-          </p>
-          {sent && (
-            <p>
-              No email? Check your spam folder and the address above. If you’re
-              new, ask someone who uses Little Hint for an invitation. If your
-              invitation has expired, ask them to send a new one.
-            </p>
-          )}
-          {!online && (
-            <p className="notice" role="status">
-              You're offline. Reconnect to send or check a code.
-            </p>
-          )}
-          <form
-            className="form login-form"
-            onSubmit={submit}
-            aria-busy={!!busy}
-            data-dirty={sent || !!email}
-          >
-            <fieldset disabled={!!busy}>
-              {sent ? (
-                <Field
-                  key="code"
-                  label="Six-digit code"
-                  hint={
-                    expired
-                      ? "This code has expired. Resend a code below."
-                      : "Your code is valid for 10 minutes."
-                  }
-                >
-                  <input
-                    ref={codeInput}
-                    name="code"
-                    className="code-input"
-                    inputMode="numeric"
-                    pattern="[0-9]{6}"
-                    maxLength={6}
-                    autoComplete="one-time-code"
-                    required
-                    value={code}
-                    onChange={(e) =>
-                      setCode(e.target.value.replace(/\D/g, "").slice(0, 6))
-                    }
-                  />
-                </Field>
-              ) : (
-                <Field key="email" label="Email address">
-                  <input
-                    ref={emailInput}
-                    name="email"
-                    type="email"
-                    autoComplete="email"
-                    required
-                    placeholder="you@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
-                </Field>
+          {smsMode ? (
+            <SmsLogin
+              online={online}
+              onSuccess={onSuccess}
+              onBack={() => setSmsMode(false)}
+            />
+          ) : (
+            <>
+              <h2>{sent ? "Check for a sign-in code" : "Come on in"}</h2>
+              <p>
+                {sent
+                  ? `If ${email} has an account or active invitation, we’ll email a sign-in code. Enter it below.`
+                  : "Use your account email or the address on your invitation."}
+              </p>
+              {sent && (
+                <p>
+                  No email? Check your spam folder and the address above. If
+                  you’re new, ask someone who uses Little Hint for an
+                  invitation. If your invitation has expired, ask them to send a
+                  new one.
+                </p>
               )}
-            </fieldset>
-            <button
-              className="button"
-              type="submit"
-              disabled={!!busy || !online || (sent && expired)}
-            >
-              {busy === "send" || busy === "verify" ? (
-                <LoaderCircle className="spin" size={17} />
-              ) : null}
-              {busy === "send"
-                ? "Sending code…"
-                : busy === "verify"
-                  ? "Signing in…"
-                  : sent
-                    ? "Sign in"
-                    : "Send me a code"}
-            </button>
-          </form>
-          {sent && (
-            <div className="login-recovery">
+              {!online && (
+                <p className="notice" role="status">
+                  You're offline. Reconnect to send or check a code.
+                </p>
+              )}
+              <form
+                className="form login-form"
+                onSubmit={submit}
+                aria-busy={!!busy}
+                data-dirty={sent || !!email}
+              >
+                <fieldset disabled={!!busy}>
+                  {sent ? (
+                    <Field
+                      key="code"
+                      label="Six-digit code"
+                      hint={
+                        expired
+                          ? "This code has expired. Resend a code below."
+                          : "Your code is valid for 10 minutes."
+                      }
+                    >
+                      <input
+                        ref={codeInput}
+                        name="code"
+                        className="code-input"
+                        inputMode="numeric"
+                        pattern="[0-9]{6}"
+                        maxLength={6}
+                        autoComplete="one-time-code"
+                        required
+                        value={code}
+                        onChange={(e) =>
+                          setCode(e.target.value.replace(/\D/g, "").slice(0, 6))
+                        }
+                      />
+                    </Field>
+                  ) : (
+                    <Field key="email" label="Email address">
+                      <input
+                        ref={emailInput}
+                        name="email"
+                        type="email"
+                        autoComplete="email"
+                        required
+                        placeholder="you@example.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                      />
+                    </Field>
+                  )}
+                </fieldset>
+                <button
+                  className="button"
+                  type="submit"
+                  disabled={!!busy || !online || (sent && expired)}
+                >
+                  {busy === "send" || busy === "verify" ? (
+                    <LoaderCircle className="spin" size={17} />
+                  ) : null}
+                  {busy === "send"
+                    ? "Sending code…"
+                    : busy === "verify"
+                      ? "Signing in…"
+                      : sent
+                        ? "Sign in"
+                        : "Send me a code"}
+                </button>
+              </form>
+              {sent && (
+                <div className="login-recovery">
+                  <button
+                    className="text-button"
+                    disabled={!!busy || !online}
+                    onClick={() => run("send", requestCode)}
+                  >
+                    Resend code
+                  </button>
+                  <button
+                    className="text-button"
+                    disabled={!!busy}
+                    onClick={() => {
+                      savePendingSignIn(null);
+                      setPending(null);
+                      setCode("");
+                      setExpired(false);
+                      setError("");
+                      setNotice("");
+                    }}
+                  >
+                    Change email
+                  </button>
+                </div>
+              )}
+              {notice && (
+                <p className="login-feedback" role="status">
+                  {notice}
+                </p>
+              )}
+              {error && (
+                <p className="error login-feedback" role="alert">
+                  {error}
+                </p>
+              )}
+              <div className="or">
+                <span>or</span>
+              </div>
               <button
-                className="text-button"
+                className="button secondary wide"
                 disabled={!!busy || !online}
-                onClick={() => run("send", requestCode)}
+                onClick={() =>
+                  run("passkey", async () => {
+                    const result = await authClient.signIn.passkey();
+                    if (result.error)
+                      throw new Error(errorMessage(result.error, "passkey"));
+                    await finish();
+                  })
+                }
               >
-                Resend code
+                <KeyRound size={18} />
+                {busy === "passkey"
+                  ? "Opening passkey…"
+                  : "Sign in with a passkey"}
               </button>
-              <button
-                className="text-button"
-                disabled={!!busy}
-                onClick={() => {
-                  savePendingSignIn(null);
-                  setPending(null);
-                  setCode("");
-                  setExpired(false);
-                  setError("");
-                  setNotice("");
-                }}
-              >
-                Change email
-              </button>
-            </div>
+              {smsAvailable && (
+                <button
+                  className="text-button"
+                  disabled={!!busy || !online}
+                  onClick={() => setSmsMode(true)}
+                >
+                  Sign in with a text code
+                </button>
+              )}
+            </>
           )}
-          {notice && (
-            <p className="login-feedback" role="status">
-              {notice}
-            </p>
-          )}
-          {error && (
-            <p className="error login-feedback" role="alert">
-              {error}
-            </p>
-          )}
-          <div className="or">
-            <span>or</span>
-          </div>
-          <button
-            className="button secondary wide"
-            disabled={!!busy || !online}
-            onClick={() =>
-              run("passkey", async () => {
-                const result = await authClient.signIn.passkey();
-                if (result.error)
-                  throw new Error(errorMessage(result.error, "passkey"));
-                await finish();
-              })
-            }
-          >
-            <KeyRound size={18} />
-            {busy === "passkey" ? "Opening passkey…" : "Sign in with a passkey"}
-          </button>
           <p className="login-footnote">
             Your circle stays private. An invitation is needed to create an
             account.

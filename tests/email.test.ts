@@ -104,3 +104,16 @@ describe("transactional email templates", () => {
     ).toThrow();
   });
 });
+
+it("labels the separate five-minute phone settings confirmation", () => {
+  const mail = renderEmail(
+    { kind: "sign-in", code: "123456", purpose: "sms-settings" },
+    "https://littlehint.example.test",
+  );
+  expect(mail.subject).toContain("phone settings confirmation");
+  expect(mail.text).toContain("5 minutes");
+  expect(mail.html).toContain(
+    "confirm changes to your phone or SMS sign-in settings",
+  );
+  expect(mail.html).not.toContain("10 minutes");
+});

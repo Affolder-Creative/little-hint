@@ -6,7 +6,6 @@ const mock = vi.hoisted(() => ({
   state: null as State | null,
   email: vi.fn(),
   telegram: vi.fn(),
-  sms: vi.fn(),
   push: vi.fn(),
   active: vi.fn(),
   configured: true,
@@ -23,13 +22,6 @@ vi.mock("../src/server/db", () => ({
 vi.mock("../src/server/notifications", () => ({
   sendEmail: (...a: any[]) => mock.email(...a),
   telegramCall: (...a: any[]) => mock.telegram(...a),
-  twilioCall: (...a: any[]) => mock.sms(...a),
-}));
-vi.mock("../src/server/settings", () => ({
-  config: async () => ({
-    TWILIO_ACCOUNT_SID: "test",
-    TWILIO_FROM: "+12025550100",
-  }),
 }));
 vi.mock("../src/server/push", () => ({
   sendPush: (...a: any[]) => mock.push(...a),
@@ -50,7 +42,6 @@ import {
   deliverWishlistBatch,
   pendingWishlistBatches,
   retryWishlistBatch,
-  recordWishlistSmsFailure,
 } from "../src/server/wishlist-delivery";
 import { PushResponseError } from "../src/server/push";
 
@@ -75,7 +66,7 @@ function fixture() {
 beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date("2026-10-27T12:00:00Z"));
-  for (const fn of [mock.email, mock.telegram, mock.sms, mock.push])
+  for (const fn of [mock.email, mock.telegram, mock.push])
     fn.mockReset().mockResolvedValue({});
   mock.active.mockReset().mockResolvedValue(true);
   mock.configured = true;
@@ -121,7 +112,7 @@ describe("cross-channel wish-list summary delivery", () => {
     vi.advanceTimersByTime(4 * 60_000);
     await deliverWishlistBatch(f.batch.id);
     await deliverWishlistBatch(f.batch.id);
-    for (const fn of [mock.email, mock.telegram, mock.sms, mock.push])
+    for (const fn of [mock.email, mock.telegram, mock.push])
       expect(fn).toHaveBeenCalledOnce();
     const text =
       'John added 3 items to "Birthday", including 1 marked Most wanted.';
@@ -135,12 +126,12 @@ describe("cross-channel wish-list summary delivery", () => {
       batchId: f.batch.id,
       unreadCount: 3,
     });
-    expect(mock.sms.mock.calls[0][1].Body).toContain("Reply STOP");
+    expect(f.batch.destinations).not.toContain("sms");
+    expect(f.batch.deliveries).not.toHaveProperty("sms");
     expect(
       JSON.stringify([
         mock.email.mock.calls,
         mock.telegram.mock.calls,
-        mock.sms.mock.calls,
         mock.push.mock.calls,
       ]),
     ).not.toContain("Private item");
@@ -158,7 +149,6 @@ describe("cross-channel wish-list summary delivery", () => {
     await deliverWishlistBatch(f.batch.id);
     expect(mock.email.mock.calls[0][1].wishlistPreview).toBeUndefined();
     expect(mock.push.mock.calls[0][1].wishlistPreview).toBeUndefined();
-    expect(mock.sms.mock.calls[0][1].Body).not.toContain("John");
     expect(mock.telegram.mock.calls[0][1].text).toContain("John");
   });
   it("filters read, archived and deleted additions and freezes event-time priority", async () => {
@@ -211,7 +201,7 @@ describe("cross-channel wish-list summary delivery", () => {
     }
     closeWindow();
     await deliverWishlistBatch(f.batch.id);
-    for (const fn of [mock.email, mock.telegram, mock.sms, mock.push])
+    for (const fn of [mock.email, mock.telegram, mock.push])
       expect(fn).not.toHaveBeenCalled();
     expect(f.batch.status).toBe("sent");
   });
@@ -223,7 +213,7 @@ describe("cross-channel wish-list summary delivery", () => {
     closeWindow();
     await deliverWishlistBatch(f.batch.id);
     expect(mock.email).toHaveBeenCalledOnce();
-    for (const fn of [mock.telegram, mock.sms, mock.push])
+    for (const fn of [mock.telegram, mock.push])
       expect(fn).not.toHaveBeenCalled();
   });
   it("honors a push-only override without bypassing globally disabled channels", async () => {
@@ -233,7 +223,7 @@ describe("cross-channel wish-list summary delivery", () => {
     closeWindow();
     await deliverWishlistBatch(f.batch.id);
     expect(mock.push).toHaveBeenCalledOnce();
-    for (const fn of [mock.email, mock.telegram, mock.sms])
+    for (const fn of [mock.email, mock.telegram])
       expect(fn).not.toHaveBeenCalled();
   });
   it("does not backfill channels or new devices, and filters device-specific summary counts", async () => {
@@ -271,88 +261,26 @@ describe("cross-channel wish-list summary delivery", () => {
     await deliverWishlistBatch(f.batch.id);
     expect(mock.email).toHaveBeenCalledTimes(2);
     expect(mock.email.mock.calls[1][1].wishlistPreview).toBeUndefined();
-    for (const fn of [mock.telegram, mock.sms, mock.push])
+    for (const fn of [mock.telegram, mock.push])
       expect(fn).toHaveBeenCalledOnce();
     expect(f.batch.status).toBe("sent");
   });
   it("stops at five failed attempts and admin retry preserves successful channels", async () => {
     const f = fixture();
-    mock.sms.mockRejectedValue(new Error("offline"));
+    mock.telegram.mockRejectedValue(new Error("offline"));
     closeWindow();
     for (let i = 0; i < 5; i++) {
       await deliverWishlistBatch(f.batch.id);
       vi.advanceTimersByTime(3600_000);
     }
     expect(f.batch.status).toBe("failed");
-    expect(mock.sms).toHaveBeenCalledTimes(5);
+    expect(mock.telegram).toHaveBeenCalledTimes(5);
     expect(retryWishlistBatch(f.s, f.batch.id)).toBe(true);
-    mock.sms.mockResolvedValue({});
+    mock.telegram.mockResolvedValue({});
     await deliverWishlistBatch(f.batch.id);
-    expect(f.batch.status).toBe("sent");
     expect(mock.email).toHaveBeenCalledOnce();
     expect(mock.push).toHaveBeenCalledOnce();
-  });
-  it("preserves an SMS failure callback received before submission returns", async () => {
-    const f = fixture();
-    mock.sms.mockImplementation(async (_route, body) => {
-      // Twilio can call the status endpoint before the worker writes its receipt.
-      const callback = new URL(body.StatusCallback);
-      recordWishlistSmsFailure(
-        f.s,
-        callback.searchParams.get("batch")!,
-        callback.searchParams.get("attempt"),
-      );
-    });
-    closeWindow();
-    await deliverWishlistBatch(f.batch.id);
-    expect(f.batch.deliveries.sms).toMatchObject({
-      status: "failed",
-      attempts: 5,
-    });
-    expect(f.batch.status).toBe("failed");
-  });
-  it("ignores old SMS failure callbacks after an administrator retry", async () => {
-    const f = fixture();
-    closeWindow();
-    await deliverWishlistBatch(f.batch.id);
-    const oldAttempt = new URL(
-      mock.sms.mock.calls[0][1].StatusCallback,
-    ).searchParams.get("attempt");
-    recordWishlistSmsFailure(f.s, f.batch.id, null);
-    recordWishlistSmsFailure(f.s, f.batch.id, "unrelated-attempt");
     expect(f.batch.status).toBe("sent");
-    recordWishlistSmsFailure(f.s, f.batch.id, oldAttempt);
-    expect(f.batch.status).toBe("failed");
-    expect(f.s.notices[0].status).toBe("failed");
-    expect(retryWishlistBatch(f.s, f.batch.id)).toBe(true);
-    recordWishlistSmsFailure(f.s, f.batch.id, oldAttempt);
-    expect(f.batch.deliveries.sms.attempts).toBe(0);
-    await deliverWishlistBatch(f.batch.id);
-    recordWishlistSmsFailure(f.s, f.batch.id, oldAttempt);
-    expect(f.batch.status).toBe("sent");
-    expect(f.batch.deliveries.sms).toMatchObject({
-      status: "sent",
-      attempts: 1,
-    });
-    expect(mock.sms).toHaveBeenCalledTimes(2);
-    for (const fn of [mock.email, mock.telegram, mock.push])
-      expect(fn).toHaveBeenCalledOnce();
-  });
-  it("retains the accepted SMS attempt when retrying another channel", async () => {
-    const f = fixture();
-    mock.email.mockRejectedValue(new Error("offline"));
-    closeWindow();
-    for (let i = 0; i < 5; i++) {
-      await deliverWishlistBatch(f.batch.id);
-      vi.advanceTimersByTime(3600_000);
-    }
-    const attempt = f.batch.smsAttemptId!;
-    expect(retryWishlistBatch(f.s, f.batch.id)).toBe(true);
-    recordWishlistSmsFailure(f.s, f.batch.id, attempt);
-    expect(f.batch.deliveries.sms).toMatchObject({
-      status: "failed",
-      attempts: 5,
-    });
   });
   it("removes expired devices and suppresses revoked sessions", async () => {
     const f = fixture();

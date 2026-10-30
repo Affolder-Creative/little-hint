@@ -1,5 +1,5 @@
 export type EmailMessage =
-  | { kind: "sign-in"; code: string }
+  | { kind: "sign-in"; code: string; purpose?: "sms-settings" }
   | {
       kind: "invitation" | "account-invitation" | "update";
       text: string;
@@ -32,6 +32,12 @@ export function renderEmail(message: EmailMessage, appUrl: string) {
     url.href = action.href;
   }
   const isCode = message.kind === "sign-in";
+  const smsSettings = isCode && message.purpose === "sms-settings";
+  const codeName = smsSettings ? "phone settings confirmation" : "sign-in";
+  const minutes = smsSettings ? 5 : 10;
+  const codeAction = smsSettings
+    ? "confirm changes to your phone or SMS sign-in settings"
+    : "sign in to Little Hint";
   const invitation = message.kind === "invitation";
   const accountInvitation = message.kind === "account-invitation";
   const wishlistPreview =
@@ -39,33 +45,33 @@ export function renderEmail(message: EmailMessage, appUrl: string) {
   const subject =
     wishlistPreview ??
     (isCode
-      ? "Your Little Hint sign-in code"
+      ? `Your Little Hint ${codeName} code`
       : invitation || accountInvitation
         ? "You're invited to Little Hint"
         : "A little update from Little Hint");
   const heading = isCode
-    ? "Your sign-in code"
+    ? `Your ${codeName} code`
     : invitation || accountInvitation
       ? "You're invited"
       : "A little update for you";
   const preview =
     wishlistPreview ??
     (isCode
-      ? "Use this code to sign in to Little Hint. It is valid for 10 minutes."
+      ? `Use this code to ${codeAction}. It is valid for ${minutes} minutes.`
       : accountInvitation
         ? "Start your own wish list. You can choose who to share it with later."
         : invitation
           ? "Your people are waiting. Open your Little Hint invitation."
           : "Open Little Hint to see what's new.");
   const text = isCode
-    ? `Your Little Hint sign-in code is ${message.code}. It expires in 10 minutes. If you did not request it, ignore this email.`
+    ? `Your Little Hint ${codeName} code is ${message.code}. It expires in ${minutes} minutes. If you did not request it, ignore this email.`
     : `${message.text} ${url.href}`;
   const content = isCode
-    ? `<p style="margin:0 0 24px">Enter this code to sign in to Little Hint.</p>
+    ? `<p style="margin:0 0 24px">Enter this code to ${codeAction}.</p>
       <div style="background:#f4e4da;border:1px solid #e6d9cf;border-radius:8px;padding:20px 12px;text-align:center;margin:0 0 20px">
         <span style="font-size:32px;line-height:1.3;font-weight:600;letter-spacing:6px;color:#2b201d">${escapeHtml(message.code)}</span>
       </div>
-      <p style="margin:0 0 8px;font-weight:600">Valid for 10 minutes</p>
+      <p style="margin:0 0 8px;font-weight:600">Valid for ${minutes} minutes</p>
       <p style="margin:0;color:#746057;font-size:14px">If you didn't request this code, you can ignore this email.</p>`
     : `<p style="margin:0 0 24px;white-space:pre-line">${escapeHtml(message.text)}</p>
       <table role="presentation" cellspacing="0" cellpadding="0"><tr><td bgcolor="#aa4d37" style="border-radius:8px;text-align:center">

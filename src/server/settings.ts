@@ -25,6 +25,12 @@ export const settingKeys = [
   "SMTP_FROM",
   "TELEGRAM_BOT_TOKEN",
   "TELEGRAM_BOT_NAME",
+  "SMS_PROVIDER",
+  "TEXTBELT_API_KEY",
+  "SMS_MONTHLY_LIMIT",
+  "SMS_USER_DAILY_LIMIT",
+  "SMS_CREDIT_RESERVE",
+  "SMS_ALLOWED_EVENTS",
   "TWILIO_ACCOUNT_SID",
   "TWILIO_AUTH_TOKEN",
   "TWILIO_FROM",
@@ -44,6 +50,11 @@ const defaults: Partial<Record<SettingKey, string>> = {
   GIFT_DISCOVERY_USER_WEEKLY_LIMIT: "3",
   GIFT_DISCOVERY_MONTHLY_LIMIT: "100",
   GIFT_DISCOVERY_MODEL: "gpt-6-luna",
+  SMS_PROVIDER: "none",
+  SMS_MONTHLY_LIMIT: "100",
+  SMS_USER_DAILY_LIMIT: "2",
+  SMS_CREDIT_RESERVE: "20",
+  SMS_ALLOWED_EVENTS: "exchange,access",
   SMTP_PORT: "465",
   SMTP_FROM: "Little Hint <littlehint@example.com>",
   OPENAI_MODEL: "gpt-6-luna",
@@ -52,7 +63,7 @@ const defaults: Partial<Record<SettingKey, string>> = {
 };
 // A staging database may contain old settings after a branch switch. Never use
 // those credentials, or runtime provider credentials, to contact real users.
-// AI and scraping accept only explicitly prefixed staging runtime settings.
+// Paid providers accept only explicitly prefixed staging runtime settings.
 export function stagingSettings(): Record<SettingKey, string> {
   const result = Object.fromEntries(
     settingKeys
@@ -92,17 +103,29 @@ export function stagingSettings(): Record<SettingKey, string> {
     discoveryConfiguration(result);
   }
   if (deploymentEnvironment() === "staging") {
+    for (const k of settingKeys.filter(
+      (k) =>
+        k.startsWith("SMS_") ||
+        k.startsWith("TWILIO_") ||
+        k === "TEXTBELT_API_KEY",
+    ))
+      result[k] = process.env[`STAGING_${k}`] || defaults[k] || "";
     result.SCRAPING_PROVIDER = process.env.STAGING_SCRAPING_PROVIDER || "auto";
     if (!scrapingSelections.includes(result.SCRAPING_PROVIDER))
       throw new Error("Invalid STAGING_SCRAPING_PROVIDER.");
     for (const provider of scrapingProviders)
       result[provider.key] = process.env[`STAGING_${provider.key}`] || "";
-    if (result.OPENAI_API_KEY || scrapingProviders.some((p) => result[p.key])) {
+    if (
+      result.OPENAI_API_KEY ||
+      result.SMS_PROVIDER !== "none" ||
+      scrapingProviders.some((p) => result[p.key])
+    ) {
       result.PAID_DAILY_LIMIT = process.env.STAGING_PAID_DAILY_LIMIT || "0";
       if (!/^\d{1,6}$/.test(result.PAID_DAILY_LIMIT))
         throw new Error("Invalid STAGING_PAID_DAILY_LIMIT.");
     }
   }
+  validateSmsConfig(result);
   return result;
 }
 const key = () => {
@@ -164,6 +187,7 @@ export function effectiveConfig(): Record<SettingKey, string> {
     settingKeys.map((k) => [k, process.env[k] || defaults[k] || ""]),
   ) as Record<SettingKey, string>;
   discoveryConfiguration(result);
+  validateSmsConfig(result);
   if (!scrapingSelections.includes(result.SCRAPING_PROVIDER))
     throw new Error("Invalid SCRAPING_PROVIDER.");
   if (!/^\d{1,6}$/.test(result.PAID_DAILY_LIMIT))
@@ -317,4 +341,31 @@ export function discoveryConfiguration(
     ),
     model,
   };
+}
+
+function validateSmsConfig(cfg: Record<string, string>) {
+  if (!["none", "textbelt", "twilio"].includes(cfg.SMS_PROVIDER || "none"))
+    throw new Error("Invalid SMS_PROVIDER.");
+  for (const k of [
+    "SMS_MONTHLY_LIMIT",
+    "SMS_USER_DAILY_LIMIT",
+    "SMS_CREDIT_RESERVE",
+  ])
+    if (cfg[k] && !/^\d{1,6}$/.test(cfg[k])) throw new Error(`Invalid ${k}.`);
+  if (
+    (cfg.SMS_ALLOWED_EVENTS || "")
+      .split(",")
+      .filter(Boolean)
+      .some(
+        (v) =>
+          ![
+            "exchange",
+            "access",
+            "reservation",
+            "purchase",
+            "discussion",
+          ].includes(v),
+      )
+  )
+    throw new Error("Invalid SMS_ALLOWED_EVENTS.");
 }

@@ -1,3 +1,5 @@
+import { SmsSettings } from "./SmsSettings";
+import { smsNotificationDisclosure } from "../shared/sms";
 import { InviteDialog, InvitationShare } from "./InvitationShare";
 import { Invitations } from "./Invitations";
 import { FollowingSettings } from "./FollowSettings";
@@ -520,6 +522,7 @@ export default function SettingsPage({
                   email: f.get("email") === "on",
                   telegram: f.get("telegram") === "on",
                   sms: f.get("sms") === "on",
+                  smsConsentAcknowledged: f.get("sms") === "on",
                   events: [
                     ...new Set(
                       ["email", "telegram", "sms"].flatMap((channel) =>
@@ -571,6 +574,7 @@ export default function SettingsPage({
                       name="sms"
                       defaultChecked={world.preferences.sms}
                       disabled={
+                        !world.sms?.available ||
                         !world.preferences.phoneVerified ||
                         world.preferences.smsOptOut
                       }
@@ -580,20 +584,31 @@ export default function SettingsPage({
                       ? `· ${world.preferences.phone}`
                       : "· Not verified"}
                   </label>
-                  {(!world.preferences.phoneVerified ||
-                    world.preferences.smsOptOut) && (
-                    <button
-                      type="button"
-                      className="text-button"
-                      onClick={() => open("Verify your phone", <SmsForm />)}
-                    >
-                      Set up text messages
-                    </button>
+                  <p className="muted">
+                    {smsNotificationDisclosure(world.sms?.dailyLimit ?? 2)}
+                  </p>
+                  {!world.sms?.available && (
+                    <p className="muted">
+                      SMS is not configured or its paid sending limit is zero.
+                      Ask the administrator to enable it.
+                    </p>
                   )}
+                  <button
+                    type="button"
+                    className="text-button"
+                    onClick={() => open("Phone & SMS sign-in", <SmsSettings />)}
+                  >
+                    Manage phone & SMS sign-in
+                  </button>
+                  <p className="muted">
+                    SMS sign-in: {world.preferences.smsLogin ? "On" : "Off"}.
+                    Verifying a phone does not enable recurring updates.
+                  </p>
                   {world.preferences.smsOptOut && (
                     <p className="muted">
                       Text updates are turned off. Reply START to the sender to
-                      turn them back on, then verify your number here.
+                      allow delivery again, then explicitly enable text updates
+                      here. Email and passkeys remain available.
                     </p>
                   )}
                 </div>
@@ -849,110 +864,6 @@ function TelegramSetup() {
     >
       Link Telegram
     </Action>
-  );
-}
-function SmsForm() {
-  const { mutate, close, toast } = useApp();
-  const [sent, setSent] = useState(false);
-  const [phone, setPhone] = useState("");
-  const [resendNotice, setResendNotice] = useState("");
-  return (
-    <Form
-      key={sent ? "code" : "phone"}
-      submit={
-        sent ? "Verify and turn on text updates" : "Send verification code"
-      }
-      onSubmit={async (f) => {
-        if (sent) {
-          await api("channels/sms/verify", { code: value(f, "code") });
-          await mutate(
-            "preferences",
-            await api<World>("world").then((w) => ({
-              email: w.preferences.email,
-              telegram: w.preferences.telegram,
-              sms: true,
-              events: w.preferences.events,
-              recipientUpdates: w.preferences.recipientUpdates,
-            })),
-          );
-          close();
-          toast("Phone verified. Text updates are on.");
-        } else {
-          await api("channels/sms/start", {
-            phone: value(f, "phone"),
-            consent: f.get("consent") === "on",
-          });
-          setPhone(value(f, "phone"));
-          setSent(true);
-        }
-      }}
-    >
-      {sent ? (
-        <>
-          <p role="status">
-            Code sent to {phone}. Codes expire; request another if yours no
-            longer works.
-          </p>
-          <Field
-            label="Verification code"
-            hint="Enter the digits from the text message."
-          >
-            <input
-              name="code"
-              required
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              pattern="[0-9]{4,10}"
-              minLength={4}
-              maxLength={10}
-              autoFocus
-            />
-          </Field>
-          <div className="actions">
-            <Action
-              secondary
-              onClick={async () => {
-                await api("channels/sms/start", { phone, consent: true });
-                setResendNotice(
-                  "Another code was sent. Use the latest text message. If too many requests are made, wait before trying again.",
-                );
-              }}
-            >
-              Resend code
-            </Action>
-            <button
-              className="text-button"
-              type="button"
-              onClick={() => {
-                setSent(false);
-                setResendNotice("");
-              }}
-            >
-              Change number
-            </button>
-          </div>
-          <p role="status">{resendNotice}</p>
-        </>
-      ) : (
-        <>
-          <Field label="US mobile number">
-            <input
-              name="phone"
-              type="tel"
-              defaultValue={phone}
-              placeholder="+15551234567"
-              pattern="\+1[2-9][0-9]{9}"
-              required
-            />
-          </Field>
-          <label className="check">
-            <input type="checkbox" name="consent" required />I agree to receive
-            Little Hint text messages. Message/data rates may apply. Reply STOP
-            to unsubscribe.
-          </label>
-        </>
-      )}
-    </Form>
   );
 }
 function PasskeyLabelForm({

@@ -12,6 +12,7 @@ import { stagingFixtures } from "../src/server/staging-fixtures";
 import { command, world } from "../src/server/domain";
 import { emptyState, type List, type Group } from "../src/shared/model";
 import { discoveryConfig } from "./gift-discovery-fixture";
+import { smsInfo } from "../src/server/sms-provider";
 
 for (const width of [320, 393, 1440]) {
   test(`purchase and exchange actions stay grouped at ${width}px`, async ({
@@ -137,7 +138,12 @@ for (const width of [320, 393, 1440]) {
   });
 }
 
-async function preview(page: Page, actorIndex = 0, solo = false) {
+async function preview(
+  page: Page,
+  actorIndex = 0,
+  solo = false,
+  smsEnabled = false,
+) {
   const fixture = stagingFixtures();
   const actor = fixture.actors[actorIndex];
   if (solo) {
@@ -169,7 +175,20 @@ async function preview(page: Page, actorIndex = 0, solo = false) {
     const path = new URL(route.request().url()).pathname;
     if (path === "/api/v1/world")
       return route.fulfill({
-        json: { ...world(fixture.state, actor), environment: "development" },
+        json: {
+          ...world(fixture.state, actor),
+          environment: "development",
+          sms: smsInfo(
+            smsEnabled
+              ? {
+                  SMS_PROVIDER: "textbelt",
+                  TEXTBELT_API_KEY: "fixture",
+                  PAID_DAILY_LIMIT: "50",
+                  SMS_ALLOWED_EVENTS: "exchange,access",
+                }
+              : {},
+          ),
+        },
       });
     if (
       path.includes("list-sessions") ||
@@ -307,14 +326,14 @@ for (const width of [1440, 390]) {
   test(`notification disclosures preserve choices and fit at ${width}px`, async ({
     page,
   }, testInfo) => {
-    const { state, actor } = await preview(page);
+    const { state, actor } = await preview(page, 0, false, true);
     const saved = command(state, actor, "preferences.update", {
       ...world(state, actor).preferences,
       pushEvents: ["mention", "wishlist"],
       channelEvents: {
         email: ["invitation"],
         telegram: ["mention", "wishlist"],
-        sms: ["purchase"],
+        sms: ["exchange"],
       },
       notificationDetails: {
         push: true,
@@ -354,7 +373,7 @@ for (const width of [1440, 390]) {
     expect(saved.channelEvents).toEqual({
       email: ["invitation"],
       telegram: ["mention", "wishlist"],
-      sms: ["purchase"],
+      sms: ["exchange"],
     });
     expect(saved.pushEvents).toEqual(["mention", "wishlist"]);
     expect(saved.notificationDetails).toEqual({
@@ -424,7 +443,7 @@ for (const width of [1440, 390]) {
 test("notification save failures retain edits and connected channels stay configurable", async ({
   page,
 }) => {
-  const { state, actor } = await preview(page);
+  const { state, actor } = await preview(page, 0, false, true);
   const saved = command(
     state,
     actor,
@@ -2344,25 +2363,61 @@ test("temporary security failures retain retry and recover", async ({
 test("SMS verification offers resend and number correction", async ({
   page,
 }) => {
-  await preview(page);
+  await preview(page, 0, false, true);
   const phones: string[] = [];
+  await page.route("**/api/v1/channels/sms/reauth/start", (route) =>
+    route.fulfill({ json: { challenge: "email-challenge" } }),
+  );
+  await page.route("**/api/v1/channels/sms/reauth/verify", (route) =>
+    route.fulfill({ json: { ok: true } }),
+  );
   await page.route("**/api/v1/channels/sms/start", (route) => {
     phones.push(route.request().postDataJSON().phone);
-    return route.fulfill({ json: { ok: true } });
+    return route.fulfill({
+      json: { challenge: `phone-challenge-${phones.length}` },
+    });
   });
   await page.goto("/settings?section=notifications");
-  await page.getByRole("button", { name: "Set up text messages" }).click();
+  await page
+    .getByRole("button", { name: "Manage phone & SMS sign-in" })
+    .click();
+  await page
+    .getByRole("button", { name: "Send email confirmation code" })
+    .click();
+  await page.getByLabel("Six-digit code").fill("123456");
+  await page.getByRole("button", { name: "Verify code", exact: true }).click();
+  await page.getByRole("button", { name: "Link phone number" }).click();
   await page.getByLabel("US mobile number").fill("+13175551234");
-  await page.getByRole("checkbox", { name: /I agree/ }).check();
+  await page
+    .getByRole("checkbox", { name: /Send a Little Hint verification code/ })
+    .check();
   await page.getByRole("button", { name: "Send verification code" }).click();
   await expect(
-    page.getByRole("status").filter({ hasText: "Code sent to +13175551234" }),
+    page
+      .getByRole("status")
+      .filter({ hasText: "Enter the code sent to +13175551234" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Resend code" }).click();
-  await expect(page.getByText(/Another code was sent/)).toBeVisible();
+  await expect(page.getByText(/A new code was sent/)).toBeVisible();
   expect(phones).toEqual(["+13175551234", "+13175551234"]);
   await page.getByRole("button", { name: "Change number" }).click();
   await expect(page.getByLabel("US mobile number")).toHaveValue("+13175551234");
+  await expect(
+    page.getByRole("checkbox", {
+      name: /Send a Little Hint verification code/,
+    }),
+  ).not.toBeChecked();
+  await page.getByLabel("US mobile number").fill("+12025550123");
+  await page
+    .getByRole("checkbox", { name: /Send a Little Hint verification code/ })
+    .check();
+  await page.getByRole("button", { name: "Send verification code" }).click();
+  expect(phones).toEqual(["+13175551234", "+13175551234", "+12025550123"]);
+  await expect(
+    page
+      .getByRole("status")
+      .filter({ hasText: "Enter the code sent to +12025550123" }),
+  ).toBeVisible();
 });
 
 test("adding a saved draft refreshes the device list", async ({ page }) => {

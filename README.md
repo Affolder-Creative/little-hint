@@ -109,6 +109,8 @@ The existing `compose.ghcr.yaml` registry overlay remains supported with
 
 Configure the SMTP sender independently from the app URL. An alias on an existing verified email domain is sufficient, for example `Little Hint <littlehint@example.com>`. All `example.com` addresses in this repository are placeholders. Keep real domains, administrator emails, resource IDs, credentials, and deployment records in ignored `.env.production` or `.local/deployment/` files, or your deployment platform's settings. Use the [deployment checklist](docs/DEPLOYMENT.md) for each installation.
 
+See [SMS setup](docs/SMS.md) for Textbelt or Twilio, phone sign-in, consent, budgets, and real staging delivery.
+
 See [notification setup and behavior](docs/NOTIFICATIONS.md) for browser push, inbox preferences, mentions, following, and device badges.
 
 ## Synthetic preview

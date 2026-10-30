@@ -1,3 +1,4 @@
+import { smsInfo } from "./sms-provider";
 import type { AdminServiceStatus } from "../shared/admin-services";
 import {
   selectedScrapingProvider,
@@ -27,12 +28,8 @@ export function serviceStatuses(
     {
       id: "sms",
       label: "Text messages",
-      status: configured(
-        cfg.TWILIO_ACCOUNT_SID &&
-          cfg.TWILIO_AUTH_TOKEN &&
-          cfg.TWILIO_FROM &&
-          cfg.TWILIO_VERIFY_SERVICE_SID,
-      ),
+      status: configured(smsInfo(cfg).available),
+      detail: `Provider: ${smsInfo(cfg).provider}. SMS sign-in and recurring notifications require separate opt-ins.`,
     },
     { id: "push", label: "Browser push", status: configured(push) },
     {
