@@ -168,6 +168,19 @@ export function SmsSettings() {
             Resend code
           </Action>
           {notice && <p role="status">{notice}</p>}
+          {!emailStep && (
+            <button
+              type="button"
+              className="button secondary"
+              onClick={() => {
+                setChallenge("");
+                setNotice("");
+                setStep("phone");
+              }}
+            >
+              Change number
+            </button>
+          )}
         </>
       ) : (
         <>
