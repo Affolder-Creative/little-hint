@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.11.0](https://github.com/Affolder-Creative/little-hint/compare/v0.10.2...v0.11.0) (2026-10-30)
+
+
+### Features
+
+* improve administration, invitation sharing, and app updates ([#105](https://github.com/Affolder-Creative/little-hint/issues/105)) ([f2424f2](https://github.com/Affolder-Creative/little-hint/commit/f2424f24e2a1a308e7965997a93a80c8ba8a7b33))
+* simplify Administration with ENV-only deployment settings ([#107](https://github.com/Affolder-Creative/little-hint/issues/107)) ([f389f6b](https://github.com/Affolder-Creative/little-hint/commit/f389f6bcbe10cd9fd36b3d05bc0067697c900dfb))
+
 ## [0.10.2](https://github.com/Affolder-Creative/little-hint/compare/v0.10.1...v0.10.2) (2026-10-29)
 
 
