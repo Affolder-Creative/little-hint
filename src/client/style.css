@@ -5,6 +5,7 @@
   font-synthesis: none;
   --bg: #fff8f0;
   --paper: #fffdf9;
+  --admin-panel-bg: #faeee5;
   --text: #2b201d;
   --muted: #746057;
   --border: #e6d9cf;
@@ -1812,6 +1813,7 @@ main {
 [data-theme="dark"] {
   --bg: #2b201d;
   --paper: #342722;
+  --admin-panel-bg: var(--paper);
   --text: #fff8f0;
   --muted: #cbb6aa;
   --border: #59453b;
@@ -3713,7 +3715,7 @@ main {
 
 /* Administration: related controls share one surface; groups stay visible. */
 .admin-page .admin-panel {
-  background: var(--paper);
+  background: var(--admin-panel-bg);
   border-radius: 12px;
   padding: 20px;
   margin: 24px 0 0;
