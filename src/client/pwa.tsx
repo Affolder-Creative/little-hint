@@ -185,54 +185,146 @@ export function Install({
   );
 }
 export function UpdateNotice() {
-  const requested = useRef(false);
-  const [waiting, setWaiting] = useState<ServiceWorker | null>(null);
+  const request = useRef<() => void>(() => {});
+  const [available, setAvailable] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   useEffect(() => {
     if (!import.meta.env.PROD || !("serviceWorker" in navigator)) return;
-    let reloading = false;
-    const changed = () => {
-      if (reloading || !requested.current) return;
+    const container = navigator.serviceWorker;
+    let initial = container.controller;
+    let registration: ServiceWorkerRegistration | undefined;
+    let requested = false,
+      reloading = false,
+      disposed = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const cleanups: Array<() => void> = [];
+    const blocked = () =>
+      hasPendingWrites() ||
+      document.querySelector('dialog[open],form[data-dirty="true"]');
+    const stop = (text: string) => {
+      clearTimeout(timer);
+      requested = false;
+      setBusy(false);
+      setMessage(text);
+    };
+    const reload = () => {
+      if (reloading || !requested) return;
+      if (blocked()) {
+        stop("Finish saving or close your form before updating.");
+        return;
+      }
       reloading = true;
+      clearTimeout(timer);
       location.reload();
     };
-    navigator.serviceWorker.addEventListener("controllerchange", changed);
-    navigator.serviceWorker
+    const activeUpdate = () =>
+      !!initial && !!container.controller && container.controller !== initial;
+    const reconcile = () => {
+      if (disposed) return;
+      if (!initial && container.controller) initial = container.controller;
+      if ((initial && registration?.waiting) || activeUpdate())
+        setAvailable(true);
+      if (requested && activeUpdate()) reload();
+    };
+    const watch = () => {
+      const worker = registration?.installing;
+      if (!worker) return;
+      const changed = () => {
+        reconcile();
+        if (
+          worker.state === "installed" &&
+          initial &&
+          worker !== container.controller
+        ) {
+          setAvailable(true);
+          if (requested) {
+            try {
+              registration?.waiting?.postMessage({ type: "SKIP_WAITING" });
+            } catch {
+              stop("The update could not start. Try Update now again.");
+            }
+          }
+        }
+      };
+      worker.addEventListener("statechange", changed);
+      cleanups.push(() => worker.removeEventListener("statechange", changed));
+    };
+    const focus = () => {
+      reconcile();
+    };
+    container.addEventListener("controllerchange", reconcile);
+    window.addEventListener("focus", focus);
+    container
       .register("/sw.js", { scope: "/" })
       .then((reg) => {
-        if (reg.waiting) setWaiting(reg.waiting);
-        reg.addEventListener("updatefound", () => {
-          const sw = reg.installing;
-          sw?.addEventListener("statechange", () => {
-            if (sw.state === "installed" && navigator.serviceWorker.controller)
-              setWaiting(sw);
-          });
-        });
+        if (disposed) return;
+        registration = reg;
+        reconcile();
+        watch();
+        reg.addEventListener("updatefound", watch);
+        cleanups.push(() => reg.removeEventListener("updatefound", watch));
       })
       .catch(() => {});
-    return () =>
-      navigator.serviceWorker.removeEventListener("controllerchange", changed);
+    request.current = () => {
+      if (requested || reloading) return;
+      if (blocked()) {
+        setMessage("Finish saving or close your form before updating.");
+        return;
+      }
+      requested = true;
+      setBusy(true);
+      setMessage("Updating…");
+      timer = setTimeout(
+        () => stop("The update did not finish. Try Update now again."),
+        10000,
+      );
+      if (activeUpdate()) {
+        reload();
+        return;
+      }
+      const worker = registration?.waiting;
+      if (worker) {
+        try {
+          worker.postMessage({ type: "SKIP_WAITING" });
+        } catch {
+          stop("The update could not start. Try Update now again.");
+        }
+      } else {
+        registration
+          ?.update()
+          .then(() => {
+            if (disposed || !requested) return;
+            reconcile();
+            registration?.waiting?.postMessage({ type: "SKIP_WAITING" });
+          })
+          .catch(() => {
+            if (!disposed)
+              stop("The update could not start. Try Update now again.");
+          });
+      }
+    };
+    return () => {
+      disposed = true;
+      clearTimeout(timer);
+      container.removeEventListener("controllerchange", reconcile);
+      window.removeEventListener("focus", focus);
+      cleanups.forEach((cleanup) => cleanup());
+      request.current = () => {};
+    };
   }, []);
-  return waiting ? (
+  return available ? (
     <div className="update-banner" role="status">
       <RefreshCw size={17} />
       <span>{message || "A new version of Little Hint is ready."}</span>
-      <button
-        onClick={() => {
-          if (
-            hasPendingWrites() ||
-            document.querySelector('dialog[open],form[data-dirty="true"]')
-          ) {
-            setMessage("Finish saving or close your form before updating.");
-            return;
-          }
-          requested.current = true;
-          waiting.postMessage({ type: "SKIP_WAITING" });
-        }}
-      >
-        Update now
+      <button disabled={busy} onClick={() => request.current()}>
+        {busy ? "Updating…" : "Update now"}
       </button>
-      <button aria-label="Dismiss update" onClick={() => setWaiting(null)}>
+      <button
+        disabled={busy}
+        aria-label="Dismiss update"
+        onClick={() => setAvailable(false)}
+      >
         <X size={16} />
       </button>
     </div>

@@ -187,6 +187,13 @@ components:
   privacy:
     textColor: '{colors.muted}'
     padding: '6px 8px'
+  admin-panel:
+    backgroundColor: '{colors.paper}'
+    textColor: '{colors.text}'
+    rounded: '{rounded.panel}'
+    padding: '20px'
+  admin-panel-phone:
+    padding: '16px'
 ---
 
 # Design System: Little Hint
@@ -323,6 +330,8 @@ and purchase guidance explains that the idea and its buying activity stay
 visible only to its creator. Wish-list item visibility does not use this badge. Group the audience selector and its explanation using compact spacing, with medium spacing before product entry. An unavailable discovery action occupies no layout space. Saved-idea links use accent text, a persistent underline, an arrow, and a 44px touch target.
 
 ### Administration
+
+Related administration controls share paper panels with panel-radius corners and no shadow. Panels use 20px padding, reduced to 16px at 650px and below, and 24px separation. Their headings use the panel-title size; internal headings use 17px. Keep every top-level group visible. Service groups use native disclosures with configuration counts, then individual setting disclosures with readable labels and status. Disabled fields retain full opacity, muted text, the page background, and a decorative border.
 
 Family-group creation is an app-wide choice with Everyone signed in and Administrators only options. Environment overrides show a readable locked value. Follow sits outside group navigation with a 32px gap, wrapping onto its own row when needed.
 

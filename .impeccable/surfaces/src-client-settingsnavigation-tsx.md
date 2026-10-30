@@ -8,6 +8,9 @@ related_targets:
     "src/client/SettingsPage.tsx",
     "src/client/Households.tsx",
     "src/client/AccountInvitations.tsx",
+    "src/client/InvitationShare.tsx",
+    "src/client/GiftDiscoveryAdmin.tsx",
+    "src/client/AdminUsage.tsx",
   ]
 ---
 
@@ -19,10 +22,12 @@ related_targets:
 - Sections: Profile & appearance, Invitations, Family groups, Notifications, Device & drafts, Sign-in & security, authorized Administration, and About. About contains the approved logo, tagline, version, and Affolder Creative credit. Sign-out remains accessible from every section. Pending family-group requests have a visible shortcut.
 - URLs retain section, selected group ID, and Members/Households/Events view for refresh, bookmarking and browser history. Unknown or unauthorized categories fall back to Profile; absent groups fall back to an available group or an empty state.
 - Family groups use an ID-based selector with owner and short-ID context for duplicate names. Members is the default view; household configuration stays optional. Compact person membership summaries retain short IDs for duplicate household names, while choosers show full member context.
-- Invitations gives any signed-in user an email invitation action and their own pending account invitations with expiration dates and cancellation. Use existing modal forms and flat rows. Account invitations do not share profiles or lists; group invitations stay under Family groups and alone contribute to pending group-request counts.
+- Invitations gives any signed-in user an email invitation action and their own pending account invitations with expiration dates and cancellation. Account invitations do not share profiles or lists; group invitations stay under Family groups and alone contribute to pending group-request counts.
+- After creating an account or family-group invitation, keep the dialog open with confirmation that delivery is pending, the invited email address, a sign-in-link action, and Done. Pending invitation rows also offer the link action. Use native sharing where available and Copy sign-in link otherwise; expose a selectable read-only link if sharing or copying fails. Explain that the recipient must use the invited address. Cancelling the native share sheet is not an error. Invitation sharing uses the existing outlined button and field styles, a 12px stack gap, and wrapping actions.
 - Household matching, photo handling, and family-group invitation acceptance stay unchanged. Solo Home makes a private wish list the primary action and group creation secondary.
 
 - Profile & appearance and owned/managed person pages include a quiet underlined Gift preferences text action opening that tab in Edit profile. In Settings it sits below account details, while the outlined Edit profile button remains the main action. The two tab drafts and independent saves remain intact.
 - Follow is separate from the group navigation, with a 32px horizontal gap and wrapping on narrow screens. Family-group creation is controlled by an app-wide administrator preference with an optional locking environment override; restricted users see invitation/administrator guidance.
-- Administration saves editable gift-suggestion settings atomically in one form. Monthly usage has flat divided feature groups, compact labeled counts, and expandable accounting details. Show enabled or used services; retain historical usage when disabled.
+- Approved Option A groups Administration into visible paper panels: App settings, AI gift suggestions, This month's usage, Connected services, and Updates & backups. Keep group headings visible while individual service groups and settings use native disclosures. App settings groups family-group creation and shop-link photo choices. Use friendly setting labels; keep technical setup keys inside the expanded setting. Connected services summarizes configured counts and each setting's state.
+- Administration saves editable gift-suggestion settings atomically in one form. Monthly usage retains flat divided feature groups inside its panel, compact labeled counts, and expandable accounting details. Show enabled or used services; retain historical usage when disabled. Server-managed fields remain readable, with explicit lock guidance. Updates & backups explains that backups are managed externally and that backup status is unavailable here.
 - About adds Kyle's approved short family-origin story and an SVG signature traced from Kyle’s selected screenshot with a matching dash before the existing attribution and version.

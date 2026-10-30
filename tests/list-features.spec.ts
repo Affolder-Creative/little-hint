@@ -683,10 +683,18 @@ test("provider selection is editable without exposing API keys", async ({
 }) => {
   await login(page, "alex@example.test");
   await page.goto("/settings?section=admin");
-  const section = page.locator("details").filter({
-    has: page.locator("summary", { hasText: "Service for shop details" }),
+  const service = page.locator(".integration-group").filter({
+    has: page.locator(":scope > summary", {
+      hasText: "Details from shop links",
+    }),
   });
-  await section.locator("summary").click();
+  await service.locator(":scope > summary").click();
+  const section = service.locator(":scope > details").filter({
+    has: page.locator(":scope > summary", {
+      hasText: "Service for shop details",
+    }),
+  });
+  await section.locator(":scope > summary").click();
   await section
     .getByLabel("Paid service for shop details", { exact: true })
     .selectOption("scrapingfish");

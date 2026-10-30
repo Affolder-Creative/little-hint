@@ -125,6 +125,10 @@ try {
     "playwright",
     "test",
     `tests/${suite}.spec.ts`,
+    ...(suite === "pwa"
+      ? ["tests/update-notice.spec.ts", "tests/update-lifecycle.spec.ts"]
+      : []),
+    ...(suite === "polish" ? ["tests/settings-polish.spec.ts"] : []),
   ]).done;
 } finally {
   await stop();
