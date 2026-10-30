@@ -39,14 +39,6 @@ async function receipt(
   await transact((s) => {
     const batch = s.notificationBatches.find((b) => b.id === id);
     if (!batch) return;
-    // A provider callback may arrive before the submission promise settles.
-    // Submission acceptance must not erase a confirmed delivery failure.
-    if (
-      destination === "sms" &&
-      batch.deliveries.sms?.status === "failed" &&
-      batch.deliveries.sms.attempts >= 5
-    )
-      return;
     const attempts =
       (batch.deliveries[destination]?.attempts ?? 0) +
       (status === "skipped" ? 0 : 1);
@@ -81,7 +73,6 @@ export function retryWishlistBatch(s: State, id: string) {
     (b) => b.id === id && b.status === "failed",
   );
   if (!b) return false;
-  if (b.deliveries.sms?.status === "failed") delete b.smsAttemptId;
   for (const d of Object.values(b.deliveries))
     if (d.status === "failed") {
       d.attempts = 0;
@@ -90,25 +81,6 @@ export function retryWishlistBatch(s: State, id: string) {
   b.status = "pending";
   b.revision++;
   return true;
-}
-
-export function recordWishlistSmsFailure(
-  s: State,
-  id: string,
-  attemptId: string | null,
-) {
-  const b = s.notificationBatches.find((b) => b.id === id);
-  // Ignore late or repeated callbacks from an earlier administrator retry.
-  if (!b || !attemptId || b.smsAttemptId !== attemptId) return;
-  b.deliveries.sms = { status: "failed", attempts: 5 };
-  if (b.status === "sent") {
-    b.status = "failed";
-    for (const n of batchNotices(s, b)) {
-      n.status = "failed";
-      n.revision++;
-    }
-  }
-  b.revision++;
 }
 
 // pg-boss dispatches one exclusive job per batch. Receipts survive worker
@@ -126,7 +98,6 @@ export async function deliverWishlistBatch(id: string) {
     b.destinations = [
       "email",
       "telegram",
-      "sms",
       ...s.pushDevices
         .filter((d) => d.userId === b.userId && d.createdAt < b.dueAt)
         .map((d) => `push:${d.id}`),
@@ -150,7 +121,7 @@ export async function deliverWishlistBatch(id: string) {
     if (!due(b.deliveries[destination])) continue;
     const channel = destination.startsWith("push:")
       ? "push"
-      : (destination as NotificationChannel);
+      : (destination as Exclude<NotificationChannel, "sms">);
     const deviceId = channel === "push" ? destination.slice(5) : undefined;
     let device = deviceId
       ? s.pushDevices.find((d) => d.id === deviceId && d.userId === b!.userId)
@@ -221,11 +192,6 @@ export async function deliverWishlistBatch(id: string) {
           text: `${text} ${link}`,
           disable_web_page_preview: true,
         });
-      if (channel === "sms") {
-        // SMS is reserved for explicitly eligible individual events, not summaries.
-        await receipt(id, destination, "skipped");
-        continue;
-      }
       if (channel === "push" && device)
         await sendPush(
           device,

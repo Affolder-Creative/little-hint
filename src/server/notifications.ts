@@ -1,6 +1,5 @@
 import { sendActivitySms } from "./sms";
 import { wishlistEligible, topicEnabled } from "./activity";
-import { parsePhoneNumberFromString } from "libphonenumber-js/min";
 import nodemailer from "nodemailer";
 import { existsSync } from "node:fs";
 import path from "node:path";
@@ -292,15 +291,6 @@ export async function pollTelegram() {
       u.count = Math.max(u.count, update.update_id + 1);
     });
   }
-}
-export function isUSPhone(phone: string): boolean {
-  const parsed = parsePhoneNumberFromString(phone);
-  return (
-    !!parsed &&
-    parsed.country === "US" &&
-    parsed.isValid() &&
-    parsed.number === phone
-  );
 }
 export async function verifyTwilio(
   url: string,

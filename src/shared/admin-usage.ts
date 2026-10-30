@@ -43,7 +43,6 @@ export interface SmsUsage {
   provider: string;
   requests: number;
   history: number;
-  legacyRequests: number;
   signIn: number;
   verification: number;
   activity: number;

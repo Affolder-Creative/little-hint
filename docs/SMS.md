@@ -70,7 +70,7 @@ STAGING_PAID_DAILY_LIMIT=10
 
 Use a separate key and balance for staging, and a real phone you control. Staging continues to deliver email to its private Mailpit inbox, so retrieve the email confirmation there. Linking a number still requires explicit action and consent. Keep `STAGING_APP_URL` public over HTTPS so signed replies can reach the staging app. A balance above the 20-credit reserve is needed to test activity messages. Set `STAGING_SMS_PROVIDER=none` when finished; history and opt-outs remain.
 
-`compose.staging.yaml` supplies these variables to both the app and worker. Build the branch's image and deploy its digest as described in [the staging guide](STAGING.md). Deploy this branch's Compose definition too, because older definitions do not pass SMS settings.
+`compose.staging.yaml` supplies these variables to both the app and worker. Build the branch's image and deploy its digest as described in [the staging guide](STAGING.md). Use the matching Compose definition so both app and worker receive the SMS settings.
 
 ## Twilio remains available
 
@@ -78,7 +78,7 @@ Set `SMS_PROVIDER=twilio` and configure `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN
 
 Configure the Verify service with the friendly name **Little Hint** and six-digit codes. Twilio controls Verify message formatting; Little Hint limits code acceptance to five minutes. Activity SMS uses the same fixed branded message as Textbelt. Configure your sender's incoming-message webhook to `https://your-origin/api/hooks/twilio/inbound`, using POST, and enable Twilio opt-out handling. The app supplies the signed status callback URL on each activity send. Inbound and status callbacks require a valid Twilio signature. Twilio sender registration and messaging eligibility remain provider requirements.
 
-Changing providers invalidates pending codes bound to the old provider account. Phone ownership, notification choices, consent receipts, opt-outs and usage history survive. There is no automatic provider fallback. Restart app and worker together when changing provider settings. Existing installations with only Twilio credentials must now explicitly set `SMS_PROVIDER=twilio`.
+Changing providers invalidates pending codes bound to the old provider account. Phone ownership, notification choices, consent receipts, opt-outs and usage history survive. There is no automatic provider fallback. Restart app and worker together when changing provider settings.
 
 ## Consent and recovery
 
@@ -86,7 +86,7 @@ Little Hint stores append-only consent receipts in PostgreSQL for verification r
 
 STOP disables activity messages locally when a signed reply reaches the app. Textbelt also processes STOP itself. START clears transport suppression but never restores notification consent: the user must explicitly enable updates in Settings again. Provider suppression can also prevent verification and sign-in codes. Use email or a passkey for recovery. During live acceptance, verify that your provider forwards STOP/START callbacks for your sender. A provider-side block may remain even when the application has not received a reply callback.
 
-Phone changes/removal and SMS sign-in changes require an email confirmation within the current session, valid for ten minutes. A phone belongs to at most one verified account. Existing verified phones are retained but do not automatically gain SMS sign-in. Older notification enrollments require accepting the current notification disclosure before new sends. If an old installation contains duplicate verified phone records, remove the number from the unwanted account before relinking it.
+Phone changes/removal and SMS sign-in changes require an email confirmation within the current session, valid for ten minutes. A phone belongs to at most one verified account.
 
 There is no account-erasure UI. When an operator performs an approved account erasure, include that user's `smsConsents`, `smsChallenges`, and `smsGrants` records in the erasure, remove their preference record, and clear `userId` and `phone` in their `smsAttempts` while retaining nonidentifying counts/statuses for shared budgets. Account deletion from the authentication table alone does not erase application records. Apply your backup-erasure policy too.
 
@@ -99,10 +99,6 @@ A shared PostgreSQL lock serializes provider submissions across app and worker, 
 If quota is unavailable or stale, paid Textbelt sends stop. Last known balance is labeled, never displayed as a fresh zero. Low credit triggers at most one email alert attempt per administrator per day, never another paid text. At a budget limit or the code reserve, activity updates are skipped permanently. Refilling credit does not create a backlog. Other notification channels continue normally. Email/passkey sign-in does not depend on SMS credit.
 
 Textbelt delivery status is polled for accepted submissions for up to seven days. Unresolved sends retain their last known status. Historical messages keep their original provider; switching does not resubmit them.
-
-## Deployment and rollback
-
-This feature adds record types to `app_record`; no SQL schema change is needed. Back up the database before upgrading. Older releases do not understand these record types and may discard them on a domain write. For rollback, stop app and worker and restore the pre-upgrade backup with the matching older image. Do not run an older worker against the upgraded database. Staging uses a separate database and requires the same care when switching images after testing.
 
 ## Terms and live acceptance
 

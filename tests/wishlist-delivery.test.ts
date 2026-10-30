@@ -6,7 +6,6 @@ const mock = vi.hoisted(() => ({
   state: null as State | null,
   email: vi.fn(),
   telegram: vi.fn(),
-  sms: vi.fn(),
   push: vi.fn(),
   active: vi.fn(),
   configured: true,
@@ -23,13 +22,6 @@ vi.mock("../src/server/db", () => ({
 vi.mock("../src/server/notifications", () => ({
   sendEmail: (...a: any[]) => mock.email(...a),
   telegramCall: (...a: any[]) => mock.telegram(...a),
-  twilioCall: (...a: any[]) => mock.sms(...a),
-}));
-vi.mock("../src/server/settings", () => ({
-  config: async () => ({
-    TWILIO_ACCOUNT_SID: "test",
-    TWILIO_FROM: "+12025550100",
-  }),
 }));
 vi.mock("../src/server/push", () => ({
   sendPush: (...a: any[]) => mock.push(...a),
@@ -50,7 +42,6 @@ import {
   deliverWishlistBatch,
   pendingWishlistBatches,
   retryWishlistBatch,
-  recordWishlistSmsFailure,
 } from "../src/server/wishlist-delivery";
 import { PushResponseError } from "../src/server/push";
 
@@ -75,7 +66,7 @@ function fixture() {
 beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date("2026-10-27T12:00:00Z"));
-  for (const fn of [mock.email, mock.telegram, mock.sms, mock.push])
+  for (const fn of [mock.email, mock.telegram, mock.push])
     fn.mockReset().mockResolvedValue({});
   mock.active.mockReset().mockResolvedValue(true);
   mock.configured = true;
@@ -123,7 +114,6 @@ describe("cross-channel wish-list summary delivery", () => {
     await deliverWishlistBatch(f.batch.id);
     for (const fn of [mock.email, mock.telegram, mock.push])
       expect(fn).toHaveBeenCalledOnce();
-    expect(mock.sms).not.toHaveBeenCalled();
     const text =
       'John added 3 items to "Birthday", including 1 marked Most wanted.';
     expect(mock.email.mock.calls[0][1]).toMatchObject({
@@ -136,12 +126,12 @@ describe("cross-channel wish-list summary delivery", () => {
       batchId: f.batch.id,
       unreadCount: 3,
     });
-    expect(f.batch.deliveries.sms.status).toBe("skipped");
+    expect(f.batch.destinations).not.toContain("sms");
+    expect(f.batch.deliveries).not.toHaveProperty("sms");
     expect(
       JSON.stringify([
         mock.email.mock.calls,
         mock.telegram.mock.calls,
-        mock.sms.mock.calls,
         mock.push.mock.calls,
       ]),
     ).not.toContain("Private item");
@@ -159,7 +149,6 @@ describe("cross-channel wish-list summary delivery", () => {
     await deliverWishlistBatch(f.batch.id);
     expect(mock.email.mock.calls[0][1].wishlistPreview).toBeUndefined();
     expect(mock.push.mock.calls[0][1].wishlistPreview).toBeUndefined();
-    expect(mock.sms).not.toHaveBeenCalled();
     expect(mock.telegram.mock.calls[0][1].text).toContain("John");
   });
   it("filters read, archived and deleted additions and freezes event-time priority", async () => {
@@ -212,7 +201,7 @@ describe("cross-channel wish-list summary delivery", () => {
     }
     closeWindow();
     await deliverWishlistBatch(f.batch.id);
-    for (const fn of [mock.email, mock.telegram, mock.sms, mock.push])
+    for (const fn of [mock.email, mock.telegram, mock.push])
       expect(fn).not.toHaveBeenCalled();
     expect(f.batch.status).toBe("sent");
   });
@@ -234,7 +223,7 @@ describe("cross-channel wish-list summary delivery", () => {
     closeWindow();
     await deliverWishlistBatch(f.batch.id);
     expect(mock.push).toHaveBeenCalledOnce();
-    for (const fn of [mock.email, mock.telegram, mock.sms])
+    for (const fn of [mock.email, mock.telegram])
       expect(fn).not.toHaveBeenCalled();
   });
   it("does not backfill channels or new devices, and filters device-specific summary counts", async () => {
@@ -291,22 +280,6 @@ describe("cross-channel wish-list summary delivery", () => {
     await deliverWishlistBatch(f.batch.id);
     expect(mock.email).toHaveBeenCalledOnce();
     expect(mock.push).toHaveBeenCalledOnce();
-    expect(mock.sms).not.toHaveBeenCalled();
-    expect(f.batch.status).toBe("sent");
-  });
-  it("preserves legacy callbacks but never resends a paid SMS summary on retry", async () => {
-    const f = fixture();
-    f.batch.smsAttemptId = "legacy-attempt";
-    f.batch.status = "sent";
-    recordWishlistSmsFailure(f.s, f.batch.id, "different-attempt");
-    expect(f.batch.status).toBe("sent");
-    recordWishlistSmsFailure(f.s, f.batch.id, "legacy-attempt");
-    expect(f.batch.status).toBe("failed");
-    expect(retryWishlistBatch(f.s, f.batch.id)).toBe(true);
-    closeWindow();
-    await deliverWishlistBatch(f.batch.id);
-    expect(mock.sms).not.toHaveBeenCalled();
-    expect(f.batch.deliveries.sms.status).toBe("skipped");
     expect(f.batch.status).toBe("sent");
   });
   it("removes expired devices and suppresses revoked sessions", async () => {

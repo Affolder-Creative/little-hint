@@ -173,9 +173,7 @@ export function budgetReason(
   if (!policy.available) return "provider-disabled";
   if (
     attempts.filter((a) => a.createdAt.slice(0, 10) === date.slice(0, 10))
-      .length +
-      (s.usage.find((u) => u.key === `${date.slice(0, 10)}:sms`)?.count ?? 0) >=
-    Number(c.PAID_DAILY_LIMIT)
+      .length >= Number(c.PAID_DAILY_LIMIT)
   )
     return "daily-paid-limit";
   if (purpose === "activity") {
@@ -196,7 +194,7 @@ export function budgetReason(
       Math.min(
         policy.dailyLimit,
         s.preferences.find((p) => p.userId === userId)
-          ?.smsConsentedDailyLimit ?? 2,
+          ?.smsConsentedDailyLimit ?? 0,
       )
     )
       return "recipient-daily-limit";

@@ -144,7 +144,6 @@ export function adminUsage(
     visible:
       sms.enabled ||
       sms.history > 0 ||
-      sms.legacyRequests > 0 ||
       [suggestions, productDetails, scraping].some(
         (g) => g.enabled || g.requests > 0,
       ),

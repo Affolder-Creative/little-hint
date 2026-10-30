@@ -23,9 +23,6 @@ export function smsUsage(s: State, c: SmsConfig, now = new Date()): SmsUsage {
     provider: policy.provider,
     requests: submissions.length,
     history: s.smsAttempts.length,
-    legacyRequests: s.usage
-      .filter((u) => u.key.startsWith(month) && u.key.endsWith(":sms"))
-      .reduce((n, u) => n + u.count, 0),
     signIn: submissions.filter((a) => a.purpose === "login").length,
     verification: submissions.filter((a) => a.purpose === "verification")
       .length,

@@ -29,7 +29,7 @@ vi.mock("nodemailer", () => ({
     createTransport: () => ({ sendMail: mock.sendMail, close: () => {} }),
   },
 }));
-import { deliverNotice, isUSPhone } from "../src/server/notifications";
+import { deliverNotice } from "../src/server/notifications";
 function fixture() {
   const s = emptyState();
   mock.state = s;
@@ -173,11 +173,5 @@ describe("notification privacy and recovery", () => {
     expect(mail.attachments[0].cid).toBe("little-hint-logo");
     await deliverNotice(f.notice.id);
     expect(mock.sendMail).toHaveBeenCalledTimes(2);
-  });
-  it("accepts US numbers and rejects other NANP countries", () => {
-    expect(isUSPhone("+12025550123")).toBe(true);
-    expect(isUSPhone("+14165550123")).toBe(false);
-    expect(isUSPhone("+442079460123")).toBe(false);
-    expect(isUSPhone("2025550123")).toBe(false);
   });
 });

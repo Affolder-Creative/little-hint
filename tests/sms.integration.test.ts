@@ -260,6 +260,48 @@ describe.skipIf(!url)("SMS HTTP and PostgreSQL integration", () => {
       smsOptOut: false,
     });
   });
+  it("records signed Twilio delivery callbacks against current SMS attempts", async () => {
+    const { stamp } = await import("../src/server/domain");
+    vi.stubEnv("TWILIO_AUTH_TOKEN", "twilio-test-secret");
+    const reference = "current-notice";
+    await storage.transact((s) =>
+      s.smsAttempts.push({
+        ...stamp(),
+        userId: "member",
+        phone,
+        provider: "twilio",
+        account: "test",
+        purpose: "activity",
+        reference,
+        providerId: "SM-test",
+        status: "accepted",
+        segments: 1,
+      }),
+    );
+    const path = `/api/hooks/twilio/status?sms=${reference}`;
+    const body = { MessageSid: "SM-test", MessageStatus: "delivered" };
+    const signature = createHmac("sha1", "twilio-test-secret")
+      .update(
+        origin +
+          path +
+          Object.entries(body)
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([k, v]) => k + v)
+            .join(""),
+      )
+      .digest("base64");
+    const response = await app.inject({
+      method: "POST",
+      url: path,
+      headers: {
+        "content-type": "application/x-www-form-urlencoded",
+        "x-twilio-signature": signature,
+      },
+      payload: new URLSearchParams(body).toString(),
+    });
+    expect(response.statusCode).toBe(200);
+    expect((await storage.readState()).smsAttempts[0].status).toBe("delivered");
+  });
   it("uses the PostgreSQL advisory lock to prevent duplicate paid submissions", async () => {
     const { stamp } = await import("../src/server/domain"),
       { smsConsentVersion } = await import("../src/shared/sms"),
@@ -268,6 +310,7 @@ describe.skipIf(!url)("SMS HTTP and PostgreSQL integration", () => {
       Object.assign(s.preferences[0], {
         sms: true,
         smsConsentVersion,
+        smsConsentedDailyLimit: 2,
         channelEvents: { sms: ["access"], email: [], telegram: [] },
       });
       const n = {

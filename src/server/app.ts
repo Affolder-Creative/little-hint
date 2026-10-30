@@ -11,11 +11,7 @@ import {
   webhookSource,
 } from "./sms";
 import { serviceStatuses } from "./service-status";
-import {
-  batchJob,
-  retryWishlistBatch,
-  recordWishlistSmsFailure,
-} from "./wishlist-delivery";
+import { batchJob, retryWishlistBatch } from "./wishlist-delivery";
 import { registerGiftDiscovery } from "./gift-discovery-routes";
 import { adminUsage } from "./usage";
 import { discoveryJob } from "./gift-discovery";
@@ -760,22 +756,6 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
           attempt.status !== "failed"
         )
           attempt.status = "delivered";
-      }
-      const batchId = new URL(req.url, appUrl).searchParams.get("batch");
-      if (batchId && ["failed", "undelivered"].includes(body.MessageStatus)) {
-        recordWishlistSmsFailure(
-          s,
-          batchId,
-          new URL(req.url, appUrl).searchParams.get("attempt"),
-        );
-      }
-      const id = new URL(req.url, appUrl).searchParams.get("notice");
-      if (id && ["failed", "undelivered"].includes(body.MessageStatus)) {
-        const n = s.notices.find((n) => n.id === id);
-        if (n) {
-          n.status = "failed";
-          n.error = "SMS could not be delivered.";
-        }
       }
     });
     return reply.type("text/xml").send("<Response/>");

@@ -5,6 +5,7 @@ import { stamp, preferences } from "../src/server/domain";
 import { smsConsentVersion, smsActivityMessage } from "../src/shared/sms";
 import {
   smsInfo,
+  normalizePhone,
   providerSend,
   providerVerify,
   verifyTextbelt,
@@ -90,6 +91,7 @@ function fixture() {
     sms: true,
     smsLogin: true,
     smsConsentVersion,
+    smsConsentedDailyLimit: 2,
     channelEvents: {
       email: ["access"],
       telegram: ["access"],
@@ -581,4 +583,11 @@ it("keeps the frequency a user consented to when the administrator raises the da
   expect(m.s!.smsConsents.at(-1)?.text).toContain(
     "Up to 5 activity texts per day",
   );
+});
+
+it("normalizes US phone input and rejects other NANP countries", () => {
+  expect(normalizePhone("+12025550123")).toBe("+12025550123");
+  expect(normalizePhone("202-555-0123")).toBe("+12025550123");
+  expect(normalizePhone("+14165550123")).toBeUndefined();
+  expect(normalizePhone("+442079460123")).toBeUndefined();
 });
