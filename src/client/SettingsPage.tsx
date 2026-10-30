@@ -1,7 +1,7 @@
 import { InviteDialog, InvitationShare } from "./InvitationShare";
 import { Invitations } from "./Invitations";
 import { FollowingSettings } from "./FollowSettings";
-import { GiftDiscoveryAdmin } from "./GiftDiscoveryAdmin";
+import type { AdminServiceStatus } from "../shared/admin-services";
 import { AdminUsage } from "./AdminUsage";
 import { KyleSignature } from "./KyleSignature";
 import { ProfileEditor, GiftPreferencesShortcut } from "./ProfileEditor";
@@ -12,7 +12,6 @@ import {
   PushSetup,
   clearPushBinding,
 } from "./Notifications";
-import { settingLabels, settingSources } from "./copy";
 import { SettingsNavigation, settingsSections } from "./SettingsNavigation";
 import { Confirm } from "./Confirm";
 import { familyGroupLabel } from "../shared/households";
@@ -36,7 +35,6 @@ import { Avatar, Form, Field, Header, Logo } from "./components";
 import { GroupForm, GiftForm, value, getDrafts, draftKey } from "./forms";
 import { Install } from "./pwa";
 import { GroupEventSettings } from "./GroupEvents";
-import { scrapingProviders } from "../shared/scraping-providers";
 import { Action } from "./Action";
 export default function SettingsPage({
   theme,
@@ -1217,14 +1215,6 @@ function Security() {
     </section>
   );
 }
-function integrationGroup(key: string) {
-  if (key.startsWith("SMTP_")) return "Email delivery";
-  if (key.startsWith("TELEGRAM_")) return "Telegram";
-  if (key.startsWith("TWILIO_")) return "Text messages";
-  if (key.startsWith("OPENAI_")) return "AI assistance";
-  if (key.includes("SCRAP")) return "Details from shop links";
-  return "Daily limits";
-}
 function Admin() {
   const { toast } = useApp();
   const client = useQueryClient();
@@ -1238,7 +1228,6 @@ function Admin() {
           source: string;
           default: string | null;
           value?: string;
-          effectiveProvider?: string | null;
         }>
       >("admin/settings"),
   });
@@ -1257,6 +1246,10 @@ function Admin() {
         }>;
       }>("admin/jobs"),
   });
+  const services = useQuery({
+    queryKey: ["admin-services"],
+    queryFn: () => api<AdminServiceStatus[]>("admin/services"),
+  });
   const groupPolicy = settings.data?.find(
     (s) => s.key === "FAMILY_GROUP_CREATION",
   );
@@ -1273,7 +1266,7 @@ function Admin() {
         <h3>App settings</h3>
         {groupPolicy && (
           <section
-            className="admin-group-policy"
+            className="admin-preference"
             aria-label="Family-group creation"
           >
             <h4>Family-group creation</h4>
@@ -1286,7 +1279,7 @@ function Admin() {
                 {groupPolicy.value === "admins"
                   ? "Administrators only"
                   : "Everyone signed in"}
-                . Set on the server with FAMILY_GROUP_CREATION.
+                . Managed in hosting configuration.
               </p>
             ) : (
               <Form
@@ -1311,210 +1304,89 @@ function Admin() {
             )}
           </section>
         )}
-        <h4>Details from shop links</h4>
-        {photos && (
-          <Form
-            key={`${photos.source}-${photos.value}`}
-            submit="Save photo preference"
-            disabled={photos.source === "environment"}
-            onSubmit={async (f) => {
-              await api("admin/settings", {
-                key: photos.key,
-                value: String(f.has("automaticPhotos")),
-              });
-              await client.invalidateQueries({ queryKey: ["admin-settings"] });
-              toast("Photo preference saved.");
-            }}
-          >
-            <label className="check">
-              <input
-                type="checkbox"
-                name="automaticPhotos"
-                defaultChecked={photos.value === "true"}
-                disabled={photos.source === "environment"}
-                aria-describedby="automatic-photos-help"
-              />
-              Add photos from shop links automatically
-            </label>
-            <p id="automatic-photos-help" className="muted">
-              Save a photo when looking up a shop link. Turn this off to save
-              storage space. You can still upload photos yourself. Existing
-              photos are kept, and lookups already running may still add a
-              photo.
-            </p>
-            <p className="muted">
-              {photos.source === "environment"
-                ? "Set on the server with AUTO_IMPORT_PRODUCT_PHOTOS. Change it there to update this choice."
-                : photos.source === "default"
-                  ? "Off by default. This choice applies to everyone using this Little Hint app."
-                  : "Saved. This choice applies to everyone using this Little Hint app."}
-            </p>
-          </Form>
+        <section
+          className="admin-preference admin-photo-preference"
+          aria-label="Details from shop links"
+        >
+          <h4>Details from shop links</h4>
+          {photos && (
+            <Form
+              key={`${photos.source}-${photos.value}`}
+              submit="Save photo preference"
+              disabled={photos.source === "environment"}
+              onSubmit={async (f) => {
+                await api("admin/settings", {
+                  key: photos.key,
+                  value: String(f.has("automaticPhotos")),
+                });
+                await client.invalidateQueries({
+                  queryKey: ["admin-settings"],
+                });
+                toast("Photo preference saved.");
+              }}
+            >
+              <label className="check">
+                <input
+                  type="checkbox"
+                  name="automaticPhotos"
+                  defaultChecked={photos.value === "true"}
+                  disabled={photos.source === "environment"}
+                  aria-describedby="automatic-photos-help"
+                />
+                Add photos from shop links automatically
+              </label>
+              <p id="automatic-photos-help" className="muted">
+                Save a photo when looking up a shop link. Turn this off to save
+                storage space. You can still upload photos yourself. Existing
+                photos are kept, and lookups already running may still add a
+                photo.
+              </p>
+              <p className="muted">
+                {photos.source === "environment"
+                  ? "Managed in hosting configuration. Change it there to update this choice."
+                  : photos.source === "default"
+                    ? "Off by default. This choice applies to everyone using this Little Hint app."
+                    : "Saved. This choice applies to everyone using this Little Hint app."}
+              </p>
+            </Form>
+          )}
+        </section>
+      </section>
+      <AdminUsage />
+      <section className="admin-panel" aria-label="Service status">
+        <h3>Service status</h3>
+        <p>
+          Services are managed in hosting configuration. Configured means setup
+          is present; connections have not been tested here.
+        </p>
+        {services.isPending && <p role="status">Loading service status…</p>}
+        {services.error ? (
+          <div role="alert">
+            <p>We could not load service status.</p>
+            <button
+              className="button secondary"
+              onClick={() => services.refetch()}
+            >
+              Retry service status
+            </button>
+          </div>
+        ) : (
+          services.data?.map((service) => (
+            <div className="setting-row admin-service-row" key={service.id}>
+              <div>
+                <strong>{service.label}</strong>
+                {service.detail && <p>{service.detail}</p>}
+              </div>
+              <span>{service.status}</span>
+            </div>
+          ))
         )}
       </section>
-      <GiftDiscoveryAdmin settings={settings.data ?? []} />
-      <AdminUsage />
-      <section className="admin-panel" aria-label="Connected services">
-        <h3>Connected services</h3>
+      <section className="admin-panel" aria-label="Background jobs">
+        <h3>Background jobs</h3>
         <p>
-          Connect services for email, text messages, and shop details. Secret
-          keys are stored encrypted. Values set on the server must be changed
-          there. Saving a blank value removes the value saved here.
-        </p>
-        <div className="integration-settings">
-          {[
-            "Email delivery",
-            "Telegram",
-            "Text messages",
-            "Details from shop links",
-            "AI assistance",
-            "Daily limits",
-          ].map((group) => {
-            const entries =
-              settings.data?.filter(
-                (s) =>
-                  s.key !== "AUTO_IMPORT_PRODUCT_PHOTOS" &&
-                  s.key !== "FAMILY_GROUP_CREATION" &&
-                  !s.key.startsWith("GIFT_DISCOVERY_") &&
-                  integrationGroup(s.key) === group,
-              ) ?? [];
-            return (
-              entries.length > 0 && (
-                <details
-                  className="integration-group"
-                  key={group}
-                  aria-label={group}
-                >
-                  <summary>
-                    <strong>{group}</strong>
-                    <small>
-                      {entries.filter((s) => s.configured).length} of{" "}
-                      {entries.length} settings configured
-                    </small>
-                  </summary>
-                  {entries.map((s) =>
-                    s.source === "environment" ? (
-                      <div className="integration-managed" key={s.key}>
-                        <strong>
-                          {s.key === "SCRAPING_PROVIDER"
-                            ? "Service for shop details"
-                            : (settingLabels[s.key] ?? s.key)}
-                        </strong>
-                        <small>
-                          {s.configured ? "Configured" : "Not configured"} ·
-                          Managed on server
-                        </small>
-                        <small>
-                          Setup key: <code>{s.key}</code>
-                        </small>
-                      </div>
-                    ) : (
-                      <details key={s.key}>
-                        <summary>
-                          <span>
-                            {s.key === "SCRAPING_PROVIDER"
-                              ? "Service for shop details"
-                              : scrapingProviders.find((p) => p.key === s.key)
-                                    ?.name
-                                ? `${scrapingProviders.find((p) => p.key === s.key)!.name} API key`
-                                : (settingLabels[s.key] ?? "Service setting")}
-                          </span>
-                          <small>
-                            {s.configured ? "Set up" : "Not set up"} ·{" "}
-                            {settingSources[s.source] ?? "Setting unavailable"}
-                          </small>
-                        </summary>
-                        <p className="muted">
-                          Setup key: <code>{s.key}</code>
-                        </p>
-                        <Form
-                          submit="Save setting"
-                          disabled={s.source === "environment"}
-                          onSubmit={async (f) => {
-                            await api("admin/settings", {
-                              key: s.key,
-                              value: value(f, "value"),
-                            });
-                            await client.invalidateQueries({
-                              queryKey: ["admin-settings"],
-                            });
-                            toast("Setting saved.");
-                          }}
-                        >
-                          {s.key === "SCRAPING_PROVIDER" ? (
-                            <>
-                              <Field
-                                label="Paid service for shop details"
-                                hint="Little Hint tries the shop directly for free, then one paid service if needed. Automatic selection prefers Scraping Fish."
-                              >
-                                <select
-                                  name="value"
-                                  defaultValue={s.value || "auto"}
-                                  disabled={s.source === "environment"}
-                                >
-                                  <option value="auto">
-                                    Automatic selection
-                                  </option>
-                                  <option value="none">
-                                    Shop website only
-                                  </option>
-                                  {scrapingProviders.map((p) => (
-                                    <option key={p.id} value={p.id}>
-                                      {p.name}
-                                    </option>
-                                  ))}
-                                </select>
-                              </Field>
-                              <p className="muted">
-                                Current paid service:{" "}
-                                {scrapingProviders.find(
-                                  (p) => p.id === s.effectiveProvider,
-                                )?.name ?? "None set up"}
-                                . Requests count toward the daily limit. If this
-                                service fails, Little Hint does not try another
-                                paid service.
-                              </p>
-                            </>
-                          ) : (
-                            <Field
-                              label="New value"
-                              hint={
-                                s.default ? `Default: ${s.default}` : undefined
-                              }
-                            >
-                              <input
-                                name="value"
-                                type={
-                                  /KEY|TOKEN|PASS/.test(s.key)
-                                    ? "password"
-                                    : "text"
-                                }
-                                autoComplete="off"
-                                disabled={s.source === "environment"}
-                                placeholder={
-                                  s.source === "environment"
-                                    ? "Change this value on the server"
-                                    : "Enter a replacement value"
-                                }
-                              />
-                            </Field>
-                          )}
-                        </Form>
-                      </details>
-                    ),
-                  )}
-                </details>
-              )
-            );
-          })}
-        </div>
-      </section>
-      <section className="admin-panel" aria-label="Updates & backups">
-        <h3>Updates & backups</h3>
-        <p>
-          Backups are managed outside Little Hint. Check your hosting or backup
-          system for the latest database and uploaded-file backups, and test a
-          restore. Backup status is not reported here.
+          Backups are managed by your hosting provider. Backup status is
+          unavailable here.
         </p>
         {jobs.isPending && (
           <p role="status">Checking updates and shop lookups…</p>
@@ -1551,10 +1423,20 @@ function Admin() {
             </p>
           </>
         )}
+        {jobs.data?.imports
+          .filter((j) => j.status === "failed")
+          .map((j) => (
+            <div className="setting-row admin-job-row" key={j.id}>
+              <span>
+                {j.error ?? "Shop lookup failed."} You can enter the gift
+                details manually.
+              </span>
+            </div>
+          ))}
         {jobs.data?.notifications
           .filter((j) => j.status === "failed")
           .map((j) => (
-            <div className="setting-row" key={j.id}>
+            <div className="setting-row admin-job-row" key={j.id}>
               <span>
                 {j.error ?? "Delivery failed"} · {j.attempts} attempts
               </span>

@@ -1,7 +1,6 @@
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
 import { readSettings, transact } from "./db";
 import type { Setting, State, Actor } from "../shared/model";
-import { pruneDiscovery } from "./gift-discovery";
 import { discoveryModes, type DiscoveryConfig } from "../shared/gift-discovery";
 import { stamp, fail, isAdmin } from "./domain";
 import {
@@ -10,10 +9,7 @@ import {
   productPhotoOverride,
   familyGroupCreationOverride,
 } from "./deployment";
-import {
-  scrapingSelections,
-  selectedScrapingProvider,
-} from "../shared/scraping-providers";
+import { scrapingSelections } from "../shared/scraping-providers";
 export const settingKeys = [
   "GIFT_DISCOVERY_MODE",
   "GIFT_DISCOVERY_USER_WEEKLY_LIMIT",
@@ -103,23 +99,16 @@ export function decrypt(value: string) {
 // so a change made by the API is visible to the worker without TTL staleness.
 let decoded = new Map<string, { encrypted: string; value: string }>();
 let decodingKey: string | undefined;
-function settingsValues(rows: Setting[], onlyApplication = false) {
+function settingsValues(rows: Setting[]) {
   if (decodingKey !== process.env.SETTINGS_ENCRYPTION_KEY) {
     decoded.clear();
     decodingKey = process.env.SETTINGS_ENCRYPTION_KEY;
   }
   const next = new Map<string, { encrypted: string; value: string }>();
   for (const row of rows) {
-    if (
-      !settingKeys.includes(row.key as SettingKey) &&
-      !applicationSettingKeys.includes(row.key)
-    )
-      continue;
+    if (!applicationSettingKeys.includes(row.key)) continue;
     const prior = decoded.get(row.key);
-    if (
-      (onlyApplication && !applicationSettingKeys.includes(row.key)) ||
-      process.env[row.key]
-    ) {
+    if (process.env[row.key]) {
       if (prior?.encrypted === row.encrypted) next.set(row.key, prior);
       continue;
     }
@@ -136,27 +125,32 @@ function settingsValues(rows: Setting[], onlyApplication = false) {
   decoded = next;
   return new Map([...next].map(([k, v]) => [k, v.value]));
 }
-function effectiveConfig(
-  values: Map<string, string>,
-): Record<SettingKey, string> {
+export function effectiveConfig(): Record<SettingKey, string> {
   if (syntheticEnvironment()) return stagingSettings();
   const result = Object.fromEntries(
-    settingKeys.map((k) => [
-      k,
-      process.env[k] || values.get(k) || defaults[k] || "",
-    ]),
+    settingKeys.map((k) => [k, process.env[k] || defaults[k] || ""]),
   ) as Record<SettingKey, string>;
   discoveryConfiguration(result);
+  if (!scrapingSelections.includes(result.SCRAPING_PROVIDER))
+    throw new Error("Invalid SCRAPING_PROVIDER.");
+  if (!/^\d{1,6}$/.test(result.PAID_DAILY_LIMIT))
+    throw new Error("Invalid PAID_DAILY_LIMIT.");
+  if (
+    !/^\d+$/.test(result.SMTP_PORT) ||
+    Number(result.SMTP_PORT) < 1 ||
+    Number(result.SMTP_PORT) > 65535
+  )
+    throw new Error("Invalid SMTP_PORT.");
   return result;
 }
 export async function config(): Promise<Record<SettingKey, string>> {
   if (syntheticEnvironment()) return stagingSettings();
-  return effectiveConfig(settingsValues(await readSettings()));
+  return effectiveConfig();
 }
-// Mutation guards read settings under the same database lock as the mutation.
-export function discoveryConfigForState(s: State) {
+// Keep the state-based interface used by mutation guards; configuration is ENV-only.
+export function discoveryConfigForState(_s: State) {
   if (syntheticEnvironment()) return discoveryConfiguration(stagingSettings());
-  return discoveryConfiguration(effectiveConfig(settingsValues(s.settings)));
+  return discoveryConfiguration(effectiveConfig());
 }
 export const productPhotoSettingKey = "AUTO_IMPORT_PRODUCT_PHOTOS";
 export const familyGroupCreationKey = "FAMILY_GROUP_CREATION";
@@ -180,7 +174,7 @@ function groupCreationSetting(values: Map<string, string>) {
 export function canCreateGroups(s: State, actor: Actor) {
   return (
     isAdmin(s, actor) ||
-    groupCreationSetting(settingsValues(s.settings, true)).value === "everyone"
+    groupCreationSetting(settingsValues(s.settings)).value === "everyone"
   );
 }
 function photoSetting(values: Map<string, string>) {
@@ -199,82 +193,31 @@ function photoSetting(values: Map<string, string>) {
 export async function productPhotoSetting() {
   const override = productPhotoOverride();
   if (override !== undefined) return photoSetting(new Map());
-  return photoSetting(settingsValues(await readSettings(), true));
+  return photoSetting(settingsValues(await readSettings()));
 }
 export async function automaticallyImportProductPhotos(): Promise<boolean> {
   return (await productPhotoSetting()).value === "true";
 }
 export async function settingsSummary() {
-  const rows = await readSettings();
-  // Staging must not decrypt dormant production integration credentials.
-  const values = settingsValues(
-    syntheticEnvironment()
-      ? rows.filter((s) => applicationSettingKeys.includes(s.key))
-      : rows,
-  );
-  const cfg = effectiveConfig(values);
-  const staging = syntheticEnvironment();
-  return [
-    photoSetting(values),
-    groupCreationSetting(values),
-    ...settingKeys.map((k) => ({
-      key: k,
-      configured: staging
-        ? !!cfg[k]
-        : !!process.env[k] || rows.some((s) => s.key === k),
-      source:
-        staging || process.env[k]
-          ? "environment"
-          : rows.some((s) => s.key === k)
-            ? "settings"
-            : "default",
-      default: staging ? cfg[k] || null : (defaults[k] ?? null),
-      ...(k.startsWith("GIFT_DISCOVERY_") ? { value: cfg[k] } : {}),
-      ...(k === "SCRAPING_PROVIDER"
-        ? {
-            value: cfg[k],
-            effectiveProvider: selectedScrapingProvider(cfg) ?? null,
-          }
-        : {}),
-    })),
-  ];
+  const values = settingsValues(await readSettings());
+  return [photoSetting(values), groupCreationSetting(values)];
 }
 function validateSetting(k: string, value: string) {
-  const photoPreference = k === productPhotoSettingKey;
-  const applicationPreference = applicationSettingKeys.includes(k);
+  if (!applicationSettingKeys.includes(k)) {
+    if (settingKeys.includes(k as SettingKey))
+      fail(409, "This value is set on the server. Change it there instead.");
+    fail(400, "Unknown setting.");
+  }
   if (k === familyGroupCreationKey && !["everyone", "admins"].includes(value))
     fail(400, "Choose everyone or administrators for family-group creation.");
-  if (photoPreference && value !== "true" && value !== "false")
+  if (k === productPhotoSettingKey && value !== "true" && value !== "false")
     fail(400, "Choose true or false for automatic product photos.");
-  if (!applicationPreference && syntheticEnvironment())
-    fail(
-      409,
-      "This test app uses a private email inbox. External services are turned off.",
-    );
-  if (!applicationPreference && !settingKeys.includes(k as SettingKey))
-    fail(400, "Unknown setting.");
-  if (photoPreference ? productPhotoOverride() !== undefined : process.env[k])
+  const locked =
+    k === productPhotoSettingKey
+      ? productPhotoOverride() !== undefined
+      : familyGroupCreationOverride() !== undefined;
+  if (locked)
     fail(409, "This value is set on the server. Change it there instead.");
-  if (k === "SCRAPING_PROVIDER" && value && !scrapingSelections.includes(value))
-    fail(400, "Choose an available service for shop details.");
-  if (k === "PAID_DAILY_LIMIT" && !/^\d{1,6}$/.test(value))
-    fail(400, "Use a daily request limit from 0 to 999999.");
-  if (
-    value &&
-    k === "GIFT_DISCOVERY_MODE" &&
-    !discoveryModes.includes(value as DiscoveryConfig["mode"])
-  )
-    fail(400, "Choose Off, For others, For own lists, or Both.");
-  if (value && /^GIFT_DISCOVERY_.*LIMIT$/.test(k) && !/^\d{1,6}$/.test(value))
-    fail(400, "Use a search limit from 0 to 999999.");
-  if (
-    value &&
-    k === "GIFT_DISCOVERY_MODEL" &&
-    !/^[a-zA-Z0-9._-]{1,100}$/.test(value)
-  )
-    fail(400, "Enter a valid model identifier.");
-  if (k === "SMTP_PORT" && !/^\d{1,5}$/.test(value))
-    fail(400, "Use a valid SMTP port.");
 }
 function applySetting(s: State, k: string, value: string) {
   const existing = s.settings.find((x) => x.key === k);
@@ -290,31 +233,6 @@ export async function saveSetting(k: string, value: string) {
   await transact((s) => {
     validateSetting(k, value);
     applySetting(s, k, value);
-    if (k === "GIFT_DISCOVERY_MODE" || k === "OPENAI_API_KEY")
-      pruneDiscovery(s, discoveryConfigForState(s));
-  });
-}
-export async function saveDiscoverySettings(
-  entries: Array<{ key: string; value: string }>,
-) {
-  if (
-    !entries.length ||
-    entries.length > 4 ||
-    new Set(entries.map((e) => e.key)).size !== entries.length
-  )
-    fail(400, "Choose the gift suggestion settings to save.");
-  for (const { key, value } of entries) {
-    if (
-      !settingKeys.includes(key as SettingKey) ||
-      !key.startsWith("GIFT_DISCOVERY_")
-    )
-      fail(400, "Only gift suggestion settings can be saved together.");
-    validateSetting(key, value);
-  }
-  await transact((s) => {
-    for (const { key, value } of entries) validateSetting(key, value);
-    for (const { key, value } of entries) applySetting(s, key, value);
-    pruneDiscovery(s, discoveryConfigForState(s));
   });
 }
 export async function spend(service: string) {

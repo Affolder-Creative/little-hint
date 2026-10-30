@@ -4,7 +4,7 @@ import {
 } from "./wishlist-delivery";
 import { processDiscovery } from "./gift-discovery-worker";
 import { pruneDiscovery } from "./gift-discovery";
-import { discoveryConfigForState } from "./settings";
+import { discoveryConfigForState, effectiveConfig } from "./settings";
 import { removeDeletedMedia } from "./media";
 import {
   deliverPushBatch,
@@ -21,6 +21,7 @@ import { pruneImportCache } from "./import-cache";
 import { deliverNotice, pollTelegram } from "./notifications";
 import { validateDeployment } from "./deployment";
 validateDeployment();
+effectiveConfig();
 const boss = new PgBoss(process.env.DATABASE_URL!);
 boss.on("error", () => console.error("Background queue error."));
 await boss.start();

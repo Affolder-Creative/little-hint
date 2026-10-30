@@ -96,7 +96,7 @@ Any compatible SMTP provider can send application email. For Forward Email, use 
 
 The app can run at `https://littlehint.example.com` while sending from `littlehint@example.com`. An existing verified sending domain can host the alias; adding the app's subdomain as a separate Forward Email domain is unnecessary. Optionally forward incoming mail for that alias to an inbox you monitor so replies reach you. DNS for the web app does not by itself configure email delivery. Keep provider credentials out of Git, chat, screenshots, and logs.
 
-The initial SMTP settings must be available before email-code login. Later an administrator can manage integrations in Settings. Nonempty environment values override values entered in the UI; remove an environment override to use the UI value. UI secrets are encrypted using `SETTINGS_ENCRYPTION_KEY` and are never returned to the browser. Keep that key through restores.
+SMTP settings must be available in the hosting environment before email-code login. All integration settings are ENV-only. The two editable app preferences remain encrypted using `SETTINGS_ENCRYPTION_KEY`; retain that key through restores.
 
 Telegram requires a bot token and name. Account linking uses an expiring single-use code and explicit user action. Twilio requires account credentials, a sending number, and a Verify service. Configure signed status/inbound callbacks according to the routes in `src/server/app.ts`; verify a US number before enabling SMS preferences. OpenAI and paid product imports are optional. Paid integrations remain inactive without credentials. `PAID_DAILY_LIMIT` caps provider requests per UTC day, not dollars. Set provider-side budgets too.
 
@@ -145,7 +145,7 @@ Settings → Administration → Family-group creation defaults to **Everyone sig
 
 ## AI gift suggestion controls and rollout
 
-Admin settings offer **Off throughout the app**, **For others only**, **For own lists only** and **Both**, plus account/week and app/month search limits and the discovery model. Nonempty environment values override and lock the corresponding controls on both app and worker:
+Configure gift-suggestion availability, account/week and app/month search limits, and the discovery model through these environment variables on both app and worker:
 
 | Variable                           | Default when empty                              |
 | ---------------------------------- | ----------------------------------------------- |
@@ -156,7 +156,7 @@ Admin settings offer **Off throughout the app**, **For others only**, **For own 
 
 Editable gift-suggestion fields save together through one atomic request. Environment-controlled fields are excluded; if every field is locked, no save button is shown. A failed save preserves edits and changes no fields.
 
-A configured `OPENAI_API_KEY` is also required. A zero search limit blocks new paid searches for accounts without an applicable exception while existing eligible batches remain usable. Staging and preview force discovery off regardless of saved/provider settings. `.env.production.example` starts with `GIFT_DISCOVERY_MODE=off`; leave it off during rollout. Remove that override to use the admin toggle, or change it and recreate **both** app and worker containers. Admin changes take effect without restart; clients learn the change on their normal refresh, and server guards apply immediately. Already dispatched work may still be billed. Disabling clears unsaved batches, and re-enabling does not restore them.
+A configured `OPENAI_API_KEY` is also required. A zero search limit blocks new paid searches for accounts without an applicable exception while existing eligible batches remain usable. Staging and preview force discovery off regardless of saved/provider settings. `.env.production.example` starts with `GIFT_DISCOVERY_MODE=off`; leave it off during rollout. Change deployment settings and recreate **both** app and worker containers. Clients learn the change on their normal refresh, and server guards use the new configuration after restart. Already dispatched work may still be billed. Disabling clears unsaved batches, and re-enabling does not restore them.
 
 Usage resets Monday 00:00 UTC for accounts and the first of each month 00:00 UTC for the installation. Limits count dispatched attempts across all recipients/modes, including failures, rather than shuffles or direct price refreshes. Each attempt permits at most two web-search calls and 4,000 output tokens. Admin usage reports returned input/output tokens, search calls and a standard-rate estimate, plus attempts with unknown usage. Estimates are not a provider billing cap; reconcile actual invoices and recheck pricing before changing models. Discovery does not use `PAID_DAILY_LIMIT` or paid scraping: its weekly/monthly controls are separate.
 
@@ -190,9 +190,9 @@ Logs deliberately omit gift content, buyer discussions, assignments, and secrets
 
 ## Product import providers
 
-Direct HTML import runs first. If the title is missing, or the image URL is missing while automatic photo imports are enabled, Little Hint makes at most one paid provider request. Configure API keys in Administration or through `SCRAPINGFISH_API_KEY`, `SCRAPINGBEE_API_KEY`, `SCRAPEDO_API_KEY`, and `SCRAPINGDOG_API_KEY`. API keys saved in Administration remain encrypted and are never returned to the browser.
+Direct HTML import runs first. If the title is missing, or the image URL is missing while automatic photo imports are enabled, Little Hint makes at most one paid provider request. Configure API keys only through `SCRAPINGFISH_API_KEY`, `SCRAPINGBEE_API_KEY`, `SCRAPEDO_API_KEY`, and `SCRAPINGDOG_API_KEY`. Provider credentials are never returned to the browser.
 
-`SCRAPING_PROVIDER` accepts `auto`, `none`, `scrapingfish`, `scrapingbee`, `scrapedo`, or `scrapingdog`. Leave the environment variable empty to use the Administration selector. Automatic selection chooses the first configured provider in this order: Scraping Fish, ScrapingBee, Scrape.do, Scrapingdog. It does not try a second provider when the selected provider fails. An explicit selection without its key uses direct import only. `none` disables paid scraping.
+`SCRAPING_PROVIDER` accepts `auto`, `none`, `scrapingfish`, `scrapingbee`, `scrapedo`, or `scrapingdog`. An empty environment variable uses the built-in automatic selection. Automatic selection chooses the first configured provider in this order: Scraping Fish, ScrapingBee, Scrape.do, Scrapingdog. It does not try a second provider when the selected provider fails. An explicit selection without its key uses direct import only. `none` disables paid scraping.
 
 Scraping Fish requests HTML with `render_js=true` so dynamically loaded product details can be included. It uses Fish's default rendering wait and the app's existing 35-second overall provider timeout. Rendering can increase import time. If the provider fails or times out, usable direct metadata is preserved; if no title is available, the user can still add the gift manually. Other generic integrations do not enable extra JavaScript rendering or premium proxy options. ScrapingBee retains its dedicated US Amazon product endpoint. Each paid attempt counts against the existing per-provider `PAID_DAILY_LIMIT`, even when it fails locally. The limit counts requests, not currency or provider credits. Provider-specific credit consumption and request-pack expiry are managed in the provider account.
 
@@ -245,4 +245,6 @@ Request totals include dispatched failures. Cached results and direct website lo
 
 Product-detail AI token tracking starts with this release. Historical request counters remain visible, but missing token information cannot be backfilled. Returned tokens are recorded before validating generated content and attributed to the request's start month. Unknown model costs are unavailable, not zero. Estimates use the existing versioned model rates and cover only recorded usage; partial estimates and missing reports are explicitly labeled. Scraping credit prices depend on the provider plan and are not estimated. Reconcile actual charges in provider billing.
 
-`GET /api/v1/admin/usage` returns the grouped report to administrators only. `POST /api/v1/admin/settings/batch` accepts a nonempty `settings` array of distinct `{key, value}` entries restricted to the four gift-discovery settings. It validates every entry and override before committing all changes. Existing single-setting clients remain supported. Both features reuse the existing settings and usage stores without a database migration.
+`GET /api/v1/admin/usage` returns the grouped report to administrators only. `GET /api/v1/admin/services` returns service configuration status without credentials or raw setup fields. It does not perform connection tests. The settings API reads and writes only family-group creation and automatic product photos. Deployment-setting writes are rejected; the discovery batch-save endpoint has been removed.
+
+All SMTP, Telegram, Twilio, scraping, AI, and paid-request configuration comes from environment variables or built-in defaults. Saved database values for those settings are ignored. Recreate both app and worker after changing deployment configuration. Administration retains app preferences, usage, service status, and background jobs.
