@@ -9,7 +9,10 @@ import {
   productPhotoOverride,
   familyGroupCreationOverride,
 } from "./deployment";
-import { scrapingSelections } from "../shared/scraping-providers";
+import {
+  scrapingProviders,
+  scrapingSelections,
+} from "../shared/scraping-providers";
 export const settingKeys = [
   "GIFT_DISCOVERY_MODE",
   "GIFT_DISCOVERY_USER_WEEKLY_LIMIT",
@@ -49,7 +52,7 @@ const defaults: Partial<Record<SettingKey, string>> = {
 };
 // A staging database may contain old settings after a branch switch. Never use
 // those credentials, or runtime provider credentials, to contact real users.
-// AI is the exception: staging accepts only explicitly prefixed runtime settings.
+// AI and scraping accept only explicitly prefixed staging runtime settings.
 export function stagingSettings(): Record<SettingKey, string> {
   const result = Object.fromEntries(
     settingKeys
@@ -83,13 +86,22 @@ export function stagingSettings(): Record<SettingKey, string> {
       "GIFT_DISCOVERY_MODEL",
       "GIFT_DISCOVERY_USER_WEEKLY_LIMIT",
       "GIFT_DISCOVERY_MONTHLY_LIMIT",
-      "PAID_DAILY_LIMIT",
     ] as const) {
       result[k] = process.env[`STAGING_${k}`] || result[k];
     }
-    if (!/^\d{1,6}$/.test(result.PAID_DAILY_LIMIT))
-      throw new Error("Invalid STAGING_PAID_DAILY_LIMIT.");
     discoveryConfiguration(result);
+  }
+  if (deploymentEnvironment() === "staging") {
+    result.SCRAPING_PROVIDER = process.env.STAGING_SCRAPING_PROVIDER || "auto";
+    if (!scrapingSelections.includes(result.SCRAPING_PROVIDER))
+      throw new Error("Invalid STAGING_SCRAPING_PROVIDER.");
+    for (const provider of scrapingProviders)
+      result[provider.key] = process.env[`STAGING_${provider.key}`] || "";
+    if (result.OPENAI_API_KEY || scrapingProviders.some((p) => result[p.key])) {
+      result.PAID_DAILY_LIMIT = process.env.STAGING_PAID_DAILY_LIMIT || "0";
+      if (!/^\d{1,6}$/.test(result.PAID_DAILY_LIMIT))
+        throw new Error("Invalid STAGING_PAID_DAILY_LIMIT.");
+    }
   }
   return result;
 }

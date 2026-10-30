@@ -100,7 +100,7 @@ describe("automatic product photo preference", () => {
     expect(await config()).toMatchObject({
       SMTP_HOST: "mailpit",
       OPENAI_API_KEY: "",
-      SCRAPING_PROVIDER: "none",
+      SCRAPING_PROVIDER: "auto",
       PAID_DAILY_LIMIT: "0",
     });
     for (const provider of [
