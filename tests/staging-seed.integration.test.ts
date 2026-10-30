@@ -48,6 +48,56 @@ describe.skipIf(!url)("staging seeding transactions", () => {
       (await pool.query('SELECT count(*) FROM "user"')).rows[0].count,
     ).toBe("5");
   });
+  it("allows and preserves SMS provider and quota metadata from the worker", async () => {
+    const records = [
+      {
+        id: "sms-provider",
+        account: "active-provider",
+        activeAccount: "test-account",
+      },
+      {
+        id: "sms-quota",
+        account: "test-account",
+        remaining: 100,
+        checkedAt: new Date().toISOString(),
+      },
+    ];
+    for (const record of records)
+      await pool.query(
+        "INSERT INTO app_record (id,kind,data) VALUES ($1,'smsQuotas',$2)",
+        [record.id, JSON.stringify(record)],
+      );
+    expect(await seedStaging(pool, env)).toHaveLength(5);
+    expect(
+      (
+        await pool.query(
+          "SELECT data FROM app_record WHERE kind='smsQuotas' ORDER BY id",
+        )
+      ).rows.map((row) => row.data),
+    ).toEqual(records);
+    await expect(seedStaging(pool, env)).rejects.toThrow("empty database");
+  });
+  it.each([
+    "smsAttempts",
+    "smsConsents",
+    "smsChallenges",
+    "smsGrants",
+    "usage",
+  ])(
+    "refuses a database containing %s records even without users",
+    async (kind) => {
+      const record = { id: "existing", key: "sms-submission", count: 1 };
+      await pool.query(
+        "INSERT INTO app_record (id,kind,data) VALUES ('existing',$1,$2)",
+        [kind, JSON.stringify(record)],
+      );
+      await expect(seedStaging(pool, env)).rejects.toThrow("empty database");
+      expect(
+        (await pool.query("SELECT data FROM app_record WHERE id='existing'"))
+          .rows[0].data,
+      ).toEqual(record);
+    },
+  );
   it("rolls back auth and domain records together after a write failure", async () => {
     const failingPool = {
       connect: async () => {

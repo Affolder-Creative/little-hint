@@ -237,7 +237,10 @@ test("family and household follows, list overrides, muting, and preview settings
   await reader.getByRole("button", { name: "Following", exact: true }).click();
   const dialog = reader.getByRole("dialog");
   await dialog.getByLabel("Updates for this follow").selectOption("custom");
-  for (const label of ["Email", "Telegram", "Text messages"])
+  await expect(dialog.getByLabel("Text messages", { exact: true })).toHaveCount(
+    0,
+  );
+  for (const label of ["Email", "Telegram"])
     await dialog.getByLabel(label, { exact: true }).uncheck();
   await dialog.getByLabel("Push", { exact: true }).check();
   await dialog.getByRole("button", { name: "Save follow settings" }).click();

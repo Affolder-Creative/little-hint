@@ -38,9 +38,14 @@ export async function seedSynthetic(
         return [];
       }
     }
+    // A running worker writes heartbeat and SMS provider/quota metadata before
+    // any users exist. Preserve those operational records when seeding.
     const existing = await client.query(`SELECT EXISTS (
       SELECT 1 FROM "user" UNION ALL SELECT 1 FROM app_record
-      WHERE NOT (kind = 'usage' AND COALESCE(data->>'key', '') = 'worker-heartbeat')
+      WHERE NOT (
+        (kind = 'usage' AND COALESCE(data->>'key', '') = 'worker-heartbeat')
+        OR kind = 'smsQuotas'
+      )
       UNION ALL SELECT 1 FROM session UNION ALL SELECT 1 FROM account
       UNION ALL SELECT 1 FROM verification UNION ALL SELECT 1 FROM passkey
     ) AS occupied`);

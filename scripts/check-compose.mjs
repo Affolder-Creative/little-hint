@@ -450,3 +450,45 @@ assert.deepEqual(Object.keys(previewConfig.volumes).sort(), [
 console.log(
   "Preview Compose checks passed: isolated network/data, pinned tools, optional tunnel, and loopback gateway only.",
 );
+
+// SMS credentials and policy must reach both submitters, with explicit staging names.
+const smsVars = {
+  SMS_PROVIDER: "textbelt",
+  TEXTBELT_API_KEY: "compose-sms-only",
+  SMS_MONTHLY_LIMIT: "75",
+  SMS_USER_DAILY_LIMIT: "1",
+  SMS_CREDIT_RESERVE: "15",
+  SMS_ALLOWED_EVENTS: "exchange,access",
+  TWILIO_ACCOUNT_SID: "compose-twilio-only",
+  TWILIO_AUTH_TOKEN: "compose-token-only",
+  TWILIO_FROM: "+12025550123",
+  TWILIO_VERIFY_SERVICE_SID: "compose-verify-only",
+};
+for (const file of [
+  "compose.yaml",
+  "compose.production.yaml",
+  "compose.staging.yaml",
+]) {
+  const isStaging = file.includes("staging");
+  const vars = Object.fromEntries(
+    Object.entries(smsVars).map(([k, v]) => [
+      `${isStaging ? "STAGING_" : ""}${k}`,
+      v,
+    ]),
+  );
+  const result = config(file, {
+    ...(isStaging ? stagingVars : productionVars),
+    ...vars,
+  });
+  assert.equal(result.status, 0, result.stderr);
+  for (const service of ["app", "worker"]) {
+    const environment = JSON.parse(result.stdout).services[service].environment;
+    for (const [k, v] of Object.entries(vars)) assert.equal(environment[k], v);
+    if (isStaging)
+      for (const k of Object.keys(smsVars))
+        assert.equal(environment[k], undefined);
+  }
+}
+console.log(
+  "SMS Compose checks passed: production/staging app-worker parity and credential separation.",
+);

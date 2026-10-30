@@ -128,6 +128,7 @@ try {
     ...(suite === "pwa"
       ? ["tests/update-notice.spec.ts", "tests/update-lifecycle.spec.ts"]
       : []),
+    ...(suite === "sign-in" ? ["tests/sms.spec.ts"] : []),
     ...(suite === "polish" ? ["tests/settings-polish.spec.ts"] : []),
   ]).done;
 } finally {

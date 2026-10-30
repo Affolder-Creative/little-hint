@@ -339,9 +339,9 @@ export function NotificationDetails() {
       <summary>
         Preview privacy
         <span className="muted">
-          {notificationChannels.some((c) => details[c])
+          {notificationChannels.some((c) => c !== "sms" && details[c])
             ? `Previews allowed: ${notificationChannels
-                .filter((c) => details[c])
+                .filter((c) => c !== "sms" && details[c])
                 .map((c) => channelLabels[c])
                 .join(", ")}`
             : "Details hidden on all channels"}
@@ -352,29 +352,32 @@ export function NotificationDetails() {
         <p className="muted">
           Choose where previews may show names, list names, and priorities
           outside Little Hint, including on a lock screen. Delivered previews
-          cannot be recalled. Private gift plans and notes stay generic.
+          cannot be recalled. Private gift plans and notes stay generic. SMS
+          always uses a short generic message without links or personal details.
         </p>
-        {notificationChannels.map((c) => (
-          <div key={c}>
-            <label className="check">
-              <input
-                type="checkbox"
-                name={`details-${c}`}
-                checked={details[c] ?? false}
-                onChange={(e) =>
-                  setDetails((d) => ({ ...d, [c]: e.target.checked }))
-                }
-              />
-              {channelLabels[c]}
-            </label>
-            <p className="muted">
-              Example:{" "}
-              {details[c]
-                ? 'John added 3 items to "Birthday", including 1 marked Most wanted.'
-                : "Open Little Hint to see the details."}
-            </p>
-          </div>
-        ))}
+        {notificationChannels
+          .filter((c) => c !== "sms")
+          .map((c) => (
+            <div key={c}>
+              <label className="check">
+                <input
+                  type="checkbox"
+                  name={`details-${c}`}
+                  checked={details[c] ?? false}
+                  onChange={(e) =>
+                    setDetails((d) => ({ ...d, [c]: e.target.checked }))
+                  }
+                />
+                {channelLabels[c]}
+              </label>
+              <p className="muted">
+                Example:{" "}
+                {details[c]
+                  ? 'John added 3 items to "Birthday", including 1 marked Most wanted.'
+                  : "Open Little Hint to see the details."}
+              </p>
+            </div>
+          ))}
       </fieldset>
     </details>
   );
@@ -399,7 +402,9 @@ export function NotificationTopics() {
     push: p.pushEvents ?? defaultPushEvents,
     email: p.channelEvents?.email ?? p.events,
     telegram: p.channelEvents?.telegram ?? p.events,
-    sms: p.channelEvents?.sms ?? p.events,
+    sms: (p.channelEvents?.sms ?? ["exchange", "access"]).filter((e) =>
+      world.sms?.eligibleEvents.includes(e),
+    ),
   }));
   return (
     <details className="notification-disclosure">
@@ -435,6 +440,10 @@ export function NotificationTopics() {
                     type="checkbox"
                     name={`${channel}Events`}
                     value={topic.id}
+                    disabled={
+                      channel === "sms" &&
+                      !world.sms?.eligibleEvents.includes(topic.id)
+                    }
                     checked={topics[channel].includes(topic.id)}
                     onChange={(e) =>
                       setTopics((current) => ({

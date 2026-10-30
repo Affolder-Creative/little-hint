@@ -1,3 +1,4 @@
+import { pollSmsStatus, alertLowSmsCredit } from "./sms";
 import {
   deliverWishlistBatch,
   pendingWishlistBatches,
@@ -162,6 +163,8 @@ async function dispatch() {
         { id: batch.id },
         { singletonKey: batch.id },
       );
+    await pollSmsStatus();
+    await alertLowSmsCredit();
     await pollTelegram();
   } catch {
     console.error("Background dispatch unavailable; will retry.");

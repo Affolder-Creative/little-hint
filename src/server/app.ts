@@ -1,9 +1,17 @@
-import { serviceStatuses } from "./service-status";
+import { smsInfo, verifyTextbelt, normalizePhone } from "./sms-provider";
+import { recordTransport } from "./sms-policy";
 import {
-  batchJob,
-  retryWishlistBatch,
-  recordWishlistSmsFailure,
-} from "./wishlist-delivery";
+  startSms,
+  verifySms,
+  startSmsReauth,
+  verifySmsReauth,
+  changeSmsLogin,
+  requireSmsGrant,
+  refreshSmsQuota,
+  webhookSource,
+} from "./sms";
+import { serviceStatuses } from "./service-status";
+import { batchJob, retryWishlistBatch } from "./wishlist-delivery";
 import { registerGiftDiscovery } from "./gift-discovery-routes";
 import { adminUsage } from "./usage";
 import { discoveryJob } from "./gift-discovery";
@@ -53,12 +61,7 @@ import {
 } from "./settings";
 import { mediaDir, saveImage } from "./imports";
 import { cardImage } from "./media";
-import {
-  linkTelegram,
-  smsStart,
-  smsVerify,
-  verifyTwilio,
-} from "./notifications";
+import { linkTelegram, verifyTwilio } from "./notifications";
 import type { Actor } from "../shared/model";
 import {
   cloudflareWebAnalyticsEnabled,
@@ -225,6 +228,7 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
     const state = await readState();
     return {
       ...world(state, a),
+      sms: smsInfo(await config()),
       canCreateGroups: canCreateGroups(state, a),
       giftDiscovery: discoveryConfiguration(await config()),
       notificationAsOf,
@@ -520,7 +524,8 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
     const a = await actor(req);
     const state = await readState();
     if (!isAdmin(state, a)) fail(403, "Administrator access required.");
-    return adminUsage(state, await config());
+    await refreshSmsQuota();
+    return adminUsage(await readState(), await config());
   });
   app.get("/api/v1/admin/jobs", async (req) => {
     const a = await actor(req),
@@ -606,28 +611,118 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
   app.post("/api/v1/channels/telegram", async (req) =>
     linkTelegram(await actor(req)),
   );
+  app.get("/api/v1/sms-info", async () => smsInfo(await config()));
+  async function smsActor(req: { headers: any }) {
+    const session = await auth.api.getSession({
+      headers: fromNodeHeaders(req.headers),
+    });
+    const a = await actor(req);
+    return { a, sessionId: session!.session.id };
+  }
+  app.post(
+    "/api/v1/channels/sms/reauth/start",
+    { config: { rateLimit: { max: 3, timeWindow: "1 hour" } } },
+    async (req) => {
+      const { a, sessionId } = await smsActor(req);
+      return { challenge: await startSmsReauth(a, sessionId) };
+    },
+  );
+  app.post("/api/v1/channels/sms/reauth/verify", async (req) => {
+    const { a, sessionId } = await smsActor(req);
+    const b = z
+      .object({
+        challenge: z.string().uuid(),
+        code: z.string().regex(/^\d{6}$/),
+      })
+      .parse(req.body);
+    await verifySmsReauth(a, sessionId, b.challenge, b.code);
+    return { ok: true };
+  });
   app.post(
     "/api/v1/channels/sms/start",
     { config: { rateLimit: { max: 5, timeWindow: "1 hour" } } },
     async (req) => {
-      const a = await actor(req),
-        b = z
-          .object({ phone: z.string(), consent: z.literal(true) })
-          .parse(req.body);
-      await smsStart(a, b.phone, b.consent);
-      return { ok: true };
+      const { a, sessionId } = await smsActor(req);
+      requireSmsGrant(await readState(), a, sessionId);
+      const b = z
+        .object({ phone: z.string().max(40), consent: z.literal(true) })
+        .parse(req.body);
+      return { challenge: await startSms(a, b.phone, "verification") };
     },
   );
   app.post(
     "/api/v1/channels/sms/verify",
     { config: { rateLimit: { max: 10, timeWindow: "1 hour" } } },
     async (req) => {
-      const a = await actor(req),
-        b = z.object({ code: z.string() }).parse(req.body);
-      await smsVerify(a, b.code);
+      const { a, sessionId } = await smsActor(req);
+      requireSmsGrant(await readState(), a, sessionId);
+      const b = z
+        .object({
+          challenge: z.string().uuid(),
+          code: z.string().regex(/^\d{6}$/),
+        })
+        .parse(req.body);
+      await verifySms(b.challenge, b.code, "verification", a);
       return { ok: true };
     },
   );
+  app.post("/api/v1/channels/sms/login", async (req) => {
+    const { a, sessionId } = await smsActor(req);
+    const b = z
+      .object({
+        enabled: z.boolean(),
+        consent: z.boolean().optional(),
+        remove: z.boolean().optional(),
+      })
+      .parse(req.body);
+    if (b.enabled && b.consent !== true)
+      fail(400, "Agree to receive requested SMS sign-in codes first.");
+    await changeSmsLogin(a, sessionId, b.enabled, b.remove);
+    return { ok: true };
+  });
+  // Capture the exact JSON bytes before parsing; re-stringification breaks HMACs.
+  await app.register(async (hooks) => {
+    hooks.removeContentTypeParser("application/json");
+    hooks.addContentTypeParser(
+      "application/json",
+      { parseAs: "string" },
+      (_req, body, done) => done(null, body),
+    );
+    hooks.post("/api/hooks/textbelt", { bodyLimit: 16384 }, async (req) => {
+      const raw = String(req.body),
+        c = await config();
+      if (
+        !verifyTextbelt(
+          raw,
+          String(req.headers["x-textbelt-timestamp"] ?? ""),
+          String(req.headers["x-textbelt-signature"] ?? ""),
+          c.TEXTBELT_API_KEY,
+        )
+      )
+        fail(403, "Invalid provider signature.");
+      const b = z
+        .object({
+          fromNumber: z.string(),
+          text: z.string().max(1600),
+          textId: z.union([z.string(), z.number()]),
+        })
+        .parse(JSON.parse(raw));
+      const phone = normalizePhone(b.fromNumber);
+      if (phone)
+        await transact((s) =>
+          recordTransport(
+            s,
+            phone,
+            b.text,
+            webhookSource(
+              "textbelt",
+              String(req.headers["x-textbelt-timestamp"]) + raw,
+            ),
+          ),
+        );
+      return { ok: true };
+    });
+  });
   app.post("/api/hooks/twilio/:action", async (req, reply) => {
     const body = z.record(z.string(), z.string()).parse(req.body);
     if (
@@ -639,30 +734,28 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
     )
       fail(403, "Invalid provider signature.");
     await transact((s) => {
-      if (
-        body.OptOutType === "STOP" ||
-        /^(STOP|UNSUBSCRIBE|CANCEL|END|QUIT)$/i.test(body.Body ?? "")
-      )
-        for (const p of s.preferences.filter((p) => p.phone === body.From)) {
-          p.sms = false;
-          p.smsOptOut = true;
-          p.revision++;
-        }
-      const batchId = new URL(req.url, appUrl).searchParams.get("batch");
-      if (batchId && ["failed", "undelivered"].includes(body.MessageStatus)) {
-        recordWishlistSmsFailure(
+      if (body.From)
+        recordTransport(
           s,
-          batchId,
-          new URL(req.url, appUrl).searchParams.get("attempt"),
+          body.From,
+          body.OptOutType ?? body.Body ?? "",
+          webhookSource("twilio", JSON.stringify(body)),
         );
-      }
-      const id = new URL(req.url, appUrl).searchParams.get("notice");
-      if (id && ["failed", "undelivered"].includes(body.MessageStatus)) {
-        const n = s.notices.find((n) => n.id === id);
-        if (n) {
-          n.status = "failed";
-          n.error = "SMS could not be delivered.";
-        }
+      const smsId = new URL(req.url, appUrl).searchParams.get("sms");
+      const attempt = s.smsAttempts.find(
+        (a) => a.reference === smsId && a.provider === "twilio",
+      );
+      if (
+        attempt &&
+        (!attempt.providerId || attempt.providerId === body.MessageSid)
+      ) {
+        if (["failed", "undelivered"].includes(body.MessageStatus))
+          attempt.status = "failed";
+        else if (
+          body.MessageStatus === "delivered" &&
+          attempt.status !== "failed"
+        )
+          attempt.status = "delivered";
       }
     });
     return reply.type("text/xml").send("<Response/>");
