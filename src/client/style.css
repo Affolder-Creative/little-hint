@@ -3765,3 +3765,92 @@ main {
   font-size: 13px;
   font-weight: 500;
 }
+
+/* Administration: related controls share one surface; groups stay visible. */
+.admin-page .admin-panel {
+  background: var(--paper);
+  border-radius: 12px;
+  padding: 20px;
+  margin: 24px 0 0;
+  min-width: 0;
+}
+.admin-panel > h3 {
+  margin: 0 0 12px;
+  font-size: 20px;
+}
+.admin-panel h4 {
+  margin: 20px 0 8px;
+  font-size: 17px;
+}
+.admin-panel p {
+  max-width: 65ch;
+}
+.admin-panel .admin-group-policy {
+  margin-bottom: 24px;
+}
+.admin-panel :is(input, select, textarea):disabled {
+  color: var(--muted);
+  -webkit-text-fill-color: var(--muted);
+  background: var(--bg);
+  border-color: var(--border);
+  opacity: 1;
+  cursor: not-allowed;
+}
+.admin-panel .usage-group {
+  padding-block: 16px;
+}
+.admin-panel .usage-group h4 {
+  margin-top: 0;
+}
+.admin-panel .integration-group {
+  padding: 0;
+  margin: 0;
+}
+.admin-panel .integration-group > summary {
+  display: list-item;
+  padding-block: 12px;
+}
+.admin-panel .integration-group > summary small {
+  display: block;
+  margin: 4px 0 0 16px;
+}
+.admin-panel .integration-group > details {
+  padding: 8px 0 8px 16px;
+}
+.admin-panel .integration-group > details > summary {
+  display: list-item;
+}
+.admin-panel .integration-group > details > summary small {
+  display: block;
+  margin-top: 4px;
+}
+.admin-panel .integration-settings summary > span {
+  text-transform: none;
+}
+.invitation-share {
+  display: grid;
+  gap: 12px;
+}
+.invitation-share .actions {
+  flex-wrap: wrap;
+}
+@media (max-width: 650px) {
+  .admin-page .admin-panel {
+    padding: 16px;
+  }
+}
+
+.integration-managed {
+  display: grid;
+  gap: 4px;
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+}
+.integration-managed strong {
+  font-size: 14px;
+  font-weight: 550;
+}
+.integration-managed small {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}

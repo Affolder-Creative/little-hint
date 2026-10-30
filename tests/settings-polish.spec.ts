@@ -27,6 +27,15 @@ async function setup(
   }
   const settings = [
     {
+      key: "AUTO_IMPORT_PRODUCT_PHOTOS",
+      value: "false",
+      source: "settings",
+      configured: true,
+    },
+    ...["SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASS", "SMTP_FROM"].map(
+      (key) => ({ key, value: "", source: "environment", configured: true }),
+    ),
+    {
       key: "FAMILY_GROUP_CREATION",
       value: options.restricted ? "admins" : "everyone",
       source: "settings",
@@ -293,6 +302,8 @@ test.describe("settings visual review", () => {
           await expect(
             page.getByRole("region", { name: "This month's usage" }),
           ).toBeVisible();
+        if (section === "admin")
+          await page.locator(".integration-group > summary").first().click();
         expect(
           await page.evaluate(
             () => document.documentElement.scrollWidth <= innerWidth,
@@ -332,4 +343,93 @@ test.describe("settings visual review", () => {
       expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
     });
   }
+});
+
+test("invitation confirmation shares the sign-in link and handles cancellation and copy failure", async ({
+  page,
+}) => {
+  await setup(page);
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "share", {
+      configurable: true,
+      value: async (data: ShareData) => {
+        (window as any).shared = data;
+        throw new DOMException("Cancelled", "AbortError");
+      },
+    });
+  });
+  await page.route("**/api/v1/invitations", (route) =>
+    route.fulfill({ json: { id: "invitation-test" } }),
+  );
+  await page.goto("/settings?section=invitations");
+  await page
+    .getByRole("button", { name: "Invite someone to Little Hint", exact: true })
+    .click();
+  await page
+    .getByRole("dialog")
+    .getByLabel("Email address")
+    .fill("friend@example.test");
+  await page
+    .getByRole("button", { name: "Send invitation", exact: true })
+    .click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByRole("status")).toContainText(
+    "waiting to be emailed",
+  );
+  await dialog.getByRole("button", { name: "Share sign-in link" }).click();
+  expect(await page.evaluate(() => (window as any).shared.url)).toBe(
+    new URL("/", page.url()).href,
+  );
+  await expect(dialog.getByLabel("Sign-in link", { exact: true })).toHaveCount(
+    0,
+  );
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, "share", { value: undefined });
+    Object.defineProperty(navigator, "clipboard", {
+      value: {
+        writeText: async () => {
+          throw new Error("denied");
+        },
+      },
+    });
+  });
+  await dialog.getByRole("button", { name: "Share sign-in link" }).click();
+  await expect(
+    dialog.getByRole("button", { name: "Copy sign-in link" }),
+  ).toBeVisible();
+  await dialog.getByRole("button", { name: "Copy sign-in link" }).click();
+  await expect(
+    dialog.getByLabel("Sign-in link", { exact: true }),
+  ).toBeVisible();
+  await dialog.getByRole("button", { name: "Done", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+});
+
+test("family invitation confirmation shares its deep link", async ({
+  page,
+}) => {
+  await setup(page);
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "share", {
+      value: async (data: ShareData) => {
+        (window as any).shared = data;
+      },
+    });
+  });
+  await page.route("**/api/v1/groups/invite", (route) =>
+    route.fulfill({ json: { id: "family-invitation" } }),
+  );
+  await page.goto("/settings?section=groups");
+  await page
+    .getByRole("button", { name: "Invite someone", exact: true })
+    .click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Email address").fill("relative@example.test");
+  await dialog
+    .getByRole("button", { name: "Send invitation", exact: true })
+    .click();
+  await dialog.getByRole("button", { name: "Share sign-in link" }).click();
+  expect(await page.evaluate(() => (window as any).shared.url)).toBe(
+    new URL("/invite/family-invitation", page.url()).href,
+  );
 });

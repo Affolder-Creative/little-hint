@@ -71,7 +71,10 @@ export function AdminUsage() {
     { month: "long", year: "numeric", timeZone: "UTC" },
   );
   return (
-    <section className="admin-usage" aria-label="This month's usage">
+    <section
+      className="admin-usage admin-panel"
+      aria-label="This month's usage"
+    >
       <h3>This month’s usage</h3>
       <p className="muted">
         {month} · Resets{" "}

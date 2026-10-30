@@ -63,7 +63,10 @@ export function GiftDiscoveryAdmin({
     </Field>
   ));
   return (
-    <section className="gift-discovery-admin" aria-label="AI gift suggestions">
+    <section
+      className="gift-discovery-admin admin-panel"
+      aria-label="AI gift suggestions"
+    >
       <h3>AI gift suggestions</h3>
       <p>
         Choose who can find gift suggestions and how many new searches are
