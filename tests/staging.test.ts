@@ -64,7 +64,7 @@ describe("staging boundaries", () => {
     });
     await expect(
       saveSetting("SMTP_HOST", "real-mail.example.com"),
-    ).rejects.toThrow("This test app uses a private email inbox");
+    ).rejects.toThrow("set on the server");
   });
 });
 describe("staging AI opt-in", () => {

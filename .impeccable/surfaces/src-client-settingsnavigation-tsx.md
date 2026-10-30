@@ -9,7 +9,6 @@ related_targets:
     "src/client/Households.tsx",
     "src/client/AccountInvitations.tsx",
     "src/client/InvitationShare.tsx",
-    "src/client/GiftDiscoveryAdmin.tsx",
     "src/client/AdminUsage.tsx",
   ]
 ---
@@ -28,6 +27,8 @@ related_targets:
 
 - Profile & appearance and owned/managed person pages include a quiet underlined Gift preferences text action opening that tab in Edit profile. In Settings it sits below account details, while the outlined Edit profile button remains the main action. The two tab drafts and independent saves remain intact.
 - Follow is separate from the group navigation, with a 32px horizontal gap and wrapping on narrow screens. Family-group creation is controlled by an app-wide administrator preference with an optional locking environment override; restricted users see invitation/administrator guidance.
-- Approved Option A groups Administration into visible paper panels: App settings, AI gift suggestions, This month's usage, Connected services, and Updates & backups. Keep group headings visible while individual service groups and settings use native disclosures. App settings groups family-group creation and shop-link photo choices. Use friendly setting labels; keep technical setup keys inside the expanded setting. Connected services summarizes configured counts and each setting's state.
-- Administration saves editable gift-suggestion settings atomically in one form. Monthly usage retains flat divided feature groups inside its panel, compact labeled counts, and expandable accounting details. Show enabled or used services; retain historical usage when disabled. Server-managed fields remain readable, with explicit lock guidance. Updates & backups explains that backups are managed externally and that backup status is unavailable here.
 - About adds Kyle's approved short family-origin story and an SVG signature traced from Kyle’s selected screenshot with a matching dash before the existing attribution and version.
+
+Administration contains App settings, This month's usage, Service status, and Background jobs. Only family-group creation and automatic product photos are editable, with optional locking ENV overrides. All service credentials, providers, models, limits, and AI availability are deployment-only. Service status reports configuration presence, not verified connectivity. Preserve usage after disabling services, notification retries, failed shop lookups, and the note that backup status is unavailable.
+
+- Administration spacing follows the shared 8px related-content and 16px controls steps. Separate app preferences with a divider and 24px on either side. Service/job rows use top dividers and 16px padding, with no trailing rule or last-row bottom padding. Status aligns at the top and stacks below its description at 360px and narrower. Usage groups retain 44px disclosures with 16px top and 8px bottom padding.

@@ -99,7 +99,7 @@ describe("preview boundaries", () => {
       }),
     ).toBe(false);
     await expect(saveSetting("SMTP_HOST", "real.example.com")).rejects.toThrow(
-      "External services are turned off",
+      "set on the server",
     );
   });
   it("reuses household and staging fixtures without losing scenarios", () => {

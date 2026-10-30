@@ -108,7 +108,7 @@ for verification and opt-out instructions. Production settings are independent.
 
 ## Automatic product photos
 
-Administration → Product imports → **Automatically import product photos** is
+Administration → App settings → **Automatically import product photos** is
 OFF by default, including on upgrades. The preference is shared by everyone on
 that instance. Staging can edit it while all external provider restrictions stay
 in force. Manual uploads and existing photos are unaffected.
@@ -158,7 +158,7 @@ limits. Model overrides are `STAGING_OPENAI_MODEL` and
 
 Recreate both app and worker after changing these variables. Remove the staging
 key to disable all AI, or set discovery mode to `off` to disable suggestions only.
-AI settings are locked in Administration and configured on the server. Test with
+AI settings are configured on the server and are not exposed in Administration. Test with
 synthetic accounts; requests incur charges in the staging OpenAI project.
 Preview deployments still ignore all AI credentials, including staging keys.
 Mailpit, messaging isolation, and paid scraping restrictions remain unchanged.

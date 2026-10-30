@@ -1562,27 +1562,6 @@ main {
 .member-list > div > span:nth-child(2) {
   flex: 1;
 }
-.integration-settings details {
-  border-bottom: 1px solid var(--border);
-  padding: 16px 0;
-}
-.integration-settings summary {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 15px;
-  cursor: pointer;
-  font-size: 14px;
-}
-.integration-settings summary > span {
-  text-transform: capitalize;
-}
-.integration-settings summary small {
-  color: var(--muted);
-}
-.integration-settings .form {
-  padding-top: 20px;
-}
 .install {
   display: flex;
   align-items: flex-start;
@@ -2371,12 +2350,6 @@ main {
   .settings-section h2 {
     font-size: 21px;
   }
-  .integration-settings summary {
-    font-size: 14px;
-  }
-  .integration-settings summary small {
-    font-size: 12px;
-  }
   .setting-row {
     gap: 10px;
   }
@@ -2629,12 +2602,6 @@ main {
 .notification-topics {
   display: grid;
   gap: 20px;
-}
-.integration-group + .integration-group {
-  margin-top: 24px;
-}
-.integration-group h4 {
-  margin-bottom: 8px;
 }
 .session-agent {
   overflow-wrap: anywhere;
@@ -3462,12 +3429,6 @@ main {
 .discovery-review > .text-button {
   margin-left: 16px;
 }
-.gift-discovery-admin {
-  margin: 32px 0;
-}
-.gift-discovery-admin .form {
-  margin: 20px 0;
-}
 @media (max-width: 900px) {
   .discovery-results {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3666,31 +3627,15 @@ main {
   margin-top: 8px;
   color: var(--accent);
 }
-.admin-fields {
-  display: grid;
-  gap: var(--space-controls);
-}
-.admin-explanation {
-  margin-top: var(--space-controls);
-}
-.admin-explanation > p,
 .usage-details > p {
   font-size: 13px;
   color: var(--muted);
   max-width: 65ch;
 }
-.admin-explanation > summary,
 .usage-details > summary {
   min-height: 44px;
   padding-block: 10px;
   font-size: 14px;
-}
-.admin-group-policy,
-.admin-usage {
-  margin-bottom: var(--space-section);
-}
-.admin-usage {
-  margin-top: var(--space-section);
 }
 .usage-group {
   padding-block: 20px;
@@ -3779,14 +3724,61 @@ main {
   font-size: 20px;
 }
 .admin-panel h4 {
-  margin: 20px 0 8px;
+  margin: 0 0 var(--space-related);
   font-size: 17px;
 }
 .admin-panel p {
   max-width: 65ch;
 }
-.admin-panel .admin-group-policy {
-  margin-bottom: 24px;
+.admin-panel > p {
+  margin-bottom: var(--space-controls);
+}
+.admin-panel > :last-child {
+  margin-bottom: 0;
+}
+.admin-preference {
+  margin-top: var(--space-controls);
+}
+.admin-preference + .admin-preference {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+}
+.admin-preference > p {
+  margin-bottom: var(--space-controls);
+}
+.admin-photo-preference .form > fieldset {
+  gap: var(--space-related);
+}
+.admin-photo-preference .form p {
+  margin: 0;
+}
+.admin-panel .admin-service-row,
+.admin-panel .admin-job-row {
+  gap: var(--space-related) var(--space-controls);
+  padding-block: var(--space-controls);
+  border-top: 1px solid var(--border);
+  border-bottom: 0;
+}
+.admin-panel .admin-service-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+}
+.admin-service-row > span {
+  text-align: right;
+}
+.admin-panel .setting-row:last-child {
+  padding-bottom: 0;
+}
+@media (max-width: 360px) {
+  .admin-panel .admin-service-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .admin-service-row > span {
+    text-align: left;
+    color: var(--muted);
+  }
 }
 .admin-panel :is(input, select, textarea):disabled {
   color: var(--muted);
@@ -3797,35 +3789,10 @@ main {
   cursor: not-allowed;
 }
 .admin-panel .usage-group {
-  padding-block: 16px;
+  padding-block: var(--space-controls) var(--space-related);
 }
 .admin-panel .usage-group h4 {
   margin-top: 0;
-}
-.admin-panel .integration-group {
-  padding: 0;
-  margin: 0;
-}
-.admin-panel .integration-group > summary {
-  display: list-item;
-  padding-block: 12px;
-}
-.admin-panel .integration-group > summary small {
-  display: block;
-  margin: 4px 0 0 16px;
-}
-.admin-panel .integration-group > details {
-  padding: 8px 0 8px 16px;
-}
-.admin-panel .integration-group > details > summary {
-  display: list-item;
-}
-.admin-panel .integration-group > details > summary small {
-  display: block;
-  margin-top: 4px;
-}
-.admin-panel .integration-settings summary > span {
-  text-transform: none;
 }
 .invitation-share {
   display: grid;
@@ -3838,19 +3805,4 @@ main {
   .admin-page .admin-panel {
     padding: 16px;
   }
-}
-
-.integration-managed {
-  display: grid;
-  gap: 4px;
-  padding: 12px 0;
-  border-top: 1px solid var(--border);
-}
-.integration-managed strong {
-  font-size: 14px;
-  font-weight: 550;
-}
-.integration-managed small {
-  color: var(--muted);
-  overflow-wrap: anywhere;
 }

@@ -596,19 +596,19 @@ describe.skipIf(!url)("PostgreSQL transaction integrity", () => {
     const other = new Pool({ connectionString: url });
     try {
       const settings = await import("../src/server/settings");
-      await settings.saveSetting("SCRAPING_PROVIDER", "none");
-      expect((await settings.config()).SCRAPING_PROVIDER).toBe("none");
+      await settings.saveSetting("AUTO_IMPORT_PRODUCT_PHOTOS", "false");
+      expect((await settings.productPhotoSetting()).value).toBe("false");
       await other.query(
-        "UPDATE app_record SET data = jsonb_set(data, '{encrypted}', to_jsonb($1::text)) WHERE kind='settings' AND data->>'key'='SCRAPING_PROVIDER'",
-        [settings.encrypt("auto")],
+        "UPDATE app_record SET data = jsonb_set(data, '{encrypted}', to_jsonb($1::text)) WHERE kind='settings' AND data->>'key'='AUTO_IMPORT_PRODUCT_PHOTOS'",
+        [settings.encrypt("true")],
       );
-      expect((await settings.config()).SCRAPING_PROVIDER).toBe("auto");
+      expect((await settings.productPhotoSetting()).value).toBe("true");
       await other.query(
-        "DELETE FROM app_record WHERE kind='settings' AND data->>'key'='SCRAPING_PROVIDER'",
+        "DELETE FROM app_record WHERE kind='settings' AND data->>'key'='AUTO_IMPORT_PRODUCT_PHOTOS'",
       );
       expect(
         (await storage.readSettings()).some(
-          (s) => s.key === "SCRAPING_PROVIDER",
+          (s) => s.key === "AUTO_IMPORT_PRODUCT_PHOTOS",
         ),
       ).toBe(false);
     } finally {

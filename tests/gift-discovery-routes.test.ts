@@ -35,6 +35,7 @@ import {
 } from "../src/server/settings";
 import {
   createDiscovery,
+  pruneDiscovery,
   addDiscoveryUsage,
   quotaKeys,
 } from "../src/server/gift-discovery";
@@ -157,24 +158,26 @@ it("requires authentication, scopes jobs and reauthorizes idempotent replays", a
     401,
   );
   mocks.actor = f.actors[1];
-  await saveSetting("GIFT_DISCOVERY_MODE", "off");
+  vi.stubEnv("GIFT_DISCOVERY_MODE", "off");
+  pruneDiscovery(mocks.state, discoveryConfigForState(mocks.state));
   expect((await create()).statusCode).toBe(403);
   expect((await app.inject(`/api/v1/gift-discovery/${id}`)).statusCode).toBe(
     404,
   );
 });
-it("persists an immediate kill switch, preserves wishes/preferences and cannot revive old results", async () => {
+it("reconciles the deployment kill switch, preserves wishes/preferences and cannot revive old results", async () => {
   const j = createDiscovery(mocks.state, f.actors[1], cfg, f.input);
   j.status = "complete";
   j.candidates = [candidate()];
   const items = structuredClone(mocks.state.items);
-  await saveSetting("GIFT_DISCOVERY_MODE", "off");
+  vi.stubEnv("GIFT_DISCOVERY_MODE", "off");
+  pruneDiscovery(mocks.state, discoveryConfigForState(mocks.state));
   expect(mocks.state.giftDiscoveryJobs[0]).toMatchObject({
     status: "cancelled",
     candidates: [],
   });
   expect(mocks.state.items).toEqual(items);
-  await saveSetting("GIFT_DISCOVERY_MODE", "both");
+  vi.stubEnv("GIFT_DISCOVERY_MODE", "both");
   expect((await app.inject(`/api/v1/gift-discovery/${j.id}`)).statusCode).toBe(
     404,
   );
@@ -194,17 +197,16 @@ it("locks environment overrides and validates limits, mode and staging isolation
   await expect(saveSetting("GIFT_DISCOVERY_MODE", "both")).rejects.toThrow(
     "set on the server",
   );
-  expect(
-    (await settingsSummary()).find((s) => s.key === "GIFT_DISCOVERY_MODE"),
-  ).toMatchObject({ source: "environment", value: "off" });
-  vi.stubEnv("GIFT_DISCOVERY_MODE", "");
-  await expect(saveSetting("GIFT_DISCOVERY_MODE", "invalid")).rejects.toThrow(
-    "Choose",
-  );
-  await expect(
-    saveSetting("GIFT_DISCOVERY_MONTHLY_LIMIT", "-1"),
-  ).rejects.toThrow("limit");
-  await saveSetting("GIFT_DISCOVERY_MONTHLY_LIMIT", "0");
+  expect((await settingsSummary()).map((s) => s.key)).toEqual([
+    "AUTO_IMPORT_PRODUCT_PHOTOS",
+    "FAMILY_GROUP_CREATION",
+  ]);
+  vi.stubEnv("GIFT_DISCOVERY_MODE", "invalid");
+  await expect(config()).rejects.toThrow("GIFT_DISCOVERY_MODE");
+  vi.stubEnv("GIFT_DISCOVERY_MODE", "both");
+  vi.stubEnv("GIFT_DISCOVERY_MONTHLY_LIMIT", "-1");
+  await expect(config()).rejects.toThrow("GIFT_DISCOVERY_MONTHLY_LIMIT");
+  vi.stubEnv("GIFT_DISCOVERY_MONTHLY_LIMIT", "0");
   expect(discoveryConfiguration(await config()).monthlyLimit).toBe(0);
   vi.stubEnv("APP_ENV", "staging");
   vi.stubEnv("SMTP_PASS", "");
@@ -262,71 +264,41 @@ it("blocks unsaved discovery images immediately when an environment override dis
   expect((await app.inject(`/api/v1/media/${id}`)).statusCode).toBe(404);
 });
 
-it("saves discovery settings together and leaves all values intact on invalid or locked fields", async () => {
-  mocks.state.people.find((p) => p.userId === mocks.actor!.id)!.admin = true;
-  const save = (settings: Array<{ key: string; value: string }>) =>
-    app.inject({
-      method: "POST",
-      url: "/api/v1/admin/settings/batch",
-      headers,
-      payload: { settings },
-    });
-  expect(
-    (
-      await save([
-        { key: "GIFT_DISCOVERY_MODE", value: "both" },
-        { key: "GIFT_DISCOVERY_MONTHLY_LIMIT", value: "24" },
-      ])
-    ).statusCode,
-  ).toBe(200);
-  expect(await config()).toMatchObject({
-    GIFT_DISCOVERY_MODE: "both",
-    GIFT_DISCOVERY_MONTHLY_LIMIT: "24",
-  });
-  expect(
-    (
-      await save([
-        { key: "GIFT_DISCOVERY_MODE", value: "off" },
-        { key: "GIFT_DISCOVERY_MONTHLY_LIMIT", value: "-1" },
-      ])
-    ).statusCode,
-  ).toBe(400);
-  expect((await config()).GIFT_DISCOVERY_MODE).toBe("both");
-  vi.stubEnv("GIFT_DISCOVERY_MONTHLY_LIMIT", "99");
-  expect(
-    (
-      await save([
-        { key: "GIFT_DISCOVERY_MODE", value: "off" },
-        { key: "GIFT_DISCOVERY_MONTHLY_LIMIT", value: "25" },
-      ])
-    ).statusCode,
-  ).toBe(409);
-  expect((await config()).GIFT_DISCOVERY_MODE).toBe("both");
-  expect(
-    (await save([{ key: "OPENAI_API_KEY", value: "must-not-save" }]))
-      .statusCode,
-  ).toBe(400);
-  expect(
-    (
-      await save([
-        { key: "GIFT_DISCOVERY_MODE", value: "off" },
-        { key: "GIFT_DISCOVERY_MODE", value: "both" },
-      ])
-    ).statusCode,
-  ).toBe(400);
-});
-it("protects usage and batch settings from non-administrators", async () => {
+it("exposes only preferences and safe service status to administrators", async () => {
+  expect((await app.inject("/api/v1/admin/services")).statusCode).toBe(403);
   expect((await app.inject("/api/v1/admin/usage")).statusCode).toBe(403);
+  mocks.state.people.find((p) => p.userId === mocks.actor!.id)!.admin = true;
+  const services = await app.inject("/api/v1/admin/services");
+  expect(services.statusCode).toBe(200);
+  expect(services.body).not.toContain("synthetic-key");
+  expect(services.json()).toHaveLength(7);
+  expect((await app.inject("/api/v1/admin/settings")).json()).toHaveLength(2);
+  for (const key of [
+    "OPENAI_API_KEY",
+    "GIFT_DISCOVERY_MODE",
+    "SMTP_HOST",
+    "PAID_DAILY_LIMIT",
+  ])
+    expect(
+      (
+        await app.inject({
+          method: "POST",
+          url: "/api/v1/admin/settings",
+          headers,
+          payload: { key, value: "anything" },
+        })
+      ).statusCode,
+    ).toBe(409);
   expect(
     (
       await app.inject({
         method: "POST",
         url: "/api/v1/admin/settings/batch",
         headers,
-        payload: { settings: [{ key: "GIFT_DISCOVERY_MODE", value: "off" }] },
+        payload: { settings: [] },
       })
     ).statusCode,
-  ).toBe(403);
+  ).toBe(404);
 });
 it("gates group creation and idempotent replays while preserving membership and ownership", async () => {
   vi.stubEnv("FAMILY_GROUP_CREATION", "");

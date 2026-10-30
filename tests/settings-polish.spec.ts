@@ -3,6 +3,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { stagingFixtures } from "../src/server/staging-fixtures";
 import { world, command } from "../src/server/domain";
 import { emptyState } from "../src/shared/model";
+import { serviceStatuses } from "../src/server/service-status";
 import { adminUsage } from "../src/server/usage";
 import { addDiscoveryUsage, quotaKeys } from "../src/server/gift-discovery";
 
@@ -29,35 +30,12 @@ async function setup(
     {
       key: "AUTO_IMPORT_PRODUCT_PHOTOS",
       value: "false",
-      source: "settings",
+      source: options.locked ? "environment" : "settings",
       configured: true,
     },
-    ...["SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASS", "SMTP_FROM"].map(
-      (key) => ({ key, value: "", source: "environment", configured: true }),
-    ),
     {
       key: "FAMILY_GROUP_CREATION",
       value: options.restricted ? "admins" : "everyone",
-      source: "settings",
-    },
-    {
-      key: "GIFT_DISCOVERY_MODE",
-      value: "both",
-      source: options.locked ? "environment" : "settings",
-    },
-    {
-      key: "GIFT_DISCOVERY_USER_WEEKLY_LIMIT",
-      value: "3",
-      source: options.locked ? "environment" : "settings",
-    },
-    {
-      key: "GIFT_DISCOVERY_MONTHLY_LIMIT",
-      value: "100",
-      source: "environment",
-    },
-    {
-      key: "GIFT_DISCOVERY_MODEL",
-      value: "gpt-6-luna",
       source: options.locked ? "environment" : "settings",
     },
   ];
@@ -78,10 +56,10 @@ async function setup(
   ] as const)
     addDiscoveryUsage(f.state, key, count);
   const state = {
-    failSave: false,
+    failServices: false,
+    retried: false,
     failUsage: false,
     visible: true,
-    lastBatch: [] as Array<{ key: string; value: string }>,
   };
   await page.route("**/api/**", async (route) => {
     const path = new URL(route.request().url()).pathname.replace(
@@ -103,15 +81,25 @@ async function setup(
       }
       return route.fulfill({ json: settings });
     }
-    if (path === "admin/settings/batch") {
-      state.lastBatch = route.request().postDataJSON().settings;
-      if (state.failSave)
-        return route.fulfill({
-          status: 400,
-          json: { error: "Could not save these settings. Try again." },
-        });
-      for (const entry of state.lastBatch)
-        settings.find((s) => s.key === entry.key)!.value = entry.value;
+    if (path === "admin/services")
+      return state.failServices
+        ? route.fulfill({ status: 500, json: { error: "Unavailable" } })
+        : route.fulfill({
+            json: serviceStatuses(
+              {
+                GIFT_DISCOVERY_MODE: "both",
+                GIFT_DISCOVERY_USER_WEEKLY_LIMIT: "3",
+                GIFT_DISCOVERY_MONTHLY_LIMIT: "100",
+                OPENAI_API_KEY: "synthetic",
+                SMTP_HOST: "synthetic",
+                PAID_DAILY_LIMIT: "50",
+                SCRAPINGFISH_API_KEY: "synthetic",
+              },
+              false,
+            ),
+          });
+    if (path === "admin/jobs/retry") {
+      state.retried = true;
       return route.fulfill({ json: { ok: true } });
     }
     if (path === "admin/usage") {
@@ -131,7 +119,22 @@ async function setup(
     }
     if (path === "admin/jobs")
       return route.fulfill({
-        json: { workerLastSeen: Date.now(), imports: [], notifications: [] },
+        json: {
+          workerLastSeen: Date.now(),
+          imports: [
+            { id: "import", status: "failed", error: "Shop lookup failed." },
+          ],
+          notifications: state.retried
+            ? []
+            : [
+                {
+                  id: "notice",
+                  status: "failed",
+                  error: "Delivery failed",
+                  attempts: 5,
+                },
+              ],
+        },
       });
     if (path === "push")
       return route.fulfill({ json: { publicKey: null, devices: [] } });
@@ -153,68 +156,43 @@ async function setup(
   });
   return { ...f, actor, person, settings, state };
 }
-test("settings changes save together, omit locked fields, and preserve failed drafts", async ({
+test("administration has only app preferences and read-only services", async ({
   page,
 }) => {
-  const f = await setup(page);
+  await setup(page);
   await page.goto("/settings?section=admin");
-  const form = page.getByRole("region", {
-    name: "AI gift suggestions",
-    exact: true,
-  });
-  await expect(form.getByRole("button", { name: /Save/ })).toHaveCount(1);
-  await form
-    .getByLabel("AI gift suggestions", { exact: true })
-    .selectOption("givers");
-  await form.getByLabel("New searches per account each week").fill("6");
   await expect(
-    form.getByLabel("Shared new-search allowance each month"),
-  ).toBeDisabled();
-  f.state.failSave = true;
-  await form
-    .getByRole("button", { name: "Save gift suggestion settings" })
-    .click();
-  await expect(form.getByRole("alert")).toContainText("Could not save");
+    page.getByRole("region", { name: "Service status", exact: true }),
+  ).toContainText("Configured");
   await expect(
-    form.getByLabel("New searches per account each week"),
-  ).toHaveValue("6");
+    page.getByRole("button", { name: "Save gift suggestion settings" }),
+  ).toHaveCount(0);
+  await expect(page.getByText("SMTP_HOST", { exact: true })).toHaveCount(0);
+  await page.getByLabel("Who can create family groups?").selectOption("admins");
   await page
-    .getByLabel("Settings section", { exact: true })
-    .selectOption("about");
-  await page
-    .getByLabel("Settings section", { exact: true })
-    .selectOption("admin");
-  await expect(
-    form.getByLabel("New searches per account each week"),
-  ).toHaveValue("6");
-  f.state.failSave = false;
-  await form
-    .getByRole("button", { name: "Save gift suggestion settings" })
+    .getByRole("button", { name: "Save group creation setting" })
     .click();
   await expect(
-    page.getByText("Gift suggestion settings saved.", { exact: true }),
+    page.getByText("Family-group creation setting saved.", { exact: true }),
   ).toBeVisible();
-  expect(f.state.lastBatch).toEqual([
-    { key: "GIFT_DISCOVERY_MODE", value: "givers" },
-    { key: "GIFT_DISCOVERY_USER_WEEKLY_LIMIT", value: "6" },
-  ]);
+  await page.getByLabel("Add photos from shop links automatically").check();
+  await page.getByRole("button", { name: "Save photo preference" }).click();
   await expect(
-    form.getByRole("button", { name: "Save gift suggestion settings" }),
-  ).toBeDisabled();
+    page.getByText("Photo preference saved.", { exact: true }),
+  ).toBeVisible();
 });
-test("server-managed fields have no save button, usage retries and can be hidden", async ({
+test("locked preferences remain readable and usage can retry", async ({
   page,
 }) => {
   const f = await setup(page, { locked: true });
   f.state.failUsage = true;
   await page.goto("/settings?section=admin");
-  const form = page.getByRole("region", {
-    name: "AI gift suggestions",
-    exact: true,
-  });
-  await expect(form.getByRole("button", { name: /Save/ })).toHaveCount(0);
-  await expect(form).toContainText("managed on the server");
-  await expect(page.getByRole("button", { name: "Retry usage" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Save group creation setting" }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByLabel("Add photos from shop links automatically"),
+  ).toBeDisabled();
   f.state.failUsage = false;
   await page.getByRole("button", { name: "Retry usage" }).click();
   await expect(
@@ -222,10 +200,38 @@ test("server-managed fields have no save button, usage retries and can be hidden
   ).toBeVisible();
   f.state.visible = false;
   await page.reload();
-  await expect(form).toBeVisible();
   await expect(
     page.getByRole("region", { name: "This month's usage" }),
   ).toHaveCount(0);
+});
+test("service status can recover and failed jobs remain actionable", async ({
+  page,
+}) => {
+  const f = await setup(page);
+  f.state.failServices = true;
+  await page.goto("/settings?section=admin");
+  await expect(
+    page.getByRole("button", { name: "Retry service status" }),
+  ).toBeVisible();
+  f.state.failServices = false;
+  await page.getByRole("button", { name: "Retry service status" }).click();
+  await expect(
+    page.getByRole("region", { name: "Service status", exact: true }),
+  ).toContainText("Browser push");
+  const jobs = page.getByRole("region", {
+    name: "Background jobs",
+    exact: true,
+  });
+  await expect(
+    jobs.getByRole("heading", { name: "Background jobs" }),
+  ).toBeVisible();
+  await expect(jobs.getByText(/Shop lookup failed/)).toHaveCount(1);
+  await expect(jobs).toContainText(
+    "0 shop lookups waiting · 0 updates waiting",
+  );
+  await jobs.getByRole("button", { name: "Retry", exact: true }).click();
+  await expect(jobs).not.toContainText("Delivery failed");
+  expect(f.state.retried).toBe(true);
 });
 test("restricted non-admins get invitation guidance instead of group creation actions", async ({
   page,
@@ -302,8 +308,6 @@ test.describe("settings visual review", () => {
           await expect(
             page.getByRole("region", { name: "This month's usage" }),
           ).toBeVisible();
-        if (section === "admin")
-          await page.locator(".integration-group > summary").first().click();
         expect(
           await page.evaluate(
             () => document.documentElement.scrollWidth <= innerWidth,
