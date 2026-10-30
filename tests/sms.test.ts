@@ -254,6 +254,127 @@ it("fails closed on unavailable/stale quota and never counts quota checks as sen
   expect(m.fetch).toHaveBeenCalledOnce();
   expect(smsUsage(m.s!, m.c).balance).toBeNull();
 });
+it("retains a redacted rejection for admins without exposing provider details in verification errors", async () => {
+  m.fetch.mockImplementation(async (url: string) =>
+    response(
+      url.includes("/quota/")
+        ? { success: true, quotaRemaining: 200 }
+        : {
+            success: false,
+            quotaRemaining: 200,
+            otp: "654321",
+            error: `Sender approval required. key=${m.c.TEXTBELT_API_KEY}; phone=${phone}; formatted=(202) 555-0123; otp=654321; account=member@example.test; https://textbelt.com/quota/${m.c.TEXTBELT_API_KEY}`,
+          },
+    ),
+  );
+  await expect(startSms(actor, phone, "verification")).rejects.toThrow(
+    "SMS could not be confirmed",
+  );
+  const attempt = m.s!.smsAttempts[0];
+  expect(attempt).toMatchObject({
+    status: "failed",
+    reason: "provider-rejected",
+  });
+  expect(attempt.providerError).toContain("Sender approval required.");
+  for (const secret of [
+    m.c.TEXTBELT_API_KEY,
+    phone,
+    "555-0123",
+    "654321",
+    actor.email,
+    "https://",
+  ])
+    expect(attempt.providerError).not.toContain(secret);
+  expect(m.s!.smsChallenges[0].state).toBe("cancelled");
+  const usage = smsUsage(m.s!, m.c);
+  expect(usage.balance).toBe(200);
+  expect(usage.recentFailures).toEqual([
+    {
+      id: attempt.id,
+      createdAt: attempt.createdAt,
+      provider: "textbelt",
+      purpose: "verification",
+      reason: "provider-rejected",
+      detail: attempt.providerError,
+    },
+  ]);
+  expect(JSON.stringify(usage)).not.toContain(phone);
+  await expect(startSms(actor, phone, "verification")).rejects.toThrow(
+    "Wait 60 seconds",
+  );
+  expect(
+    m.fetch.mock.calls.filter(([url]) => url.endsWith("/otp/generate")),
+  ).toHaveLength(1);
+});
+it("keeps sign-in failures opaque and never copies provider response fields outside the selected error", async () => {
+  m.fetch.mockImplementation(async (url: string) =>
+    response(
+      url.includes("/quota/")
+        ? { success: true, quotaRemaining: 200 }
+        : {
+            success: false,
+            quotaRemaining: 200,
+            otp: "654321",
+            error: { private: "secret" },
+          },
+    ),
+  );
+  expect(await startSms(undefined, phone, "login")).toMatch(/^[a-f0-9-]{36}$/);
+  expect(m.s!.smsAttempts[0].providerError).toBeUndefined();
+  expect(JSON.stringify(m.s)).not.toContain("654321");
+  expect(JSON.stringify(m.s)).not.toContain("private");
+});
+it("redacts encoded keys before bounding provider error text and ignores errors on success", async () => {
+  m.c.TEXTBELT_API_KEY = "secret/key+value";
+  m.fetch.mockResolvedValue(
+    response({
+      success: false,
+      error: `Rejected ${encodeURIComponent(m.c.TEXTBELT_API_KEY)} ${"x".repeat(500)}`,
+    }),
+  );
+  const result = await providerSend(m.c, phone, "reference", "verification");
+  expect(result.providerError).toBe("Rejected [redacted] [token redacted]");
+  m.fetch.mockResolvedValue(
+    response({ success: false, error: "word ".repeat(200) }),
+  );
+  expect(
+    (await providerSend(m.c, phone, "reference", "verification")).providerError,
+  ).toHaveLength(400);
+  m.fetch.mockResolvedValue(
+    response({ success: true, textId: "id", error: "Ignored" }),
+  );
+  expect(
+    (await providerSend(m.c, phone, "reference", "verification")).providerError,
+  ).toBeUndefined();
+});
+it("shows only the ten newest monthly failed or uncertain attempts in admin diagnostics", () => {
+  for (let i = 0; i < 12; i++) {
+    m.s!.smsAttempts.push({
+      ...stamp(),
+      id: `failure-${i}`,
+      createdAt: new Date(Date.now() - i * 60000).toISOString(),
+      userId: actor.id,
+      phone,
+      account: "test",
+      provider: "textbelt",
+      purpose: "verification",
+      reference: "private-reference",
+      segments: 1,
+      status: i % 2 ? "failed" : "uncertain",
+    });
+  }
+  m.s!.smsAttempts.push({
+    ...m.s!.smsAttempts[0],
+    id: "prior-month",
+    createdAt: "2026-09-30T12:00:00Z",
+  });
+  const failures = smsUsage(m.s!, m.c).recentFailures;
+  expect(failures).toHaveLength(10);
+  expect(failures.map((failure) => failure.id)).toEqual(
+    Array.from({ length: 10 }, (_, i) => `failure-${i}`),
+  );
+  expect(JSON.stringify(failures)).not.toContain("private-reference");
+});
 it("does not subscribe users or enable login when verifying a replacement; enforces unique ownership", async () => {
   const id = await startSms(actor, "+12025550124", "verification");
   expect(m.s!.preferences[0].phone).toBe(phone);

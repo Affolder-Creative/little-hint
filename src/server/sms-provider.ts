@@ -62,6 +62,31 @@ async function json(
 }
 const quotaValue = (v: unknown) =>
   typeof v === "number" && Number.isSafeInteger(v) && v >= 0 ? v : undefined;
+// Select only the error field, never the response (which can contain the OTP).
+// Redact before truncating so a shortened secret cannot escape replacement.
+function textbeltError(
+  data: Record<string, unknown>,
+  key: string,
+  phone: string,
+) {
+  if (typeof data.error !== "string") return undefined;
+  let message = data.error;
+  for (const value of [key, phone, String(data.otp ?? "")]) {
+    if (!value) continue;
+    for (const encoded of new Set([value, encodeURIComponent(value)]))
+      message = message.replaceAll(encoded, "[redacted]");
+  }
+  return (
+    message
+      .replace(/https?:\/\/\S+/gi, "[URL redacted]")
+      .replace(/[\w.+-]+@[\w.-]+/g, "[email redacted]")
+      .replace(/\+?\d(?:[\s().-]*\d){3,}/g, "[number redacted]")
+      .replace(/[a-z\d_-]{24,}/gi, "[token redacted]")
+      .replace(/[\x00-\x1f\x7f\s]+/g, " ")
+      .trim()
+      .slice(0, 400) || undefined
+  );
+}
 export async function providerQuota(c: SmsConfig) {
   const data = await json(
     `https://textbelt.com/quota/${encodeURIComponent(c.TEXTBELT_API_KEY)}`,
@@ -130,6 +155,9 @@ export async function providerSend(
       accepted: data.success,
       providerId,
       remaining: quotaValue(data.quotaRemaining),
+      providerError: data.success
+        ? undefined
+        : textbeltError(data, c.TEXTBELT_API_KEY, phone),
     };
   }
   if (c.SMS_PROVIDER !== "twilio") throw new Error("SMS is not configured.");
@@ -153,7 +181,12 @@ export async function providerSend(
         );
   if (typeof data.sid !== "string")
     throw new Error("SMS provider unavailable.");
-  return { accepted: true, providerId: data.sid, remaining: undefined };
+  return {
+    accepted: true,
+    providerId: data.sid,
+    remaining: undefined,
+    providerError: undefined,
+  };
 }
 export async function providerVerify(
   c: SmsConfig,

@@ -2,6 +2,20 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "./api";
 import type { AdminUsage as Usage, AiUsage } from "../shared/admin-usage";
 const number = (n: number) => n.toLocaleString();
+const smsLabels: Record<string, string> = {
+  textbelt: "Textbelt",
+  twilio: "Twilio",
+  login: "Sign-in code",
+  verification: "Phone verification",
+  activity: "Activity notification",
+  "provider-rejected": "Request rejected by provider",
+  "submission-unknown": "Submission could not be confirmed",
+  uncertain: "Submission could not be confirmed",
+  failed: "Send failed",
+};
+const smsLabel = (value: string) =>
+  smsLabels[value] ??
+  value.replaceAll("-", " ").replace(/^./, (letter) => letter.toUpperCase());
 function AiDetails({ usage }: { usage: AiUsage }) {
   return (
     <details className="usage-details">
@@ -163,6 +177,28 @@ export function AdminUsage() {
                 </div>
               ))}
             </dl>
+            {u.sms.recentFailures.length > 0 && (
+              <>
+                <h5>Recent SMS failures</h5>
+                <p>
+                  Up to 10 latest failed or unconfirmed submissions this month.
+                </p>
+                {u.sms.recentFailures.map((failure) => (
+                  <p key={failure.id}>
+                    <time dateTime={failure.createdAt}>
+                      {new Date(failure.createdAt).toLocaleString()}
+                    </time>{" "}
+                    · {smsLabel(failure.provider)}
+                    <br />
+                    <strong>{smsLabel(failure.purpose)}</strong> ·{" "}
+                    {smsLabel(failure.reason)}.
+                    <br />
+                    {failure.detail ??
+                      "No additional details were recorded for this attempt."}
+                  </p>
+                ))}
+              </>
+            )}
             {u.sms.skipped.map((r) => (
               <p key={r.reason}>
                 {r.reason.replaceAll("-", " ")}: {number(r.count)}

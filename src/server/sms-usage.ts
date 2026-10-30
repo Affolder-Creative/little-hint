@@ -44,6 +44,18 @@ export function smsUsage(s: State, c: SmsConfig, now = new Date()): SmsUsage {
         count: rows.filter((a) => a.status === status).length,
       }),
     ),
+    recentFailures: rows
+      .filter((a) => a.status === "failed" || a.status === "uncertain")
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .slice(0, 10)
+      .map((a) => ({
+        id: a.id,
+        createdAt: a.createdAt,
+        provider: a.provider,
+        purpose: a.purpose,
+        reason: a.reason ?? a.status,
+        detail: a.providerError,
+      })),
     skipped: [
       ...new Set(
         rows

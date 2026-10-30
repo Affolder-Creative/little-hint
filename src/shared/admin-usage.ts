@@ -53,6 +53,14 @@ export interface SmsUsage {
   quotaState: "fresh" | "stale" | "unavailable" | "not-applicable";
   checkedAt?: string;
   outcomes: Array<{ status: string; count: number }>;
+  recentFailures: Array<{
+    id: string;
+    createdAt: string;
+    provider: string;
+    purpose: string;
+    reason: string;
+    detail?: string;
+  }>;
   skipped: Array<{ reason: string; count: number }>;
   providers: Array<{ provider: string; requests: number }>;
 }
