@@ -56,7 +56,7 @@ Do not attach production or shared external volumes. Coolify must create distinc
 
 Keep only you authorized to read Mailpit: its messages include sign-in codes for all synthetic accounts. The UI and API require the configured login. STARTTLS is required for internal SMTP; app and worker trust the staging CA. Mailpit has no relay or forwarding configured.
 
-App and worker run with `NODE_ENV=production` and `APP_ENV=staging`. They require the dedicated `little_hint_staging` database and role. Staging settings force mail to `mailpit:1025`, disable paid providers/SMS/Telegram/AI, and reject integration edits. Stored or environment-supplied external provider credentials are ignored. Direct product-page import remains available. The signed-in app displays a staging banner using runtime metadata.
+App and worker run with `NODE_ENV=production` and `APP_ENV=staging`. They require the dedicated `little_hint_staging` database and role. Staging settings force mail to `mailpit:1025`, disable paid scraping/SMS/Telegram, and reject integration edits. Stored or environment-supplied external provider credentials are ignored. Direct product-page import remains available. AI can be enabled with dedicated staging environment variables as described below. The signed-in app displays a staging banner using runtime metadata.
 
 ## 4. Seed synthetic scenarios
 
@@ -140,3 +140,25 @@ A rollback to code predating this preference restores automatic photo importing,
 even if the environment says false. No migration or media deletion is part of
 this change. Abandoned previews and manual uploads can still leave unused files;
 a retention and cleanup policy is separate work.
+
+## Paid AI testing
+
+Create a separate service account key in the OpenAI project `Little Hint (Staging)`.
+Set `STAGING_OPENAI_API_KEY` in the staging host's runtime secrets. Both app and
+worker receive it from `compose.staging.yaml`. Ordinary `OPENAI_API_KEY` values
+and saved database credentials remain ignored in staging.
+
+Set `STAGING_PAID_DAILY_LIMIT=10` to permit up to ten product-detail AI requests
+per day. To test gift suggestions, set `STAGING_GIFT_DISCOVERY_MODE=both`, with
+`STAGING_GIFT_DISCOVERY_USER_WEEKLY_LIMIT=3` and
+`STAGING_GIFT_DISCOVERY_MONTHLY_LIMIT=20`. Discovery has its own quotas, separate
+from the daily product-detail request limit. These are request limits, not dollar
+limits. Model overrides are `STAGING_OPENAI_MODEL` and
+`STAGING_GIFT_DISCOVERY_MODEL`.
+
+Recreate both app and worker after changing these variables. Remove the staging
+key to disable all AI, or set discovery mode to `off` to disable suggestions only.
+AI settings are locked in Administration and configured on the server. Test with
+synthetic accounts; requests incur charges in the staging OpenAI project.
+Preview deployments still ignore all AI credentials, including staging keys.
+Mailpit, messaging isolation, and paid scraping restrictions remain unchanged.

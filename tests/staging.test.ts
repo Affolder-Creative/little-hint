@@ -6,7 +6,11 @@ import {
 } from "../src/server/deployment";
 import { stagingFixtures } from "../src/server/staging-fixtures";
 import { world, giftSummary } from "../src/server/domain";
-import { config, saveSetting } from "../src/server/settings";
+import {
+  config,
+  saveSetting,
+  discoveryConfigForState,
+} from "../src/server/settings";
 const env = {
   APP_ENV: "staging",
   NODE_ENV: "production",
@@ -61,6 +65,51 @@ describe("staging boundaries", () => {
     await expect(
       saveSetting("SMTP_HOST", "real-mail.example.com"),
     ).rejects.toThrow("This test app uses a private email inbox");
+  });
+});
+describe("staging AI opt-in", () => {
+  it("uses only staging credentials and shares discovery configuration with transaction guards", async () => {
+    vi.stubEnv("APP_ENV", "staging");
+    vi.stubEnv("STAGING_OPENAI_API_KEY", "staging-test-key");
+    vi.stubEnv("OPENAI_API_KEY", "production-must-not-use");
+    vi.stubEnv("STAGING_GIFT_DISCOVERY_MODE", "both");
+    vi.stubEnv("STAGING_GIFT_DISCOVERY_MONTHLY_LIMIT", "20");
+    vi.stubEnv("STAGING_PAID_DAILY_LIMIT", "10");
+    vi.stubEnv("SMTP_HOST", "real.example.com");
+    vi.stubEnv("SCRAPINGBEE_API_KEY", "must-not-use");
+    expect(await config()).toMatchObject({
+      OPENAI_API_KEY: "staging-test-key",
+      GIFT_DISCOVERY_MODE: "both",
+      GIFT_DISCOVERY_MONTHLY_LIMIT: "20",
+      PAID_DAILY_LIMIT: "10",
+      SMTP_HOST: "mailpit",
+      SCRAPINGBEE_API_KEY: "",
+      SCRAPING_PROVIDER: "none",
+    });
+    const { state } = stagingFixtures();
+    expect(discoveryConfigForState(state)).toMatchObject({
+      available: true,
+      mode: "both",
+      monthlyLimit: 20,
+    });
+    vi.stubEnv("STAGING_OPENAI_API_KEY", "");
+    expect(discoveryConfigForState(state).available).toBe(false);
+    expect((await config()).PAID_DAILY_LIMIT).toBe("0");
+  });
+  it("keeps preview isolated even with a staging key and validates staging limits", async () => {
+    vi.stubEnv("STAGING_OPENAI_API_KEY", "staging-test-key");
+    vi.stubEnv("STAGING_GIFT_DISCOVERY_MODE", "both");
+    vi.stubEnv("APP_ENV", "preview");
+    expect(await config()).toMatchObject({
+      OPENAI_API_KEY: "",
+      GIFT_DISCOVERY_MODE: "off",
+    });
+    vi.stubEnv("APP_ENV", "staging");
+    vi.stubEnv("STAGING_PAID_DAILY_LIMIT", "invalid");
+    await expect(config()).rejects.toThrow("STAGING_PAID_DAILY_LIMIT");
+    vi.stubEnv("STAGING_PAID_DAILY_LIMIT", "10");
+    vi.stubEnv("STAGING_GIFT_DISCOVERY_MONTHLY_LIMIT", "invalid");
+    await expect(config()).rejects.toThrow("GIFT_DISCOVERY_MONTHLY_LIMIT");
   });
 });
 describe("representative staging fixtures", () => {

@@ -76,6 +76,22 @@ describe("automatic product photo preference", () => {
       "AUTO_IMPORT_PRODUCT_PHOTOS",
     );
   });
+  it("never exposes the staging AI secret in the settings summary", async () => {
+    vi.stubEnv("APP_ENV", "staging");
+    vi.stubEnv("STAGING_OPENAI_API_KEY", "staging-secret-must-not-leak");
+    const summary = await settingsSummary();
+    expect(summary).toContainEqual(
+      expect.objectContaining({
+        key: "OPENAI_API_KEY",
+        configured: true,
+        source: "environment",
+        default: null,
+      }),
+    );
+    expect(JSON.stringify(summary)).not.toContain(
+      "staging-secret-must-not-leak",
+    );
+  });
   it("allows the preference in staging without unlocking providers", async () => {
     vi.stubEnv("APP_ENV", "staging");
     vi.stubEnv("OPENAI_API_KEY", "must-not-use");

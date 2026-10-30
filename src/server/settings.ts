@@ -53,8 +53,9 @@ const defaults: Partial<Record<SettingKey, string>> = {
 };
 // A staging database may contain old settings after a branch switch. Never use
 // those credentials, or runtime provider credentials, to contact real users.
+// AI is the exception: staging accepts only explicitly prefixed runtime settings.
 export function stagingSettings(): Record<SettingKey, string> {
-  return Object.fromEntries(
+  const result = Object.fromEntries(
     settingKeys
       .map((k) => [k, ""])
       .concat([
@@ -75,6 +76,26 @@ export function stagingSettings(): Record<SettingKey, string> {
         ["OPENAI_MODEL", defaults.OPENAI_MODEL!],
       ]),
   ) as Record<SettingKey, string>;
+  if (
+    deploymentEnvironment() === "staging" &&
+    process.env.STAGING_OPENAI_API_KEY
+  ) {
+    result.OPENAI_API_KEY = process.env.STAGING_OPENAI_API_KEY;
+    for (const k of [
+      "OPENAI_MODEL",
+      "GIFT_DISCOVERY_MODE",
+      "GIFT_DISCOVERY_MODEL",
+      "GIFT_DISCOVERY_USER_WEEKLY_LIMIT",
+      "GIFT_DISCOVERY_MONTHLY_LIMIT",
+      "PAID_DAILY_LIMIT",
+    ] as const) {
+      result[k] = process.env[`STAGING_${k}`] || result[k];
+    }
+    if (!/^\d{1,6}$/.test(result.PAID_DAILY_LIMIT))
+      throw new Error("Invalid STAGING_PAID_DAILY_LIMIT.");
+    discoveryConfiguration(result);
+  }
+  return result;
 }
 const key = () => {
   const b = Buffer.from(process.env.SETTINGS_ENCRYPTION_KEY ?? "", "base64");
@@ -228,7 +249,11 @@ export async function settingsSummary() {
           : rows.some((s) => s.key === k)
             ? "settings"
             : "default",
-      default: staging ? cfg[k] || null : (defaults[k] ?? null),
+      default: staging
+        ? k === "OPENAI_API_KEY"
+          ? null
+          : cfg[k] || null
+        : (defaults[k] ?? null),
       ...(k.startsWith("GIFT_DISCOVERY_") ? { value: cfg[k] } : {}),
       ...(k === "SCRAPING_PROVIDER"
         ? {
@@ -249,7 +274,9 @@ function validateSetting(k: string, value: string) {
   if (!applicationPreference && syntheticEnvironment())
     fail(
       409,
-      "This test app uses a private email inbox. External services are turned off.",
+      deploymentEnvironment() === "staging"
+        ? "This test app uses a private email inbox. Configure AI with STAGING_ environment variables on the server; other external services are turned off."
+        : "This test app uses a private email inbox. External services are turned off.",
     );
   if (!applicationPreference && !settingKeys.includes(k as SettingKey))
     fail(400, "Unknown setting.");
