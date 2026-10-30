@@ -1562,27 +1562,6 @@ main {
 .member-list > div > span:nth-child(2) {
   flex: 1;
 }
-.integration-settings details {
-  border-bottom: 1px solid var(--border);
-  padding: 16px 0;
-}
-.integration-settings summary {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 15px;
-  cursor: pointer;
-  font-size: 14px;
-}
-.integration-settings summary > span {
-  text-transform: capitalize;
-}
-.integration-settings summary small {
-  color: var(--muted);
-}
-.integration-settings .form {
-  padding-top: 20px;
-}
 .install {
   display: flex;
   align-items: flex-start;
@@ -2371,12 +2350,6 @@ main {
   .settings-section h2 {
     font-size: 21px;
   }
-  .integration-settings summary {
-    font-size: 14px;
-  }
-  .integration-settings summary small {
-    font-size: 12px;
-  }
   .setting-row {
     gap: 10px;
   }
@@ -2629,12 +2602,6 @@ main {
 .notification-topics {
   display: grid;
   gap: 20px;
-}
-.integration-group + .integration-group {
-  margin-top: 24px;
-}
-.integration-group h4 {
-  margin-bottom: 8px;
 }
 .session-agent {
   overflow-wrap: anywhere;
@@ -3462,12 +3429,6 @@ main {
 .discovery-review > .text-button {
   margin-left: 16px;
 }
-.gift-discovery-admin {
-  margin: 32px 0;
-}
-.gift-discovery-admin .form {
-  margin: 20px 0;
-}
 @media (max-width: 900px) {
   .discovery-results {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3666,20 +3627,11 @@ main {
   margin-top: 8px;
   color: var(--accent);
 }
-.admin-fields {
-  display: grid;
-  gap: var(--space-controls);
-}
-.admin-explanation {
-  margin-top: var(--space-controls);
-}
-.admin-explanation > p,
 .usage-details > p {
   font-size: 13px;
   color: var(--muted);
   max-width: 65ch;
 }
-.admin-explanation > summary,
 .usage-details > summary {
   min-height: 44px;
   padding-block: 10px;
@@ -3802,31 +3754,6 @@ main {
 .admin-panel .usage-group h4 {
   margin-top: 0;
 }
-.admin-panel .integration-group {
-  padding: 0;
-  margin: 0;
-}
-.admin-panel .integration-group > summary {
-  display: list-item;
-  padding-block: 12px;
-}
-.admin-panel .integration-group > summary small {
-  display: block;
-  margin: 4px 0 0 16px;
-}
-.admin-panel .integration-group > details {
-  padding: 8px 0 8px 16px;
-}
-.admin-panel .integration-group > details > summary {
-  display: list-item;
-}
-.admin-panel .integration-group > details > summary small {
-  display: block;
-  margin-top: 4px;
-}
-.admin-panel .integration-settings summary > span {
-  text-transform: none;
-}
 .invitation-share {
   display: grid;
   gap: 12px;
@@ -3838,19 +3765,4 @@ main {
   .admin-page .admin-panel {
     padding: 16px;
   }
-}
-
-.integration-managed {
-  display: grid;
-  gap: 4px;
-  padding: 12px 0;
-  border-top: 1px solid var(--border);
-}
-.integration-managed strong {
-  font-size: 14px;
-  font-weight: 550;
-}
-.integration-managed small {
-  color: var(--muted);
-  overflow-wrap: anywhere;
 }

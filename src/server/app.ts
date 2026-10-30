@@ -1,3 +1,4 @@
+import { serviceStatuses } from "./service-status";
 import {
   batchJob,
   retryWishlistBatch,
@@ -46,7 +47,7 @@ import {
   config,
   settingsSummary,
   saveSetting,
-  saveDiscoverySettings,
+  effectiveConfig,
   canCreateGroups,
   discoveryConfiguration,
 } from "./settings";
@@ -66,6 +67,7 @@ import {
 } from "./deployment";
 export async function makeApp(options: { browserTest?: boolean } = {}) {
   validateDeployment();
+  effectiveConfig();
   // Only the separate test entrypoint opts in. Production entrypoints never
   // read an environment switch that could accidentally relax these limits.
   if (
@@ -508,20 +510,11 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
     await saveSetting(b.key, b.value);
     return { ok: true };
   });
-  app.post("/api/v1/admin/settings/batch", async (req) => {
+  app.get("/api/v1/admin/services", async (req) => {
     const a = await actor(req);
     if (!isAdmin(await readState(), a))
       fail(403, "Administrator access required.");
-    const body = z
-      .object({
-        settings: z
-          .array(z.object({ key: z.string(), value: z.string().max(100) }))
-          .min(1)
-          .max(4),
-      })
-      .parse(req.body);
-    await saveDiscoverySettings(body.settings);
-    return { ok: true };
+    return serviceStatuses(await config(), !!pushConfiguration());
   });
   app.get("/api/v1/admin/usage", async (req) => {
     const a = await actor(req);

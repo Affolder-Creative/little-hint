@@ -96,7 +96,7 @@ describe("automatic product photo preference", () => {
       "PAID_DAILY_LIMIT",
     ])
       await expect(saveSetting(provider, "anything")).rejects.toThrow(
-        "This test app uses a private email inbox",
+        "set on the server",
       );
     vi.stubEnv(key, "false");
     expect(await automaticallyImportProductPhotos()).toBe(false);
@@ -105,26 +105,27 @@ describe("automatic product photo preference", () => {
 });
 
 describe("settings read and decryption reuse", () => {
-  it("reuses decoded values, while observing external updates and deletion immediately", async () => {
+  it("ignores legacy deployment rows without decrypting them", async () => {
     vi.stubEnv("SMTP_HOST", "");
-    await saveSetting("SMTP_HOST", "first.example");
-    expect((await config()).SMTP_HOST).toBe("first.example");
-    expect((await config()).SMTP_HOST).toBe("first.example");
-    await automaticallyImportProductPhotos();
-    expect((await config()).SMTP_HOST).toBe("first.example");
-    expect(createDecipheriv).toHaveBeenCalledTimes(1);
-    storage.state.settings[0].encrypted = encrypt("second.example");
-    expect((await config()).SMTP_HOST).toBe("second.example");
-    expect(createDecipheriv).toHaveBeenCalledTimes(2);
-    storage.state.settings = [];
+    storage.state.settings.push({
+      id: "legacy",
+      key: "SMTP_HOST",
+      encrypted: "invalid",
+      revision: 1,
+      createdAt: "",
+    });
     expect((await config()).SMTP_HOST).toBe("");
-  });
-  it("uses one narrow settings read for a summary and never returns secrets", async () => {
-    vi.stubEnv("SMTP_PASS", "");
-    await saveSetting("SMTP_PASS", "synthetic-password");
-    const summary = await settingsSummary();
+    expect(await settingsSummary()).toHaveLength(2);
+    expect(createDecipheriv).not.toHaveBeenCalled();
     expect(readSettings).toHaveBeenCalledTimes(1);
-    expect(JSON.stringify(summary)).not.toContain("synthetic-password");
+  });
+  it("observes application preference updates and deletion", async () => {
+    await saveSetting(key, "true");
+    expect(await automaticallyImportProductPhotos()).toBe(true);
+    storage.state.settings[0].encrypted = encrypt("false");
+    expect(await automaticallyImportProductPhotos()).toBe(false);
+    storage.state.settings = [];
+    expect(await automaticallyImportProductPhotos()).toBe(false);
   });
   it("does not decrypt saved credentials overridden by environment or disabled in staging", async () => {
     storage.state.settings.push({

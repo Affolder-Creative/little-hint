@@ -331,11 +331,11 @@ visible only to its creator. Wish-list item visibility does not use this badge. 
 
 ### Administration
 
-Related administration controls share paper panels with panel-radius corners and no shadow. Panels use 20px padding, reduced to 16px at 650px and below, and 24px separation. Their headings use the panel-title size; internal headings use 17px. Keep every top-level group visible. Service groups use native disclosures with configuration counts, then individual setting disclosures with readable labels and status. Disabled fields retain full opacity, muted text, the page background, and a decorative border.
+Related administration controls share paper panels with panel-radius corners and no shadow. Panels use 20px padding, reduced to 16px at 650px and below, and 24px separation. Their headings use the panel-title size; internal headings use 17px. Keep every top-level group visible. Service status uses flat divided rows with readable capability names and configuration status. Disabled fields retain full opacity, muted text, the page background, and a decorative border.
 
 Family-group creation is an app-wide choice with Everyone signed in and Administrators only options. Environment overrides show a readable locked value. Follow sits outside group navigation with a 32px gap, wrapping onto its own row when needed.
 
-AI gift suggestion mode, limits, and model share one form and one save button. Locked fields remain readable and are omitted from saves; an entirely locked form has no save button. Long explanations live in disclosures. Monthly usage uses flat divided groups for gift suggestions, product-detail AI, and paid shop lookups. Compact definition lists pair 13px labels with 18px tabular counts; token/model and estimate details expand on demand. Never equate missing usage or unknown costs with zero. Enabled services can show an empty month; disabled services with activity remain visible.
+AI gift suggestion mode, limits, and model are ENV-only. The service summary describes availability and allowances without configuration fields. Monthly usage uses flat divided groups for gift suggestions, product-detail AI, and paid shop lookups. Compact definition lists pair 13px labels with 18px tabular counts; token/model and estimate details expand on demand. Never equate missing usage or unknown costs with zero. Enabled services can show an empty month; disabled services with activity remain visible.
 
 ### Attribution
 
@@ -362,7 +362,7 @@ Browser favicons use the approved micro tag without a surrounding tile. The tag 
 
 ### Optional fields and settings
 
-Optional gift notes, price, quantity, tags and photos share a disclosure below the gift name and destination. Upload progress is announced and saving waits for the photo. Missing-photo placeholders stay compact across screen sizes. Notification delivery setup leads the page, with channel connection status and setup beside its checkbox. Push setup, topic customization, and preview privacy use native disclosures with summaries of their current choices. Collapsed controls remain mounted so saving preserves every selection, including disconnected channels. Notification and follow checkbox rows have 44px targets. Save feedback appears beside the form. Inherited follows name their source choices; person follows explain that the source depends on each wish list. Administration integrations use labeled task groups. Session rows identify this device where available, with readable browser names and expandable details. Loading and failure states never stand in for empty data.
+Optional gift notes, price, quantity, tags and photos share a disclosure below the gift name and destination. Upload progress is announced and saving waits for the photo. Missing-photo placeholders stay compact across screen sizes. Notification delivery setup leads the page, with channel connection status and setup beside its checkbox. Push setup, topic customization, and preview privacy use native disclosures with summaries of their current choices. Collapsed controls remain mounted so saving preserves every selection, including disconnected channels. Notification and follow checkbox rows have 44px targets. Save feedback appears beside the form. Inherited follows name their source choices; person follows explain that the source depends on each wish list. Administration services use labeled status rows. Session rows identify this device where available, with readable browser names and expandable details. Loading and failure states never stand in for empty data.
 
 ### Notifications and mentions
 
@@ -411,3 +411,5 @@ remains visible in every section, including Family groups.
 - Don't add shadows to ordinary gift cards or list rows.
 - Don't use invented product photography or present demonstration fixtures as real gifts.
 - Don't rely on color alone to explain availability or list privacy.
+
+Administration contains App settings, This month's usage, Service status, and Background jobs. Only family-group creation and automatic product photos are editable, with optional locking ENV overrides. All service credentials, providers, models, limits, and AI availability are deployment-only. Service status reports configuration presence, not verified connectivity. Preserve usage after disabling services, notification retries, failed shop lookups, and the note that backup status is unavailable.

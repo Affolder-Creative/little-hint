@@ -108,7 +108,7 @@ for verification and opt-out instructions. Production settings are independent.
 
 ## Automatic product photos
 
-Administration → Product imports → **Automatically import product photos** is
+Administration → App settings → **Automatically import product photos** is
 OFF by default, including on upgrades. The preference is shared by everyone on
 that instance. Staging can edit it while all external provider restrictions stay
 in force. Manual uploads and existing photos are unaffected.

@@ -105,3 +105,7 @@ Take a database backup and stop both app and worker before replacing their image
 Do not run a pre-event app or worker against a database containing group events. Its transaction writer does not recognize the new record kind and can delete event records. A rollback to a pre-event build requires restoring the pre-upgrade database backup as well; it loses changes made since that backup. Do not perform that rollback automatically.
 
 After upgrading, confirm that a group owner can appoint an event leader, create an event with two selected people, and that each person can add a wish while an unselected group member can shop from those lists. Confirm the worker is healthy and Surprise recipients cannot see purchase activity.
+
+### Deployment settings and app preferences
+
+Configure email, Telegram, Twilio, scraping providers, AI credentials/models, gift-suggestion availability and allowances, and paid-request limits in the hosting environment. Empty values use built-in defaults, not saved database configuration. Recreate both app and worker containers after changes. Administration edits only family-group creation and automatic product photos, unless ENV overrides lock them. It also reports service configuration status, usage, and background jobs.
