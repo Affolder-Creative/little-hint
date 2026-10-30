@@ -246,6 +246,11 @@ for (const missing of Object.keys(stagingVars)) {
   }
 }
 const stagingAI = {
+  STAGING_SCRAPING_PROVIDER: "auto",
+  STAGING_SCRAPINGFISH_API_KEY: "compose-fish-only",
+  STAGING_SCRAPINGBEE_API_KEY: "compose-bee-only",
+  STAGING_SCRAPEDO_API_KEY: "compose-scrapedo-only",
+  STAGING_SCRAPINGDOG_API_KEY: "compose-dog-only",
   STAGING_GIFT_DISCOVERY_USER_OVERRIDES: discoveryOverrides,
   STAGING_OPENAI_API_KEY: "compose-staging-key-only",
   STAGING_OPENAI_MODEL: "test-model",
@@ -266,6 +271,14 @@ for (const name of ["app", "worker"]) {
   for (const [key, value] of Object.entries(stagingAI))
     assert.equal(environment[key], value);
   assert.equal(environment.OPENAI_API_KEY, undefined);
+  for (const key of [
+    "SCRAPING_PROVIDER",
+    "SCRAPINGFISH_API_KEY",
+    "SCRAPINGBEE_API_KEY",
+    "SCRAPEDO_API_KEY",
+    "SCRAPINGDOG_API_KEY",
+  ])
+    assert.equal(environment[key], undefined);
 }
 const stagingResult = config("compose.staging.yaml", stagingVars);
 assert.equal(stagingResult.status, 0, stagingResult.stderr);

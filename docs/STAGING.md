@@ -56,7 +56,7 @@ Do not attach production or shared external volumes. Coolify must create distinc
 
 Keep only you authorized to read Mailpit: its messages include sign-in codes for all synthetic accounts. The UI and API require the configured login. STARTTLS is required for internal SMTP; app and worker trust the staging CA. Mailpit has no relay or forwarding configured.
 
-App and worker run with `NODE_ENV=production` and `APP_ENV=staging`. They require the dedicated `little_hint_staging` database and role. Staging settings force mail to `mailpit:1025`, disable paid scraping/SMS/Telegram, and reject integration edits. Stored or environment-supplied external provider credentials are ignored. Direct product-page import remains available. AI can be enabled with dedicated staging environment variables as described below. The signed-in app displays a staging banner using runtime metadata.
+App and worker run with `NODE_ENV=production` and `APP_ENV=staging`. They require the dedicated `little_hint_staging` database and role. Staging settings force mail to `mailpit:1025`, disable SMS/Telegram and default to direct shop lookups, and reject integration edits. Stored credentials and unprefixed external provider environment variables are ignored. Direct product-page import remains available. AI and paid scraping can be enabled with dedicated staging environment variables as described below. The signed-in app displays a staging banner using runtime metadata.
 
 ## 4. Seed synthetic scenarios
 
@@ -161,7 +161,7 @@ key to disable all AI, or set discovery mode to `off` to disable suggestions onl
 AI settings are configured on the server and are not exposed in Administration. Test with
 synthetic accounts; requests incur charges in the staging OpenAI project.
 Preview deployments still ignore all AI credentials, including staging keys.
-Mailpit, messaging isolation, and paid scraping restrictions remain unchanged.
+Mailpit and messaging isolation remain unchanged. Paid scraping has its own opt-in below.
 
 ### Per-account AI allowances
 
@@ -179,3 +179,38 @@ Staging ignores `GIFT_DISCOVERY_USER_OVERRIDES`; production ignores the staging
 variable; preview ignores both. Invalid active overrides stop startup without
 logging their values. Overrides do not enable AI without a staging key and an
 enabled discovery mode. Exempt searches still incur OpenAI charges.
+
+## Paid shop lookup testing
+
+Set `STAGING_SCRAPING_PROVIDER=auto` and configure only the provider keys you use
+in the staging host's runtime secrets:
+
+| Provider | Staging variable |
+| --- | --- |
+| Scraping Fish | `STAGING_SCRAPINGFISH_API_KEY` |
+| ScrapingBee | `STAGING_SCRAPINGBEE_API_KEY` |
+| Scrape.do | `STAGING_SCRAPEDO_API_KEY` |
+| Scrapingdog | `STAGING_SCRAPINGDOG_API_KEY` |
+
+Use dedicated staging credentials. Ordinary `SCRAPING_PROVIDER` and unprefixed
+provider keys, along with saved database credentials, remain ignored in staging.
+Both app and worker receive these variables from `compose.staging.yaml`.
+
+The selector accepts `auto`, `none`, `scrapingfish`, `scrapingbee`, `scrapedo`,
+or `scrapingdog`. Empty defaults to `auto`, which chooses the first configured
+provider in this order: Fish, Bee, Scrape.do, Dog. It does not try another provider
+if the selected one fails. An explicit selection without its staging key uses
+direct lookup only. Set `none` or remove all staging scraping keys to disable
+paid scraping without disabling AI.
+
+Set `STAGING_PAID_DAILY_LIMIT=10` to allow paid requests. This setting applies
+separately to each paid service, including product-detail AI. A value of `0`
+disables paid requests; Compose defaults to `10`, while a runtime without this
+variable defaults to `0`. Scraping does not require `STAGING_OPENAI_API_KEY`.
+Direct HTML import runs first; a paid request is made only when required details
+are missing. Requests incur charges with the selected provider.
+
+Recreate both app and worker after changing these variables. With a configured
+provider and a positive limit, Administration shows Shop lookups as Configured
+with the provider name. Preview deployments ignore all scraping credentials,
+including staging keys.
