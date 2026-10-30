@@ -245,6 +245,28 @@ for (const missing of Object.keys(stagingVars)) {
     assert.ok(result.stderr.includes(missing));
   }
 }
+const stagingAI = {
+  STAGING_GIFT_DISCOVERY_USER_OVERRIDES: discoveryOverrides,
+  STAGING_OPENAI_API_KEY: "compose-staging-key-only",
+  STAGING_OPENAI_MODEL: "test-model",
+  STAGING_GIFT_DISCOVERY_MODE: "both",
+  STAGING_GIFT_DISCOVERY_MODEL: "test-discovery-model",
+  STAGING_GIFT_DISCOVERY_USER_WEEKLY_LIMIT: "2",
+  STAGING_GIFT_DISCOVERY_MONTHLY_LIMIT: "15",
+  STAGING_PAID_DAILY_LIMIT: "8",
+};
+const stagingAIResult = config("compose.staging.yaml", {
+  ...stagingVars,
+  ...stagingAI,
+});
+assert.equal(stagingAIResult.status, 0, stagingAIResult.stderr);
+for (const name of ["app", "worker"]) {
+  const environment = JSON.parse(stagingAIResult.stdout).services[name]
+    .environment;
+  for (const [key, value] of Object.entries(stagingAI))
+    assert.equal(environment[key], value);
+  assert.equal(environment.OPENAI_API_KEY, undefined);
+}
 const stagingResult = config("compose.staging.yaml", stagingVars);
 assert.equal(stagingResult.status, 0, stagingResult.stderr);
 const staging = JSON.parse(stagingResult.stdout);

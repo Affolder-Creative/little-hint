@@ -26,7 +26,6 @@ import {
 import { listIsArchived } from "../shared/list-dates";
 import { itemTrashed } from "../shared/organization";
 import { discoveryUserOverrides } from "./gift-discovery-limits";
-import { syntheticEnvironment } from "./deployment";
 
 const uuid = z.string().uuid();
 const ids = z
@@ -226,9 +225,7 @@ export function discoveryAllowance(
   now = new Date(),
 ) {
   const keys = quotaKeys(a.id, now);
-  const override = syntheticEnvironment()
-    ? undefined
-    : discoveryUserOverrides().get(a.id);
+  const override = discoveryUserOverrides().get(a.id);
   const weeklyLimit = override?.weeklyLimit ?? cfg.weeklyLimit;
   return {
     weeklyRemaining:

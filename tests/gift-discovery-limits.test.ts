@@ -16,6 +16,7 @@ import {
 
 beforeEach(() => {
   vi.stubEnv("APP_ENV", "test");
+  vi.stubEnv("STAGING_GIFT_DISCOVERY_USER_OVERRIDES", "");
   vi.stubEnv("GIFT_DISCOVERY_USER_OVERRIDES", "");
 });
 afterEach(() => vi.unstubAllEnvs());
@@ -182,6 +183,58 @@ describe("per-account allowances", () => {
       weeklyRemaining: 3,
       monthlyRemaining: 100,
     });
+  });
+
+  it("applies staging-specific overrides to requests and worker reservations only in staging", () => {
+    const f = discoveryFixture(),
+      a = f.actors[1];
+    vi.stubEnv(
+      "STAGING_GIFT_DISCOVERY_USER_OVERRIDES",
+      JSON.stringify({
+        [a.id]: { weeklyLimit: "unlimited", bypassMonthlyLimit: true },
+      }),
+    );
+    expect(discoveryAllowance(f.state, a, cfg).weeklyRemaining).toBe(3);
+    vi.stubEnv("APP_ENV", "staging");
+    const zero = { ...cfg, weeklyLimit: 0, monthlyLimit: 0 };
+    const job = createDiscovery(f.state, a, zero, f.input);
+    expect(startDiscovery(f.state, a, zero, job.id)?.monthlyQuotaExempt).toBe(
+      true,
+    );
+    expect(discoveryAllowance(f.state, a, zero)).toMatchObject({
+      weeklyRemaining: null,
+      monthlyRemaining: null,
+    });
+    expect(discoveryAllowance(f.state, f.actors[2], zero).weeklyRemaining).toBe(
+      0,
+    );
+    expect(() =>
+      createDiscovery(f.state, a, { ...zero, mode: "off" }, f.input),
+    ).toThrow("not enabled");
+    vi.stubEnv("APP_ENV", "preview");
+    expect(discoveryAllowance(f.state, a, zero).weeklyRemaining).toBe(0);
+  });
+
+  it("validates staging overrides at startup without exposing their value", () => {
+    expect(() =>
+      validateDeployment({
+        APP_ENV: "staging",
+        STAGING_GIFT_DISCOVERY_USER_OVERRIDES: "private-invalid-value",
+      }),
+    ).toThrow("Invalid STAGING_GIFT_DISCOVERY_USER_OVERRIDES.");
+    expect(() =>
+      discoveryUserOverrides({
+        APP_ENV: "staging",
+        GIFT_DISCOVERY_USER_OVERRIDES: "ignored-production-value",
+      }),
+    ).not.toThrow();
+    expect(() =>
+      discoveryUserOverrides({
+        APP_ENV: "preview",
+        STAGING_GIFT_DISCOVERY_USER_OVERRIDES: "ignored-staging-value",
+        GIFT_DISCOVERY_USER_OVERRIDES: "ignored-production-value",
+      }),
+    ).not.toThrow();
   });
 
   it("resets both shared and exempt monthly accounting at UTC boundaries", () => {
