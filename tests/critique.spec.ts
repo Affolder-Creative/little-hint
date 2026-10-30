@@ -2987,7 +2987,7 @@ for (const viewport of [
       .scrollIntoViewIfNeeded();
     await page.screenshot({ path: testInfo.outputPath("audience.png") });
     await page.goto("/settings?section=admin");
-    const guidance = page.getByText(/Backups are managed outside Little Hint/);
+    const guidance = page.getByText(/Backup status is unavailable here/);
     await expect(guidance).toBeVisible();
     await expect(
       page.getByText(/Updates and shop lookups: Running/),
