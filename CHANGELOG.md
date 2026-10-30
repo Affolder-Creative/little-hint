@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.2](https://github.com/Affolder-Creative/little-hint/compare/v0.11.1...v0.11.2) (2026-10-30)
+
+
+### Fixes
+
+* enable staging scraping with dedicated provider credentials ([#110](https://github.com/Affolder-Creative/little-hint/issues/110)) ([897bac7](https://github.com/Affolder-Creative/little-hint/commit/897bac7461ec526de14b1e9d47e6505bfa2449fe))
+
 ## [0.11.1](https://github.com/Affolder-Creative/little-hint/compare/v0.11.0...v0.11.1) (2026-10-30)
 
 
