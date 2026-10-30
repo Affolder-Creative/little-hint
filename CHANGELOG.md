@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.1](https://github.com/Affolder-Creative/little-hint/compare/v0.11.0...v0.11.1) (2026-10-30)
+
+
+### Fixes
+
+* enable AI testing with dedicated staging credentials ([#108](https://github.com/Affolder-Creative/little-hint/issues/108)) ([38ecf22](https://github.com/Affolder-Creative/little-hint/commit/38ecf225918574ed81970780a745e73d50c91438))
+
 ## [0.11.0](https://github.com/Affolder-Creative/little-hint/compare/v0.10.2...v0.11.0) (2026-10-30)
 
 
