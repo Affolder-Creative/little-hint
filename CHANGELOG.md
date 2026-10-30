@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.12.0](https://github.com/Affolder-Creative/little-hint/compare/v0.11.2...v0.12.0) (2026-10-30)
+
+
+### Features
+
+* add Textbelt SMS, phone sign-in, and usage controls ([#113](https://github.com/Affolder-Creative/little-hint/issues/113)) ([053507b](https://github.com/Affolder-Creative/little-hint/commit/053507bcab91a494a7670a3b4cfc625d7859a3be))
+
+
+### Fixes
+
+* darken Administration panels in light mode ([#112](https://github.com/Affolder-Creative/little-hint/issues/112)) ([ffc830d](https://github.com/Affolder-Creative/little-hint/commit/ffc830dc9c9608033693ac72d84914c53eb196cc))
+
 ## [0.11.2](https://github.com/Affolder-Creative/little-hint/compare/v0.11.1...v0.11.2) (2026-10-30)
 
 
