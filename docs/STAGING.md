@@ -162,3 +162,20 @@ AI settings are configured on the server and are not exposed in Administration. 
 synthetic accounts; requests incur charges in the staging OpenAI project.
 Preview deployments still ignore all AI credentials, including staging keys.
 Mailpit, messaging isolation, and paid scraping restrictions remain unchanged.
+
+### Per-account AI allowances
+
+`STAGING_GIFT_DISCOVERY_USER_OVERRIDES` accepts the same JSON format as production,
+but use account IDs from the staging database. For example, in a hosting
+runtime-value field:
+
+```json
+{"staging-account-id":{"weeklyLimit":"unlimited","bypassMonthlyLimit":true}}
+```
+
+Omit either property to retain its shared limit. A numeric `weeklyLimit` from
+0 to 999999 is also supported. Recreate both app and worker after changes.
+Staging ignores `GIFT_DISCOVERY_USER_OVERRIDES`; production ignores the staging
+variable; preview ignores both. Invalid active overrides stop startup without
+logging their values. Overrides do not enable AI without a staging key and an
+enabled discovery mode. Exempt searches still incur OpenAI charges.

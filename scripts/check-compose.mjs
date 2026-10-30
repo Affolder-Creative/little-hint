@@ -246,6 +246,7 @@ for (const missing of Object.keys(stagingVars)) {
   }
 }
 const stagingAI = {
+  STAGING_GIFT_DISCOVERY_USER_OVERRIDES: discoveryOverrides,
   STAGING_OPENAI_API_KEY: "compose-staging-key-only",
   STAGING_OPENAI_MODEL: "test-model",
   STAGING_GIFT_DISCOVERY_MODE: "both",
