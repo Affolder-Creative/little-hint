@@ -1,3 +1,4 @@
+import { sendActivitySms } from "./sms";
 import { wishlistEligible, topicEnabled } from "./activity";
 import { parsePhoneNumberFromString } from "libphonenumber-js/min";
 import nodemailer from "nodemailer";
@@ -11,7 +12,7 @@ import {
   createHmac,
   timingSafeEqual,
 } from "node:crypto";
-import { config, spend } from "./settings";
+import { config } from "./settings";
 import { pool, readState, transact } from "./db";
 import { noticeAllowed, preferences, stamp, fail } from "./domain";
 import type { Actor } from "../shared/model";
@@ -83,28 +84,6 @@ export async function telegramCall(
   if (!r.ok || !json.ok) throw new Error("Telegram delivery failed.");
   return json.result;
 }
-export async function twilioCall(
-  route: string,
-  body: Record<string, string>,
-  verify = false,
-) {
-  const c = await config();
-  if (!c.TWILIO_ACCOUNT_SID || !c.TWILIO_AUTH_TOKEN)
-    throw new Error("SMS is not configured.");
-  await spend("sms");
-  const host = verify ? "verify.twilio.com" : "api.twilio.com";
-  const r = await fetch(`https://${host}${route}`, {
-    method: "POST",
-    headers: {
-      Authorization: `Basic ${Buffer.from(`${c.TWILIO_ACCOUNT_SID}:${c.TWILIO_AUTH_TOKEN}`).toString("base64")}`,
-      "content-type": "application/x-www-form-urlencoded",
-    },
-    body: new URLSearchParams(body),
-    signal: AbortSignal.timeout(15000),
-  });
-  if (!r.ok) throw new Error("SMS provider could not complete this request.");
-  return r.json() as Promise<Record<string, string>>;
-}
 export async function deliverNotice(id: string) {
   let s = await readState();
   let n = s.notices.find((n) => n.id === id);
@@ -129,6 +108,7 @@ export async function deliverNotice(id: string) {
         ])
       ).rows[0];
   if (!user) return;
+  if (!inv) await sendActivitySms(id);
   const prefs = inv
     ? {
         email: true,
@@ -166,7 +146,7 @@ export async function deliverNotice(id: string) {
     : `A little update is waiting in Little Hint. Sign in to see it: ${link}`;
   try {
     let failures = 0;
-    for (const channel of ["email", "telegram", "sms"] as const) {
+    for (const channel of ["email", "telegram"] as const) {
       s = await readState();
       n = s.notices.find((n) => n.id === id);
       if (!n) return;
@@ -205,23 +185,6 @@ export async function deliverNotice(id: string) {
             text: message,
             disable_web_page_preview: true,
           });
-        if (
-          channel === "sms" &&
-          current.phoneVerified &&
-          !current.smsOptOut &&
-          current.phone
-        ) {
-          const c = await config();
-          await twilioCall(
-            `/2010-04-01/Accounts/${c.TWILIO_ACCOUNT_SID}/Messages.json`,
-            {
-              To: current.phone,
-              From: c.TWILIO_FROM,
-              Body: `${message} Reply STOP to unsubscribe.`,
-              StatusCallback: `${origin()}/api/hooks/twilio/status?notice=${id}`,
-            },
-          );
-        }
         await transact((s) => {
           const n = s.notices.find((n) => n.id === id);
           if (!n) return;
@@ -338,54 +301,6 @@ export function isUSPhone(phone: string): boolean {
     parsed.isValid() &&
     parsed.number === phone
   );
-}
-export async function smsStart(a: Actor, phone: string, consent: boolean) {
-  if (!consent || !isUSPhone(phone))
-    fail(
-      400,
-      "Enter a US phone number starting with +1 and agree to receive text messages.",
-    );
-  const c = await config();
-  if (!c.TWILIO_VERIFY_SERVICE_SID)
-    fail(
-      400,
-      "Text-message verification is not set up. Ask the app administrator for help.",
-    );
-  await twilioCall(
-    `/v2/Services/${c.TWILIO_VERIFY_SERVICE_SID}/Verifications`,
-    { To: phone, Channel: "sms" },
-    true,
-  );
-  await transact((s) => {
-    const p = preferences(s, a);
-    p.phone = phone;
-    p.phoneVerified = false;
-    p.sms = false;
-    if (!s.preferences.some((x) => x.id === p.id)) s.preferences.push(p);
-  });
-}
-export async function smsVerify(a: Actor, code: string) {
-  if (!/^\d{4,10}$/.test(code)) fail(400, "Enter the verification code.");
-  const s = await readState(),
-    p = preferences(s, a);
-  if (!p.phone) fail(400, "Request a verification code first.");
-  const c = await config();
-  const response = await twilioCall(
-    `/v2/Services/${c.TWILIO_VERIFY_SERVICE_SID}/VerificationCheck`,
-    { To: p.phone, Code: code },
-    true,
-  );
-  if (response.status !== "approved")
-    fail(400, "The code was not accepted. Request a new code.");
-  await transact((s) => {
-    const current = preferences(s, a);
-    if (current.phone !== p.phone)
-      fail(409, "The phone number changed. Try again.");
-    current.phoneVerified = true;
-    current.sms = true;
-    current.smsOptOut = false;
-    current.revision++;
-  });
 }
 export async function verifyTwilio(
   url: string,

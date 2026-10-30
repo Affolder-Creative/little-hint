@@ -1,3 +1,4 @@
+import { smsAuth } from "./sms-auth";
 import { betterAuth, APIError } from "better-auth";
 import { emailOTP } from "better-auth/plugins";
 import { passkey } from "@better-auth/passkey";
@@ -59,6 +60,7 @@ export function makeAuth() {
       },
     },
     plugins: [
+      smsAuth(),
       emailOTP({
         otpLength: 6,
         expiresIn: 600,

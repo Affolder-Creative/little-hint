@@ -14,6 +14,7 @@ export interface AiUsage {
   }>;
 }
 export interface AdminUsage {
+  sms: SmsUsage;
   visible: boolean;
   month: string;
   resetsAt: string;
@@ -35,4 +36,24 @@ export interface AdminUsage {
       enabled: boolean;
     }>;
   };
+}
+
+export interface SmsUsage {
+  enabled: boolean;
+  provider: string;
+  requests: number;
+  history: number;
+  legacyRequests: number;
+  signIn: number;
+  verification: number;
+  activity: number;
+  monthlyLimit: number;
+  reserve: number;
+  balance: number | null;
+  availableForNotifications: number | null;
+  quotaState: "fresh" | "stale" | "unavailable" | "not-applicable";
+  checkedAt?: string;
+  outcomes: Array<{ status: string; count: number }>;
+  skipped: Array<{ reason: string; count: number }>;
+  providers: Array<{ provider: string; requests: number }>;
 }

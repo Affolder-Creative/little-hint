@@ -114,6 +114,12 @@ jobs:
           node-version: "24"
           cache: npm
       - run: npm ci
+      - name: Create isolated SMS test database
+        run: docker exec $(docker ps -q --filter ancestor=postgres:18-alpine) createdb -U little_hint little_hint_sms_test
+      - name: SMS authentication and concurrent delivery
+        run: npx vitest run tests/sms.integration.test.ts
+        env:
+          SMS_TEST_DATABASE_URL: postgres://little_hint:ci-only@localhost:5432/little_hint_sms_test
       - run: npm run test:integration
       - name: Create isolated staging test database
         run: |

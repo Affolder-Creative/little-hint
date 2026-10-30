@@ -7,8 +7,10 @@ export function Action({
   children,
   secondary = false,
   label,
+  disabled = false,
 }: {
   label?: string;
+  disabled?: boolean;
   onClick: () => Promise<unknown>;
   children: ReactNode;
   secondary?: boolean;
@@ -23,7 +25,7 @@ export function Action({
         type="button"
         aria-label={label}
         title={!online ? "Reconnect to complete this action" : undefined}
-        disabled={busy || !online}
+        disabled={disabled || busy || !online}
         aria-busy={busy}
         onClick={async () => {
           setBusy(true);

@@ -26,6 +26,7 @@ it("reports capability requirements without exposing values", () => {
       OPENAI_API_KEY: "secret",
       SCRAPINGFISH_API_KEY: "secret",
       TELEGRAM_BOT_NAME: "private-bot",
+      SMS_PROVIDER: "twilio",
       TWILIO_AUTH_TOKEN: "secret",
       TWILIO_FROM: "private-number",
       TWILIO_VERIFY_SERVICE_SID: "secret",

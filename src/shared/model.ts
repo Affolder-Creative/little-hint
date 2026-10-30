@@ -288,6 +288,9 @@ export interface Preferences extends Base {
   phoneVerified?: boolean;
   chatId?: string;
   smsOptOut?: boolean;
+  smsLogin?: boolean;
+  smsConsentVersion?: string;
+  smsConsentedDailyLimit?: number;
 }
 export interface ImportJob extends Base {
   userId: string;
@@ -326,7 +329,60 @@ export interface Media extends Base {
   userId: string;
   file: string;
 }
+export interface SmsAttempt extends Base {
+  userId: string;
+  provider: "none" | "textbelt" | "twilio";
+  account: string;
+  purpose: "login" | "verification" | "activity";
+  reference: string;
+  phone: string;
+  status: "accepted" | "delivered" | "failed" | "skipped" | "uncertain";
+  segments: number;
+  providerId?: string;
+  reason?: string;
+  checkedAt?: string;
+}
+export interface SmsChallenge extends Base {
+  userId: string;
+  phone: string;
+  purpose: "login" | "verification" | "reauth";
+  account: string;
+  sessionId?: string;
+  expiresAt: string;
+  attempts: number;
+  state: "pending" | "checking" | "used" | "cancelled";
+  codeHash?: string;
+}
+export interface SmsConsent extends Base {
+  sequence: number;
+  userId: string;
+  phone: string;
+  purpose: "notifications" | "login" | "verification" | "transport";
+  optedIn: boolean;
+  text: string;
+  version: string;
+  source: string;
+}
+export interface SmsQuota extends Base {
+  account: string;
+  activeAccount?: string;
+  remaining?: number;
+  checkedAt?: string;
+  attemptedAt?: string;
+  unavailable?: boolean;
+  lowCreditAlertAt?: string;
+}
+export interface SmsGrant extends Base {
+  userId: string;
+  sessionId: string;
+  expiresAt: string;
+}
 export interface Records {
+  smsAttempts: SmsAttempt;
+  smsChallenges: SmsChallenge;
+  smsConsents: SmsConsent;
+  smsQuotas: SmsQuota;
+  smsGrants: SmsGrant;
   giftPreferences: GiftPreferences;
   giftDiscoveryJobs: GiftDiscoveryJob;
   organization: Organization;
@@ -358,6 +414,11 @@ export interface Records {
 export type Kind = keyof Records;
 export type State = { [K in Kind]: Records[K][] };
 export const kinds: Kind[] = [
+  "smsAttempts",
+  "smsChallenges",
+  "smsConsents",
+  "smsQuotas",
+  "smsGrants",
   "giftPreferences",
   "giftDiscoveryJobs",
   "organization",
@@ -424,6 +485,7 @@ export interface GiftView extends Omit<Item, "creatorId"> {
   }>;
 }
 export interface World {
+  sms?: import("./sms").SmsInfo;
   canCreateGroups?: boolean;
   giftPreferences?: GiftPreferenceView[];
   giftDiscovery?: DiscoveryConfig;

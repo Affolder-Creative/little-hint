@@ -1,3 +1,4 @@
+import { smsUsage } from "./sms-usage";
 import type { State } from "../shared/model";
 import type { AdminUsage, AiUsage } from "../shared/admin-usage";
 import {
@@ -132,15 +133,21 @@ export function adminUsage(
     requests: providers.reduce((n, p) => n + p.requests, 0),
     providers: providers.filter((p) => p.enabled || p.requests > 0),
   };
+  const sms = smsUsage(s, cfg, now);
   return {
+    sms,
     month,
     resetsAt: new Date(
       Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1),
     ).toISOString(),
     pricingAsOf: usagePricingAsOf,
-    visible: [suggestions, productDetails, scraping].some(
-      (g) => g.enabled || g.requests > 0,
-    ),
+    visible:
+      sms.enabled ||
+      sms.history > 0 ||
+      sms.legacyRequests > 0 ||
+      [suggestions, productDetails, scraping].some(
+        (g) => g.enabled || g.requests > 0,
+      ),
     suggestions,
     productDetails,
     scraping,

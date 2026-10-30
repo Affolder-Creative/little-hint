@@ -85,6 +85,111 @@ export function AdminUsage() {
         })}{" "}
         at 00:00 UTC
       </p>
+      {u.sms &&
+        (u.sms.enabled || u.sms.history > 0 || u.sms.legacyRequests > 0) && (
+          <section className="usage-group" aria-label="SMS">
+            <h4>
+              SMS{" "}
+              <span className="usage-state">
+                {u.sms.enabled ? u.sms.provider : "Currently off"}
+              </span>
+            </h4>
+            <dl className="usage-metrics">
+              <div>
+                <dt>Sign-in code submissions</dt>
+                <dd>{number(u.sms.signIn)}</dd>
+              </div>
+              <div>
+                <dt>Phone verification submissions</dt>
+                <dd>{number(u.sms.verification)}</dd>
+              </div>
+              <div>
+                <dt>Activity segment budget</dt>
+                <dd>
+                  {number(u.sms.activity)} / {number(u.sms.monthlyLimit)}
+                </dd>
+              </div>
+              {u.sms.provider === "textbelt" && (
+                <>
+                  <div>
+                    <dt>Textbelt credits remaining</dt>
+                    <dd>
+                      {u.sms.balance === null
+                        ? "Unavailable"
+                        : number(u.sms.balance)}
+                      {u.sms.quotaState !== "fresh" && u.sms.balance !== null
+                        ? " (last known)"
+                        : ""}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Reserved for codes</dt>
+                    <dd>{number(u.sms.reserve)}</dd>
+                  </div>
+                  <div>
+                    <dt>Credits available for activity</dt>
+                    <dd>
+                      {u.sms.availableForNotifications === null
+                        ? "Unavailable"
+                        : number(u.sms.availableForNotifications)}
+                    </dd>
+                  </div>
+                </>
+              )}
+            </dl>
+            {u.sms.provider === "textbelt" && (
+              <p className="muted">
+                Balance {u.sms.quotaState}.
+                {u.sms.checkedAt
+                  ? ` Last checked ${new Date(u.sms.checkedAt).toLocaleString()}.`
+                  : " Not yet checked."}{" "}
+                <button
+                  className="text-button"
+                  disabled={query.isFetching}
+                  onClick={() => query.refetch()}
+                >
+                  Refresh balance
+                </button>{" "}
+                Checks are limited to once per minute. Prepaid credits do not
+                reset with monthly usage.
+              </p>
+            )}
+            <details className="usage-details">
+              <summary>SMS delivery and skipped updates</summary>
+              <dl className="usage-metrics">
+                {u.sms.outcomes.map((o) => (
+                  <div key={o.status}>
+                    <dt>{o.status[0].toUpperCase() + o.status.slice(1)}</dt>
+                    <dd>{number(o.count)}</dd>
+                  </div>
+                ))}
+              </dl>
+              {u.sms.skipped.map((r) => (
+                <p key={r.reason}>
+                  {r.reason.replaceAll("-", " ")}: {number(r.count)}
+                </p>
+              ))}
+              {u.sms.providers.map((p) => (
+                <p key={p.provider}>
+                  {p.provider}: {number(p.requests)} submissions this month
+                </p>
+              ))}
+              {u.sms.legacyRequests > 0 && (
+                <p>
+                  {number(u.sms.legacyRequests)} legacy SMS provider requests
+                  were recorded before detailed tracking, including verification
+                  checks.
+                </p>
+              )}
+              <p>
+                Submissions are not proof of delivery or a bill. Failed and
+                uncertain submissions keep their budget reservation. Skipped
+                updates are not sent later. Provider history remains when SMS is
+                disabled or switched.
+              </p>
+            </details>
+          </section>
+        )}
       {(u.suggestions.enabled || u.suggestions.requests > 0) && (
         <section className="usage-group" aria-label="Gift suggestions">
           <h4>

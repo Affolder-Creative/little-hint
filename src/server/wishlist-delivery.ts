@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import type {
   BatchDelivery,
   NotificationChannel,
@@ -13,7 +12,7 @@ import {
   wishlistEligible,
   wishlistMessage,
 } from "./activity";
-import { sendEmail, telegramCall, twilioCall } from "./notifications";
+import { sendEmail, telegramCall } from "./notifications";
 import {
   activePushDevice,
   pushConfiguration,
@@ -21,7 +20,6 @@ import {
   removePushDevice,
   sendPush,
 } from "./push";
-import { config } from "./settings";
 
 export function pendingWishlistBatches(s: State) {
   return s.notificationBatches.filter(
@@ -224,26 +222,9 @@ export async function deliverWishlistBatch(id: string) {
           disable_web_page_preview: true,
         });
       if (channel === "sms") {
-        const c = await config();
-        const attemptId = randomUUID();
-        await transact((s) => {
-          const current = s.notificationBatches.find(
-            (batch) => batch.id === id,
-          );
-          if (current) {
-            current.smsAttemptId = attemptId;
-            current.revision++;
-          }
-        });
-        await twilioCall(
-          `/2010-04-01/Accounts/${c.TWILIO_ACCOUNT_SID}/Messages.json`,
-          {
-            To: prefs.phone!,
-            From: c.TWILIO_FROM,
-            Body: `${text} ${link} Reply STOP to unsubscribe.`,
-            StatusCallback: `${process.env.APP_URL ?? "http://localhost:5173"}/api/hooks/twilio/status?batch=${b.id}&attempt=${attemptId}`,
-          },
-        );
+        // SMS is reserved for explicitly eligible individual events, not summaries.
+        await receipt(id, destination, "skipped");
+        continue;
       }
       if (channel === "push" && device)
         await sendPush(

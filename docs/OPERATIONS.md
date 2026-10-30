@@ -98,7 +98,7 @@ The app can run at `https://littlehint.example.com` while sending from `littlehi
 
 SMTP settings must be available in the hosting environment before email-code login. All integration settings are ENV-only. The two editable app preferences remain encrypted using `SETTINGS_ENCRYPTION_KEY`; retain that key through restores.
 
-Telegram requires a bot token and name. Account linking uses an expiring single-use code and explicit user action. Twilio requires account credentials, a sending number, and a Verify service. Configure signed status/inbound callbacks according to the routes in `src/server/app.ts`; verify a US number before enabling SMS preferences. OpenAI and paid product imports are optional. Paid integrations remain inactive without credentials. `PAID_DAILY_LIMIT` caps provider requests per UTC day, not dollars. Set provider-side budgets too.
+Telegram requires a bot token and name. Account linking uses an expiring single-use code and explicit user action. SMS supports Textbelt or Twilio with separate sign-in and notification consent, spending limits, quota reporting, and explicit staging settings. Follow [SMS setup](SMS.md). Twilio credentials alone no longer enable SMS: set `SMS_PROVIDER=twilio` to select it. OpenAI and paid product imports are optional. Paid integrations remain inactive without credentials. `PAID_DAILY_LIMIT` caps provider requests per UTC day, not dollars. Set provider-side budgets too.
 
 ## Existing backup sidecar
 

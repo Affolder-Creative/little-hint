@@ -99,7 +99,7 @@ export function FollowSettings({ target, targetId }: FollowTarget) {
     direct?.muted ? "mute" : direct?.channels ? "custom" : "inherit",
   );
   const [channels, setChannels] = useState<NotificationChannel[]>(
-    direct?.channels ?? inherited.channels,
+    (direct?.channels ?? inherited.channels).filter((c) => c !== "sms"),
   );
   const p = world.preferences;
   return (
@@ -120,7 +120,8 @@ export function FollowSettings({ target, targetId }: FollowTarget) {
     >
       <p>
         New wish-list items from {name} appear in your inbox immediately.
-        External updates are grouped for 15 minutes per list.
+        External updates are grouped for 15 minutes per list. SMS does not send
+        wish-list summaries.
       </p>
       <Field label="Updates for this follow">
         <select value={mode} onChange={(e) => setMode(e.target.value)}>
@@ -140,26 +141,33 @@ export function FollowSettings({ target, targetId }: FollowTarget) {
         <p className="muted">
           {target === "person"
             ? "Uses the first available custom choices for each wish list: the list, its people, its household, then its family group. Otherwise, uses your default channels."
-            : `${inheritance}: ${inherited.channels.map((c) => channelLabels[c]).join(", ") || "Inbox only"}.`}
+            : `${inheritance}: ${
+                inherited.channels
+                  .filter((c) => c !== "sms")
+                  .map((c) => channelLabels[c])
+                  .join(", ") || "Inbox only"
+              }.`}
         </p>
       )}
       {mode === "custom" && (
         <fieldset className="choice-group">
           <legend>Send summaries through</legend>
-          {notificationChannels.map((c) => (
-            <label className="check" key={c}>
-              <input
-                type="checkbox"
-                checked={channels.includes(c)}
-                onChange={(e) =>
-                  setChannels((v) =>
-                    e.target.checked ? [...v, c] : v.filter((x) => x !== c),
-                  )
-                }
-              />
-              {channelLabels[c]}
-            </label>
-          ))}
+          {notificationChannels
+            .filter((c) => c !== "sms")
+            .map((c) => (
+              <label className="check" key={c}>
+                <input
+                  type="checkbox"
+                  checked={channels.includes(c)}
+                  onChange={(e) =>
+                    setChannels((v) =>
+                      e.target.checked ? [...v, c] : v.filter((x) => x !== c),
+                    )
+                  }
+                />
+                {channelLabels[c]}
+              </label>
+            ))}
           <p className="muted">
             Leave all unchecked for inbox only. Custom channels replace broader
             follow choices. List settings win; tied choices combine.
