@@ -678,42 +678,43 @@ test("gift summaries are owner-only, omit financial data, and remain available i
   }
 });
 
-test("provider selection is editable without exposing API keys", async ({
+test("provider configuration is deployment-only and service status is read-only", async ({
   page,
 }) => {
   await login(page, "alex@example.test");
   await page.goto("/settings?section=admin");
-  const service = page.locator(".integration-group").filter({
-    has: page.locator(":scope > summary", {
-      hasText: "Details from shop links",
-    }),
+  const section = page.getByRole("region", {
+    name: "Service status",
+    exact: true,
   });
-  await service.locator(":scope > summary").click();
-  const section = service.locator(":scope > details").filter({
-    has: page.locator(":scope > summary", {
-      hasText: "Service for shop details",
-    }),
-  });
-  await section.locator(":scope > summary").click();
-  await section
-    .getByLabel("Paid service for shop details", { exact: true })
-    .selectOption("scrapingfish");
-  await section
-    .getByRole("button", { name: "Save setting", exact: true })
-    .click();
+  await expect(section).toBeVisible();
+  await expect(section).toContainText("Shop lookups");
+  await expect(section.getByRole("textbox")).toHaveCount(0);
+  await expect(section.getByRole("combobox")).toHaveCount(0);
   await expect(
-    page.getByRole("status").filter({ hasText: "Setting saved." }),
-  ).toBeVisible();
+    page.getByLabel("Paid service for shop details", { exact: true }),
+  ).toHaveCount(0);
   const response = await page.request.get("/api/v1/admin/settings");
+  expect(response.ok()).toBe(true);
   const settings = await response.json();
-  expect(settings.find((s: any) => s.key === "SCRAPING_PROVIDER").value).toBe(
-    "scrapingfish",
-  );
-  expect(
-    settings
-      .filter((s: any) => s.key.endsWith("API_KEY"))
-      .every((s: any) => !Object.hasOwn(s, "value")),
-  ).toBe(true);
+  expect(settings.map((s: { key: string }) => s.key).sort()).toEqual([
+    "AUTO_IMPORT_PRODUCT_PHOTOS",
+    "FAMILY_GROUP_CREATION",
+  ]);
+  const rejected = await page.request.post("/api/v1/admin/settings", {
+    headers: { Origin: new URL(page.url()).origin },
+    data: { key: "SCRAPING_PROVIDER", value: "scrapingfish" },
+  });
+  expect(rejected.status()).toBe(409);
+  const services = await page.request.get("/api/v1/admin/services");
+  expect(services.ok()).toBe(true);
+  for (const service of await services.json()) {
+    expect(
+      Object.keys(service).every((key) =>
+        ["id", "label", "status", "detail"].includes(key),
+      ),
+    ).toBe(true);
+  }
   for (const [name, width, height] of [
     ["desktop", 1440, 1000],
     ["mobile", 390, 844],
@@ -728,10 +729,4 @@ test("provider selection is editable without exposing API keys", async ({
       ),
     ).toBe(true);
   }
-  await section
-    .getByLabel("Paid service for shop details", { exact: true })
-    .selectOption("none");
-  await section
-    .getByRole("button", { name: "Save setting", exact: true })
-    .click();
 });

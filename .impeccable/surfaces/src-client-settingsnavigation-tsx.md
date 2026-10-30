@@ -9,7 +9,6 @@ related_targets:
     "src/client/Households.tsx",
     "src/client/AccountInvitations.tsx",
     "src/client/InvitationShare.tsx",
-    "src/client/GiftDiscoveryAdmin.tsx",
     "src/client/AdminUsage.tsx",
   ]
 ---
