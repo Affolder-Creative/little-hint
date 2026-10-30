@@ -163,6 +163,14 @@ export function AdminUsage() {
                 </div>
               ))}
             </dl>
+            {u.sms.recentFailures.map((failure) => (
+              <p key={failure.id}>
+                {new Date(failure.createdAt).toLocaleString()} ·{" "}
+                {failure.provider} {failure.purpose}:{" "}
+                {failure.reason.replaceAll("-", " ")}.{" "}
+                {failure.detail ?? "No provider explanation was recorded."}
+              </p>
+            ))}
             {u.sms.skipped.map((r) => (
               <p key={r.reason}>
                 {r.reason.replaceAll("-", " ")}: {number(r.count)}

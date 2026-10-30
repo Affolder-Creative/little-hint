@@ -338,6 +338,7 @@ export interface SmsAttempt extends Base {
   status: "accepted" | "delivered" | "failed" | "skipped" | "uncertain";
   segments: number;
   providerId?: string;
+  providerError?: string;
   reason?: string;
   checkedAt?: string;
 }

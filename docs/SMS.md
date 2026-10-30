@@ -100,6 +100,14 @@ If quota is unavailable or stale, paid Textbelt sends stop. Last known balance i
 
 Textbelt delivery status is polled for accepted submissions for up to seven days. Unresolved sends retain their last known status. Historical messages keep their original provider; switching does not resubmit them.
 
+### Troubleshooting a rejected code request
+
+In Administration → This month's usage → SMS, expand **SMS delivery and skipped updates**. The panel shows the ten newest failed or uncertain submissions this month, including the time, provider, purpose and reason. For new Textbelt rejections, it also shows the provider's error explanation with the API key, OTP, phone numbers, email addresses, URLs and long tokens redacted. Raw responses are never stored or logged. These details are administrator-only; public sign-in responses remain generic.
+
+`provider rejected` means Textbelt returned `success: false`. An unchanged positive balance rules out depleted credit, but does not establish why sending was refused. `submission unknown` means the app could not confirm the submission, including a timeout or unreadable response. Do not repeatedly request codes to diagnose either outcome. Both consume the app's request allowance: 60 seconds between requests, three per hour and five per rolling day across sign-in and phone verification.
+
+Attempts without a recorded explanation cannot recover their original provider response. After deploying the diagnostic change, wait until the code-request allowance permits one controlled retry, then read the new explanation. If Textbelt requires account or sender approval, resolve that with Textbelt before retrying. Do not disable consent checks, increase rate limits, or change the credit reserve to work around a provider rejection.
+
 ## Terms and live acceptance
 
 The implementation follows Textbelt's [opt-in, sender identification and recurring-message opt-out requirements](https://textbelt.com/tos/). Ordinary requested app updates are not giveaway offers. The app sends no promotional or payment SMS, and its templates contain no URLs requiring Textbelt URL activation. See the [SMS API](https://docs.textbelt.com/) and [OTP API](https://textbelt.com/otp-sms-verification-api/) for provider behavior.

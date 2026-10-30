@@ -114,7 +114,10 @@ async function submit(c: SmsConfig, attempt: SmsAttempt) {
       if (a.status === "uncertain")
         a.status = result.accepted ? "accepted" : "failed";
       a.providerId = result.providerId;
-      if (!result.accepted) a.reason = "provider-rejected";
+      if (!result.accepted) {
+        a.reason = "provider-rejected";
+        a.providerError = result.providerError;
+      }
       if (result.remaining !== undefined) {
         let q = s.smsQuotas.find((q) => q.account === a.account);
         if (!q) {
