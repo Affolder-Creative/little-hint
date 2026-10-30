@@ -29,6 +29,16 @@ test("standalone invitation creates a private account that can later join two gr
     await sender
       .getByRole("button", { name: "Send invitation", exact: true })
       .click();
+    const confirmation = sender.getByRole("dialog");
+    await expect(confirmation.getByRole("status")).toContainText(
+      "waiting to be emailed",
+    );
+    await expect(
+      confirmation.getByRole("button", { name: /^(Share|Copy) sign-in link$/ }),
+    ).toBeVisible();
+    await confirmation
+      .getByRole("button", { name: "Done", exact: true })
+      .click();
     await expect(sender.getByRole("dialog")).not.toBeVisible();
     await expect(sender.getByText(email, { exact: true })).toBeVisible();
     let invitationMail: { text: string; html: string } | undefined;

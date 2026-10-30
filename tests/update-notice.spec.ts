@@ -89,3 +89,12 @@ test("activation timeout restores a retry action", async ({ page }) => {
     page.getByText("The update did not finish. Try Update now again."),
   ).toBeVisible();
 });
+
+test("first installation does not announce an app update", async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.assign(navigator.serviceWorker, { controller: null });
+  });
+  await page.goto("/");
+  await expect(page.getByLabel("Email address", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Update now" })).toHaveCount(0);
+});

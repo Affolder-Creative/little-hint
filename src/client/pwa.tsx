@@ -223,7 +223,8 @@ export function UpdateNotice() {
     const reconcile = () => {
       if (disposed) return;
       if (!initial && container.controller) initial = container.controller;
-      if (registration?.waiting || activeUpdate()) setAvailable(true);
+      if ((initial && registration?.waiting) || activeUpdate())
+        setAvailable(true);
       if (requested && activeUpdate()) reload();
     };
     const watch = () => {
@@ -231,7 +232,11 @@ export function UpdateNotice() {
       if (!worker) return;
       const changed = () => {
         reconcile();
-        if (worker.state === "installed" && container.controller) {
+        if (
+          worker.state === "installed" &&
+          initial &&
+          worker !== container.controller
+        ) {
           setAvailable(true);
           if (requested) {
             try {

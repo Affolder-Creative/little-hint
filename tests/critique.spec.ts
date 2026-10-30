@@ -595,6 +595,16 @@ for (const viewport of [
     await page
       .getByRole("button", { name: "Send invitation", exact: true })
       .click();
+    const confirmation = page.getByRole("dialog");
+    await expect(confirmation.getByRole("status")).toContainText(
+      "waiting to be emailed",
+    );
+    await expect(
+      confirmation.getByRole("button", { name: /^(Share|Copy) sign-in link$/ }),
+    ).toBeVisible();
+    await confirmation
+      .getByRole("button", { name: "Done", exact: true })
+      .click();
     await expect(page.getByRole("dialog")).not.toBeVisible();
     await expect(
       page.getByText("friend@example.test", { exact: true }),
