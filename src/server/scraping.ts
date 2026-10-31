@@ -2,7 +2,7 @@ import type { ScrapingProvider } from "../shared/scraping-providers";
 
 /** Provider hosts are fixed. Target URLs must pass validateUrl before this call. */
 export function scrapingRequest(
-  provider: ScrapingProvider,
+  provider: Exclude<ScrapingProvider, "brightdata">,
   key: string,
   target: string,
 ) {

@@ -34,6 +34,8 @@ export const settingKeys = [
   "OPENAI_MODEL",
   "SCRAPINGBEE_API_KEY",
   "SCRAPINGFISH_API_KEY",
+  "BRIGHTDATA_API_KEY",
+  "BRIGHTDATA_UNLOCKER_ZONE",
   "SCRAPEDO_API_KEY",
   "SCRAPINGDOG_API_KEY",
   "SCRAPING_PROVIDER",
@@ -111,6 +113,8 @@ export function stagingSettings(): Record<SettingKey, string> {
     result.SCRAPING_PROVIDER = process.env.STAGING_SCRAPING_PROVIDER || "auto";
     if (!scrapingSelections.includes(result.SCRAPING_PROVIDER))
       throw new Error("Invalid STAGING_SCRAPING_PROVIDER.");
+    result.BRIGHTDATA_UNLOCKER_ZONE =
+      process.env.STAGING_BRIGHTDATA_UNLOCKER_ZONE || "";
     for (const provider of scrapingProviders)
       result[provider.key] = process.env[`STAGING_${provider.key}`] || "";
     if (

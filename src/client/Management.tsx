@@ -1,5 +1,6 @@
+import { dismissActionMenu } from "./menu-dismiss";
 import "./action-menu.css";
-import { useState, type ReactNode } from "react";
+import { useState, useRef, useEffect, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
@@ -46,11 +47,13 @@ export function RunButton({
         className={className}
         disabled={busy || disabled}
         aria-busy={busy}
-        onClick={async () => {
+        onClick={async (event) => {
+          const button = event.currentTarget;
           setBusy(true);
           setError("");
           try {
             await run();
+            dismissActionMenu(button);
           } catch (error) {
             setError(actionError(error));
           } finally {
@@ -77,8 +80,53 @@ export function ActionMenu({
   label?: string;
   children: ReactNode;
 }) {
+  const ref = useRef<HTMLDetailsElement>(null);
+  useEffect(() => {
+    // Safari moves focus to the main region between pointerdown and click.
+    // Keep the menu mounted until that activation has completed.
+    let pointerInside = false;
+    const outside = (event: Event) => {
+      if (
+        event.target instanceof Node &&
+        ref.current &&
+        !ref.current.contains(event.target)
+      )
+        ref.current.open = false;
+    };
+    const pointer = (event: Event) => {
+      pointerInside =
+        event.target instanceof Node && !!ref.current?.contains(event.target);
+      outside(event);
+    };
+    const focus = (event: Event) => {
+      if (!pointerInside) outside(event);
+    };
+    const finish = () => {
+      queueMicrotask(() => {
+        pointerInside = false;
+        if (ref.current && document.querySelector("dialog[open]"))
+          ref.current.open = false;
+      });
+    };
+    const reset = () => {
+      pointerInside = false;
+    };
+    document.addEventListener("pointerdown", pointer, true);
+    document.addEventListener("focusin", focus);
+    document.addEventListener("click", finish);
+    document.addEventListener("pointercancel", reset);
+    document.addEventListener("keydown", reset, true);
+    return () => {
+      document.removeEventListener("pointerdown", pointer, true);
+      document.removeEventListener("focusin", focus);
+      document.removeEventListener("click", finish);
+      document.removeEventListener("pointercancel", reset);
+      document.removeEventListener("keydown", reset, true);
+    };
+  }, []);
   return (
     <details
+      ref={ref}
       className="entry-actions"
       onToggle={(event) => {
         if (!event.currentTarget.open) return;
@@ -99,10 +147,6 @@ export function ActionMenu({
           event.currentTarget.open = false;
           event.currentTarget.querySelector("summary")?.focus();
         }
-      }}
-      onBlur={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget))
-          event.currentTarget.open = false;
       }}
     >
       <summary aria-label={`${label ?? "Actions"} for ${name}`}>

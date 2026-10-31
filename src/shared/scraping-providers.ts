@@ -3,6 +3,7 @@ export const scrapingProviders = [
   { id: "scrapingbee", name: "ScrapingBee", key: "SCRAPINGBEE_API_KEY" },
   { id: "scrapedo", name: "Scrape.do", key: "SCRAPEDO_API_KEY" },
   { id: "scrapingdog", name: "Scrapingdog", key: "SCRAPINGDOG_API_KEY" },
+  { id: "brightdata", name: "Bright Data", key: "BRIGHTDATA_API_KEY" },
 ] as const;
 export type ScrapingProvider = (typeof scrapingProviders)[number]["id"];
 export const scrapingSelections = [
@@ -15,6 +16,9 @@ export function selectedScrapingProvider(
 ): ScrapingProvider | undefined {
   const selected = cfg.SCRAPING_PROVIDER || "auto";
   return scrapingProviders.find(
-    (p) => (selected === "auto" || p.id === selected) && !!cfg[p.key],
+    (p) =>
+      (selected === "auto" || p.id === selected) &&
+      !!cfg[p.key] &&
+      (p.id !== "brightdata" || !!cfg.BRIGHTDATA_UNLOCKER_ZONE),
   )?.id;
 }

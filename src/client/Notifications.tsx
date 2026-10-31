@@ -1,3 +1,4 @@
+import { dismissActionMenu } from "./menu-dismiss";
 import { availableNotificationChannels } from "../shared/channel-availability";
 import { useEffect, useState, type ReactNode } from "react";
 import {
@@ -62,11 +63,13 @@ export function AsyncButton({
         disabled={busy}
         aria-busy={busy}
         aria-label={label}
-        onClick={async () => {
+        onClick={async (event) => {
+          const button = event.currentTarget;
           setBusy(true);
           setError("");
           try {
             await action();
+            dismissActionMenu(button);
           } catch (e) {
             setError(actionError(e));
           } finally {

@@ -1,3 +1,4 @@
+import { dismissActionMenu } from "./menu-dismiss";
 import { useState, type ReactNode } from "react";
 import { LoaderCircle } from "lucide-react";
 import { useOnline } from "./pwa";
@@ -27,11 +28,13 @@ export function Action({
         title={!online ? "Reconnect to complete this action" : undefined}
         disabled={disabled || busy || !online}
         aria-busy={busy}
-        onClick={async () => {
+        onClick={async (event) => {
+          const button = event.currentTarget;
           setBusy(true);
           setError("");
           try {
             await onClick();
+            dismissActionMenu(button);
           } catch (e) {
             setError(actionError(e));
           } finally {

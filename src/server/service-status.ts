@@ -57,7 +57,12 @@ export function serviceStatuses(
           : "Direct lookup only",
       ...(provider && Number(cfg.PAID_DAILY_LIMIT) > 0
         ? { detail: scrapingProviders.find((p) => p.id === provider)!.name }
-        : {}),
+        : cfg.SCRAPING_PROVIDER === "brightdata"
+          ? {
+              detail:
+                "Bright Data requires an API key, Web Unlocker zone, and positive daily allowance.",
+            }
+          : {}),
     },
     {
       id: "product-ai",

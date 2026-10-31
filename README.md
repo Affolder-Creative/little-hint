@@ -198,3 +198,5 @@ and [outside contribution policy](CONTRIBUTING.md) are documented separately.
 ## Staging
 
 Use the [persistent staging guide](docs/STAGING.md) to test feature branches on a separate server with synthetic data and a private Mailpit inbox. Images are built manually in GitHub Actions and deployed by digest; production data and credentials stay separate.
+
+For paid shop lookups, see [Shop lookup configuration](docs/shop-lookups.md), including production and staging credentials, the Web Unlocker zone, retailer scrapers, and verification.

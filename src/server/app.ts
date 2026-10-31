@@ -1,3 +1,4 @@
+import { importView } from "../shared/imports";
 import { telegramInfo } from "./channel-availability";
 import { smsInfo, verifyTextbelt, normalizePhone } from "./sms-provider";
 import { recordTransport } from "./sms-policy";
@@ -245,7 +246,7 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
     const id = z.string().uuid().parse(req.params.id);
     const job = await readImport(id, a.id);
     if (!job) fail(404, "Import not found.");
-    return job;
+    return importView(job);
   });
   app.get<{ Params: { id: string } }>(
     "/api/v1/lists/:id/gift-summary",
@@ -397,6 +398,9 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
     "exchanges/cancel": "exchanges.cancel",
     preferences: "preferences.update",
     imports: "imports.create",
+    "imports/update": "imports.update",
+    "imports/discard": "imports.discard",
+    "imports/retry": "imports.retry",
   };
   app.get("/api/v1/trash", async (req) =>
     trash(await readState(), await actor(req)),
@@ -541,7 +545,8 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
       workerLastSeen:
         s.usage.find((u) => u.key === "worker-heartbeat")?.count ?? null,
       backupProvider: "backup-sidecar",
-      imports: s.imports.map(({ id, status, error }) => ({
+      imports: s.imports.map(({ id, status, error, diagnostic }) => ({
+        diagnostic,
         id,
         status,
         error,

@@ -1,3 +1,5 @@
+import { RevealPolicy } from "./ListFeatures";
+import { Info } from "lucide-react";
 import { useNavigationState } from "./NavigationScroll";
 import {
   GuidelineField,
@@ -559,7 +561,17 @@ export function EventPage() {
           event.description || `Individual wish lists for ${group.name}.`
         }
       >
-        <Privacy mode={event.mode} />
+        <details
+          className="list-privacy"
+          open={event.revealAfter ? true : undefined}
+        >
+          <summary>
+            <Privacy mode={event.mode} />
+            <Info size={16} aria-hidden="true" />
+            <span className="sr-only">Privacy details</span>
+          </summary>
+          <RevealPolicy list={event} />
+        </details>
         {event.canManage && (
           <>
             <button

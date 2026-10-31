@@ -1,3 +1,4 @@
+import { importView, retailerCollectionTimeoutMs } from "../shared/imports";
 import { effectiveConfig } from "./runtime-config";
 import { unavailableChannels } from "./channel-availability";
 import { notificationConsent, transportBlocked } from "./sms-policy";
@@ -657,7 +658,7 @@ export function world(s: State, a: Actor): World {
         itemId: i.id,
         watching: watchesItem(s, a.id, i.id),
       })),
-    imports: s.imports.filter((j) => j.userId === a.id),
+    imports: s.imports.filter((j) => j.userId === a.id).map(importView),
     links: s.links
       .filter(
         (l) =>
@@ -1317,6 +1318,15 @@ export function command(
             }
           : {}),
       };
+      const draftImport = s.imports.find(
+        (j) => j.id === importId && j.userId === a.id && j.draft,
+      );
+      if (draftImport) {
+        if (draftImport.draft!.state !== "active" || draftImport.url !== p.url)
+          fail(409, "This draft has already been added or changed.");
+        draftImport.draft!.state = "published";
+        touch(draftImport);
+      }
       s.items.push(i);
       if (i.listId)
         emitActivity(
@@ -2016,24 +2026,118 @@ export function command(
         s.preferences.push(prefs);
       return prefs;
     }
+    case "imports.update":
+    case "imports.discard":
+    case "imports.retry": {
+      const p = z
+        .object({
+          id,
+          revision: z.number().int().optional(),
+          fields: z
+            .record(
+              z.string().max(40),
+              z.union([z.string().max(5000), z.number().finite(), z.null()]),
+            )
+            .optional(),
+          touched: z.array(z.string().max(40)).max(20).optional(),
+          listId: id.optional(),
+        })
+        .parse(b);
+      const j =
+        s.imports.find(
+          (j) =>
+            j.id === p.id && j.userId === a.id && j.draft?.state === "active",
+        ) ?? fail(404, "Draft not found.");
+      if (action === "imports.discard") {
+        j.draft!.state = "discarded";
+        touch(j);
+        return importView(j);
+      }
+      if (action === "imports.retry") {
+        if (j.status !== "failed") return importView(j);
+        if (j.providerState?.terminal) delete j.providerState;
+        if (j.providerState && !j.providerState.snapshotId)
+          fail(
+            409,
+            "The shop request may still be running. Enter details manually to avoid another paid request.",
+          );
+        if (j.providerState) {
+          j.providerState.deadline = new Date(
+            Date.now() + retailerCollectionTimeoutMs,
+          ).toISOString();
+          delete j.providerState.nextPollAt;
+        }
+        j.status = "pending";
+        delete j.error;
+        delete j.diagnostic;
+        touch(j);
+        return importView(j);
+      }
+      if (p.revision !== j.draft!.revision)
+        fail(
+          409,
+          "This draft changed on another device. Reopen it before editing.",
+        );
+      if (
+        p.listId &&
+        !s.lists.some(
+          (l) =>
+            l.id === p.listId &&
+            !l.deletedAt &&
+            !listIsArchived(l) &&
+            l.ownerIds.some((id) => controls(s, a, id)),
+        )
+      )
+        fail(404, "List not found.");
+      if (p.listId) j.draft!.listId = p.listId;
+      if (p.fields) j.draft!.fields = p.fields;
+      if (p.touched) j.draft!.touched = p.touched;
+      j.draft!.revision++;
+      touch(j);
+      return importView(j);
+    }
     case "imports.create": {
       const p = z
         .object({
           url: z.url().max(2048),
           forceRefresh: z.boolean().default(false),
+          draft: z
+            .object({
+              listId: id,
+              fields: z.record(
+                z.string().max(40),
+                z.union([z.string().max(5000), z.number().finite(), z.null()]),
+              ),
+              touched: z.array(z.string().max(40)).max(20),
+            })
+            .optional(),
         })
         .parse(b);
       if (!/^https?:\/\//.test(p.url))
         fail(400, "Use a full shop link starting with https:// or http://.");
+      if (
+        p.draft &&
+        !s.lists.some(
+          (l) =>
+            l.id === p.draft!.listId &&
+            !l.deletedAt &&
+            !listIsArchived(l) &&
+            l.ownerIds.some((id) => controls(s, a, id)),
+        )
+      )
+        fail(404, "List not found.");
       const j = {
         ...stamp(),
+        ...(p.draft
+          ? { draft: { ...p.draft, revision: 1, state: "active" as const } }
+          : {}),
         userId: a.id,
         url: p.url,
         forceRefresh: p.forceRefresh,
         status: "pending" as const,
       };
       s.imports.push(j);
-      return j;
+      return importView(j);
     }
     default:
       fail(404, "Action not found.");

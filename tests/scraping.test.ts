@@ -57,7 +57,7 @@ describe("provider selection", () => {
       selectedScrapingProvider({ ...keys, SCRAPING_PROVIDER: "unknown" }),
     ).toBeUndefined();
   });
-  it.each(scrapingProviders)(
+  it.each(scrapingProviders.filter((p) => p.id !== "brightdata"))(
     "encodes $name requests and uses the documented credentials",
     (provider) => {
       const r = scrapingRequest(provider.id, "private-key", target);
@@ -141,27 +141,30 @@ describe("single paid preview attempt", () => {
     await paidProductPreview(target, partial, keys, true);
     expect(fetcher).toHaveBeenCalledTimes(2);
   });
-  it.each(scrapingProviders)("parses HTML from $name", async (p) => {
-    const fetcher = vi.fn(
-      async (_url: unknown, _options: unknown) =>
-        new Response(
-          '<meta property="og:title" content="A book"><meta property="og:image" content="/book.png">',
-        ),
-    );
-    vi.stubGlobal("fetch", fetcher);
-    const result = await paidProductPreview(
-      target,
-      { description: "Direct description", priceCents: 2300 },
-      { ...keys, SCRAPING_PROVIDER: p.id },
-    );
-    expect(result.title).toBe("A book");
-    expect(result.remoteImage).toBe("https://example.com/book.png");
-    expect(result.description).toBe("Direct description");
-    expect(result.priceCents).toBe(2300);
-    expect(spend).toHaveBeenCalledExactlyOnceWith(p.id);
-    expect(fetcher).toHaveBeenCalledTimes(1);
-    expect(fetcher.mock.calls[0][1]).toMatchObject({ redirect: "error" });
-  });
+  it.each(scrapingProviders.filter((p) => p.id !== "brightdata"))(
+    "parses HTML from $name",
+    async (p) => {
+      const fetcher = vi.fn(
+        async (_url: unknown, _options: unknown) =>
+          new Response(
+            '<meta property="og:title" content="A book"><meta property="og:image" content="/book.png">',
+          ),
+      );
+      vi.stubGlobal("fetch", fetcher);
+      const result = await paidProductPreview(
+        target,
+        { description: "Direct description", priceCents: 2300 },
+        { ...keys, SCRAPING_PROVIDER: p.id },
+      );
+      expect(result.title).toBe("A book");
+      expect(result.remoteImage).toBe("https://example.com/book.png");
+      expect(result.description).toBe("Direct description");
+      expect(result.priceCents).toBe(2300);
+      expect(spend).toHaveBeenCalledExactlyOnceWith(p.id);
+      expect(fetcher).toHaveBeenCalledTimes(1);
+      expect(fetcher.mock.calls[0][1]).toMatchObject({ redirect: "error" });
+    },
+  );
   it("does not spend when direct metadata is complete or paid imports are disabled", async () => {
     const fetcher = vi.fn();
     vi.stubGlobal("fetch", fetcher);

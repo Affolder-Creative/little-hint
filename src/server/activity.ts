@@ -270,6 +270,11 @@ export function watchesItem(s: State, userId: string, itemId: string) {
 export function activityAllowed(s: State, n: Notice): boolean {
   const a = actor(s, n.userId);
   if (!accountIds(s).includes(a.id)) return false;
+  if (n.importId)
+    return s.imports.some(
+      (j) =>
+        j.id === n.importId && j.userId === a.id && j.draft?.state === "active",
+    );
   if (n.invitationId) {
     const inv = s.invitations.find((i) => i.id === n.invitationId);
     // Account binding is established when the invitation is created, not inferred from a client ID.
@@ -434,6 +439,7 @@ function renderActivity(s: State, n: Notice): NotificationView {
   const item = s.items.find((i) => i.id === n.itemId);
   const list = s.lists.find((l) => l.id === n.listId);
   const messages: Record<string, string> = {
+    import: "Your product details are ready to review",
     mention: `${who} mentioned you in a private note`,
     discussion: `${who} added a private note`,
     wishlist: wishlistMessage(s, [n]),
@@ -471,19 +477,21 @@ function renderActivity(s: State, n: Notice): NotificationView {
       (n.exchangeId
         ? s.exchanges.find((e) => e.id === n.exchangeId)?.name
         : undefined),
-    href: n.invitationId
-      ? `/invite/${n.invitationId}`
-      : n.event === "invitation" && n.listId
-        ? "/lists"
-        : n.event === "invitation"
-          ? "/settings?section=groups"
-          : n.groupEventId
-            ? `/events/${n.groupEventId}`
-            : n.exchangeId
-              ? `/exchanges#exchange-${n.exchangeId}`
-              : item
-                ? `/gift/${item.id}${n.commentId ? `#note-${n.commentId}` : ""}`
-                : "/buying",
+    href: n.importId
+      ? `/lists?draft=${n.importId}`
+      : n.invitationId
+        ? `/invite/${n.invitationId}`
+        : n.event === "invitation" && n.listId
+          ? "/lists"
+          : n.event === "invitation"
+            ? "/settings?section=groups"
+            : n.groupEventId
+              ? `/events/${n.groupEventId}`
+              : n.exchangeId
+                ? `/exchanges#exchange-${n.exchangeId}`
+                : item
+                  ? `/gift/${item.id}${n.commentId ? `#note-${n.commentId}` : ""}`
+                  : "/buying",
     createdAt: n.createdAt,
     readAt: n.readAt,
   };
