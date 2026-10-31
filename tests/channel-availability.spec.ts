@@ -88,6 +88,84 @@ async function setup(
   return { saved };
 }
 
+for (const family of [false, true]) {
+  for (const native of [true, false]) {
+    test(`${family ? "family" : "account"} invitation ${native ? "native sharing" : "copy fallback"} works with SMS_ENABLED=false`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width: 393, height: 852 });
+      await setup(page, false, false);
+      const shared: ShareData[] = [];
+      const copied: string[] = [];
+      await page.exposeFunction("recordInvitationShare", (data: ShareData) => {
+        shared.push(data);
+      });
+      await page.exposeFunction("recordInvitationCopy", (url: string) => {
+        copied.push(url);
+      });
+      await page.addInitScript((native) => {
+        const recorder = window as unknown as {
+          recordInvitationShare: (data: ShareData) => Promise<void>;
+          recordInvitationCopy: (url: string) => Promise<void>;
+        };
+        Object.defineProperty(navigator, "share", {
+          value: native ? recorder.recordInvitationShare : undefined,
+        });
+        Object.defineProperty(navigator, "clipboard", {
+          value: { writeText: recorder.recordInvitationCopy },
+        });
+      }, native);
+      await page.route(
+        `**/api/v1/${family ? "groups/invite" : "invitations"}`,
+        (route) => route.fulfill({ json: { id: "sms-disabled-invitation" } }),
+      );
+      await page.goto("/settings?section=notifications");
+      await expect(
+        page.getByRole("button", { name: "Manage phone & SMS sign-in" }),
+      ).toHaveCount(0);
+      await page.goto(`/settings?section=${family ? "groups" : "invitations"}`);
+      await page
+        .getByRole("button", {
+          name: family ? "Invite someone" : "Invite someone to Little Hint",
+          exact: true,
+        })
+        .click();
+      const dialog = page.getByRole("dialog");
+      await dialog.getByLabel("Email address").fill("friend@example.test");
+      await dialog
+        .getByRole("button", { name: "Send invitation", exact: true })
+        .click();
+      const button = dialog.getByRole("button", {
+        name: native ? "Share sign-in link" : "Copy sign-in link",
+      });
+      await button.click();
+      const url = new URL(
+        family ? "/invite/sms-disabled-invitation" : "/",
+        page.url(),
+      ).href;
+      if (native) {
+        await expect
+          .poll(() => shared)
+          .toEqual([
+            {
+              title: "Little Hint",
+              text: "You're invited to Little Hint. Sign in with the email address I invited.",
+              url,
+            },
+          ]);
+        expect(copied).toEqual([]);
+      } else {
+        await expect.poll(() => copied).toEqual([url]);
+        await expect(
+          page.getByText("Sign-in link copied.", { exact: true }),
+        ).toBeVisible();
+        expect(shared).toEqual([]);
+      }
+      await expect(button).toBeEnabled();
+    });
+  }
+}
+
 for (const width of [393, 1280]) {
   for (const [sms, telegram] of [
     [false, false],
