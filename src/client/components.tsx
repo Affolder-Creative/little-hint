@@ -250,6 +250,8 @@ export function Form({
   dirty: controlledDirty,
   cancel,
   busyLabel = "Saving…",
+  cancelLabel = "Cancel",
+  status,
   onBusyChange,
 }: {
   onSubmit: (data: FormData) => Promise<unknown>;
@@ -264,6 +266,8 @@ export function Form({
   dirty?: boolean;
   cancel?: () => void;
   busyLabel?: string;
+  cancelLabel?: string;
+  status?: string;
   onBusyChange?: (busy: boolean) => void;
 }) {
   const [busy, setBusy] = useState(false),
@@ -395,8 +399,13 @@ export function Form({
             disabled={busy}
             onClick={cancel}
           >
-            Cancel
+            {cancelLabel}
           </button>
+        )}
+        {status && (
+          <p className="muted form-status" role="status">
+            {status}
+          </p>
         )}
       </div>
     </form>

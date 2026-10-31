@@ -1,3 +1,4 @@
+import { AdminPreferences } from "./AdminPreferences";
 import { availableNotificationChannels } from "../shared/channel-availability";
 import { SmsSettings } from "./SmsSettings";
 import { smsNotificationDisclosure } from "../shared/sms";
@@ -1134,7 +1135,6 @@ function Security() {
   );
 }
 function Admin() {
-  const { toast } = useApp();
   const client = useQueryClient();
   const settings = useQuery({
     queryKey: ["admin-settings"],
@@ -1168,165 +1168,18 @@ function Admin() {
     queryKey: ["admin-services"],
     queryFn: () => api<AdminServiceStatus[]>("admin/services"),
   });
-  const groupPolicy = settings.data?.find(
-    (s) => s.key === "FAMILY_GROUP_CREATION",
-  );
-  const photos = settings.data?.find(
-    (s) => s.key === "AUTO_IMPORT_PRODUCT_PHOTOS",
-  );
   return (
     <section className="settings-section admin-page">
       <h2>Administration</h2>
-      {settings.isPending && (
-        <p role="status">Loading administration settings…</p>
-      )}
       <section className="admin-panel" aria-label="App settings">
         <h3>App settings</h3>
-        {groupPolicy && (
-          <section
-            className="admin-preference"
-            aria-label="Family-group creation"
-          >
-            <h4>Family-group creation</h4>
-            <p>
-              Choose who can start a family group. Existing groups and their
-              owners keep their permissions.
-            </p>
-            {groupPolicy.source === "environment" ? (
-              <p className="muted">
-                {groupPolicy.value === "admins"
-                  ? "Administrators only"
-                  : "Everyone signed in"}
-                . Managed in hosting configuration.
-              </p>
-            ) : (
-              <Form
-                key={groupPolicy.value}
-                submit="Save group creation setting"
-                onSubmit={async (f) => {
-                  await api("admin/settings", {
-                    key: "FAMILY_GROUP_CREATION",
-                    value: value(f, "policy"),
-                  });
-                  await client.invalidateQueries();
-                  toast("Family-group creation setting saved.");
-                }}
-              >
-                <Field label="Who can create family groups?">
-                  <select name="policy" defaultValue={groupPolicy.value}>
-                    <option value="everyone">Everyone signed in</option>
-                    <option value="admins">Administrators only</option>
-                  </select>
-                </Field>
-              </Form>
-            )}
-          </section>
+        <p className="muted">
+          These settings apply to everyone using this Little Hint app.
+        </p>
+        {settings.isPending && (
+          <p role="status">Loading administration settings…</p>
         )}
-        <section
-          className="admin-preference admin-photo-preference"
-          aria-label="Details from shop links"
-        >
-          <h4>Details from shop links</h4>
-          {photos && (
-            <Form
-              key={`${photos.source}-${photos.value}`}
-              submit="Save photo preference"
-              disabled={photos.source === "environment"}
-              onSubmit={async (f) => {
-                await api("admin/settings", {
-                  key: photos.key,
-                  value: String(f.has("automaticPhotos")),
-                });
-                await client.invalidateQueries({
-                  queryKey: ["admin-settings"],
-                });
-                toast("Photo preference saved.");
-              }}
-            >
-              <label className="check">
-                <input
-                  type="checkbox"
-                  name="automaticPhotos"
-                  defaultChecked={photos.value === "true"}
-                  disabled={photos.source === "environment"}
-                  aria-describedby="automatic-photos-help"
-                />
-                Add photos from shop links automatically
-              </label>
-              <p id="automatic-photos-help" className="muted">
-                Save a photo when looking up a shop link. Turn this off to save
-                storage space. You can still upload photos yourself. Existing
-                photos are kept, and lookups already running may still add a
-                photo.
-              </p>
-              <p className="muted">
-                {photos.source === "environment"
-                  ? "Managed in hosting configuration. Change it there to update this choice."
-                  : photos.source === "default"
-                    ? "Off by default. This choice applies to everyone using this Little Hint app."
-                    : "Saved. This choice applies to everyone using this Little Hint app."}
-              </p>
-            </Form>
-          )}
-        </section>
-        <section
-          className="admin-preference"
-          aria-label="Product photo loading"
-        >
-          <h4>Product photo loading</h4>
-          {[
-            [
-              "PRODUCT_IMAGE_CACHE_ENABLED",
-              "Cache product photos on devices",
-              "Keep downloaded photos for faster repeat visits. Turning this off clears saved photos as devices reconnect and increases repeat downloads.",
-            ],
-            [
-              "PRODUCT_IMAGE_PREFETCH_ENABLED",
-              "Preload larger product photos",
-              "Download a few larger photos after visible content loads so items open faster. Requires photo caching. Turn off to reduce background data use.",
-            ],
-          ].map(([key, label, help]) => {
-            const setting = settings.data?.find((s) => s.key === key);
-            if (!setting) return null;
-            return (
-              <Form
-                key={`${key}-${setting.source}-${setting.value}`}
-                submit="Save preference"
-                disabled={setting.source === "environment"}
-                onSubmit={async (f) => {
-                  await api("admin/settings", {
-                    key,
-                    value: String(f.has("enabled")),
-                  });
-                  await Promise.all([
-                    client.invalidateQueries({ queryKey: ["admin-settings"] }),
-                    client.invalidateQueries({ queryKey: ["world"] }),
-                  ]);
-                  toast("Photo loading preference saved.");
-                }}
-              >
-                <label className="check">
-                  <input
-                    type="checkbox"
-                    name="enabled"
-                    defaultChecked={setting.value === "true"}
-                    disabled={setting.source === "environment"}
-                    aria-describedby={`${key}-help`}
-                  />
-                  {label}
-                </label>
-                <p className="muted" id={`${key}-help`}>
-                  {help}
-                </p>
-                <p className="muted">
-                  {setting.source === "environment"
-                    ? "Managed in hosting configuration. Change it there to update this choice."
-                    : "On by default. This choice applies to everyone using this Little Hint app."}
-                </p>
-              </Form>
-            );
-          })}
-        </section>
+        {settings.data && <AdminPreferences settings={settings.data} />}
       </section>
       <AdminUsage />
       <section className="admin-panel" aria-label="Service status">
