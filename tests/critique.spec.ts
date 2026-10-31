@@ -3911,20 +3911,29 @@ test.describe("navigation scroll restoration", () => {
   }
 
   for (const width of [1440, 390])
-    for (const appleStandalone of [false, true]) {
-      test(`new pages start at the top and history restores distinct entries at ${width}px standalone=${appleStandalone}`, async ({
+    for (const appleMode of ["browser", "standalone", "safari", "ipad"]) {
+      test(`new pages start at the top and history restores distinct entries at ${width}px mode=${appleMode}`, async ({
         page,
       }) => {
         await page.setViewportSize({ width, height: 720 });
-        if (appleStandalone)
-          await page.addInitScript(() => {
+        await page.addInitScript((mode) => {
+          if (mode === "standalone")
             Object.defineProperty(navigator, "standalone", { value: true });
-          });
+          if (mode === "safari")
+            Object.defineProperty(navigator, "userAgent", {
+              value:
+                "Mozilla/5.0 (iPhone; CPU iPhone OS 27_0_1 like Mac OS X) AppleWebKit/605.1.15 Version/27.0 Mobile/15E148 Safari/604.1",
+            });
+          if (mode === "ipad") {
+            Object.defineProperty(navigator, "platform", { value: "MacIntel" });
+            Object.defineProperty(navigator, "maxTouchPoints", { value: 5 });
+          }
+        }, appleMode);
         const { list } = await longList(page);
         await page.goto(`/lists/${list.id}`);
         await expect(page.locator(".gift-card")).toHaveCount(46);
         expect(await page.evaluate(() => history.scrollRestoration)).toBe(
-          appleStandalone ? "auto" : "manual",
+          appleMode !== "browser" ? "auto" : "manual",
         );
         const gift = page.locator(".gift-card").nth(15);
         await gift.scrollIntoViewIfNeeded();
