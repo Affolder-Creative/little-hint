@@ -2,6 +2,7 @@ import { transact } from "./db";
 import { spend } from "./settings";
 import { validateUrl, boundedBody } from "./imports";
 import type { ImportJob, Item } from "../shared/model";
+import { retailerCollectionTimeoutMs } from "../shared/imports";
 
 export class ImportPending extends Error {}
 export class BrightDataFailure extends Error {
@@ -86,7 +87,7 @@ export function retailerDataset(value: string) {
         : host === "target.com"
           ? u.pathname.startsWith("/p/")
           : host === "bestbuy.com"
-            ? u.pathname.includes(".p")
+            ? /\/(?:\d+\.p|sku\/\d+)\/?$/.test(u.pathname)
             : false;
   return product ? datasets[host] : undefined;
 }
@@ -112,9 +113,11 @@ export function normalizeRetailer(
     host === "walmart.com"
       ? new URL(url).pathname.split("/").pop()
       : host === "target.com"
-        ? new URL(url).pathname.match(/A-(\d+)/)?.[1]
+        ? /^\d+$/.test(new URL(url).searchParams.get("preselect") ?? "")
+          ? new URL(url).searchParams.get("preselect")
+          : new URL(url).pathname.match(/A-(\d+)/)?.[1]
         : host === "bestbuy.com"
-          ? new URL(url).pathname.match(/\/(\d+)\.p/)?.[1]
+          ? new URL(url).pathname.match(/\/(?:sku\/)?(\d+)(?:\.p)?\/?$/)?.[1]
           : undefined;
   const returnedId =
     host === "target.com"
@@ -123,7 +126,10 @@ export function normalizeRetailer(
         ? (row.sku ?? row.product_id)
         : row.product_id;
   if (requestedId && returnedId && String(requestedId) !== String(returnedId))
-    throw new Error("Product identity mismatch");
+    throw new BrightDataFailure(
+      "brightdata-result",
+      "Returned product does not match the requested product or selected option",
+    );
   const price = row.final_price ?? row.sale_price ?? row.price;
   const amount =
     typeof price === "number"
@@ -200,7 +206,9 @@ export async function brightRetailer(url: string, key: string, jobId: string) {
     if (!state)
       job.providerState = {
         submittedAt: new Date().toISOString(),
-        deadline: new Date(Date.now() + 180000).toISOString(),
+        deadline: new Date(
+          Date.now() + retailerCollectionTimeoutMs,
+        ).toISOString(),
       };
   });
   if (!state) {
@@ -220,7 +228,17 @@ export async function brightRetailer(url: string, key: string, jobId: string) {
       result = await jsonRequest(
         `/datasets/v3/trigger?dataset_id=${retailerDataset(url)}&include_errors=true&notify=false`,
         key,
-        { input: [{ url, all_variations: false }], limit_per_input: 1 },
+        {
+          input: [
+            {
+              url,
+              ...(new URL(url).hostname.replace(/^www\./, "") === "amazon.com"
+                ? { all_variations: false }
+                : {}),
+            },
+          ],
+          limit_per_input: 1,
+        },
       );
     } catch (error) {
       if (
@@ -245,11 +263,16 @@ export async function brightRetailer(url: string, key: string, jobId: string) {
     throw new Error(
       "Submission outcome uncertain; do not automatically resubmit",
     );
-  if (Date.now() > Date.parse(state.deadline))
-    throw new Error("Collection timed out");
   const path = encodeURIComponent(state.snapshotId);
   const progress = await jsonRequest(`/datasets/v3/progress/${path}`, key);
   if (["starting", "running"].includes(progress.status)) {
+    // A delayed worker must still download a collection that finished before
+    // its final check. Only time out a collection the provider says is pending.
+    if (Date.now() > Date.parse(state.deadline))
+      throw new BrightDataFailure(
+        "brightdata-progress",
+        "Collection still running at the waiting limit; retry resumes the same collection",
+      );
     await transact((s) => {
       s.imports.find((j) => j.id === jobId)!.providerState!.nextPollAt =
         new Date(Date.now() + 10000).toISOString();

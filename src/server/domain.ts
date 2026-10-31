@@ -1,4 +1,4 @@
-import { importView } from "../shared/imports";
+import { importView, retailerCollectionTimeoutMs } from "../shared/imports";
 import { effectiveConfig } from "./runtime-config";
 import { unavailableChannels } from "./channel-availability";
 import { notificationConsent, transportBlocked } from "./sms-policy";
@@ -2063,7 +2063,7 @@ export function command(
           );
         if (j.providerState) {
           j.providerState.deadline = new Date(
-            Date.now() + 180000,
+            Date.now() + retailerCollectionTimeoutMs,
           ).toISOString();
           delete j.providerState.nextPollAt;
         }

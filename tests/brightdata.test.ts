@@ -44,9 +44,47 @@ describe("retailer imports", () => {
       retailerDataset("https://www.bestbuy.com/site/name/123.p"),
     ).toBeTruthy();
     expect(
+      retailerDataset(
+        "https://www.bestbuy.com/product/lg-tv/JJ8VPZKKFW/sku/6673142",
+      ),
+    ).toBeTruthy();
+    expect(
+      retailerDataset("https://www.bestbuy.com/site/not-a-product.page"),
+    ).toBeUndefined();
+    expect(
       retailerDataset("https://amazon.com.evil.test/dp/B012345678"),
     ).toBeUndefined();
     expect(retailerDataset("https://amazon.com/s?k=shoes")).toBeUndefined();
+  });
+  it("matches the selected Target variant instead of rejecting it against the parent", () => {
+    const url =
+      "https://www.target.com/p/men-s-monte-collapsible-heel-loafers-goodfellow-co-taupe/-/A-1010085867?preselect=95250268#lnk=sametab";
+    const row = {
+      title: "Men's Monte Collapsible Heel Loafers - Goodfellow & Co Taupe 11",
+      tcin_id: "95250268",
+      product_id: "95250268",
+      final_price: 30,
+      currency: "USD",
+    };
+    expect(normalizeRetailer(row, url)).toMatchObject({
+      title: row.title,
+      priceCents: 3000,
+    });
+    expect(() =>
+      normalizeRetailer({ ...row, tcin_id: "1010085867" }, url),
+    ).toThrow("selected option");
+    expect(() =>
+      normalizeRetailer({ ...row, tcin_id: "95250269" }, url),
+    ).toThrow("selected option");
+  });
+  it("validates the SKU in modern Best Buy product URLs", () => {
+    const url = "https://www.bestbuy.com/product/lg-tv/JJ8VPZKKFW/sku/6673142";
+    expect(
+      normalizeRetailer({ title: "LG TV", sku: "6673142" }, url).title,
+    ).toBe("LG TV");
+    expect(() =>
+      normalizeRetailer({ title: "LG TV", sku: "12345" }, url),
+    ).toThrow("does not match");
   });
   it("rejects wrong Amazon identities and uncertain prices", () => {
     const url = "https://amazon.com/dp/B012345678";

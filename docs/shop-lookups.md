@@ -6,27 +6,27 @@ Little Hint first uses its built-in product parser for ordinary shops. You can c
 
 Set `SCRAPING_PROVIDER` in production, or `STAGING_SCRAPING_PROVIDER` in staging. Supported values are:
 
-| Value | Behavior |
-| --- | --- |
-| `brightdata` | Bright Data retailer Scraper APIs and Web Unlocker |
-| `scrapingfish` | Scraping Fish |
-| `scrapingbee` | ScrapingBee |
-| `scrapedo` | Scrape.do |
-| `scrapingdog` | Scrapingdog |
-| `auto` | First configured provider in this order: Fish, Bee, Scrape.do, Dog, Bright Data |
-| `none` | Built-in extraction only; no paid scraping |
+| Value          | Behavior                                                                        |
+| -------------- | ------------------------------------------------------------------------------- |
+| `brightdata`   | Bright Data retailer Scraper APIs and Web Unlocker                              |
+| `scrapingfish` | Scraping Fish                                                                   |
+| `scrapingbee`  | ScrapingBee                                                                     |
+| `scrapedo`     | Scrape.do                                                                       |
+| `scrapingdog`  | Scrapingdog                                                                     |
+| `auto`         | First configured provider in this order: Fish, Bee, Scrape.do, Dog, Bright Data |
+| `none`         | Built-in extraction only; no paid scraping                                      |
 
 An explicit selection never silently falls through to another paid provider. Supply that provider's credentials to both the app and worker. Bright Data also requires its Unlocker zone. Restart/recreate both services after changing the environment.
 
 ## Credentials and shared limits
 
-| Provider | Production credential variables |
-| --- | --- |
-| Scraping Fish | `SCRAPINGFISH_API_KEY` |
-| ScrapingBee | `SCRAPINGBEE_API_KEY` |
-| Scrape.do | `SCRAPEDO_API_KEY` |
-| Scrapingdog | `SCRAPINGDOG_API_KEY` |
-| Bright Data | `BRIGHTDATA_API_KEY` and `BRIGHTDATA_UNLOCKER_ZONE` |
+| Provider      | Production credential variables                     |
+| ------------- | --------------------------------------------------- |
+| Scraping Fish | `SCRAPINGFISH_API_KEY`                              |
+| ScrapingBee   | `SCRAPINGBEE_API_KEY`                               |
+| Scrape.do     | `SCRAPEDO_API_KEY`                                  |
+| Scrapingdog   | `SCRAPINGDOG_API_KEY`                               |
+| Bright Data   | `BRIGHTDATA_API_KEY` and `BRIGHTDATA_UNLOCKER_ZONE` |
 
 Prefix every variable with `STAGING_` for staging. Production credentials are ignored in staging. Supply the selected provider's variables to both the app and worker and recreate both services after changing them.
 
@@ -41,23 +41,40 @@ Prefix every variable with `STAGING_` for staging. Production credentials are ig
 3. Create an API token with access to Web Unlocker and the Scraper APIs. Store it in your deployment secret manager. Do not put it in Git or browser configuration.
 4. Confirm access to the four product scrapers below. Little Hint supplies the dataset IDs itself. You do not need a schedule, webhook, cloud storage destination, separate token per store, or a custom scraper.
 
-| Store | Product scraper dataset ID |
-| --- | --- |
-| Amazon | `gd_l7q7dkf244hwjntr0` |
-| Walmart | `gd_l95fol7l1ru6rlo116` |
-| Target | `gd_ltppk5mx2lp0v1k0vo` |
-| Best Buy | `gd_ltre1jqe1jfr7cccf` |
+| Store    | Product scraper dataset ID |
+| -------- | -------------------------- |
+| Amazon   | `gd_l7q7dkf244hwjntr0`     |
+| Walmart  | `gd_l95fol7l1ru6rlo116`    |
+| Target   | `gd_ltppk5mx2lp0v1k0vo`    |
+| Best Buy | `gd_ltre1jqe1jfr7cccf`     |
 
 These adapters target US product links. Category pages, search results, and other regional storefronts use the general website path. Retailer coverage is explicit: enabling Bright Data does not automatically install every scraper in its catalog.
+
+### Retailer routing and verification
+
+With Bright Data selected, supported Amazon, Target, Walmart, and Best Buy product links go directly to their dedicated scraper. Ordinary shops use built-in extraction first, then Web Unlocker if needed. A retailer collection failure keeps the private draft for retry or manual entry; it does not trigger another paid scraper automatically.
+
+Direct-only probes from the staging worker on 2026-10-31 produced these results for the supplied products:
+
+| Store    | Built-in result                                               | Routing decision     |
+| -------- | ------------------------------------------------------------- | -------------------- |
+| Amazon   | Existing short-link lookup succeeds through its dedicated API | Keep dedicated first |
+| Target   | Correct selected Taupe 11 loafer title, no usable price       | Dedicated first      |
+| Walmart  | Correct Nintendo Switch 2 title, no usable price              | Dedicated first      |
+| Best Buy | LG TV preview blocked                                         | Dedicated first      |
+
+These observations cover these product pages and the deployment's network, not every product at each store. Recheck representative pages before changing these exceptions. The probes disabled paid providers, AI, photo downloads, and caching.
+
+Target's `preselect` query identifies the selected variant and takes precedence over the parent product ID in the path. Best Buy supports both older `/<sku>.p` links and newer `/product/.../sku/<sku>` links. Little Hint includes the Best Buy dataset ID; confirm your API token has access to it. Its absence from the dashboard's recent scrapers list alone does not establish an access problem.
 
 ### Network restrictions
 
 In the Web Unlocker zone's security settings, configure these controls according to where Little Hint runs and which shops it should support:
 
-| Setting | Recommended configuration |
-| --- | --- |
-| Allowed IPs | Add the public outbound IP of the server running the app and worker. If production and staging share that address, one entry covers both; otherwise include both servers' outbound addresses. |
-| Allowed target hosts | Leave `any` to support product links from arbitrary shops. These are destination shop domains, such as `ombraz.com`, not Little Hint's production or staging domains. |
+| Setting              | Recommended configuration                                                                                                                                                                     |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Allowed IPs          | Add the public outbound IP of the server running the app and worker. If production and staging share that address, one entry covers both; otherwise include both servers' outbound addresses. |
+| Allowed target hosts | Leave `any` to support product links from arbitrary shops. These are destination shop domains, such as `ombraz.com`, not Little Hint's production or staging domains.                         |
 
 For a typical Coolify deployment on a DigitalOcean VPS, the outbound address is the VPS's public IP. Confirm the address used by outbound requests if the server uses a NAT gateway, VPN, or other routing. Do not enter a Docker container's private IP or infer the outbound address from the app's DNS records, which may point to a CDN or reverse proxy. Update the allowlist if the deployment's outbound address changes.
 
@@ -107,7 +124,7 @@ For Bright Data failures, the diagnostic stage identifies submission (`brightdat
 
 An Amazon `a.co` or `amzn.to` link must first resolve to a supported product page. The app then submits that product URL to the Amazon scraper. The draft can still display `Item from a.co` until product details arrive; that label alone does not indicate which provider ran. A failed draft remains private and can be retried after the cause is corrected.
 
-Collections run asynchronously and normally get checked about every ten seconds for up to three minutes. A retry resumes a known collection before submitting another. If the submission outcome is uncertain, automatic resubmission is blocked to avoid duplicate charges; manual entry remains available.
+Collections run asynchronously and normally get checked about every ten seconds for up to ten minutes. The final check still downloads a ready result, even if the worker runs after that deadline. If the collection is still running, the draft stays private and can be retried. A retry resumes the same known collection with another ten-minute waiting window, without another paid submission. If the submission outcome is uncertain, automatic resubmission is blocked to avoid duplicate charges; manual entry remains available.
 
 ## Other providers and limitations
 

@@ -87,6 +87,68 @@ it("imports an Amazon iOS short link through the full async pipeline", async () 
   ).toBe(true);
   expect(mock.spend).toHaveBeenCalledTimes(1);
 });
+it.each([
+  "https://www.amazon.com/dp/B012345678",
+  "https://www.bestbuy.com/product/lg-tv/JJ8VPZKKFW/sku/6673142",
+  "https://www.walmart.com/ip/Nintendo-Switch-2-System/15949610846",
+  "https://www.target.com/p/slippers/-/A-1010085867?preselect=95250268",
+])("uses the dedicated scraper first for %s", async (link) => {
+  const fetch = vi
+    .fn()
+    .mockResolvedValue(Response.json({ snapshot_id: "retailer" }));
+  vi.stubGlobal("fetch", fetch);
+  await expect(
+    importProduct(link, "owner", false, "job"),
+  ).rejects.toBeInstanceOf(ImportPending);
+  expect(mock.request).not.toHaveBeenCalled();
+  expect(fetch.mock.calls[0][0]).toContain("/datasets/v3/trigger");
+  expect(JSON.parse(fetch.mock.calls[0][1].body)).toEqual({
+    input: [
+      {
+        url: link,
+        ...(link.includes("amazon.com") ? { all_variations: false } : {}),
+      },
+    ],
+    limit_per_input: 1,
+  });
+  expect(mock.spend).toHaveBeenCalledTimes(1);
+});
+it("imports the selected Target option and resumes the same collection", async () => {
+  const link =
+    "https://www.target.com/p/slippers/-/A-1010085867?preselect=95250268";
+  mock.request.mockResolvedValue(
+    new Response(
+      '<script type="application/ld+json">{"@type":"Product","name":"Parent product","sku":"1010085867","offers":{"price":30,"priceCurrency":"USD"}}</script>',
+    ),
+  );
+  const fetch = vi
+    .fn()
+    .mockResolvedValueOnce(Response.json({ snapshot_id: "target" }))
+    .mockResolvedValueOnce(Response.json({ status: "ready" }))
+    .mockResolvedValueOnce(
+      Response.json([
+        {
+          title: "Taupe 11",
+          tcin_id: "95250268",
+          final_price: 30,
+          currency: "USD",
+        },
+      ]),
+    );
+  vi.stubGlobal("fetch", fetch);
+  await expect(
+    importProduct(link, "owner", false, "job"),
+  ).rejects.toBeInstanceOf(ImportPending);
+  expect(JSON.parse(fetch.mock.calls[0][1].body).input).toEqual([
+    { url: link },
+  ]);
+  expect(await importProduct(link, "owner", false, "job")).toMatchObject({
+    title: "Taupe 11",
+    priceCents: 3000,
+  });
+  expect(mock.request).not.toHaveBeenCalled();
+  expect(mock.spend).toHaveBeenCalledTimes(1);
+});
 it("persists and resumes one paid collection across worker invocations", async () => {
   const fetch = vi
     .fn()
@@ -155,16 +217,64 @@ it("retains a safe submission reason for HTTP 400 and allows a corrected retry",
   });
   expect(mock.state.imports[0].providerState).toBeUndefined();
 });
-it("honors the deadline without another provider request", async () => {
+it("checks the collection before timing out without another paid submission", async () => {
   mock.state.imports[0].providerState = {
     snapshotId: "snapshot",
     submittedAt: new Date(0).toISOString(),
     deadline: new Date(0).toISOString(),
   };
-  const fetch = vi.fn();
+  const fetch = vi.fn().mockResolvedValue(Response.json({ status: "running" }));
   vi.stubGlobal("fetch", fetch);
-  await expect(brightRetailer(url, "key", "job")).rejects.toThrow("timed out");
-  expect(fetch).not.toHaveBeenCalled();
+  await expect(brightRetailer(url, "key", "job")).rejects.toThrow(
+    "still running",
+  );
+  expect(fetch).toHaveBeenCalledTimes(1);
+  expect(mock.spend).not.toHaveBeenCalled();
+});
+it("downloads a ready collection even when its final poll is past the deadline", async () => {
+  mock.state.imports[0].providerState = {
+    snapshotId: "snapshot",
+    submittedAt: new Date(0).toISOString(),
+    deadline: new Date(0).toISOString(),
+  };
+  const fetch = vi
+    .fn()
+    .mockResolvedValueOnce(Response.json({ status: "ready" }))
+    .mockResolvedValueOnce(
+      Response.json([
+        {
+          title: "Nintendo Switch 2 System",
+          product_name: "Nintendo Switch 2 System",
+          product_id: "15949610846",
+          final_price: 499,
+          currency: "USD",
+        },
+      ]),
+    );
+  vi.stubGlobal("fetch", fetch);
+  expect(
+    await brightRetailer(
+      "https://www.walmart.com/ip/Nintendo-Switch-2-System/15949610846",
+      "key",
+      "job",
+    ),
+  ).toMatchObject({ title: "Nintendo Switch 2 System", priceCents: 49900 });
+  expect(mock.spend).not.toHaveBeenCalled();
+});
+it("keeps polling a collection that takes more than three minutes", async () => {
+  mock.state.imports[0].providerState = {
+    snapshotId: "snapshot",
+    submittedAt: new Date(Date.now() - 300000).toISOString(),
+    deadline: new Date(Date.now() + 300000).toISOString(),
+  };
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValue(Response.json({ status: "running" })),
+  );
+  await expect(brightRetailer(url, "key", "job")).rejects.toBeInstanceOf(
+    ImportPending,
+  );
+  expect(mock.spend).not.toHaveBeenCalled();
 });
 it("uses Scraping Fish's resolved Amazon URL", async () => {
   vi.stubGlobal(
