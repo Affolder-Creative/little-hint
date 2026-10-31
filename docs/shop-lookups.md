@@ -1,22 +1,6 @@
-# Configure shop lookups with Bright Data
+# Configure shop lookups
 
-Little Hint uses one Bright Data API key for two products. Dedicated Scraper APIs fetch Amazon, Walmart, Target, and Best Buy product details. Web Unlocker fetches HTML for other shops when built-in extraction cannot get a usable name or a requested photo. Other shops still use the built-in parser first.
-
-## Bright Data account setup
-
-1. Create a Bright Data account and review its current pay-as-you-go terms, account verification requirements, and spending controls. Free credits depend on account eligibility; the app does not assume they are available.
-2. In the Bright Data dashboard, enable Web Unlocker and create a zone, for example `little_hint_shops`. Copy the exact zone name. This is a Bright Data product configuration, not a DNS record or another server.
-3. Create an API token with access to Web Unlocker and the Scraper APIs. Store it in your deployment secret manager. Do not put it in Git or browser configuration.
-4. Confirm access to the four product scrapers below. Little Hint supplies the dataset IDs itself. You do not need a schedule, webhook, cloud storage destination, separate token per store, or a custom scraper.
-
-| Store | Product scraper dataset ID |
-| --- | --- |
-| Amazon | `gd_l7q7dkf244hwjntr0` |
-| Walmart | `gd_l95fol7l1ru6rlo116` |
-| Target | `gd_ltppk5mx2lp0v1k0vo` |
-| Best Buy | `gd_ltre1jqe1jfr7cccf` |
-
-These adapters target US product links. Category pages, search results, and other regional storefronts use the general website path. Retailer coverage is explicit: enabling Bright Data does not automatically install every scraper in its catalog.
+Little Hint first uses its built-in product parser for ordinary shops. You can choose one paid provider to help with blocked or incomplete pages. Bright Data additionally supports dedicated product APIs for Amazon, Walmart, Target, and Best Buy US product links.
 
 ## Choose the paid provider
 
@@ -34,7 +18,39 @@ Set `SCRAPING_PROVIDER` in production, or `STAGING_SCRAPING_PROVIDER` in staging
 
 An explicit selection never silently falls through to another paid provider. Supply that provider's credentials to both the app and worker. Bright Data also requires its Unlocker zone. Restart/recreate both services after changing the environment.
 
-## Production configuration
+## Credentials and shared limits
+
+| Provider | Production credential variables |
+| --- | --- |
+| Scraping Fish | `SCRAPINGFISH_API_KEY` |
+| ScrapingBee | `SCRAPINGBEE_API_KEY` |
+| Scrape.do | `SCRAPEDO_API_KEY` |
+| Scrapingdog | `SCRAPINGDOG_API_KEY` |
+| Bright Data | `BRIGHTDATA_API_KEY` and `BRIGHTDATA_UNLOCKER_ZONE` |
+
+Prefix every variable with `STAGING_` for staging. Production credentials are ignored in staging. Supply the selected provider's variables to both the app and worker and recreate both services after changing them.
+
+`PAID_DAILY_LIMIT`, or `STAGING_PAID_DAILY_LIMIT`, limits dispatched attempts per paid service per UTC day. Failed dispatched attempts count. It is not a dollar cap. Use provider-side spending controls for billing limits. Progress checks on an existing Bright Data collection do not count as new submissions.
+
+## Bright Data setup
+
+### Account, token, and Web Unlocker zone
+
+1. Create a Bright Data account and review its current pay-as-you-go terms, account verification requirements, and spending controls. Free credits depend on account eligibility; the app does not assume they are available.
+2. In the Bright Data dashboard, enable Web Unlocker and create a zone, for example `little_hint_shops`. Copy the exact zone name. This is a Bright Data product configuration, not a DNS record or another server.
+3. Create an API token with access to Web Unlocker and the Scraper APIs. Store it in your deployment secret manager. Do not put it in Git or browser configuration.
+4. Confirm access to the four product scrapers below. Little Hint supplies the dataset IDs itself. You do not need a schedule, webhook, cloud storage destination, separate token per store, or a custom scraper.
+
+| Store | Product scraper dataset ID |
+| --- | --- |
+| Amazon | `gd_l7q7dkf244hwjntr0` |
+| Walmart | `gd_l95fol7l1ru6rlo116` |
+| Target | `gd_ltppk5mx2lp0v1k0vo` |
+| Best Buy | `gd_ltre1jqe1jfr7cccf` |
+
+These adapters target US product links. Category pages, search results, and other regional storefronts use the general website path. Retailer coverage is explicit: enabling Bright Data does not automatically install every scraper in its catalog.
+
+### Production environment
 
 Set these environment variables for **both the app and worker**, then recreate both services:
 
@@ -49,7 +65,7 @@ Use a daily limit appropriate for your installation. This is a count of paid att
 
 The supplied Compose files pass these settings through their shared app/worker environment. Configuration stays deployment-only; there are no credential fields in the PWA.
 
-## Staging configuration
+### Staging environment
 
 Staging ignores production credentials. Set these separately:
 

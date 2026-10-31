@@ -106,4 +106,4 @@ Service status remains visible. Connections, consent, and saved choices survive
 disablement. Suppressed updates remain in the inbox and are never caught up after
 re-enabling. Configured but unconnected channels still offer setup.
 
-Product lookups support Bright Data retailer scrapers for Amazon, Walmart, Target, and Best Buy US product pages, plus Web Unlocker after built-in extraction for other shops. New wish-list imports are private server-saved drafts until explicitly added. Configuration and limitations are documented in [Bright Data setup](docs/bright-data.md).
+Product lookups support Bright Data retailer scrapers for Amazon, Walmart, Target, and Best Buy US product pages, plus Web Unlocker after built-in extraction for other shops. New wish-list imports are private server-saved drafts until explicitly added. Configuration and limitations are documented in [Shop lookup configuration](docs/shop-lookups.md).
