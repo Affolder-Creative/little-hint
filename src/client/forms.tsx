@@ -671,7 +671,7 @@ export function GiftForm({
                   ? "Getting product details. You can keep editing."
                   : job?.status === "failed"
                     ? "Your draft is safe. Enter details or try again."
-                    : "Details are ready to review."}
+                    : "Your draft is saved. Retry checking progress or enter details."}
             </p>
           )}
           <button
