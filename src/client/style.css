@@ -3837,3 +3837,33 @@ main {
   border-radius: 0;
   margin-block-start: 4px;
 }
+
+.admin-photo-options {
+  display: grid;
+  gap: var(--space-controls);
+}
+.admin-photo-option {
+  display: grid;
+  gap: var(--space-related);
+}
+.admin-photo-option p {
+  margin: 0;
+  padding-inline-start: 26px;
+}
+.admin-photo-dependent {
+  margin-inline-start: 24px;
+}
+.admin-preference-form .check {
+  align-items: flex-start;
+  padding-block: 10px;
+}
+.admin-preference-form .check input {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.admin-preference .field {
+  max-width: 28rem;
+}
+.form-actions .form-status {
+  margin: 0;
+}

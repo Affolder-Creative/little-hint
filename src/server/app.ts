@@ -56,7 +56,7 @@ import {
 import {
   config,
   settingsSummary,
-  saveSetting,
+  saveSettings,
   effectiveConfig,
   canCreateGroups,
   imageDeliveryForState,
@@ -517,10 +517,11 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
     const a = await actor(req);
     if (!isAdmin(await readState(), a))
       fail(403, "Administrator access required.");
+    const update = z.object({ key: z.string(), value: z.string().max(10000) });
     const b = z
-      .object({ key: z.string(), value: z.string().max(10000) })
+      .union([update, z.object({ updates: z.array(update).min(1).max(4) })])
       .parse(req.body);
-    await saveSetting(b.key, b.value);
+    await saveSettings("updates" in b ? b.updates : [b]);
     return { ok: true };
   });
   app.get("/api/v1/admin/services", async (req) => {

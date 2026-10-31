@@ -19,6 +19,7 @@ import {
   config,
   productPhotoSetting,
   saveSetting,
+  saveSettings,
   settingsSummary,
   imageDeliveryForState,
 } from "../src/server/settings";
@@ -193,4 +194,48 @@ describe("product image delivery controls", () => {
       expect(() => validateDeployment()).toThrow(key);
     },
   );
+});
+
+describe("grouped application settings", () => {
+  it("saves a photo batch and preserves the preload choice while caching is off", async () => {
+    await saveSettings([
+      { key, value: "true" },
+      { key: "PRODUCT_IMAGE_CACHE_ENABLED", value: "false" },
+      { key: "PRODUCT_IMAGE_PREFETCH_ENABLED", value: "true" },
+    ]);
+    expect(await automaticallyImportProductPhotos()).toBe(true);
+    expect(imageDeliveryForState(storage.state)).toEqual({
+      cacheEnabled: false,
+      prefetchEnabled: false,
+    });
+    await saveSetting("PRODUCT_IMAGE_CACHE_ENABLED", "true");
+    expect(imageDeliveryForState(storage.state).prefetchEnabled).toBe(true);
+  });
+  it("rejects the whole batch when a later value is invalid or locked", async () => {
+    await expect(
+      saveSettings([
+        { key, value: "true" },
+        { key: "PRODUCT_IMAGE_CACHE_ENABLED", value: "bad" },
+      ]),
+    ).rejects.toThrow();
+    expect(storage.state.settings).toHaveLength(0);
+    vi.stubEnv("PRODUCT_IMAGE_CACHE_ENABLED", "false");
+    await expect(
+      saveSettings([
+        { key, value: "true" },
+        { key: "PRODUCT_IMAGE_CACHE_ENABLED", value: "true" },
+      ]),
+    ).rejects.toThrow();
+    expect(storage.state.settings).toHaveLength(0);
+  });
+  it("rejects empty batches and duplicate keys", async () => {
+    await expect(saveSettings([])).rejects.toThrow();
+    await expect(
+      saveSettings([
+        { key, value: "true" },
+        { key, value: "false" },
+      ]),
+    ).rejects.toThrow();
+    expect(storage.state.settings).toHaveLength(0);
+  });
 });

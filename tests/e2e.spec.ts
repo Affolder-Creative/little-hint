@@ -626,19 +626,19 @@ test("administrators control automatic photos without affecting manual uploads",
   try {
     await toggle.check();
     await page
-      .getByRole("button", { name: "Save photo preference", exact: true })
+      .getByRole("button", { name: "Save photo settings", exact: true })
       .click();
     await expect(
-      page.getByRole("status").filter({ hasText: "Photo preference saved." }),
+      page.getByRole("status").filter({ hasText: "Product photos saved." }),
     ).toBeVisible();
     await page.reload();
     await expect(toggle).toBeChecked();
     await toggle.uncheck();
     await page
-      .getByRole("button", { name: "Save photo preference", exact: true })
+      .getByRole("button", { name: "Save photo settings", exact: true })
       .click();
     await expect(
-      page.getByRole("status").filter({ hasText: "Photo preference saved." }),
+      page.getByRole("status").filter({ hasText: "Product photos saved." }),
     ).toBeVisible();
     await page.reload();
     await expect(toggle).not.toBeChecked();
