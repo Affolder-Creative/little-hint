@@ -260,7 +260,13 @@ export function Form({
   status,
   onBusyChange,
   onBeforeClose,
+  dialogLayout = false,
+  externalBusy = false,
+  secondaryActions,
 }: {
+  dialogLayout?: boolean;
+  externalBusy?: boolean;
+  secondaryActions?: (busy: boolean) => ReactNode;
   onBeforeClose?: () => Promise<void>;
   onSubmit: (data: FormData) => Promise<unknown>;
   children: ReactNode;
@@ -278,9 +284,10 @@ export function Form({
   status?: string;
   onBusyChange?: (busy: boolean) => void;
 }) {
-  const [busy, setBusy] = useState(false),
+  const [submittingBusy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [changed, setDirty] = useState(false);
+  const busy = submittingBusy || externalBusy;
   const dirty = controlledDirty ?? changed;
   const formRef = useRef<HTMLFormElement>(null);
   const beforeClose = useRef(onBeforeClose);
@@ -340,7 +347,8 @@ export function Form({
   async function send(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = e.currentTarget;
-    if (submitting.current || disabled || (!online && !allowOffline)) return;
+    if (busy || submitting.current || disabled || (!online && !allowOffline))
+      return;
     const data = pending?.data ?? new FormData(form);
     if (!pending && review) {
       const content = review(data);
@@ -364,21 +372,8 @@ export function Form({
       setBusy(false);
     }
   }
-  return (
-    <form
-      ref={formRef}
-      className={`form ${className}`.trim()}
-      onSubmit={send}
-      onChange={() => setDirty(true)}
-      data-dirty={dirty}
-      data-busy={busy}
-      aria-busy={busy}
-      aria-describedby={error ? errorId : undefined}
-      onClick={(event) => {
-        if ((event.target as Element).closest("[data-form-change]"))
-          setDirty(true);
-      }}
-    >
+  const content = (
+    <>
       <fieldset ref={fieldsRef} disabled={busy} hidden={!!pending}>
         {children}
       </fieldset>
@@ -409,7 +404,35 @@ export function Form({
       {!online && !allowOffline && (
         <p role="status">Reconnect to save these changes.</p>
       )}
+    </>
+  );
+  return (
+    <form
+      ref={formRef}
+      className={`form ${dialogLayout ? "form-dialog" : ""} ${className}`.trim()}
+      onSubmit={send}
+      onInvalidCapture={(event) => {
+        if (!dialogLayout) return;
+        const control = event.target as HTMLElement;
+        const details = control.closest("details");
+        if (details && !details.open) {
+          details.open = true;
+          requestAnimationFrame(() => control.focus());
+        }
+      }}
+      onChange={() => setDirty(true)}
+      data-dirty={dirty}
+      data-busy={busy}
+      aria-busy={busy}
+      aria-describedby={error ? errorId : undefined}
+      onClick={(event) => {
+        if ((event.target as Element).closest("[data-form-change]"))
+          setDirty(true);
+      }}
+    >
+      {dialogLayout ? <div className="form-content">{content}</div> : content}
       <div className="form-actions">
+        {secondaryActions?.(busy)}
         <button
           disabled={busy || disabled || (!online && !allowOffline)}
           className="button"

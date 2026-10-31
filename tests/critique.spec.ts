@@ -4458,7 +4458,7 @@ for (const [width, theme] of [
       .getByLabel("Who can see this idea?")
       .boundingBox();
     const product = await page
-      .getByLabel("Start with a product link")
+      .getByLabel("Product link (optional)")
       .boundingBox();
     expect(audience!.y).toBeLessThan(product!.y);
     await page
@@ -4992,13 +4992,13 @@ for (const engine of ["chromium", "webkit"] as const) {
         .getByRole("button", { name: "Add item", exact: true })
         .click();
       await page
-        .getByLabel("Start with a product link")
+        .getByLabel("Product link (optional)")
         .fill("https://amazon.com/dp/B012345678");
       await page
         .getByRole("button", { name: "Get details", exact: true })
         .click();
       await expect(
-        page.getByRole("button", { name: "Save draft and continue" }),
+        page.getByRole("button", { name: "Save for later" }),
       ).toBeVisible();
       await page
         .getByLabel("Item name", { exact: true })
@@ -5033,3 +5033,129 @@ for (const engine of ["chromium", "webkit"] as const) {
     }
   });
 }
+
+for (const width of [320, 393, 768, 1440]) {
+  test(`item editor keeps actions visible and respects disclosure at ${width}px`, async ({
+    page,
+  }, info) => {
+    const { state } = await preview(page);
+    await page.setViewportSize({ width, height: 740 });
+    await page.addInitScript(
+      (theme) => localStorage.setItem("little-hint:theme", theme),
+      width === 320 || width === 1440 ? "dark" : "light",
+    );
+    await page.goto("/");
+    await page.getByRole("button", { name: "Add item", exact: true }).click();
+    const dialog = page.getByRole("dialog");
+    const submit = dialog.getByRole("button", {
+      name: "Add to wish list",
+      exact: true,
+    });
+    const details = dialog.locator("details.optional-fields");
+    await expect(submit).toBeInViewport();
+    await dialog
+      .getByLabel("Product link (optional)")
+      .fill("https://amazon.com/dp/B012345678");
+    await dialog
+      .getByRole("button", { name: "Get details", exact: true })
+      .click();
+    await expect(
+      dialog.getByRole("button", { name: "Save for later", exact: true }),
+    ).toBeVisible();
+    await dialog.getByLabel("Item name", { exact: true }).fill("My own title");
+    state.imports[0].status = "complete";
+    state.imports[0].result = {
+      title: "Shop title",
+      priceCents: 3500,
+      source: "amazon.com",
+      description: "Shop note",
+    };
+    await expect(
+      dialog.getByText("Details found. Check them before saving."),
+    ).toBeVisible();
+    await expect(details).not.toHaveAttribute("open");
+    await expect(dialog.getByLabel("Item name", { exact: true })).toHaveValue(
+      "My own title",
+    );
+    await dialog.getByText("More details", { exact: true }).click();
+    await expect(submit).toBeInViewport();
+    await dialog.getByLabel("Price in USD", { exact: true }).fill("42");
+    await dialog.getByText("More details", { exact: true }).click();
+    await expect(details).not.toHaveAttribute("open");
+    await expect(dialog.locator(".gift-import-preview")).toContainText(
+      "$42.00",
+    );
+    await page.screenshot({
+      path: info.outputPath(`item-editor-${width}.png`),
+      fullPage: true,
+    });
+    expect(
+      (
+        await new AxeBuilder({ page })
+          .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+          .analyze()
+      ).violations,
+    ).toEqual([]);
+    await dialog.getByText("More details", { exact: true }).click();
+    await dialog.getByLabel("Quantity wanted").fill("0");
+    await dialog.getByText("More details", { exact: true }).click();
+    await submit.click();
+    await expect(details).toHaveAttribute("open");
+    await expect(dialog.getByLabel("Quantity wanted")).toBeFocused();
+    await expect(submit).toBeInViewport();
+    await dialog.getByLabel("Quantity wanted").fill("2");
+    await dialog
+      .getByRole("button", { name: "Save for later", exact: true })
+      .click();
+    await expect(dialog).not.toBeVisible();
+    expect(state.imports[0].draft?.fields.title).toBe("My own title");
+    expect(state.imports[0].draft?.fields.quantity).toBe(2);
+  });
+}
+
+test("item editor keeps failed lookup and draft-save recovery separate", async ({
+  page,
+}) => {
+  const { state } = await preview(page);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Add item", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog
+    .getByLabel("Product link (optional)")
+    .fill("https://amazon.com/dp/B012345678");
+  await dialog
+    .getByRole("button", { name: "Get details", exact: true })
+    .click();
+  await expect(
+    dialog.getByRole("button", { name: "Save for later", exact: true }),
+  ).toBeVisible();
+  state.imports[0].status = "failed";
+  state.imports[0].error =
+    "This shop could not be reached. Enter details or try again.";
+  await expect(dialog.locator(".gift-lookup")).toContainText(
+    "This shop could not be reached.",
+  );
+  await page.route("**/api/v1/imports/update", (route) =>
+    route.fulfill({ status: 503, json: { error: "Temporarily unavailable" } }),
+  );
+  await dialog.getByLabel("Item name", { exact: true }).fill("Keep my item");
+  await dialog
+    .getByRole("button", { name: "Save for later", exact: true })
+    .click();
+  await expect(dialog).toBeVisible();
+  await expect(dialog.locator(".gift-draft-actions")).toContainText(
+    "Your draft could not be saved.",
+  );
+  await expect(dialog.getByLabel("Item name", { exact: true })).toHaveValue(
+    "Keep my item",
+  );
+  await expect(
+    dialog.getByText("Private draft saved", { exact: true }),
+  ).toHaveCount(0);
+  await page.unroute("**/api/v1/imports/update");
+  await dialog
+    .getByRole("button", { name: "Save for later", exact: true })
+    .click();
+  await expect(dialog).not.toBeVisible();
+  expect(state.imports[0].draft?.fields.title).toBe("Keep my item");
+});
