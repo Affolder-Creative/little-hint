@@ -15,3 +15,13 @@
 .entry-actions-label {
   overflow-wrap: normal;
 }
+
+.entry-actions-content :is(.button, .text-button) {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  min-height: 44px;
+}
+.entry-actions-content :is(.button, .text-button):hover {
+  background: var(--bg);
+}

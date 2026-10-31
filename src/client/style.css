@@ -3063,6 +3063,9 @@ main {
   gap: 0;
 }
 .entry-actions-content :is(.text-button, .button) {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
   padding: 8px 12px;
   min-height: 44px;
   font-size: 14px;
@@ -3816,6 +3819,23 @@ main {
 /* Reserve the photo area without exposing alt text while a cached image decodes. */
 .gift-photo > img:not([src]) {
   visibility: hidden;
+}
+
+.import-drafts {
+  margin-block: 24px;
+}
+.import-drafts .setting-row {
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.import-draft-status {
+  display: grid;
+  gap: 12px;
+}
+.entry-actions-content .danger {
+  border-block-start: 1px solid var(--border);
+  border-radius: 0;
+  margin-block-start: 4px;
 }
 
 .admin-photo-options {

@@ -1,3 +1,4 @@
+import { ImportDrafts } from "./ImportDrafts";
 import { useNavigationState } from "./NavigationScroll";
 import { Link, useSearchParams } from "react-router-dom";
 import { ArrowRight, ListChecks, Plus } from "lucide-react";
@@ -62,6 +63,7 @@ export function ListIndex() {
           Create a list
         </button>
       </Header>
+      <ImportDrafts />
       <div className="tabs" role="group" aria-label="List status">
         {["active", "archived", "trash"].map((value) => (
           <button
@@ -126,11 +128,9 @@ export function ListIndex() {
                   <ActionMenu name={l.name} label="List actions">
                     <button
                       className="text-button"
-                      onClick={() =>
-                        open("List settings", <ListForm list={l} />)
-                      }
+                      onClick={() => open("Edit list", <ListForm list={l} />)}
                     >
-                      List settings
+                      Edit list
                     </button>
                     <RunButton
                       run={() =>
