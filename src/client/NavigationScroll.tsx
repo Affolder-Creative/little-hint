@@ -113,7 +113,13 @@ function RestoreNavigation({ account }: { account: string }) {
 
   useLayoutEffect(() => {
     const previous = history.scrollRestoration;
-    history.scrollRestoration = "manual";
+    // Apple standalone apps animate history using native page snapshots.
+    // Keep native restoration available during that gesture. The entry-based
+    // restore below still corrects positions when React content becomes ready.
+    history.scrollRestoration =
+      (navigator as Navigator & { standalone?: boolean }).standalone === true
+        ? "auto"
+        : "manual";
     return () => {
       history.scrollRestoration = previous;
     };

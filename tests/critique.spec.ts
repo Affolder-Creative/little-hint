@@ -3910,43 +3910,51 @@ test.describe("navigation scroll restoration", () => {
     await expect.poll(() => page.evaluate(() => scrollY)).toBeCloseTo(y, 0);
   }
 
-  for (const width of [1440, 390]) {
-    test(`new pages start at the top and history restores distinct entries at ${width}px`, async ({
-      page,
-    }) => {
-      await page.setViewportSize({ width, height: 720 });
-      const { list } = await longList(page);
-      await page.goto(`/lists/${list.id}`);
-      await expect(page.locator(".gift-card")).toHaveCount(46);
-      const gift = page.locator(".gift-card").nth(15);
-      await gift.scrollIntoViewIfNeeded();
-      await page.evaluate(() => new Promise(requestAnimationFrame));
-      const first = await page.evaluate(() => scrollY);
-      expect(first).toBeGreaterThan(500);
-      await gift.click();
-      await expect(page).toHaveURL(/\/gift\//);
-      await expectScroll(page, 0);
-      await expect(page.getByRole("main")).toBeFocused();
-      // A link creates a second entry for the same list, starting at the top.
-      await page.getByRole("link", { name: "Back to wish list" }).click();
-      await expect(page.locator(".gift-card")).toHaveCount(46);
-      await expectScroll(page, 0);
-      await scroll(page, 500);
-      await page.locator('a[href="/people"]:visible').first().click();
-      await expect(page).toHaveURL(/\/people$/);
-      await expectScroll(page, 0);
-      await page.goBack();
-      await expectScroll(page, 500);
-      await page.goBack();
-      await expectScroll(page, 0);
-      await page.goBack();
-      await expectScroll(page, first);
-      await page.goForward();
-      await expectScroll(page, 0);
-      await page.goForward();
-      await expectScroll(page, 500);
-    });
-  }
+  for (const width of [1440, 390])
+    for (const appleStandalone of [false, true]) {
+      test(`new pages start at the top and history restores distinct entries at ${width}px standalone=${appleStandalone}`, async ({
+        page,
+      }) => {
+        await page.setViewportSize({ width, height: 720 });
+        if (appleStandalone)
+          await page.addInitScript(() => {
+            Object.defineProperty(navigator, "standalone", { value: true });
+          });
+        const { list } = await longList(page);
+        await page.goto(`/lists/${list.id}`);
+        await expect(page.locator(".gift-card")).toHaveCount(46);
+        expect(await page.evaluate(() => history.scrollRestoration)).toBe(
+          appleStandalone ? "auto" : "manual",
+        );
+        const gift = page.locator(".gift-card").nth(15);
+        await gift.scrollIntoViewIfNeeded();
+        await page.evaluate(() => new Promise(requestAnimationFrame));
+        const first = await page.evaluate(() => scrollY);
+        expect(first).toBeGreaterThan(500);
+        await gift.click();
+        await expect(page).toHaveURL(/\/gift\//);
+        await expectScroll(page, 0);
+        await expect(page.getByRole("main")).toBeFocused();
+        // A link creates a second entry for the same list, starting at the top.
+        await page.getByRole("link", { name: "Back to wish list" }).click();
+        await expect(page.locator(".gift-card")).toHaveCount(46);
+        await expectScroll(page, 0);
+        await scroll(page, 500);
+        await page.locator('a[href="/people"]:visible').first().click();
+        await expect(page).toHaveURL(/\/people$/);
+        await expectScroll(page, 0);
+        await page.goBack();
+        await expectScroll(page, 500);
+        await page.goBack();
+        await expectScroll(page, 0);
+        await page.goBack();
+        await expectScroll(page, first);
+        await page.goForward();
+        await expectScroll(page, 0);
+        await page.goForward();
+        await expectScroll(page, 500);
+      });
+    }
 
   for (const width of [1440, 390]) {
     test(`history preserves filters, gift focus, and distinct visits at ${width}px`, async ({
