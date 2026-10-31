@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.13.0](https://github.com/Affolder-Creative/little-hint/compare/v0.12.1...v0.13.0) (2026-10-31)
+
+
+### Features
+
+* add private import drafts and Bright Data retailer support ([#120](https://github.com/Affolder-Creative/little-hint/issues/120)) ([c5747a6](https://github.com/Affolder-Creative/little-hint/commit/c5747a69ada276af6640850f36b19415740c9533))
+* cache product photos and add configurable prefetching ([#118](https://github.com/Affolder-Creative/little-hint/issues/118)) ([dbaf930](https://github.com/Affolder-Creative/little-hint/commit/dbaf930fd1c798127964c9b27819e137ccd971e7))
+* group administration saves and couple photo controls ([#121](https://github.com/Affolder-Creative/little-hint/issues/121)) ([befcd44](https://github.com/Affolder-Creative/little-hint/commit/befcd4426cf26d206abea8629faa349a41377dda))
+* protect invitation sharing when SMS is disabled ([#122](https://github.com/Affolder-Creative/little-hint/issues/122)) ([4452e0f](https://github.com/Affolder-Creative/little-hint/commit/4452e0ff85809b1b76dbd92383476576dc03d9c3))
+
+
+### Fixes
+
+* polish item editor layout and draft actions ([#124](https://github.com/Affolder-Creative/little-hint/issues/124)) ([7c9d1f5](https://github.com/Affolder-Creative/little-hint/commit/7c9d1f598deac71a4e6f9e956c9db174efad3ce2))
+* polish list and settings UI and enforce manual product entry ([#123](https://github.com/Affolder-Creative/little-hint/issues/123)) ([46ffb63](https://github.com/Affolder-Creative/little-hint/commit/46ffb63a25fa22664fe805f89fe0536aa8a4ce3f))
+
 ## [0.12.1](https://github.com/Affolder-Creative/little-hint/compare/v0.12.0...v0.12.1) (2026-10-31)
 
 
