@@ -99,7 +99,7 @@ export function AdminUsage() {
         })}{" "}
         at 00:00 UTC
       </p>
-      {u.sms && (u.sms.enabled || u.sms.history > 0) && (
+      {u.sms && (u.sms.enabled || u.sms.requests > 0) && (
         <section className="usage-group" aria-label="SMS">
           <h4>
             SMS{" "}

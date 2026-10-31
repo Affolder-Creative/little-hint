@@ -32,6 +32,7 @@ If the configured daily activity limit differs from two, adjust the explanation 
 2. Set these server variables in your deployment platform or ignored environment file:
 
    ```dotenv
+   SMS_ENABLED=true
    SMS_PROVIDER=textbelt
    TEXTBELT_API_KEY=your-dedicated-key
    SMS_ALLOWED_EVENTS=exchange,access
@@ -59,6 +60,7 @@ The fixed activity message is:
 Staging supports real SMS through explicitly prefixed variables. Production keys and unprefixed provider variables are ignored in staging. Preview deployments always disable SMS, including prefixed credentials.
 
 ```dotenv
+STAGING_SMS_ENABLED=true
 STAGING_SMS_PROVIDER=textbelt
 STAGING_TEXTBELT_API_KEY=your-separate-staging-key
 STAGING_SMS_ALLOWED_EVENTS=exchange,access
@@ -68,13 +70,13 @@ STAGING_SMS_CREDIT_RESERVE=20
 STAGING_PAID_DAILY_LIMIT=10
 ```
 
-Use a separate key and balance for staging, and a real phone you control. Staging continues to deliver email to its private Mailpit inbox, so retrieve the email confirmation there. Linking a number still requires explicit action and consent. Keep `STAGING_APP_URL` public over HTTPS so signed replies can reach the staging app. A balance above the 20-credit reserve is needed to test activity messages. Set `STAGING_SMS_PROVIDER=none` when finished; history and opt-outs remain.
+Use a separate key and balance for staging, and a real phone you control. Staging continues to deliver email to its private Mailpit inbox, so retrieve the email confirmation there. Linking a number still requires explicit action and consent. Keep `STAGING_APP_URL` public over HTTPS so signed replies can reach the staging app. A balance above the 20-credit reserve is needed to test activity messages. Set `STAGING_SMS_ENABLED=false` when finished; credentials, history, and opt-outs remain.
 
 `compose.staging.yaml` supplies these variables to both the app and worker. Build the branch's image and deploy its digest as described in [the staging guide](STAGING.md). Use the matching Compose definition so both app and worker receive the SMS settings.
 
 ## Twilio remains available
 
-Set `SMS_PROVIDER=twilio` and configure `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM`, and `TWILIO_VERIFY_SERVICE_SID`. For staging use `STAGING_SMS_PROVIDER=twilio` and the corresponding `STAGING_TWILIO_...` values. Use separate staging resources.
+Set `SMS_ENABLED=true`, `SMS_PROVIDER=twilio`, and configure `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM`, and `TWILIO_VERIFY_SERVICE_SID`. For staging use `STAGING_SMS_ENABLED=true`, `STAGING_SMS_PROVIDER=twilio` and the corresponding `STAGING_TWILIO_...` values. Use separate staging resources.
 
 Configure the Verify service with the friendly name **Little Hint** and six-digit codes. Twilio controls Verify message formatting; Little Hint limits code acceptance to five minutes. Activity SMS uses the same fixed branded message as Textbelt. Configure your sender's incoming-message webhook to `https://your-origin/api/hooks/twilio/inbound`, using POST, and enable Twilio opt-out handling. The app supplies the signed status callback URL on each activity send. Inbound and status callbacks require a valid Twilio signature. Twilio sender registration and messaging eligibility remain provider requirements.
 
@@ -120,3 +122,20 @@ Automated tests use mocked provider responses and isolated PostgreSQL databases.
 - Exercise the code reserve and refill with small test limits. Skipped events must remain skipped. Verify webhook reachability and provider-specific Verify formatting.
 
 No live paid delivery is claimed by automated test results. Use real credentials only in deployment settings, never in test fixtures.
+
+## Disabling SMS
+
+Set `SMS_ENABLED=false`, or `STAGING_SMS_ENABLED=false` in staging. Blank and
+unset flags also mean off. Keep credentials in place if you expect to re-enable
+later. A blank provider still resolves to `none` and prevents sending even with
+the flag set to `true`.
+
+Disabled SMS disappears from notification settings, topic summaries, follow
+explanations, and sign-in choices. Saving other preferences does not erase saved
+SMS choices or consent. Server guards reject new verification sends and prevent
+sign-in sends. Authenticated removal and signed opt-out/status callbacks remain
+available. Updates suppressed while SMS is off are not sent after re-enabling.
+
+The monthly usage section remains visible after disabling only if this UTC month
+has provider submissions, including failed or uncertain ones. Skipped-only and
+prior-month history do not keep it visible. Records are retained.

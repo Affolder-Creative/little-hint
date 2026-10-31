@@ -1,3 +1,4 @@
+import { telegramInfo } from "./channel-availability";
 import { smsInfo } from "./sms-provider";
 import type { AdminServiceStatus } from "../shared/admin-services";
 import {
@@ -23,13 +24,28 @@ export function serviceStatuses(
     {
       id: "telegram",
       label: "Telegram",
-      status: configured(cfg.TELEGRAM_BOT_TOKEN && cfg.TELEGRAM_BOT_NAME),
+      status:
+        cfg.TELEGRAM_ENABLED !== "true"
+          ? "Off"
+          : configured(telegramInfo(cfg).available),
+      detail:
+        cfg.TELEGRAM_ENABLED !== "true"
+          ? "Enable Telegram in the deployment environment to offer it to users."
+          : !telegramInfo(cfg).available
+            ? "Telegram requires both a bot token and bot name."
+            : undefined,
     },
     {
       id: "sms",
       label: "Text messages",
-      status: configured(smsInfo(cfg).available),
-      detail: `Provider: ${smsInfo(cfg).provider}. SMS sign-in and recurring notifications require separate opt-ins.`,
+      status:
+        cfg.SMS_ENABLED !== "true" ? "Off" : configured(smsInfo(cfg).available),
+      detail:
+        cfg.SMS_ENABLED !== "true"
+          ? "Enable SMS in the deployment environment to offer it to users."
+          : !smsInfo(cfg).available
+            ? `Provider: ${smsInfo(cfg).provider}. Select a provider, supply its required credentials, and set a positive paid-request limit.`
+            : `Provider: ${smsInfo(cfg).provider}. SMS sign-in and recurring notifications require separate opt-ins.`,
     },
     { id: "push", label: "Browser push", status: configured(push) },
     {

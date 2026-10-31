@@ -56,7 +56,7 @@ Do not attach production or shared external volumes. Coolify must create distinc
 
 Keep only you authorized to read Mailpit: its messages include sign-in codes for all synthetic accounts. The UI and API require the configured login. STARTTLS is required for internal SMTP; app and worker trust the staging CA. Mailpit has no relay or forwarding configured.
 
-App and worker run with `NODE_ENV=production` and `APP_ENV=staging`. They require the dedicated `little_hint_staging` database and role. Staging settings force mail to `mailpit:1025`, disable Telegram and default to direct shop lookups, and reject integration edits. Stored credentials and unprefixed external provider environment variables are ignored. Direct product-page import remains available. AI, paid scraping, and SMS can be enabled with dedicated staging environment variables. See [SMS setup](SMS.md#staging-with-real-sms) for real staging texts, phone sign-in, consent, and quota testing. The signed-in app displays a staging banner using runtime metadata.
+App and worker run with `NODE_ENV=production` and `APP_ENV=staging`. They require the dedicated `little_hint_staging` database and role. Staging settings force mail to `mailpit:1025`, keep Telegram off by default and default to direct shop lookups, and reject integration edits. Stored credentials and unprefixed external provider environment variables are ignored. Direct product-page import remains available. AI, paid scraping, SMS, and Telegram can be enabled with dedicated staging environment variables. See [SMS setup](SMS.md#staging-with-real-sms) for real staging texts, phone sign-in, consent, and quota testing. The signed-in app displays a staging banner using runtime metadata.
 
 ## 4. Seed synthetic scenarios
 
@@ -218,3 +218,24 @@ Recreate both app and worker after changing these variables. With a configured
 provider and a positive limit, Administration shows Shop lookups as Configured
 with the provider name. Preview deployments ignore all scraping credentials,
 including staging keys.
+
+## Telegram testing
+
+Use a dedicated staging bot and explicitly enable it in both app and worker:
+
+```env
+STAGING_TELEGRAM_ENABLED=true
+STAGING_TELEGRAM_BOT_TOKEN=your-staging-bot-token
+STAGING_TELEGRAM_BOT_NAME=your_staging_bot
+```
+
+Recreate both containers. In Notifications, choose Link Telegram and complete the
+link with a controlled test account. Confirm delivery, then set
+`STAGING_TELEGRAM_ENABLED=false` to test hidden controls and suppressed delivery.
+Restoring `true` restores valid saved preferences without sending skipped updates.
+
+Blank or missing enabled flags mean off, just as with `STAGING_SMS_ENABLED`.
+Both staging bot values are required. Production bot settings and stored service
+credentials are ignored. Use a separate bot from production so polling and
+account links do not compete. Preview remains isolated even if staging variables
+are supplied. Telegram does not require a paid-request allowance.

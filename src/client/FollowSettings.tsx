@@ -1,3 +1,4 @@
+import { availableNotificationChannels } from "../shared/channel-availability";
 import { useState } from "react";
 import type { Follow, NotificationChannel } from "../shared/model";
 import {
@@ -102,6 +103,9 @@ export function FollowSettings({ target, targetId }: FollowTarget) {
     (direct?.channels ?? inherited.channels).filter((c) => c !== "sms"),
   );
   const p = world.preferences;
+  const visibleChannels = availableNotificationChannels(world).filter(
+    (c) => c !== "sms",
+  );
   return (
     <Form
       className="follow-settings"
@@ -120,8 +124,8 @@ export function FollowSettings({ target, targetId }: FollowTarget) {
     >
       <p>
         New wish-list items from {name} appear in your inbox immediately.
-        External updates are grouped for 15 minutes per list. SMS does not send
-        wish-list summaries.
+        External updates are grouped for 15 minutes per list.
+        {world.sms?.available && " SMS does not send wish-list summaries."}
       </p>
       <Field label="Updates for this follow">
         <select value={mode} onChange={(e) => setMode(e.target.value)}>
@@ -143,7 +147,11 @@ export function FollowSettings({ target, targetId }: FollowTarget) {
             ? "Uses the first available custom choices for each wish list: the list, its people, its household, then its family group. Otherwise, uses your default channels."
             : `${inheritance}: ${
                 inherited.channels
-                  .filter((c) => c !== "sms")
+                  .filter((c) =>
+                    visibleChannels.includes(
+                      c as Exclude<NotificationChannel, "sms">,
+                    ),
+                  )
                   .map((c) => channelLabels[c])
                   .join(", ") || "Inbox only"
               }.`}
@@ -152,22 +160,20 @@ export function FollowSettings({ target, targetId }: FollowTarget) {
       {mode === "custom" && (
         <fieldset className="choice-group">
           <legend>Send summaries through</legend>
-          {notificationChannels
-            .filter((c) => c !== "sms")
-            .map((c) => (
-              <label className="check" key={c}>
-                <input
-                  type="checkbox"
-                  checked={channels.includes(c)}
-                  onChange={(e) =>
-                    setChannels((v) =>
-                      e.target.checked ? [...v, c] : v.filter((x) => x !== c),
-                    )
-                  }
-                />
-                {channelLabels[c]}
-              </label>
-            ))}
+          {visibleChannels.map((c) => (
+            <label className="check" key={c}>
+              <input
+                type="checkbox"
+                checked={channels.includes(c)}
+                onChange={(e) =>
+                  setChannels((v) =>
+                    e.target.checked ? [...v, c] : v.filter((x) => x !== c),
+                  )
+                }
+              />
+              {channelLabels[c]}
+            </label>
+          ))}
           <p className="muted">
             Leave all unchecked for inbox only. Custom channels replace broader
             follow choices. List settings win; tied choices combine.
@@ -177,7 +183,9 @@ export function FollowSettings({ target, targetId }: FollowTarget) {
       {mode !== "mute" && mode !== "remove" && (
         <p className="muted">
           Push requires an enabled device.{" "}
-          {(!p.email || !p.telegram || !p.sms) &&
+          {(!p.email ||
+            (world.telegram?.available && !p.telegram) ||
+            (world.sms?.available && !p.sms)) &&
             "Disabled or unconnected channels stay off."}{" "}
           <a href="/settings?section=notifications">Manage delivery channels</a>
           .
@@ -234,6 +242,10 @@ function FollowingRow({
   onOpen: () => void;
 }) {
   const { name, effective, inheritance } = useFollowSettings(follow);
+  const { world } = useApp();
+  const visibleChannels = availableNotificationChannels(world).filter(
+    (c) => c !== "sms",
+  );
   return (
     <div className="setting-row">
       <div>
@@ -250,8 +262,14 @@ function FollowingRow({
           {follow.muted
             ? "Muted"
             : follow.channels !== undefined
-              ? effective.channels.map((c) => channelLabels[c]).join(", ") ||
-                "Inbox only"
+              ? effective.channels
+                  .filter((c) =>
+                    visibleChannels.includes(
+                      c as Exclude<NotificationChannel, "sms">,
+                    ),
+                  )
+                  .map((c) => channelLabels[c])
+                  .join(", ") || "Inbox only"
               : inheritance}
         </p>
       </div>

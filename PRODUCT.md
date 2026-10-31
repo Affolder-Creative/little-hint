@@ -94,6 +94,14 @@ Off hides discovery controls and unsaved results, blocks endpoints, cancels pend
 
 Selected accounts may receive server-configured higher or unlimited weekly AI allowances and a separate monthly exemption. Monthly-exempt searches remain in total usage reports without consuming the shared allowance. Exceptions never override Off, staging/preview isolation, or recipient permissions.
 
-Gift-suggestion mode, limits, and model are configured only through deployment environment variables. Monthly usage separates gift suggestions, product-detail AI, and paid shop lookups. It appears when a service is enabled or usage exists in the current UTC month, and retains historical counts after disabling services. Unknown or older token usage is labeled as unavailable; estimates cover recorded usage at known rates and are not a complete bill.
+Gift-suggestion mode, limits, and model are configured only through deployment environment variables. Monthly usage separates gift suggestions, product-detail AI, and paid shop lookups. It appears when a service is available or provider submissions/requests exist in the current UTC month. Disabled services with current-month usage say Currently off; prior-month records and skipped SMS attempts alone do not keep sections visible. Older records remain stored. Unknown or older token usage is labeled as unavailable; estimates cover recorded usage at known rates and are not a complete bill.
 
 Administration contains App settings, This month's usage, Service status, and Background jobs. Only family-group creation and automatic product photos are editable, with optional locking ENV overrides. All service credentials, providers, models, limits, and AI availability are deployment-only. Service status reports configuration presence, not verified connectivity. Preserve usage after disabling services, notification retries, failed shop lookups, and the note that backup status is unavailable.
+
+SMS and Telegram require explicit deployment enabled flags set to true plus
+complete provider configuration. Staging supports both through dedicated prefixed
+flags and credentials; preview keeps both disabled. Unavailable channels are
+hidden throughout personal settings, follows, and SMS sign-in, while administrator
+Service status remains visible. Connections, consent, and saved choices survive
+disablement. Suppressed updates remain in the inbox and are never caught up after
+re-enabling. Configured but unconnected channels still offer setup.

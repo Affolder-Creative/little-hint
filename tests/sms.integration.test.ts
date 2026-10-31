@@ -41,6 +41,7 @@ describe.skipIf(!url)("SMS HTTP and PostgreSQL integration", () => {
       "BETTER_AUTH_SECRET",
       "sms-integration-test-secret-at-least-32-characters",
     );
+    vi.stubEnv("SMS_ENABLED", "true");
     vi.stubEnv("SMS_PROVIDER", "textbelt");
     vi.stubEnv("TEXTBELT_API_KEY", "integration-secret");
     vi.stubEnv("PAID_DAILY_LIMIT", "50");

@@ -1,3 +1,4 @@
+import { availableNotificationChannels } from "../shared/channel-availability";
 import { useEffect, useState, type ReactNode } from "react";
 import {
   useInfiniteQuery,
@@ -17,7 +18,7 @@ import {
   type FollowTarget,
 } from "./FollowSettings";
 import type { NotificationBatchView } from "../shared/model";
-import { notificationChannels, channelLabels } from "../shared/follows";
+import { channelLabels } from "../shared/follows";
 import { defaultPushEvents, notificationTopics } from "../shared/notifications";
 
 type PushInfo = {
@@ -331,6 +332,7 @@ export function FollowButton({
 }
 export function NotificationDetails() {
   const { world } = useApp();
+  const channels = availableNotificationChannels(world);
   const [details, setDetails] = useState(
     world.preferences.notificationDetails ?? {},
   );
@@ -339,8 +341,8 @@ export function NotificationDetails() {
       <summary>
         Preview privacy
         <span className="muted">
-          {notificationChannels.some((c) => c !== "sms" && details[c])
-            ? `Previews allowed: ${notificationChannels
+          {channels.some((c) => c !== "sms" && details[c])
+            ? `Previews allowed: ${channels
                 .filter((c) => c !== "sms" && details[c])
                 .map((c) => channelLabels[c])
                 .join(", ")}`
@@ -352,10 +354,11 @@ export function NotificationDetails() {
         <p className="muted">
           Choose where previews may show names, list names, and priorities
           outside Little Hint, including on a lock screen. Delivered previews
-          cannot be recalled. Private gift plans and notes stay generic. SMS
-          always uses a short generic message without links or personal details.
+          cannot be recalled. Private gift plans and notes stay generic.
+          {world.sms?.available &&
+            " SMS always uses a short generic message without links or personal details."}
         </p>
-        {notificationChannels
+        {channels
           .filter((c) => c !== "sms")
           .map((c) => (
             <div key={c}>
@@ -397,6 +400,7 @@ export function WatchButton({ itemId }: { itemId: string }) {
 }
 export function NotificationTopics() {
   const { world } = useApp();
+  const channels = availableNotificationChannels(world);
   const p = world.preferences;
   const [topics, setTopics] = useState(() => ({
     push: p.pushEvents ?? defaultPushEvents,
@@ -411,7 +415,7 @@ export function NotificationTopics() {
       <summary>
         Customize topics
         <span className="muted">
-          {notificationChannels
+          {channels
             .map(
               (c) =>
                 `${channelLabels[c]} ${topics[c].length}/${notificationTopics.length}`,
@@ -434,7 +438,7 @@ export function NotificationTopics() {
                 : topic.label}
             </legend>
             <div className="topic-channels">
-              {notificationChannels.map((channel) => (
+              {channels.map((channel) => (
                 <label className="check" key={channel}>
                   <input
                     type="checkbox"

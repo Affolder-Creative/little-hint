@@ -1,3 +1,4 @@
+import { availableNotificationChannels } from "../shared/channel-availability";
 import { SmsSettings } from "./SmsSettings";
 import { smsNotificationDisclosure } from "../shared/sms";
 import { InviteDialog, InvitationShare } from "./InvitationShare";
@@ -46,6 +47,7 @@ export default function SettingsPage({
   setTheme: (v: string) => void;
 }) {
   const { world, open, mutate, close, toast, dark } = useApp();
+  const channels = availableNotificationChannels(world);
   const client = useQueryClient();
   const [params, setParams] = useSearchParams();
   const requestedSection = params.get("section");
@@ -514,28 +516,33 @@ export default function SettingsPage({
               onSubmit={async (f) => {
                 await mutate("preferences", {
                   notificationDetails: Object.fromEntries(
-                    ["push", "email", "telegram", "sms"].map((c) => [
-                      c,
-                      f.get(`details-${c}`) === "on",
-                    ]),
+                    channels
+                      .filter((c) => c !== "sms")
+                      .map((c) => [c, f.get(`details-${c}`) === "on"]),
                   ),
                   email: f.get("email") === "on",
-                  telegram: f.get("telegram") === "on",
-                  sms: f.get("sms") === "on",
-                  smsConsentAcknowledged: f.get("sms") === "on",
+                  ...(world.telegram?.available
+                    ? { telegram: f.get("telegram") === "on" }
+                    : {}),
+                  ...(world.sms?.available
+                    ? {
+                        sms: f.get("sms") === "on",
+                        smsConsentAcknowledged: f.get("sms") === "on",
+                      }
+                    : {}),
                   events: [
                     ...new Set(
-                      ["email", "telegram", "sms"].flatMap((channel) =>
-                        f.getAll(`${channel}Events`),
-                      ),
+                      channels
+                        .filter((c) => c !== "push")
+                        .flatMap((channel) => f.getAll(`${channel}Events`)),
                     ),
                   ],
                   pushEvents: f.getAll("pushEvents"),
-                  channelEvents: {
-                    email: f.getAll("emailEvents"),
-                    telegram: f.getAll("telegramEvents"),
-                    sms: f.getAll("smsEvents"),
-                  },
+                  channelEvents: Object.fromEntries(
+                    channels
+                      .filter((c) => c !== "push")
+                      .map((c) => [c, f.getAll(`${c}Events`)]),
+                  ),
                   recipientUpdates: f.get("recipientUpdates") === "on",
                 });
                 setNotificationSaved(true);
@@ -554,64 +561,64 @@ export default function SettingsPage({
                   </label>
                   <span className="muted">{world.me.email}</span>
                 </div>
-                <div className="delivery-channel">
-                  <label className="check">
-                    <input
-                      type="checkbox"
-                      name="telegram"
-                      defaultChecked={world.preferences.telegram}
-                      disabled={!world.preferences.chatId}
-                    />
-                    Telegram{" "}
-                    {world.preferences.chatId ? "· Linked" : "· Not linked"}
-                  </label>
-                  {!world.preferences.chatId && <TelegramSetup />}
-                </div>
-                <div className="delivery-channel">
-                  <label className="check">
-                    <input
-                      type="checkbox"
-                      name="sms"
-                      defaultChecked={world.preferences.sms}
-                      disabled={
-                        !world.sms?.available ||
-                        !world.preferences.phoneVerified ||
-                        world.preferences.smsOptOut
+                {world.telegram?.available && (
+                  <div className="delivery-channel">
+                    <label className="check">
+                      <input
+                        type="checkbox"
+                        name="telegram"
+                        defaultChecked={world.preferences.telegram}
+                        disabled={!world.preferences.chatId}
+                      />
+                      Telegram{" "}
+                      {world.preferences.chatId ? "· Linked" : "· Not linked"}
+                    </label>
+                    {!world.preferences.chatId && <TelegramSetup />}
+                  </div>
+                )}
+                {world.sms?.available && (
+                  <div className="delivery-channel">
+                    <label className="check">
+                      <input
+                        type="checkbox"
+                        name="sms"
+                        defaultChecked={world.preferences.sms}
+                        disabled={
+                          !world.sms?.available ||
+                          !world.preferences.phoneVerified ||
+                          world.preferences.smsOptOut
+                        }
+                      />
+                      Text messages{" "}
+                      {world.preferences.phoneVerified
+                        ? `· ${world.preferences.phone}`
+                        : "· Not verified"}
+                    </label>
+                    <p className="muted">
+                      {smsNotificationDisclosure(world.sms?.dailyLimit ?? 2)}
+                    </p>
+                    <button
+                      type="button"
+                      className="text-button"
+                      onClick={() =>
+                        open("Phone & SMS sign-in", <SmsSettings />)
                       }
-                    />
-                    Text messages{" "}
-                    {world.preferences.phoneVerified
-                      ? `· ${world.preferences.phone}`
-                      : "· Not verified"}
-                  </label>
-                  <p className="muted">
-                    {smsNotificationDisclosure(world.sms?.dailyLimit ?? 2)}
-                  </p>
-                  {!world.sms?.available && (
+                    >
+                      Manage phone & SMS sign-in
+                    </button>
                     <p className="muted">
-                      SMS is not configured or its paid sending limit is zero.
-                      Ask the administrator to enable it.
+                      SMS sign-in: {world.preferences.smsLogin ? "On" : "Off"}.
+                      Verifying a phone does not enable recurring updates.
                     </p>
-                  )}
-                  <button
-                    type="button"
-                    className="text-button"
-                    onClick={() => open("Phone & SMS sign-in", <SmsSettings />)}
-                  >
-                    Manage phone & SMS sign-in
-                  </button>
-                  <p className="muted">
-                    SMS sign-in: {world.preferences.smsLogin ? "On" : "Off"}.
-                    Verifying a phone does not enable recurring updates.
-                  </p>
-                  {world.preferences.smsOptOut && (
-                    <p className="muted">
-                      Text updates are turned off. Reply START to the sender to
-                      allow delivery again, then explicitly enable text updates
-                      here. Email and passkeys remain available.
-                    </p>
-                  )}
-                </div>
+                    {world.preferences.smsOptOut && (
+                      <p className="muted">
+                        Text updates are turned off. Reply START to the sender
+                        to allow delivery again, then explicitly enable text
+                        updates here. Email and passkeys remain available.
+                      </p>
+                    )}
+                  </div>
+                )}
                 <PushSetup />
               </fieldset>
               <NotificationTopics />

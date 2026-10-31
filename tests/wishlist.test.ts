@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach } from "vitest";
+import { beforeEach, describe, it, expect, vi, afterEach } from "vitest";
 import { command, stamp, world } from "../src/server/domain";
 import {
   wishlistFollowing,
@@ -164,3 +164,14 @@ describe("wish-list subscriptions and copy", () => {
     );
   });
 });
+
+beforeEach(() => {
+  vi.stubEnv("APP_ENV", "test");
+  vi.stubEnv("TELEGRAM_ENABLED", "true");
+  vi.stubEnv("TELEGRAM_BOT_TOKEN", "test-token");
+  vi.stubEnv("TELEGRAM_BOT_NAME", "test-bot");
+  vi.stubEnv("SMS_ENABLED", "true");
+  vi.stubEnv("SMS_PROVIDER", "textbelt");
+  vi.stubEnv("TEXTBELT_API_KEY", "test-key");
+});
+afterEach(() => vi.unstubAllEnvs());

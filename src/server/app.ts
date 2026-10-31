@@ -1,3 +1,4 @@
+import { telegramInfo } from "./channel-availability";
 import { smsInfo, verifyTextbelt, normalizePhone } from "./sms-provider";
 import { recordTransport } from "./sms-policy";
 import {
@@ -226,11 +227,13 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
     const a = await actor(req);
     const notificationAsOf = Date.now();
     const state = await readState();
+    const cfg = await config();
     return {
       ...world(state, a),
-      sms: smsInfo(await config()),
+      sms: smsInfo(cfg),
+      telegram: telegramInfo(cfg),
       canCreateGroups: canCreateGroups(state, a),
-      giftDiscovery: discoveryConfiguration(await config()),
+      giftDiscovery: discoveryConfiguration(cfg),
       notificationAsOf,
       environment: deploymentEnvironment(),
     };

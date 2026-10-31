@@ -6,6 +6,7 @@ import { smsNotificationConsent } from "../src/shared/sms";
 import { smsInfo } from "../src/server/sms-provider";
 import { adminUsage } from "../src/server/usage";
 const cfg = {
+  SMS_ENABLED: "true",
   SMS_PROVIDER: "textbelt",
   TEXTBELT_API_KEY: "fixture",
   PAID_DAILY_LIMIT: "50",

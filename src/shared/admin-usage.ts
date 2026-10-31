@@ -42,6 +42,7 @@ export interface SmsUsage {
   enabled: boolean;
   provider: string;
   requests: number;
+  // All-time audit count; visibility uses this month's requests instead.
   history: number;
   signIn: number;
   verification: number;

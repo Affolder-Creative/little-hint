@@ -5,6 +5,7 @@ const mock = vi.hoisted(() => ({
   state: null as State | null,
   sendMail: vi.fn(),
   fetch: vi.fn(),
+  telegramEnabled: true,
 }));
 vi.mock("../src/server/db", () => ({
   readState: async () => mock.state,
@@ -15,11 +16,14 @@ vi.mock("../src/server/db", () => ({
     }),
   },
 }));
-vi.mock("../src/server/settings", () => ({
+vi.mock("../src/server/settings", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../src/server/settings")>()),
   config: async () => ({
     SMTP_HOST: "smtp.example.test",
     SMTP_PORT: "465",
     SMTP_FROM: "Little Hint <hello@example.test>",
+    TELEGRAM_ENABLED: String(mock.telegramEnabled),
+    TELEGRAM_BOT_NAME: "test-bot",
     TELEGRAM_BOT_TOKEN: "test-token",
   }),
   spend: async () => {},
@@ -29,7 +33,11 @@ vi.mock("nodemailer", () => ({
     createTransport: () => ({ sendMail: mock.sendMail, close: () => {} }),
   },
 }));
-import { deliverNotice } from "../src/server/notifications";
+import {
+  deliverNotice,
+  linkTelegram,
+  pollTelegram,
+} from "../src/server/notifications";
 function fixture() {
   const s = emptyState();
   mock.state = s;
@@ -85,6 +93,7 @@ function fixture() {
   return { s, actors, group, notice };
 }
 beforeEach(() => {
+  mock.telegramEnabled = true;
   mock.sendMail.mockReset().mockResolvedValue({});
   mock.fetch.mockReset().mockResolvedValue(
     new Response(JSON.stringify({ ok: true, result: {} }), {
@@ -174,4 +183,30 @@ describe("notification privacy and recovery", () => {
     await deliverNotice(f.notice.id);
     expect(mock.sendMail).toHaveBeenCalledTimes(2);
   });
+});
+
+it("does not retry Telegram updates suppressed while disabled", async () => {
+  const f = fixture();
+  mock.telegramEnabled = false;
+  await deliverNotice(f.notice.id);
+  expect(mock.fetch).not.toHaveBeenCalled();
+  expect(
+    mock.state!.notices.find((n) => n.id === f.notice.id)?.suppressedChannels,
+  ).toContain("telegram");
+  expect(f.notice.delivered).not.toContain("telegram");
+  mock.telegramEnabled = true;
+  f.notice.status = "pending";
+  await deliverNotice(f.notice.id);
+  expect(mock.fetch).not.toHaveBeenCalled();
+});
+
+it("does not link or poll Telegram while disabled", async () => {
+  fixture();
+  mock.telegramEnabled = false;
+  await expect(
+    linkTelegram({ id: "u", name: "User", email: "user@example.test" }),
+  ).rejects.toThrow("configured");
+  await pollTelegram();
+  expect(mock.fetch).not.toHaveBeenCalled();
+  expect(mock.state!.links).toHaveLength(0);
 });

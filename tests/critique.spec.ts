@@ -144,6 +144,12 @@ async function preview(
   solo = false,
   smsEnabled = false,
 ) {
+  process.env.TELEGRAM_ENABLED = "true";
+  process.env.TELEGRAM_BOT_TOKEN = "fixture";
+  process.env.TELEGRAM_BOT_NAME = "fixture_bot";
+  process.env.SMS_ENABLED = String(smsEnabled);
+  process.env.SMS_PROVIDER = smsEnabled ? "textbelt" : "none";
+  process.env.TEXTBELT_API_KEY = "fixture";
   const fixture = stagingFixtures();
   const actor = fixture.actors[actorIndex];
   if (solo) {
@@ -178,9 +184,11 @@ async function preview(
         json: {
           ...world(fixture.state, actor),
           environment: "development",
+          telegram: { available: true },
           sms: smsInfo(
             smsEnabled
               ? {
+                  SMS_ENABLED: "true",
                   SMS_PROVIDER: "textbelt",
                   TEXTBELT_API_KEY: "fixture",
                   PAID_DAILY_LIMIT: "50",

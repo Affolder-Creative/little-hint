@@ -172,6 +172,18 @@ export async function sendActivitySms(noticeId: string) {
     return;
   await withSmsLock(async () => {
     const c = await config();
+    if (!smsInfo(c).available || n.suppressedChannels?.includes("sms")) {
+      await transact((s) => {
+        const notice = s.notices.find((row) => row.id === noticeId);
+        if (notice) {
+          notice.suppressedChannels = [
+            ...new Set([...(notice.suppressedChannels ?? []), "sms" as const]),
+          ];
+          notice.revision++;
+        }
+      });
+      return;
+    }
     if (
       (await readState()).smsAttempts.some(
         (a) => a.reference === noticeId && a.purpose === "activity",
@@ -184,6 +196,7 @@ export async function sendActivitySms(noticeId: string) {
       const n = s.notices.find((n) => n.id === noticeId);
       if (
         !n ||
+        n.suppressedChannels?.includes("sms") ||
         s.smsAttempts.some(
           (a) => a.reference === noticeId && a.purpose === "activity",
         )
@@ -223,6 +236,13 @@ export async function startSms(
   }
   return withSmsLock(async () => {
     const c = await config();
+    if (!smsInfo(c).available) {
+      if (purpose === "login") return randomUUID();
+      fail(
+        400,
+        "SMS is unavailable. Ask the administrator to review its configuration.",
+      );
+    }
     await syncProviderLocked(c);
     const s = await readState();
     const matches = s.preferences.filter(
@@ -514,6 +534,11 @@ export async function changeSmsLogin(
   enabled: boolean,
   remove = false,
 ) {
+  if (enabled && !smsInfo(await config()).available)
+    fail(
+      400,
+      "SMS is unavailable. Ask the administrator to review its configuration.",
+    );
   await transact((s) => {
     requireSmsGrant(s, a, sessionId);
     const p = preferences(s, a);

@@ -181,6 +181,7 @@ export interface Exchange extends Base {
   drawnAt?: string;
 }
 export interface Notice extends Base {
+  suppressedChannels?: Array<"sms" | "telegram">;
   batchId?: string;
   prioritySnapshot?: ItemPriority | null;
   deliveryChannels?: NotificationChannel[];
@@ -485,6 +486,7 @@ export interface GiftView extends Omit<Item, "creatorId"> {
   }>;
 }
 export interface World {
+  telegram?: { available: boolean };
   sms?: import("./sms").SmsInfo;
   canCreateGroups?: boolean;
   giftPreferences?: GiftPreferenceView[];

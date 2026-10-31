@@ -125,8 +125,8 @@ For `compose.production.yaml`, keep application variables Runtime-only. The shar
 | AI allowance exceptions | `GIFT_DISCOVERY_USER_OVERRIDES` | Optional JSON keyed by account ID. Empty means no exceptions. |
 | Paid shop lookups | `SCRAPING_PROVIDER` and the corresponding `SCRAPINGFISH_API_KEY`, `SCRAPINGBEE_API_KEY`, `SCRAPEDO_API_KEY`, or `SCRAPINGDOG_API_KEY` | Only configure providers you use. Selection defaults to `auto`, preferring Fish, then Bee, Scrape.do, Dog. `none` disables paid scraping; direct shop lookup remains available. Staging uses dedicated `STAGING_` variables; see [paid shop lookup testing](STAGING.md#paid-shop-lookup-testing). |
 | Daily paid-request cap | `PAID_DAILY_LIMIT` | Defaults to `50` per service per UTC day. Applies to product-detail AI and paid shop lookups, not gift-suggestion allowances. `0` blocks those paid requests. This is a request count, not a dollar budget. |
-| Telegram | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_NAME` | Optional; both needed for Telegram setup. |
-| Text messages | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM`, `TWILIO_VERIFY_SERVICE_SID` | Optional; configure all four for verified SMS. |
+| Telegram | `TELEGRAM_ENABLED`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_NAME` | Requires `true` and both bot values. Blank/unset/false keeps it off. |
+| Text messages | `SMS_ENABLED`, `SMS_PROVIDER`, provider credentials | Requires `true`, a supported provider, its credentials, and a positive paid-request limit. See [SMS setup](SMS.md). |
 | Browser push | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | Optional; a matching key pair and valid `mailto:` or HTTPS subject are needed. Keep the pair stable across deployments. |
 | In-app preferences | `FAMILY_GROUP_CREATION`, `AUTO_IMPORT_PRODUCT_PHOTOS` | Leave empty/unset to keep the PWA controls editable. Explicit `everyone`/`admins` and `true`/`false` values lock the respective controls. |
 | Other options | `PRODUCT_IMPORT_CACHE_ENABLED`, `CLOUDFLARE_WEB_ANALYTICS` | Defaults: `true`, `false`. These were already deployment settings. |
@@ -136,3 +136,33 @@ Compose supplies `DATABASE_URL`, `NODE_ENV`, `APP_ENV`, `PORT`, and `UPLOAD_DIR`
 If you use the optional backup sidecar, retain `COMPOSE_PROFILES=backup`, `RESTIC_REPOSITORY`, `RESTIC_PASSWORD`, and credentials for your storage backend. S3-compatible storage uses `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and `AWS_DEFAULT_REGION`; native B2 uses `B2_ACCOUNT_ID` and `B2_ACCOUNT_KEY`. The existing backup name, retention, and age defaults are listed in [.env.production.example](../.env.production.example). This change does not alter backup configuration.
 
 After updating values and selecting an image containing this feature, recreate both app and worker. Check email sign-in, the worker, and Administration's service status. A “Configured” label confirms setup presence, not a successful delivery or connection test.
+
+### Optional channel switches
+
+SMS and Telegram require explicit enablement. Set `SMS_ENABLED=true` or
+`TELEGRAM_ENABLED=true` only for services you want to offer. Blank, unset, and
+`false` disable them even when credentials are present. Other values are rejected
+with a configuration error naming the variable. A `true` flag does not bypass
+missing credentials or SMS spending restrictions.
+
+**Upgrade:** deployments previously enabled through credentials alone must add
+the corresponding enabled flags. Recreate both app and worker after changing ENV.
+Staging uses `STAGING_SMS_ENABLED` and `STAGING_TELEGRAM_ENABLED` with the same
+rules and only staging-prefixed credentials. Preview always keeps both off.
+
+Unavailable channels disappear from personal settings and sign-in choices.
+Administration → Service status still explains whether they are off or missing
+configuration. Configured means setup is present, not that connectivity has been
+tested. User connections, consent, and choices remain stored while disabled.
+Re-enabling resumes future updates without replaying suppressed updates.
+
+This month's usage shows available services and services with submissions or
+requests in the current UTC month. Disabled services say Currently off. Their
+sections disappear the following month if no new usage exists; older records
+remain stored. Skipped SMS attempts alone do not keep a disabled section visible.
+If no sections qualify, the usage panel is hidden.
+
+Blank AI model values select built-in defaults; they do not disable AI. Use
+`GIFT_DISCOVERY_MODE=off` to disable suggestions, not `none`. Removing the OpenAI
+key disables both AI features. A zero paid-request limit disables product-detail
+AI and paid shop lookups; gift suggestions retain their separate allowances.
