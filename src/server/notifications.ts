@@ -1,3 +1,4 @@
+import { telegramInfo, unavailableChannels } from "./channel-availability";
 import { sendActivitySms } from "./sms";
 import { wishlistEligible, topicEnabled } from "./activity";
 import nodemailer from "nodemailer";
@@ -69,7 +70,7 @@ export async function telegramCall(
   body: Record<string, unknown>,
 ) {
   const c = await config();
-  if (!c.TELEGRAM_BOT_TOKEN) throw new Error("Telegram is not configured.");
+  if (!telegramInfo(c).available) throw new Error("Telegram is unavailable.");
   const r = await fetch(
     `https://api.telegram.org/bot${c.TELEGRAM_BOT_TOKEN}/${method}`,
     {
@@ -107,6 +108,15 @@ export async function deliverNotice(id: string) {
         ])
       ).rows[0];
   if (!user) return;
+  const unavailable = unavailableChannels(await config());
+  await transact((state) => {
+    const notice = state.notices.find((row) => row.id === id);
+    if (!notice) return;
+    notice.suppressedChannels = [
+      ...new Set([...(notice.suppressedChannels ?? []), ...unavailable]),
+    ];
+    notice.revision++;
+  });
   if (!inv) await sendActivitySms(id);
   const prefs = inv
     ? {
@@ -154,6 +164,8 @@ export async function deliverNotice(id: string) {
         ? prefs
         : preferences(s, { id: n.userId, email: user.email, name: user.name });
       if (
+        (channel === "telegram" &&
+          n.suppressedChannels?.includes("telegram")) ||
         !current[channel] ||
         !(n.event === "wishlist"
           ? wishlistEligible(s, n, channel)
@@ -217,7 +229,7 @@ export async function deliverNotice(id: string) {
 }
 export async function linkTelegram(a: Actor) {
   const c = await config();
-  if (!c.TELEGRAM_BOT_NAME || !c.TELEGRAM_BOT_TOKEN)
+  if (!telegramInfo(c).available)
     fail(400, "Telegram has not been configured by the administrator.");
   const token = randomBytes(24).toString("base64url");
   await transact((s) => {
@@ -235,7 +247,7 @@ export async function linkTelegram(a: Actor) {
 }
 export async function pollTelegram() {
   const c = await config();
-  if (!c.TELEGRAM_BOT_TOKEN) return;
+  if (!telegramInfo(c).available) return;
   const s = await readState();
   const offset = s.usage.find((u) => u.key === "telegram-offset")?.count ?? 0;
   const updates = await telegramCall("getUpdates", {

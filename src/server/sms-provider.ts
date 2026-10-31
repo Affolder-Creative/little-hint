@@ -10,6 +10,7 @@ export function smsInfo(c: SmsConfig): SmsInfo {
   return {
     provider,
     available:
+      c.SMS_ENABLED === "true" &&
       Number(c.PAID_DAILY_LIMIT) > 0 &&
       (provider === "textbelt"
         ? !!c.TEXTBELT_API_KEY

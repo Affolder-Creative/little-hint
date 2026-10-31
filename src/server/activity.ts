@@ -1,3 +1,5 @@
+import { effectiveConfig } from "./runtime-config";
+import { unavailableChannels } from "./channel-availability";
 import { z } from "zod";
 import type {
   Actor,
@@ -191,6 +193,9 @@ export function wishlistEligible(
 ) {
   const item = s.items.find((i) => i.id === n.itemId);
   return (
+    !(channel === "telegram" || channel === "sms"
+      ? n.suppressedChannels?.includes(channel)
+      : false) &&
     !n.readAt &&
     activityAllowed(s, n) &&
     !!item &&
@@ -362,6 +367,7 @@ export function emitActivity(
       attempts: 0,
       delivered: [],
       ...refs,
+      suppressedChannels: unavailableChannels(effectiveConfig()),
     };
     if (!activityAllowed(s, n)) continue;
     if (event === "wishlist" && n.listId) {
@@ -556,6 +562,19 @@ export function activityCommand(
       (f) =>
         f.userId === a.id && f.target === p.target && f.targetId === p.targetId,
     );
+    if (p.channels) {
+      const unavailable = unavailableChannels(effectiveConfig());
+      p.channels = [
+        ...new Set([
+          ...p.channels.filter(
+            (c) => !unavailable.includes(c as "sms" | "telegram"),
+          ),
+          ...(existing?.channels ?? []).filter((c) =>
+            unavailable.includes(c as "sms" | "telegram"),
+          ),
+        ]),
+      ];
+    }
     s.follows = s.follows.filter(
       (f) =>
         !(

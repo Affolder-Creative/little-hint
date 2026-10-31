@@ -8,6 +8,8 @@ it("reports capability requirements without exposing values", () => {
     PAID_DAILY_LIMIT: "50",
     SMTP_HOST: "private-host",
     SMTP_USER: "",
+    TELEGRAM_ENABLED: "true",
+    SMS_ENABLED: "true",
     TELEGRAM_BOT_TOKEN: "secret",
     TWILIO_ACCOUNT_SID: "secret",
     SCRAPING_PROVIDER: "auto",

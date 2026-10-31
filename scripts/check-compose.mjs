@@ -453,6 +453,10 @@ console.log(
 
 // SMS credentials and policy must reach both submitters, with explicit staging names.
 const smsVars = {
+  SMS_ENABLED: "true",
+  TELEGRAM_ENABLED: "true",
+  TELEGRAM_BOT_TOKEN: "compose-telegram-only",
+  TELEGRAM_BOT_NAME: "compose_test_bot",
   SMS_PROVIDER: "textbelt",
   TEXTBELT_API_KEY: "compose-sms-only",
   SMS_MONTHLY_LIMIT: "75",

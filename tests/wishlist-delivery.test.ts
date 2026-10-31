@@ -64,6 +64,10 @@ function fixture() {
   return { ...f, device, item, batch };
 }
 beforeEach(() => {
+  vi.stubEnv("APP_ENV", "test");
+  vi.stubEnv("TELEGRAM_ENABLED", "true");
+  vi.stubEnv("TELEGRAM_BOT_TOKEN", "test-token");
+  vi.stubEnv("TELEGRAM_BOT_NAME", "test-bot");
   vi.useFakeTimers();
   vi.setSystemTime(new Date("2026-10-27T12:00:00Z"));
   for (const fn of [mock.email, mock.telegram, mock.push])
@@ -71,7 +75,10 @@ beforeEach(() => {
   mock.active.mockReset().mockResolvedValue(true);
   mock.configured = true;
 });
-afterEach(() => vi.useRealTimers());
+afterEach(() => {
+  vi.useRealTimers();
+  vi.unstubAllEnvs();
+});
 const closeWindow = () => vi.advanceTimersByTime(15 * 60_000);
 
 describe("cross-channel wish-list summary delivery", () => {
@@ -304,4 +311,37 @@ describe("cross-channel wish-list summary delivery", () => {
     expect(mock.push).not.toHaveBeenCalled();
     expect(f.s.pushDevices).toHaveLength(1);
   });
+});
+
+it("does not catch up on Telegram notices created while disabled, including mixed batches", async () => {
+  vi.stubEnv("TELEGRAM_ENABLED", "false");
+  const f = fixture();
+  const disabledItem = f.item;
+  vi.stubEnv("TELEGRAM_ENABLED", "true");
+  const enabledItem = f.add();
+  await closeWindow();
+  await deliverWishlistBatch(f.batch.id);
+  expect(mock.telegram).toHaveBeenCalledOnce();
+  const text = mock.telegram.mock.calls[0][1].text;
+  expect(text).toContain('John added something to "Birthday".');
+  expect(text).not.toContain("Most wanted");
+  expect(
+    f.s.notices.find((n) => n.itemId === disabledItem.id)?.suppressedChannels,
+  ).toContain("telegram");
+  expect(
+    f.s.notices.find((n) => n.itemId === enabledItem.id)?.suppressedChannels,
+  ).not.toContain("telegram");
+});
+
+it("skips disabled Telegram without retrying it after the service returns", async () => {
+  const f = fixture();
+  vi.stubEnv("TELEGRAM_ENABLED", "false");
+  await closeWindow();
+  await deliverWishlistBatch(f.batch.id);
+  expect(mock.telegram).not.toHaveBeenCalled();
+  expect(f.batch.deliveries.telegram.status).toBe("skipped");
+  vi.stubEnv("TELEGRAM_ENABLED", "true");
+  retryWishlistBatch(f.s, f.batch.id);
+  await deliverWishlistBatch(f.batch.id);
+  expect(mock.telegram).not.toHaveBeenCalled();
 });

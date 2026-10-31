@@ -127,6 +127,7 @@ beforeEach(() => {
   );
   vi.stubEnv("APP_URL", "https://littlehint.example.test");
   m.c = {
+    SMS_ENABLED: "true",
     SMS_PROVIDER: "textbelt",
     TEXTBELT_API_KEY: "test-secret-key",
     SMS_MONTHLY_LIMIT: "100",
@@ -604,6 +605,7 @@ it("isolates staging credentials and keeps preview SMS disabled", () => {
   vi.stubEnv("STAGING_SMS_PROVIDER", "");
   expect(smsInfo(effectiveConfig()).available).toBe(false);
   expect(effectiveConfig().TEXTBELT_API_KEY).toBe("");
+  vi.stubEnv("STAGING_SMS_ENABLED", "true");
   vi.stubEnv("STAGING_SMS_PROVIDER", "textbelt");
   vi.stubEnv("STAGING_TEXTBELT_API_KEY", "staging-secret");
   vi.stubEnv("STAGING_PAID_DAILY_LIMIT", "10");
@@ -711,4 +713,20 @@ it("normalizes US phone input and rejects other NANP countries", () => {
   expect(normalizePhone("202-555-0123")).toBe("+12025550123");
   expect(normalizePhone("+14165550123")).toBeUndefined();
   expect(normalizePhone("+442079460123")).toBeUndefined();
+});
+
+it("suppresses disabled activity permanently and makes no provider calls", async () => {
+  m.c.SMS_ENABLED = "false";
+  await sendActivitySms(m.s!.notices[0].id);
+  expect(m.fetch).not.toHaveBeenCalled();
+  expect(m.s!.smsAttempts).toHaveLength(0);
+  expect(m.s!.notices[0].suppressedChannels).toContain("sms");
+  await expect(startSms(actor, phone, "verification")).rejects.toThrow(
+    "unavailable",
+  );
+  await startSms(undefined, phone, "login");
+  expect(m.fetch).not.toHaveBeenCalled();
+  m.c.SMS_ENABLED = "true";
+  await sendActivitySms(m.s!.notices[0].id);
+  expect(m.fetch).not.toHaveBeenCalled();
 });

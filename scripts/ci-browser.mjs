@@ -46,6 +46,8 @@ const env = {
   CI: "true",
   SMTP_HOST: "",
   TELEGRAM_BOT_TOKEN: "",
+  TELEGRAM_ENABLED: "false",
+  SMS_ENABLED: "false",
   OPENAI_API_KEY: "",
 };
 await mkdir("test-results", { recursive: true });
@@ -127,6 +129,9 @@ try {
     `tests/${suite}.spec.ts`,
     ...(suite === "pwa"
       ? ["tests/update-notice.spec.ts", "tests/update-lifecycle.spec.ts"]
+      : []),
+    ...(suite === "notifications"
+      ? ["tests/channel-availability.spec.ts"]
       : []),
     ...(suite === "sign-in" ? ["tests/sms.spec.ts"] : []),
     ...(suite === "polish" ? ["tests/settings-polish.spec.ts"] : []),

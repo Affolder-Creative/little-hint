@@ -45,3 +45,23 @@ Run unit tests, PostgreSQL integration tests, the notifications and PWA browser 
 ## SMS
 
 See [SMS setup](SMS.md) for Textbelt/Twilio configuration, phone sign-in, separate consent, signed STOP/START replies, usage reporting and production/staging testing. SMS always uses a generic message without previews or links. Administrator eligibility and individual SMS topics both apply.
+
+## Deployment availability
+
+SMS and Telegram appear only when their deployment enabled flag is `true` and
+required configuration is present. This applies to delivery setup, topic counters
+and checkboxes, preview settings, follow controls and summaries, and SMS sign-in.
+Email and push retain their existing behavior. A configured but unconnected
+channel still offers setup. SMS never offers detailed previews.
+
+Unavailable channels keep their stored connection, consent, and preferences.
+Saving visible choices does not reset hidden ones. Existing custom follow
+choices are preserved unless the user explicitly switches to inheritance, mutes,
+or removes the follow. Re-enabling does not override opt-outs or verification.
+
+The inbox continues receiving authorized updates. SMS and Telegram suppression
+is recorded when an update is created or processed while its channel is
+unavailable; subsequent delivery and administrator retries respect it. Telegram
+summaries spanning a configuration change include only eligible updates.
+Intentional disablement does not create a provider-failure retry loop. Temporary
+provider failures keep the normal retry policy and do not hide configured UI.

@@ -1,3 +1,5 @@
+import { effectiveConfig } from "./runtime-config";
+import { unavailableChannels } from "./channel-availability";
 import { notificationConsent, transportBlocked } from "./sms-policy";
 import { managementActions, managementCommand } from "./management";
 import {
@@ -1907,16 +1909,16 @@ export function command(
         .object({
           notificationDetails: z
             .object({
-              push: z.boolean(),
-              email: z.boolean(),
-              telegram: z.boolean(),
-              sms: z.boolean(),
+              push: z.boolean().optional(),
+              email: z.boolean().optional(),
+              telegram: z.boolean().optional(),
+              sms: z.boolean().optional(),
             })
             .optional(),
-          email: z.boolean(),
+          email: z.boolean().optional(),
           recipientUpdates: z.boolean().default(false),
-          telegram: z.boolean(),
-          sms: z.boolean(),
+          telegram: z.boolean().optional(),
+          sms: z.boolean().optional(),
           smsConsentAcknowledged: z.boolean().optional(),
           events: z
             .array(
@@ -1941,18 +1943,34 @@ export function command(
             .object({
               email: z
                 .array(z.string().refine((v) => topicIds.includes(v as any)))
-                .max(9),
+                .max(9)
+                .optional(),
               telegram: z
                 .array(z.string().refine((v) => topicIds.includes(v as any)))
-                .max(9),
+                .max(9)
+                .optional(),
               sms: z
                 .array(z.string().refine((v) => topicIds.includes(v as any)))
-                .max(9),
+                .max(9)
+                .optional(),
             })
             .optional(),
         })
         .parse(b);
       const prefs = preferences(s, a);
+      const cfg = effectiveConfig();
+      for (const channel of unavailableChannels(cfg)) {
+        delete p[channel];
+        if (p.channelEvents) delete p.channelEvents[channel];
+        if (p.notificationDetails) delete p.notificationDetails[channel];
+      }
+      // Materialize legacy defaults before updating the shared events fallback.
+      const channelEvents = { ...prefs.channelEvents };
+      for (const channel of ["email", "telegram", "sms"] as const)
+        channelEvents[channel] =
+          p.channelEvents?.[channel] ??
+          prefs.channelEvents?.[channel] ??
+          prefs.events;
       if (
         p.sms &&
         (!prefs.phoneVerified ||
@@ -1967,24 +1985,32 @@ export function command(
       if (p.telegram && !prefs.chatId)
         fail(400, "Link Telegram before enabling notifications.");
       if (
+        p.sms !== undefined &&
         !notificationConsent(
           s,
           prefs,
           p.sms,
           p.smsConsentAcknowledged === true,
-          Number(
-            ((process.env.APP_ENV || process.env.NODE_ENV) === "staging"
-              ? process.env.STAGING_SMS_USER_DAILY_LIMIT
-              : process.env.SMS_USER_DAILY_LIMIT) || 2,
-          ),
+          Number(cfg.SMS_USER_DAILY_LIMIT || 2),
         )
       )
         fail(
           400,
           "Agree to recurring SMS updates before enabling text messages.",
         );
-      const { smsConsentAcknowledged, ...values } = p;
-      Object.assign(prefs, values);
+      const {
+        smsConsentAcknowledged,
+        notificationDetails,
+        channelEvents: suppliedTopics,
+        ...values
+      } = p;
+      Object.assign(prefs, values, {
+        channelEvents,
+        notificationDetails: {
+          ...prefs.notificationDetails,
+          ...notificationDetails,
+        },
+      });
       touch(prefs);
       if (!s.preferences.some((x) => x.id === prefs.id))
         s.preferences.push(prefs);

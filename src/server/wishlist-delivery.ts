@@ -1,3 +1,5 @@
+import { config } from "./settings";
+import { telegramInfo } from "./channel-availability";
 import type {
   BatchDelivery,
   NotificationChannel,
@@ -86,6 +88,22 @@ export function retryWishlistBatch(s: State, id: string) {
 // pg-boss dispatches one exclusive job per batch. Receipts survive worker
 // restarts; a crash between provider acceptance and receipt remains at-least-once.
 export async function deliverWishlistBatch(id: string) {
+  const telegramAvailable = telegramInfo(await config()).available;
+  if (!telegramAvailable) {
+    await transact((s) => {
+      const batch = s.notificationBatches.find((b) => b.id === id);
+      if (!batch || batch.status !== "pending") return;
+      for (const notice of batchNotices(s, batch)) {
+        notice.suppressedChannels = [
+          ...new Set([
+            ...(notice.suppressedChannels ?? []),
+            "telegram" as const,
+          ]),
+        ];
+        notice.revision++;
+      }
+    });
+  }
   await transact((s) => {
     const b = s.notificationBatches.find((b) => b.id === id);
     if (
@@ -118,6 +136,14 @@ export async function deliverWishlistBatch(id: string) {
     let s = await readState();
     let b = s.notificationBatches.find((b) => b.id === id);
     if (!b || b.status !== "pending") return;
+    if (
+      destination === "telegram" &&
+      !telegramAvailable &&
+      b.deliveries[destination]?.status !== "sent"
+    ) {
+      await receipt(id, destination, "skipped");
+      continue;
+    }
     if (!due(b.deliveries[destination])) continue;
     const channel = destination.startsWith("push:")
       ? "push"
