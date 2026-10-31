@@ -55,7 +55,7 @@ export function useImportJob(accountId: string, initial?: ImportJob) {
       const job = await api<ImportJob>("imports", { url, forceRefresh, draft });
       if (current !== generation.current) return;
       client.setQueryData(["import", accountId, job.id], job);
-      void client.invalidateQueries({ queryKey: ["world"] });
+      if (job.draft) void client.invalidateQueries({ queryKey: ["world"] });
       setId(job.id);
       return job;
     } catch (error) {

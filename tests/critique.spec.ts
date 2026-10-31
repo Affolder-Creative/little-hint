@@ -2230,10 +2230,7 @@ test("photo upload blocks saving and reports completion", async ({ page }) => {
     });
   });
   await page.goto("/lists");
-  await page
-    .getByRole("main")
-    .getByRole("button", { name: "Add item", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Add item", exact: true }).click();
   await page
     .getByLabel("Item name", { exact: true })
     .fill("A gift with a photo");
@@ -4304,10 +4301,7 @@ for (const browserName of ["chromium", "webkit"] as const) {
       const { state } = await preview(page);
       await page.setViewportSize({ width: 852, height: 393 });
       await page.goto("/lists");
-      await page
-        .getByRole("main")
-        .getByRole("button", { name: "Add item", exact: true })
-        .click();
+      await page.getByRole("button", { name: "Add item", exact: true }).click();
       const dialog = page.getByRole("dialog");
       const name = page.getByLabel("Item name", { exact: true });
       await expect(name).toHaveCSS("font-size", "16px");
@@ -4909,6 +4903,18 @@ for (const engine of ["chromium", "webkit"] as const) {
           viewport: { width: 393, height: 852 },
         })
       : defaultPage;
+    if (browser)
+      await page.route("**/*", async (route) => {
+        if (route.request().resourceType() !== "document")
+          return route.continue();
+        const response = await route.fetch();
+        const headers = response.headers();
+        if (headers["content-security-policy"])
+          headers["content-security-policy"] = headers[
+            "content-security-policy"
+          ].replace(/upgrade-insecure-requests;?/g, "");
+        await route.fulfill({ response, headers });
+      });
     try {
       await page.setViewportSize({
         width: engine === "webkit" ? 393 : 1440,
@@ -4919,6 +4925,13 @@ for (const engine of ["chromium", "webkit"] as const) {
         (l) => l.canEdit && !l.archived && !l.groupEventId,
       )!;
       await page.goto(`/lists/${list.id}`);
+      await page.locator(".list-heading .entry-actions > summary").click();
+      await page
+        .getByRole("button", { name: "Edit list", exact: true })
+        .click();
+      await expect(page.getByRole("dialog")).toBeVisible();
+      await page.getByRole("button", { name: "Close dialog" }).click();
+
       await page
         .getByRole("main")
         .getByRole("button", { name: "Add item", exact: true })

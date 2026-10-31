@@ -2069,6 +2069,7 @@ export function command(
         }
         j.status = "pending";
         delete j.error;
+        delete j.diagnostic;
         touch(j);
         return importView(j);
       }
