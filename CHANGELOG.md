@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.12.1](https://github.com/Affolder-Creative/little-hint/compare/v0.12.0...v0.12.1) (2026-10-31)
+
+
+### Fixes
+
+* expose redacted Textbelt rejection details ([#115](https://github.com/Affolder-Creative/little-hint/issues/115)) ([481b559](https://github.com/Affolder-Creative/little-hint/commit/481b5599574af2eacd441926fd4b3b8068531ea3))
+* hide unavailable channels and require explicit service enablement ([#117](https://github.com/Affolder-Creative/little-hint/issues/117)) ([bbfc4c5](https://github.com/Affolder-Creative/little-hint/commit/bbfc4c5d1a38dda282a8308f06e2afa039819fbc))
+
 ## [0.12.0](https://github.com/Affolder-Creative/little-hint/compare/v0.11.2...v0.12.0) (2026-10-30)
 
 
