@@ -371,7 +371,23 @@ Browser favicons use the approved micro tag without a surrounding tile. The tag 
 
 ### Optional fields and settings
 
-Optional gift notes, price, quantity, tags and photos share a disclosure below the gift name and destination. Upload progress is announced and saving waits for the photo. Missing-photo placeholders stay compact across screen sizes. Notification delivery setup leads the page, with channel connection status and setup beside its checkbox. Push setup, topic customization, and preview privacy use native disclosures with summaries of their current choices. Collapsed controls remain mounted so saving preserves every selection, including disconnected channels. Deployment-unavailable SMS and Telegram controls, counters, setup actions, and explanatory copy are omitted without placeholders. Remaining controls reflow in the existing wrapping layout. Saving visible controls preserves hidden choices. Preview summaries and follow summaries name only available channels; SMS never offers detailed previews. Notification and follow checkbox rows have 44px targets. Save feedback appears beside the form. Inherited follows name their source choices; person follows explain that the source depends on each wish list. Administration services use labeled status rows. Session rows identify this device where available, with readable browser names and expandable details. Loading and failure states never stand in for empty data.
+Item and gift-idea editors use a single form with an optional product link,
+item name, destination, and More details disclosure. Keep lookup status, recovery,
+and warnings beside the link. Successful imports show a compact contained 64px
+photo, shop, and current editable price. Lookup completion never opens optional
+fields or overwrites manual edits. New entries and import drafts start collapsed;
+existing items and recovered offline drafts start expanded. The disclosure
+summarizes populated fields and reveals invalid controls before focusing them.
+
+The dialog heading and action footer stay fixed around one scrollable content
+area. Content uses 24px padding, reduced to 20px vertically and 18px horizontally
+on phones. The footer has a top divider, 16px vertical padding, and safe-area
+clearance. The primary action aligns right on desktop and spans the phone width.
+Save for later is a secondary text action only for persistent import drafts;
+status distinguishes saving, saved, and failed changes. Photo controls, preview,
+and upload feedback share one compact group. Saving waits for photo uploads.
+
+Notification delivery setup leads the page, with channel connection status and setup beside its checkbox. Push setup, topic customization, and preview privacy use native disclosures with summaries of their current choices. Collapsed controls remain mounted so saving preserves every selection, including disconnected channels. Deployment-unavailable SMS and Telegram controls, counters, setup actions, and explanatory copy are omitted without placeholders. Remaining controls reflow in the existing wrapping layout. Saving visible controls preserves hidden choices. Preview summaries and follow summaries name only available channels; SMS never offers detailed previews. Notification and follow checkbox rows have 44px targets. Save feedback appears beside the form. Inherited follows name their source choices; person follows explain that the source depends on each wish list. Administration services use labeled status rows. Session rows identify this device where available, with readable browser names and expandable details. Loading and failure states never stand in for empty data.
 
 ### Notifications and mentions
 

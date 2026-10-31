@@ -290,6 +290,10 @@ export function GiftForm({
   const importQuery = useImportJob(world.me.id, importDraft);
   const importing = importQuery.busy;
   const [uploading, setUploading] = useState(false);
+  const [draftSaving, setDraftSaving] = useState(false);
+  const draftSavingRef = useRef(false);
+  const [detailsOpen, setDetailsOpen] = useState(!!gift || !!draft);
+  const [photoError, setPhotoError] = useState("");
   const [uploadStatus, setUploadStatus] = useState("");
   const [duplicate, setDuplicate] = useState<GiftView | null>(null);
   const [allowDuplicate, setAllowDuplicate] = useState(false);
@@ -379,6 +383,8 @@ export function GiftForm({
         );
       }
       importQuery.reset();
+      setSaveError("");
+      setDraftSaved("");
       setError("");
     }
     touched.current.add(key);
@@ -421,8 +427,11 @@ export function GiftForm({
         await importQuery.retry();
         return;
       }
-      if (savedDraft.current?.draft)
+      if (savedDraft.current?.draft) {
         await api("imports/discard", { id: savedDraft.current.id });
+        savedDraft.current = undefined;
+        setDraftSaved("");
+      }
       const created = await importQuery.start(
         data.url,
         forceRefresh,
@@ -442,7 +451,7 @@ export function GiftForm({
   }
   async function upload(file?: File) {
     if (!file) return;
-    setError("");
+    setPhotoError("");
     setUploading(true);
     setUploadStatus("Uploading photo…");
     try {
@@ -456,7 +465,7 @@ export function GiftForm({
       change("image", j.url);
       setUploadStatus("Photo uploaded.");
     } catch (e) {
-      setError(actionError(e));
+      setPhotoError(actionError(e));
       setUploadStatus("");
     } finally {
       setUploading(false);
@@ -464,6 +473,48 @@ export function GiftForm({
   }
   return (
     <Form
+      className="gift-form"
+      dialogLayout
+      externalBusy={draftSaving}
+      secondaryActions={(busy) =>
+        savedDraft.current?.draft ? (
+          <div className="gift-draft-actions">
+            <button
+              type="button"
+              className="text-button"
+              disabled={busy || uploading}
+              onClick={async () => {
+                if (draftSavingRef.current || busy || uploading) return;
+                draftSavingRef.current = true;
+                setDraftSaving(true);
+                try {
+                  await flushDraft();
+                  toast("Private draft saved. Find it in My lists.");
+                  close();
+                } catch {
+                  setSaveError(
+                    "Your draft could not be saved. Please try again.",
+                  );
+                } finally {
+                  draftSavingRef.current = false;
+                  setDraftSaving(false);
+                }
+              }}
+            >
+              {draftSaving ? "Saving draft…" : "Save for later"}
+            </button>
+            <p
+              className={saveError ? "error" : "muted"}
+              role={saveError ? "alert" : "status"}
+            >
+              {saveError ||
+                (snapshot === draftSaved
+                  ? "Private draft saved"
+                  : "Saving draft…")}
+            </p>
+          </div>
+        ) : null
+      }
       dirty={savedDraft.current?.draft ? snapshot !== draftSaved : undefined}
       onBeforeClose={savedDraft.current?.draft ? flushDraft : undefined}
       submit={
@@ -656,116 +707,118 @@ export function GiftForm({
           )}
         </>
       )}
-      {job?.result?.warnings?.map((w) => (
-        <p className="notice" key={w}>
-          {w}
-        </p>
-      ))}
-      {savedDraft.current?.draft && (
-        <div className="import-draft-status">
-          {job?.status !== "complete" && (
-            <p role="status">
-              {slow
-                ? "This is taking a little longer. Save your draft and we’ll keep working."
-                : importing
-                  ? "Getting product details. You can keep editing."
-                  : job?.status === "failed"
-                    ? "Your draft is safe. Enter details or try again."
-                    : "Your draft is saved. Retry checking progress or enter details."}
-            </p>
-          )}
-          <button
-            type="button"
-            className="button secondary"
-            onClick={async () => {
-              try {
-                await flushDraft();
-                toast("Private draft saved. Find it in My lists.");
-                close();
-              } catch {
-                setSaveError(
-                  "Your draft could not be saved. Please try again.",
-                );
-              }
-            }}
-          >
-            {importing ? "Save draft and continue" : "Save for later"}
-          </button>
-          {saveError && (
-            <p role="alert" className="error">
-              {saveError}
-            </p>
-          )}
-        </div>
-      )}
-      <div
-        className={`url-entry${world.productLookupEnabled === false ? " manual-entry" : ""}`}
-      >
-        <Field
-          label={
-            world.productLookupEnabled === false
-              ? "Product link (optional)"
-              : "Start with a product link"
-          }
+      <section className="gift-lookup" aria-label="Product link and details">
+        <div
+          className={`url-entry${world.productLookupEnabled === false ? " manual-entry" : ""}`}
         >
-          <input
-            type="url"
-            value={data.url}
-            onChange={(e) => change("url", e.target.value)}
-            placeholder="Paste a link from your favorite shop"
-          />
-        </Field>
-        {world.productLookupEnabled !== false && (
-          <button
-            className="button secondary small"
-            type="button"
-            disabled={!data.url || importing}
-            onClick={() => importUrl()}
-          >
-            {importing ? (
-              <LoaderCircle className="spin" size={16} />
-            ) : (
-              <LinkIcon size={16} />
-            )}{" "}
-            {importing ? "Finding details…" : "Get details"}
-          </button>
-        )}
-      </div>
-      {error && (
-        <p className="error" role="alert">
-          {error}
-        </p>
-      )}
-      {importQuery.error && (
-        <div className="error" role="alert">
-          <p>
-            {actionError(importQuery.error)} You can retry or enter the details
-            manually.
+          <Field label="Product link (optional)">
+            <input
+              type="url"
+              value={data.url}
+              onChange={(e) => change("url", e.target.value)}
+              placeholder="Paste a link from your favorite shop"
+            />
+          </Field>
+          {world.productLookupEnabled !== false &&
+            job?.status !== "complete" && (
+              <button
+                className="button secondary small"
+                type="button"
+                disabled={!data.url || importing}
+                onClick={() => importUrl()}
+              >
+                {importing ? (
+                  <LoaderCircle className="spin" size={16} />
+                ) : (
+                  <LinkIcon size={16} />
+                )}{" "}
+                {importing ? "Finding details…" : "Get details"}
+              </button>
+            )}
+        </div>
+        {error && (
+          <p className="error" role="alert">
+            {error}
           </p>
-          <button
-            type="button"
-            className="text-button"
-            onClick={() => importQuery.retry()}
-          >
-            Retry status
-          </button>
-        </div>
-      )}
-      {world.productLookupEnabled !== false && job?.status === "complete" && (
-        <button
-          type="button"
-          className="text-button"
-          disabled={importing}
-          onClick={() => importUrl(true)}
-        >
-          Refresh from shop
-        </button>
-      )}
-      {world.productLookupEnabled !== false && job?.status === "complete" && (
-        <p className="success" role="status">
-          <Check size={16} /> Details found. Check them before saving.
-        </p>
-      )}
+        )}
+        {importQuery.error && (
+          <div className="error" role="alert">
+            <p>
+              {actionError(importQuery.error)} You can retry or enter the
+              details manually.
+            </p>
+            <button
+              type="button"
+              className="text-button"
+              onClick={() => importQuery.retry()}
+            >
+              Retry status
+            </button>
+          </div>
+        )}
+        {importing && (
+          <p className="muted" role="status">
+            {slow
+              ? savedDraft.current?.draft
+                ? "This is taking a little longer. You can keep editing or save for later while we keep working."
+                : "This is taking a little longer. You can keep editing."
+              : "Getting product details. You can keep editing."}
+          </p>
+        )}
+        {!job && !importing && !error && (
+          <p className="muted">Or enter the details below.</p>
+        )}
+        {job?.status === "complete" && (
+          <>
+            <div className="gift-lookup-result">
+              <p className="success" role="status">
+                <Check size={16} /> Details found. Check them before saving.
+              </p>
+              {world.productLookupEnabled !== false && (
+                <button
+                  type="button"
+                  className="text-button"
+                  onClick={() => importUrl(true)}
+                >
+                  Refresh from shop
+                </button>
+              )}
+            </div>
+            {(data.image || data.price || job.result?.source) && (
+              <div className="gift-import-preview">
+                {data.image && (
+                  <img
+                    key={data.image}
+                    src={data.image}
+                    alt="Product preview"
+                    onError={(event) => {
+                      event.currentTarget.hidden = true;
+                    }}
+                  />
+                )}
+                <div>
+                  {job.result?.source && (
+                    <small className="muted">{job.result.source}</small>
+                  )}
+                  {data.price !== "" && (
+                    <p>
+                      {new Intl.NumberFormat("en-US", {
+                        style: "currency",
+                        currency: "USD",
+                      }).format(Number(data.price))}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+        {job?.result?.warnings?.map((warning) => (
+          <p className="notice" key={warning}>
+            {warning}
+          </p>
+        ))}
+      </section>
       <Field label={idea ? "Gift idea name" : "Item name"}>
         <input
           value={data.title}
@@ -799,9 +852,31 @@ export function GiftForm({
       )}
       <details
         className="optional-fields"
-        open={!!gift || !!draft || job?.status === "complete"}
+        open={detailsOpen}
+        onToggle={(event) => setDetailsOpen(event.currentTarget.open)}
       >
-        <summary>More details</summary>
+        <summary>
+          <span>More details</span>
+          <small className="muted">
+            {[
+              data.description && "Note added",
+              data.price !== "" &&
+                new Intl.NumberFormat("en-US", {
+                  style: "currency",
+                  currency: "USD",
+                }).format(Number(data.price)),
+              Number(data.quantity) !== 1 && `Quantity: ${data.quantity}`,
+              priority && "Priority set",
+              data.tags && "Tags added",
+              data.image && "Photo added",
+            ]
+              .filter(Boolean)
+              .join(" · ") ||
+              (idea
+                ? "Note, price, quantity, tags & photo"
+                : "Note, price, quantity, priority, tags & photo")}
+          </small>
+        </summary>
         <Field label="A helpful note">
           <textarea
             rows={3}
@@ -842,39 +917,46 @@ export function GiftForm({
             placeholder="Coffee, Kitchen, Slow mornings"
           />
         </Field>
-        <label className="upload">
-          <Upload size={18} />
-          <span>
-            {uploading
-              ? "Uploading photo…"
-              : data.image
-                ? "Replace photo"
-                : "Add a photo"}
-          </span>
-          <input
-            type="file"
-            disabled={uploading}
-            accept="image/png,image/jpeg,image/webp,image/gif"
-            onChange={(e) => upload(e.target.files?.[0])}
-          />
-        </label>
-        <p role="status">{uploadStatus}</p>
-        {data.image && (
-          <div className="image-preview">
-            <img
-              src={data.image}
-              alt={idea ? "Gift idea photo" : "Item photo"}
-            />
-            <button
-              className="text-button"
-              type="button"
+        <div className="gift-photo-editor">
+          <label className="upload">
+            <Upload size={18} />
+            <span>
+              {uploading
+                ? "Uploading photo…"
+                : data.image
+                  ? "Replace photo"
+                  : "Add a photo"}
+            </span>
+            <input
+              type="file"
               disabled={uploading}
-              onClick={() => change("image", "")}
-            >
-              Remove photo
-            </button>
-          </div>
-        )}
+              accept="image/png,image/jpeg,image/webp,image/gif"
+              onChange={(e) => upload(e.target.files?.[0])}
+            />
+          </label>
+          {uploadStatus && <p role="status">{uploadStatus}</p>}
+          {photoError && (
+            <p className="error" role="alert">
+              {photoError}
+            </p>
+          )}
+          {data.image && (
+            <div className="image-preview">
+              <img
+                src={data.image}
+                alt={idea ? "Gift idea photo" : "Item photo"}
+              />
+              <button
+                className="text-button"
+                type="button"
+                disabled={uploading}
+                onClick={() => change("image", "")}
+              >
+                Remove photo
+              </button>
+            </div>
+          )}
+        </div>
         {job?.result?.importedAt && (
           <small className="muted">
             From {job.result.source}, checked{" "}
