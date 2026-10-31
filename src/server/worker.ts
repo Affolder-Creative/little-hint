@@ -1,4 +1,4 @@
-import { ImportPending } from "./brightdata";
+import { ImportPending, BrightDataFailure } from "./brightdata";
 import { pollSmsStatus, alertLowSmsCredit } from "./sms";
 import {
   deliverWishlistBatch,
@@ -130,16 +130,19 @@ await boss.work<{ id: string }>(
         await transact((s) => {
           const row = s.imports.find((i) => i.id === j.id)!;
           row.status = "failed";
-          row.diagnostic ??= {
-            stage: "lookup",
-            reason:
-              error instanceof Error &&
-              /^(Bright Data HTTP \d{3}|Collection timed out|Collection failed|Submission outcome uncertain; do not automatically resubmit)$/.test(
-                error.message,
-              )
-                ? error.message
-                : "No usable product details",
-          };
+          row.diagnostic ??=
+            error instanceof BrightDataFailure
+              ? { stage: error.stage, reason: error.message }
+              : {
+                  stage: "lookup",
+                  reason:
+                    error instanceof Error &&
+                    /^(Bright Data HTTP \d{3}|Collection timed out|Collection failed|Submission outcome uncertain; do not automatically resubmit)$/.test(
+                      error.message,
+                    )
+                      ? error.message
+                      : "No usable product details",
+                };
           row.error =
             "We could not get details from that shop. You can still enter them yourself.";
           row.revision++;

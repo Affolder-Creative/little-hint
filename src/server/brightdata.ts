@@ -4,6 +4,71 @@ import { validateUrl, boundedBody } from "./imports";
 import type { ImportJob, Item } from "../shared/model";
 
 export class ImportPending extends Error {}
+export class BrightDataFailure extends Error {
+  constructor(
+    public stage: string,
+    message: string,
+    public status?: number,
+  ) {
+    super(message);
+  }
+}
+// Never retain raw provider errors: they can echo credentials or product URLs.
+export function brightDataFailureReason(status: number, body: string) {
+  let message = body;
+  let fields: string[] = [];
+  try {
+    const data = JSON.parse(body);
+    message = [data.error, data.message, data.code, data.error_code]
+      .filter((v) => typeof v === "string")
+      .join(" ");
+    const allowed = new Set([
+      "url",
+      "input",
+      "limit_per_input",
+      "all_variations",
+      "zipcode",
+      "language",
+      "dataset_id",
+      "notify",
+      "zone",
+    ]);
+    if (Array.isArray(data.errors))
+      fields = [
+        ...new Set<string>(
+          data.errors.flatMap((row: unknown) =>
+            Array.isArray(row) && allowed.has(row[0]) ? [row[0]] : [],
+          ),
+        ),
+      ];
+  } catch {
+    /* Plain-text rejections use the same fixed categories. */
+  }
+  const detail = fields.length
+    ? `Invalid request fields: ${fields.join(", ")}`
+    : /limit_per_input/i.test(message)
+      ? "Record limit rejected"
+      : /invalid.*input|validation_error|invalid.*url|input.*array/i.test(
+            message,
+          )
+        ? "Request input rejected"
+        : /insufficient|balance|payment|billing|credit/i.test(message)
+          ? "Account billing or credit restriction"
+          : /not active|inactive|suspended|disabled/i.test(message)
+            ? "Account or service inactive"
+            : /permission|access denied|not authorized|not allowed/i.test(
+                  message,
+                )
+              ? "Account lacks access to this service"
+              : /dataset.*(not found|does not exist|invalid)/i.test(message)
+                ? "Scraper dataset unavailable"
+                : /credential|api.?key|authentication|token/i.test(message)
+                  ? "API credentials rejected"
+                  : status === 429
+                    ? "Provider rate or quota limit"
+                    : "Request rejected; check provider access and request configuration";
+  return `Bright Data HTTP ${status}: ${detail}`;
+}
 const datasets: Record<string, string> = {
   "amazon.com": "gd_l7q7dkf244hwjntr0",
   "walmart.com": "gd_l95fol7l1ru6rlo116",
@@ -95,6 +160,11 @@ export function normalizeRetailer(
   };
 }
 async function jsonRequest(path: string, key: string, body?: unknown) {
+  const stage = body
+    ? "brightdata-submit"
+    : path.includes("/progress/")
+      ? "brightdata-progress"
+      : "brightdata-result";
   const response = await fetch(`https://api.brightdata.com${path}`, {
     method: body ? "POST" : "GET",
     headers: {
@@ -106,8 +176,17 @@ async function jsonRequest(path: string, key: string, body?: unknown) {
     signal: AbortSignal.timeout(20000),
   });
   if (!response.ok) {
-    await response.body?.cancel();
-    throw new Error(`Bright Data HTTP ${response.status}`);
+    let text = "";
+    try {
+      text = (await boundedBody(response, 16384)).toString("utf8");
+    } catch {
+      /* Keep the HTTP status when the body cannot be read. */
+    }
+    throw new BrightDataFailure(
+      stage,
+      brightDataFailureReason(response.status, text),
+      response.status,
+    );
   }
   return JSON.parse((await boundedBody(response)).toString("utf8"));
 }
@@ -131,7 +210,10 @@ export async function brightRetailer(url: string, key: string, jobId: string) {
       await transact((s) => {
         delete s.imports.find((j) => j.id === jobId)!.providerState;
       });
-      throw error;
+      throw new BrightDataFailure(
+        "brightdata-budget",
+        "Daily paid-request allowance exhausted or unavailable",
+      );
     }
     let result;
     try {
@@ -142,8 +224,8 @@ export async function brightRetailer(url: string, key: string, jobId: string) {
       );
     } catch (error) {
       if (
-        error instanceof Error &&
-        /^Bright Data HTTP (400|401|403|404|422|429)$/.test(error.message)
+        error instanceof BrightDataFailure &&
+        [400, 401, 403, 404, 422, 429].includes(error.status ?? 0)
       )
         await transact((s) => {
           delete s.imports.find((j) => j.id === jobId)!.providerState;

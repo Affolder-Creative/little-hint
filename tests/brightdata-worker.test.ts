@@ -1,6 +1,11 @@
 import { beforeEach, afterEach, expect, it, vi } from "vitest";
 import { emptyState, type State } from "../src/shared/model";
-const mock = vi.hoisted(() => ({ state: {} as State, spend: vi.fn() }));
+const mock = vi.hoisted(() => ({
+  state: {} as State,
+  spend: vi.fn(),
+  request: vi.fn(),
+}));
+vi.mock("undici", () => ({ Agent: class {}, fetch: mock.request }));
 vi.mock("../src/server/db", () => ({
   transact: async (fn: any) => fn(mock.state),
 }));
@@ -13,7 +18,15 @@ vi.mock("node:dns/promises", () => ({
   lookup: async () => [{ address: "93.184.216.34", family: 4 }],
 }));
 import { brightRetailer, ImportPending } from "../src/server/brightdata";
-import { applyShopifyVariant, paidProductPreview } from "../src/server/imports";
+import {
+  applyShopifyVariant,
+  paidProductPreview,
+  importProduct,
+} from "../src/server/imports";
+import {
+  config,
+  automaticallyImportProductPhotos,
+} from "../src/server/settings";
 const url = "https://amazon.com/dp/B012345678";
 beforeEach(() => {
   mock.state = emptyState();
@@ -26,8 +39,54 @@ beforeEach(() => {
     createdAt: new Date().toISOString(),
   });
   mock.spend.mockReset();
+  mock.request.mockReset();
+  vi.mocked(config).mockResolvedValue({
+    SCRAPING_PROVIDER: "brightdata",
+    BRIGHTDATA_API_KEY: "key",
+    BRIGHTDATA_UNLOCKER_ZONE: "shops",
+  } as Awaited<ReturnType<typeof config>>);
+  vi.mocked(automaticallyImportProductPhotos).mockResolvedValue(false);
+  vi.stubEnv("PRODUCT_IMPORT_CACHE_ENABLED", "false");
 });
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
+});
+it("imports an Amazon iOS short link through the full async pipeline", async () => {
+  const short = "https://a.co/d/09A4Qhm9";
+  const destination =
+    "https://www.amazon.com/dp/B0DHHK1291?ref=cm_sw_r_cso_cp_apin_dp&ref_=share&social_share=app";
+  mock.state.imports[0].url = short;
+  mock.request.mockResolvedValue(
+    new Response(null, { status: 301, headers: { location: destination } }),
+  );
+  const fetch = vi
+    .fn()
+    .mockResolvedValueOnce(Response.json({ snapshot_id: "snapshot" }))
+    .mockResolvedValueOnce(Response.json({ status: "ready" }))
+    .mockResolvedValueOnce(
+      Response.json([
+        {
+          title: "Product from the shared link",
+          asin: "B0DHHK1291",
+          final_price: 25,
+          currency: "USD",
+        },
+      ]),
+    );
+  vi.stubGlobal("fetch", fetch);
+  await expect(
+    importProduct(short, "owner", false, "job"),
+  ).rejects.toBeInstanceOf(ImportPending);
+  expect(await importProduct(short, "owner", false, "job")).toMatchObject({
+    title: "Product from the shared link",
+    priceCents: 2500,
+  });
+  expect(
+    mock.request.mock.calls.every(([requested]) => requested === short),
+  ).toBe(true);
+  expect(mock.spend).toHaveBeenCalledTimes(1);
+});
 it("persists and resumes one paid collection across worker invocations", async () => {
   const fetch = vi
     .fn()
@@ -73,6 +132,27 @@ it("allows a corrected configuration after a definitive rejection", async () => 
     vi.fn().mockResolvedValue(new Response("denied", { status: 401 })),
   );
   await expect(brightRetailer(url, "key", "job")).rejects.toThrow("401");
+  expect(mock.state.imports[0].providerState).toBeUndefined();
+});
+it("retains a safe submission reason for HTTP 400 and allows a corrected retry", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValue(
+      Response.json(
+        {
+          code: "validation_error",
+          line: "secret input",
+          errors: [["url", "Invalid URL: secret input"]],
+        },
+        { status: 400 },
+      ),
+    ),
+  );
+  await expect(brightRetailer(url, "key", "job")).rejects.toMatchObject({
+    stage: "brightdata-submit",
+    status: 400,
+    message: "Bright Data HTTP 400: Invalid request fields: url",
+  });
   expect(mock.state.imports[0].providerState).toBeUndefined();
 });
 it("honors the deadline without another provider request", async () => {

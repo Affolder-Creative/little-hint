@@ -103,6 +103,10 @@ Try one current product URL for each of the four stores, an Amazon short link, a
 
 Failed lookups retain the draft. Check Background jobs for sanitized diagnostics. HTTP 401/403 usually calls for checking token permissions; billing/allowance failures require checking the account and application limits. A missing zone prevents Bright Data selection. Never send API keys when reporting an error.
 
+For Bright Data failures, the diagnostic stage identifies submission (`brightdata-submit`), progress checks (`brightdata-progress`), or result download (`brightdata-result`). A submission HTTP 400 means the API rejected the request before creating a collection; it does not mean Amazon blocked the scraper. The accompanying category distinguishes rejected input fields, account access, billing, or an inactive service when the provider supplies that information. Unknown responses retain the HTTP status without exposing raw response bodies, product links, or credentials. If no collection was created, it may not appear in Bright Data's collection logs.
+
+An Amazon `a.co` or `amzn.to` link must first resolve to a supported product page. The app then submits that product URL to the Amazon scraper. The draft can still display `Item from a.co` until product details arrive; that label alone does not indicate which provider ran. A failed draft remains private and can be retried after the cause is corrected.
+
 Collections run asynchronously and normally get checked about every ten seconds for up to three minutes. A retry resumes a known collection before submitting another. If the submission outcome is uncertain, automatic resubmission is blocked to avoid duplicate charges; manual entry remains available.
 
 ## Other providers and limitations

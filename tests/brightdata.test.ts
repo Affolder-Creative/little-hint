@@ -1,10 +1,37 @@
 import { describe, it, expect } from "vitest";
-import { retailerDataset, normalizeRetailer } from "../src/server/brightdata";
+import {
+  retailerDataset,
+  normalizeRetailer,
+  brightDataFailureReason,
+} from "../src/server/brightdata";
 import { importView } from "../src/shared/imports";
 import { selectedScrapingProvider } from "../src/shared/scraping-providers";
 import { stamp, command, world } from "../src/server/domain";
 import { emptyState, type ImportJob } from "../src/shared/model";
 describe("retailer imports", () => {
+  it("classifies provider rejections without retaining echoed input or credentials", () => {
+    const reason = brightDataFailureReason(
+      400,
+      JSON.stringify({
+        code: "validation_error",
+        line: "https://private.test/item?token=secret",
+        errors: [
+          ["url", "Invalid URL with secret"],
+          ["unknown-secret", "bad"],
+        ],
+      }),
+    );
+    expect(reason).toBe("Bright Data HTTP 400: Invalid request fields: url");
+    expect(
+      brightDataFailureReason(400, "Account is not active: secret-account"),
+    ).toContain("Account or service inactive");
+    expect(brightDataFailureReason(400, "API key secret-key is invalid")).toBe(
+      "Bright Data HTTP 400: API credentials rejected",
+    );
+    expect(
+      brightDataFailureReason(400, "some unrecognized response with secrets"),
+    ).not.toContain("secrets");
+  });
   it("routes product URLs, not lookalike domains or category pages", () => {
     expect(
       retailerDataset("https://www.amazon.com/dp/B012345678"),
