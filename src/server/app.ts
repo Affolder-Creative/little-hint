@@ -58,6 +58,7 @@ import {
   saveSetting,
   effectiveConfig,
   canCreateGroups,
+  imageDeliveryForState,
   discoveryConfiguration,
 } from "./settings";
 import { mediaDir, saveImage } from "./imports";
@@ -233,6 +234,7 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
       sms: smsInfo(cfg),
       telegram: telegramInfo(cfg),
       canCreateGroups: canCreateGroups(state, a),
+      imageDelivery: imageDeliveryForState(state),
       giftDiscovery: discoveryConfiguration(cfg),
       notificationAsOf,
       environment: deploymentEnvironment(),

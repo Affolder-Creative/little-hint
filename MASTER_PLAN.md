@@ -125,7 +125,7 @@ Not now suppresses for 30 days in that browser; Don't remind me suppresses indef
 
 Manifest: name/short_name Little Hint; description tagline; id/start_url/scope `/`; standalone display; ivory background and sienna theme. Public manifest/icons over HTTPS, origin-wide service worker, no private invitation data in launch URL. Test sessions/deep links in installed mode independently from browser sessions.
 
-Only public application/branding assets enter service-worker caches. No authenticated APIs, lists, media, reservations, discussion, or assignments persist offline. Optional local drafts contain only the user's own title, URL, and notes, isolated by account and cleared on sign-out. Require authentication and review to publish drafts. Reservations/purchases require online confirmation.
+Only public application/branding assets enter service-worker caches. No authenticated API snapshots, lists, reservations, discussion, or assignments persist offline. Saved-gift photos may persist in a bounded account-scoped device cache after authenticated visibility checks, without enabling offline list browsing. Clear photos on sign-out, account changes, access removal, or disabling caching. Optional local drafts contain only the user's own title, URL, and notes, isolated by account and cleared on sign-out. Require authentication and review to publish drafts. Reservations/purchases require online confirmation.
 
 Offer safe updates; do not interrupt open forms or pending writes. Respect keyboard, text enlargement, orientation, safe areas, and reduced motion.
 

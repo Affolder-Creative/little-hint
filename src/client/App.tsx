@@ -1,3 +1,4 @@
+import { useProductImages } from "./useProductImages";
 import { BrowseTools } from "./BrowseTools";
 import { ProfileEditor, GiftPreferencesShortcut } from "./ProfileEditor";
 import { Invitations } from "./Invitations";
@@ -166,6 +167,9 @@ export function App() {
       }
     },
     refetchInterval: (q) => (q.state.data ? 20000 : false),
+  });
+  useProductImages(query.data, location.key, () => {
+    void query.refetch();
   });
   useEffect(() => {
     const mq = matchMedia("(prefers-color-scheme: dark)");
@@ -579,8 +583,8 @@ function OfflineDrafts({ dark }: { dark: boolean }) {
             </button>
             <button
               className="button"
-              onClick={() => {
-                clearPersonalData();
+              onClick={async () => {
+                await clearPersonalData();
                 location.reload();
               }}
             >

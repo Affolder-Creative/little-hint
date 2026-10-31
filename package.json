@@ -35,7 +35,8 @@
     "preview:stop": "node scripts/preview.mjs stop",
     "preview:reset": "node scripts/preview.mjs reset",
     "test:preview": "node --test scripts/preview.test.mjs",
-    "test:preview-smoke": "node scripts/preview/smoke.mjs"
+    "test:preview-smoke": "node scripts/preview/smoke.mjs",
+    "test:images:browser": "npm run build && node tests/image-store.browser.mjs && node --import tsx tests/image-ui.browser.mjs"
   },
   "dependencies": {
     "@better-auth/passkey": "^1.7.12",

@@ -796,7 +796,7 @@ export default function SettingsPage({
             <h2>Sign out</h2>
             <p>
               Your account and saved wish lists are kept. Signing out deletes
-              personal drafts saved on this device.
+              personal drafts and cached product photos saved on this device.
             </p>
             <Action
               secondary
@@ -807,7 +807,7 @@ export default function SettingsPage({
                     "We could not complete this account action. Check your connection and try again.",
                   );
                 await clearPushBinding().catch(() => {});
-                clearPersonalData();
+                await clearPersonalData();
                 client.clear();
                 location.assign("/");
               }}
@@ -1268,6 +1268,64 @@ function Admin() {
               </p>
             </Form>
           )}
+        </section>
+        <section
+          className="admin-preference"
+          aria-label="Product photo loading"
+        >
+          <h4>Product photo loading</h4>
+          {[
+            [
+              "PRODUCT_IMAGE_CACHE_ENABLED",
+              "Cache product photos on devices",
+              "Keep downloaded photos for faster repeat visits. Turning this off clears saved photos as devices reconnect and increases repeat downloads.",
+            ],
+            [
+              "PRODUCT_IMAGE_PREFETCH_ENABLED",
+              "Preload larger product photos",
+              "Download a few larger photos after visible content loads so items open faster. Requires photo caching. Turn off to reduce background data use.",
+            ],
+          ].map(([key, label, help]) => {
+            const setting = settings.data?.find((s) => s.key === key);
+            if (!setting) return null;
+            return (
+              <Form
+                key={`${key}-${setting.source}-${setting.value}`}
+                submit="Save preference"
+                disabled={setting.source === "environment"}
+                onSubmit={async (f) => {
+                  await api("admin/settings", {
+                    key,
+                    value: String(f.has("enabled")),
+                  });
+                  await Promise.all([
+                    client.invalidateQueries({ queryKey: ["admin-settings"] }),
+                    client.invalidateQueries({ queryKey: ["world"] }),
+                  ]);
+                  toast("Photo loading preference saved.");
+                }}
+              >
+                <label className="check">
+                  <input
+                    type="checkbox"
+                    name="enabled"
+                    defaultChecked={setting.value === "true"}
+                    disabled={setting.source === "environment"}
+                    aria-describedby={`${key}-help`}
+                  />
+                  {label}
+                </label>
+                <p className="muted" id={`${key}-help`}>
+                  {help}
+                </p>
+                <p className="muted">
+                  {setting.source === "environment"
+                    ? "Managed in hosting configuration. Change it there to update this choice."
+                    : "On by default. This choice applies to everyone using this Little Hint app."}
+                </p>
+              </Form>
+            );
+          })}
         </section>
       </section>
       <AdminUsage />

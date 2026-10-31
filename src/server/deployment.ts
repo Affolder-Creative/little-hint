@@ -34,6 +34,8 @@ export function assertStagingSeed(env = process.env) {
 export function validateDeployment(env = process.env) {
   discoveryUserOverrides(env);
   productPhotoOverride(env);
+  imageDeliveryOverride("PRODUCT_IMAGE_CACHE_ENABLED", env);
+  imageDeliveryOverride("PRODUCT_IMAGE_PREFETCH_ENABLED", env);
   familyGroupCreationOverride(env);
   cloudflareWebAnalyticsEnabled(env);
   productImportCacheEnabled(env);
@@ -133,4 +135,15 @@ export function assertPreviewSeed(env = process.env) {
     throw new Error(
       "Seeding requires ALLOW_SYNTHETIC_DATA=1 for this command.",
     );
+}
+
+export function imageDeliveryOverride(
+  name: string,
+  env = process.env,
+): boolean | undefined {
+  const value = env[name];
+  if (value === undefined || value === "") return undefined;
+  if (value !== "true" && value !== "false")
+    throw new Error(`${name} must be true, false, or empty.`);
+  return value === "true";
 }

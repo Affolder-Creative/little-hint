@@ -49,3 +49,7 @@ Use the emitted JSON for comparisons on the same machine and dataset. The script
 contains no provider calls. For release validation, run the integration suite,
 the `caching` browser suite, and built-PWA/privacy workflows on synthetic staging
 data before production rollout.
+
+## Device image cache validation, 2026-10-31
+
+The isolated Chromium and WebKit test downloads a synthetic image once, deduplicates concurrent requests, and reloads the page with IndexedDB retained. The reload transfers zero additional image responses. A second account downloads independently. Tests also verify revoked access, disabled caching and cross-tab clearing. Run `npm run test:images:browser` with Playwright Chromium and WebKit installed. These are deterministic request-count checks, not production latency measurements.

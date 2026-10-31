@@ -108,7 +108,7 @@ Import enrichment returns a cleaned title of at most 160 characters, a descripti
 
 ## PWA, drafts, and updates
 
-The generated service worker caches only an explicit list of public shell/branding assets. It does not intercept `/api/` responses. Navigation falls back to the public shell offline. Private state lives in React Query memory, not IndexedDB/cache storage. Local draft opt-in stores title/URL/notes under the current account ID; sign-out clears personal draft keys. Publishing requires an authenticated form review. No offline reservation queue exists.
+The generated service worker caches only an explicit list of public shell/branding assets. It does not intercept `/api/` responses. Navigation falls back to the public shell offline. Private account snapshots live in React Query memory. Saved-gift image bytes alone may persist in account-scoped IndexedDB. Local draft opt-in stores title/URL/notes under the current account ID; sign-out clears personal draft keys. Publishing requires an authenticated form review. No offline reservation queue exists.
 
 Installation uses capability detection with native prompts only after a tap, browser/Apple/embedded guidance otherwise. Reminders are browser-local, suppressed for 30 days/indefinitely or when standalone. The app does not claim installation after an instruction dismissal. Updates wait for an explicit click and reject activation during open/dirty forms or pending writes. Initial service-worker activation does not reload the application.
 
@@ -117,3 +117,13 @@ Installation uses capability detection with native prompts only after a tap, bro
 This is application-level privacy, not encryption against the server operator. Deployment requires protected PostgreSQL/upload volumes, TLS, guarded environment secrets, initialized encrypted off-host backup storage, and restricted admin access. Fastify does not trust arbitrary forwarded IP headers; configure a restricted trusted-proxy range only if adding per-client proxy rate limiting later. At present ingress users share the proxy's API rate bucket. Review capacity if many family members use it simultaneously.
 
 The application worker heartbeat is visible in admin diagnostics. Backup health and last-success state belong to the existing backup sidecar and Coolify. A scheduler configuration is not proof that an off-host backup can be restored. Execute and record restore drills and the physical-device checklist before production release.
+
+## Device product images
+
+Saved gifts use a versioned IndexedDB image store, keyed by account, immutable media URL and rendition. The store holds at most 50 MiB or 200 variants and expires entries unused for 30 days. A 20-entry/10-MiB memory layer supports navigation. IndexedDB stores ArrayBuffers for browser compatibility and keeps eviction metadata separate so cleanup does not read all image bytes. Replacements receive new URLs. Only images present in the authenticated world may be read; world refreshes remove obsolete entries. No world snapshot or authorization grant is persisted. Access changes become visible at the next successful refresh, normally every 20 seconds online. Inactive devices clean up when they reconnect. Storage errors fall back to ordinary authenticated requests.
+
+Sign-out and account changes clear images and cancel downloads; a cross-tab signal invalidates memory and work in other tabs. HTTP media remains no-store and the service worker remains static-only. New sessions must load the authenticated world before image cache reuse. This does not enable offline wish-list browsing.
+
+Visible thumbnails load first. Once visible card images finish, a sequential queue warms at most two larger photos per route visit. Pointer, focus and touch can queue likely detail photos. Foreground image demand cancels unrelated prefetch work; route changes, hidden pages, offline status and disabled policy cancel speculative work. Save-data and slow effective connection types suppress it where supported.
+
+Administration stores PRODUCT_IMAGE_CACHE_ENABLED and PRODUCT_IMAGE_PREFETCH_ENABLED as application preferences, both defaulting to true. Explicit true/false environment values override and lock their controls; blank leaves them editable. The world exposes effective imageDelivery flags. Caching off also disables prefetching without changing the stored prefetch preference. Unknown client configuration disables both features.

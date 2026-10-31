@@ -20,6 +20,7 @@ import {
   productPhotoSetting,
   saveSetting,
   settingsSummary,
+  imageDeliveryForState,
 } from "../src/server/settings";
 import { validateDeployment } from "../src/server/deployment";
 const key = "AUTO_IMPORT_PRODUCT_PHOTOS";
@@ -129,7 +130,7 @@ describe("settings read and decryption reuse", () => {
       createdAt: "",
     });
     expect((await config()).SMTP_HOST).toBe("");
-    expect(await settingsSummary()).toHaveLength(2);
+    expect(await settingsSummary()).toHaveLength(4);
     expect(createDecipheriv).not.toHaveBeenCalled();
     expect(readSettings).toHaveBeenCalledTimes(1);
   });
@@ -156,4 +157,40 @@ describe("settings read and decryption reuse", () => {
     await settingsSummary();
     expect(createDecipheriv).not.toHaveBeenCalled();
   });
+});
+
+describe("product image delivery controls", () => {
+  it("defaults on and keeps saved prefetch preference while caching is disabled", async () => {
+    expect(imageDeliveryForState(storage.state)).toEqual({
+      cacheEnabled: true,
+      prefetchEnabled: true,
+    });
+    await saveSetting("PRODUCT_IMAGE_CACHE_ENABLED", "false");
+    expect(imageDeliveryForState(storage.state)).toEqual({
+      cacheEnabled: false,
+      prefetchEnabled: false,
+    });
+    await saveSetting("PRODUCT_IMAGE_CACHE_ENABLED", "true");
+    expect(imageDeliveryForState(storage.state).prefetchEnabled).toBe(true);
+    await saveSetting("PRODUCT_IMAGE_PREFETCH_ENABLED", "false");
+    expect(imageDeliveryForState(storage.state)).toEqual({
+      cacheEnabled: true,
+      prefetchEnabled: false,
+    });
+  });
+  it.each(["PRODUCT_IMAGE_CACHE_ENABLED", "PRODUCT_IMAGE_PREFETCH_ENABLED"])(
+    "validates and locks %s overrides",
+    async (key) => {
+      await expect(saveSetting(key, "yes")).rejects.toThrow("true or false");
+      vi.stubEnv(key, "false");
+      expect(await settingsSummary()).toContainEqual(
+        expect.objectContaining({ key, value: "false", source: "environment" }),
+      );
+      await expect(saveSetting(key, "true")).rejects.toThrow(
+        "set on the server",
+      );
+      vi.stubEnv(key, "no");
+      expect(() => validateDeployment()).toThrow(key);
+    },
+  );
 });

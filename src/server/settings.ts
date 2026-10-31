@@ -3,6 +3,7 @@ import { readSettings, transact } from "./db";
 import type { Setting, State, Actor } from "../shared/model";
 import { stamp, fail, isAdmin } from "./domain";
 import {
+  imageDeliveryOverride,
   syntheticEnvironment,
   productPhotoOverride,
   familyGroupCreationOverride,
@@ -85,7 +86,42 @@ export function discoveryConfigForState(_s: State) {
 }
 export const productPhotoSettingKey = "AUTO_IMPORT_PRODUCT_PHOTOS";
 export const familyGroupCreationKey = "FAMILY_GROUP_CREATION";
-const applicationSettingKeys = [productPhotoSettingKey, familyGroupCreationKey];
+export const imageSettingKeys = [
+  "PRODUCT_IMAGE_CACHE_ENABLED",
+  "PRODUCT_IMAGE_PREFETCH_ENABLED",
+] as const;
+const applicationSettingKeys = [
+  productPhotoSettingKey,
+  familyGroupCreationKey,
+  ...imageSettingKeys,
+];
+function imageSetting(k: string, values: Map<string, string>) {
+  const override = imageDeliveryOverride(k);
+  const saved = values.get(k);
+  return {
+    key: k,
+    configured: override !== undefined || saved !== undefined,
+    source:
+      override !== undefined
+        ? "environment"
+        : saved !== undefined
+          ? "settings"
+          : "default",
+    default: "true",
+    value: String(override ?? (saved === undefined || saved === "true")),
+  };
+}
+export function imageDeliveryForState(s: State) {
+  const values = settingsValues(s.settings);
+  const cacheEnabled =
+    imageSetting(imageSettingKeys[0], values).value === "true";
+  return {
+    cacheEnabled,
+    prefetchEnabled:
+      cacheEnabled &&
+      imageSetting(imageSettingKeys[1], values).value === "true",
+  };
+}
 function groupCreationSetting(values: Map<string, string>) {
   const override = familyGroupCreationOverride();
   const saved = values.get(familyGroupCreationKey);
@@ -131,7 +167,11 @@ export async function automaticallyImportProductPhotos(): Promise<boolean> {
 }
 export async function settingsSummary() {
   const values = settingsValues(await readSettings());
-  return [photoSetting(values), groupCreationSetting(values)];
+  return [
+    photoSetting(values),
+    groupCreationSetting(values),
+    ...imageSettingKeys.map((k) => imageSetting(k, values)),
+  ];
 }
 function validateSetting(k: string, value: string) {
   if (!applicationSettingKeys.includes(k)) {
@@ -143,6 +183,13 @@ function validateSetting(k: string, value: string) {
     fail(400, "Choose everyone or administrators for family-group creation.");
   if (k === productPhotoSettingKey && value !== "true" && value !== "false")
     fail(400, "Choose true or false for automatic product photos.");
+  if (imageSettingKeys.some((key) => key === k)) {
+    if (value !== "true" && value !== "false")
+      fail(400, "Choose true or false for product image delivery.");
+    if (imageDeliveryOverride(k) !== undefined)
+      fail(409, "This value is set on the server. Change it there instead.");
+    return;
+  }
   const locked =
     k === productPhotoSettingKey
       ? productPhotoOverride() !== undefined
