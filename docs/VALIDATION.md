@@ -147,3 +147,10 @@ No physical-device, real SMTP/SMS/Telegram, live retailer success, or off-host r
 - The local staging stack passed real email-code login through Mailpit with verified SMTP STARTTLS, protected Mailpit UI/API access, runtime environment metadata, blocked integration edits, uploads, and session/upload persistence after app/worker recreation. Seeding correctly allowed only the worker heartbeat in an otherwise empty database and refused a second seed.
 - The production-shaped container smoke test also passed. Removing the redundant Alpine certificate-package install unblocked the build while retaining the digest-pinned base's existing CA bundle. All 44 runtime source identifiers remained covered by the reviewed source manifests; complete source archives were not rebuilt locally for this change.
 - These are local validation results. Live staging requires the workflow on `main`, its first published image, staging-server capacity checks, DNS/TLS, registry credentials, and Coolify configuration. No production deployment was changed.
+
+## Device product photos, 2026-10-31
+
+- Typecheck, production build, Compose checks, 117 tooling tests and 498 unit tests pass; 43 database-dependent cases remain skipped without their configured test database.
+- Isolated Chromium and WebKit image-cache tests pass for persistence through reload, download deduplication, account isolation, access removal, cross-tab cleanup and disabled policy.
+- The built UI test verifies three visible thumbnail downloads, exactly two automatic detail prefetches and reuse on detail navigation. Synthetic desktop and 390px phone renders verified Administration controls and decoded gift photos. The design detector reported no findings on changed UI targets.
+- Physical installed iPhone/Android checks, production latency measurements and the database-backed built-PWA browser suites remain release checks; they were not run in this local verification.

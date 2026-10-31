@@ -486,6 +486,7 @@ export interface GiftView extends Omit<Item, "creatorId"> {
   }>;
 }
 export interface World {
+  imageDelivery?: { cacheEnabled: boolean; prefetchEnabled: boolean };
   telegram?: { available: boolean };
   sms?: import("./sms").SmsInfo;
   canCreateGroups?: boolean;

@@ -3812,3 +3812,8 @@ main {
     padding: 16px;
   }
 }
+
+/* Reserve the photo area without exposing alt text while a cached image decodes. */
+.gift-photo > img:not([src]) {
+  visibility: hidden;
+}

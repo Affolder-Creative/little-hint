@@ -200,6 +200,8 @@ it("locks environment overrides and validates limits, mode and staging isolation
   expect((await settingsSummary()).map((s) => s.key)).toEqual([
     "AUTO_IMPORT_PRODUCT_PHOTOS",
     "FAMILY_GROUP_CREATION",
+    "PRODUCT_IMAGE_CACHE_ENABLED",
+    "PRODUCT_IMAGE_PREFETCH_ENABLED",
   ]);
   vi.stubEnv("GIFT_DISCOVERY_MODE", "invalid");
   await expect(config()).rejects.toThrow("GIFT_DISCOVERY_MODE");
@@ -272,7 +274,7 @@ it("exposes only preferences and safe service status to administrators", async (
   expect(services.statusCode).toBe(200);
   expect(services.body).not.toContain("synthetic-key");
   expect(services.json()).toHaveLength(7);
-  expect((await app.inject("/api/v1/admin/settings")).json()).toHaveLength(2);
+  expect((await app.inject("/api/v1/admin/settings")).json()).toHaveLength(4);
   for (const key of [
     "OPENAI_API_KEY",
     "GIFT_DISCOVERY_MODE",

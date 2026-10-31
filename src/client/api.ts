@@ -1,3 +1,4 @@
+import { clearProductImages } from "./image-store";
 import { createAuthClient } from "better-auth/react";
 import { emailOTPClient } from "better-auth/client/plugins";
 import { passkeyClient } from "@better-auth/passkey/client";
@@ -45,7 +46,8 @@ export async function api<T = any>(
     if (body !== undefined) pendingWrites--;
   }
 }
-export function clearPersonalData() {
+export async function clearPersonalData() {
+  await clearProductImages();
   try {
     sessionStorage.removeItem("little-hint:scroll");
   } catch {

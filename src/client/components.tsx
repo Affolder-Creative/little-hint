@@ -1,3 +1,5 @@
+import { ProductImage } from "./ProductImage";
+import { prefetchProductImage } from "./image-store";
 import { priorityLabels } from "../shared/organization";
 import "./mobile-repairs.css";
 import { useDialogViewport } from "./useDialogViewport";
@@ -482,10 +484,10 @@ export function GiftPhoto({
       className={`gift-photo photo-${gift.tags.join("").length % 4} ${!gift.image || failed ? "without-photo" : ""}`}
     >
       {gift.image && !failed ? (
-        <img
-          src={size === "card" ? `${gift.image}?size=card` : gift.image}
-          alt={gift.title}
-          loading="lazy"
+        <ProductImage
+          url={gift.image}
+          title={gift.title}
+          full={size === "full"}
           onError={() => setFailedImage(gift.image)}
         />
       ) : (
@@ -524,6 +526,11 @@ export function GiftCard({
   const Heading = headingLevel === 2 ? "h2" : "h3";
   return (
     <Link
+      onPointerEnter={() =>
+        gift.image && prefetchProductImage(gift.image, true)
+      }
+      onFocus={() => gift.image && prefetchProductImage(gift.image, true)}
+      onTouchStart={() => gift.image && prefetchProductImage(gift.image, true)}
       className="gift-card"
       to={`/gift/${gift.id}`}
       data-navigation-focus={`gift-${gift.id}`}

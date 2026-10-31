@@ -166,3 +166,7 @@ Blank AI model values select built-in defaults; they do not disable AI. Use
 `GIFT_DISCOVERY_MODE=off` to disable suggestions, not `none`. Removing the OpenAI
 key disables both AI features. A zero paid-request limit disables product-detail
 AI and paid shop lookups; gift suggestions retain their separate allowances.
+
+## Product image delivery
+
+`PRODUCT_IMAGE_CACHE_ENABLED` and `PRODUCT_IMAGE_PREFETCH_ENABLED` default to on through Administration. Leave both environment values blank for editable controls. Set either to `true` or `false` to override and lock it; invalid values fail validation. Environment changes require recreating the app container. Administration changes reach other clients at their next world refresh. Disabling caching also suspends prefetching and clears device images as clients reconnect. It increases repeat downloads. No database migration is needed.

@@ -331,9 +331,11 @@ identifies private ideas on cards, detail pages, and Buying entries. Reservation
 and purchase guidance explains that the idea and its buying activity stay
 visible only to its creator. Wish-list item visibility does not use this badge. Group the audience selector and its explanation using compact spacing, with medium spacing before product entry. An unavailable discovery action occupies no layout space. Saved-idea links use accent text, a persistent underline, an arrow, and a 44px touch target.
 
+Product photo loading preserves the image area and contains the product. Visible thumbnails load promptly; detail photos retain the thumbnail until the larger image decodes.
+
 ### Administration
 
-Administration contains App settings, This month's usage, Service status, and Background jobs. Only family-group creation and automatic product photos are editable, with optional locking ENV overrides. All service credentials, providers, models, limits, and AI availability are deployment-only. Service status reports configuration presence, not verified connectivity. Retain disabled services’ current-month usage with Currently off; omit sections with only prior-month or skipped SMS history. Preserve notification retries, failed shop lookups, and the note that backup status is unavailable.
+Administration contains App settings, This month's usage, Service status, and Background jobs. Family-group creation, automatic product photos, device photo caching, and photo prefetching are editable, with optional locking ENV overrides. All service credentials, providers, models, limits, and AI availability are deployment-only. Service status reports configuration presence, not verified connectivity. Retain disabled services’ current-month usage with Currently off; omit sections with only prior-month or skipped SMS history. Preserve notification retries, failed shop lookups, and the note that backup status is unavailable.
 
 Related administration controls share warm beige panels (`#faeee5`) slightly darker than the page in light mode, retaining the paper background in dark mode. Panels have panel-radius corners and no shadow. Panels use 20px padding, reduced to 16px at 650px and below, and 24px separation. Their headings use the panel-title size; internal headings use 17px. Keep service diagnostics visible; omit the monthly usage panel when no service qualifies. Service status uses flat divided rows with readable capability names and configuration status. Disabled fields retain full opacity, muted text, the page background, and a decorative border.
 

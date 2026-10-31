@@ -232,14 +232,15 @@ test("cards use thumbnails, details use originals, and neither enters the PWA ca
   });
   await page.goto(`/lists/${list.id}`);
   const card = page.getByRole("img", { name: gift.title, exact: true });
-  await expect(card).toHaveAttribute("src", `${url}?size=card`);
+  await expect(card).toHaveAttribute("data-image-size", "card");
+  await expect(card).toHaveAttribute("data-product-image", url);
   await expect
     .poll(() => card.evaluate((img: HTMLImageElement) => img.naturalWidth))
     .toBe(480);
   await page.goto(`/gift/${gift.id}`);
   await expect(
     page.getByRole("img", { name: gift.title, exact: true }),
-  ).toHaveAttribute("src", url);
+  ).toHaveAttribute("data-image-size", "full");
   for (const suffix of ["", "?size=card"]) {
     const response = await page.request.get(url + suffix);
     expect(response.headers()["cache-control"]).toBe("no-store");
