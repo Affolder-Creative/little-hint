@@ -181,6 +181,7 @@ export interface Exchange extends Base {
   drawnAt?: string;
 }
 export interface Notice extends Base {
+  importId?: string;
   suppressedChannels?: Array<"sms" | "telegram">;
   batchId?: string;
   prioritySnapshot?: ItemPriority | null;
@@ -196,7 +197,8 @@ export interface Notice extends Base {
     | "exchange"
     | "access"
     | "mention"
-    | "wishlist";
+    | "wishlist"
+    | "import";
   itemId?: string;
   exchangeId?: string;
   invitationId?: string;
@@ -292,12 +294,29 @@ export interface Preferences extends Base {
   smsConsentVersion?: string;
   smsConsentedDailyLimit?: number;
 }
+export interface ImportDraft {
+  listId: string;
+  revision: number;
+  state: "active" | "published" | "discarded";
+  fields: Record<string, string | number | null>;
+  touched: string[];
+}
 export interface ImportJob extends Base {
+  draft?: ImportDraft;
+  providerState?: {
+    snapshotId?: string;
+    terminal?: boolean;
+    submittedAt: string;
+    nextPollAt?: string;
+    deadline: string;
+  };
+  diagnostic?: { stage: string; reason: string; elapsedMs?: number };
+
   userId: string;
   url: string;
   forceRefresh?: boolean;
   status: "pending" | "running" | "complete" | "failed";
-  result?: Partial<Item>;
+  result?: Partial<Item> & { warnings?: string[] };
   error?: string;
 }
 export interface Setting extends Base {

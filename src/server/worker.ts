@@ -1,3 +1,4 @@
+import { ImportPending } from "./brightdata";
 import { pollSmsStatus, alertLowSmsCredit } from "./sms";
 import {
   deliverWishlistBatch,
@@ -85,22 +86,60 @@ await boss.work<{ id: string }>(
     for (const job of jobs) {
       const s = await readState(),
         j = s.imports.find((i) => i.id === job.data.id);
-      if (!j || j.status === "complete" || j.status === "failed") continue;
+      if (
+        !j ||
+        (j.draft && j.draft.state !== "active") ||
+        j.status === "complete" ||
+        j.status === "failed"
+      )
+        continue;
       await transact((s) => {
         s.imports.find((i) => i.id === j.id)!.status = "running";
       });
       try {
-        const result = await importProduct(j.url, j.userId, j.forceRefresh);
+        const result = await importProduct(
+          j.url,
+          j.userId,
+          j.forceRefresh,
+          j.id,
+        );
         await transact((s) => {
           const row = s.imports.find((i) => i.id === j.id)!;
           row.status = "complete";
           row.result = result;
+          if (
+            row.draft?.state === "active" &&
+            !s.notices.some((n) => n.importId === row.id)
+          )
+            s.notices.push({
+              ...stamp(),
+              userId: row.userId,
+              event: "import",
+              importId: row.id,
+              inbox: true,
+              status: "sent",
+              attempts: 0,
+              delivered: [],
+              deliveryChannels: [],
+              pushComplete: true,
+            });
           row.revision++;
         });
-      } catch {
+      } catch (error) {
+        if (error instanceof ImportPending) continue;
         await transact((s) => {
           const row = s.imports.find((i) => i.id === j.id)!;
           row.status = "failed";
+          row.diagnostic ??= {
+            stage: "lookup",
+            reason:
+              error instanceof Error &&
+              /^(Bright Data HTTP \d{3}|Collection timed out|Collection failed|Submission outcome uncertain; do not automatically resubmit)$/.test(
+                error.message,
+              )
+                ? error.message
+                : "No usable product details",
+          };
           row.error =
             "We could not get details from that shop. You can still enter them yourself.";
           row.revision++;
@@ -144,7 +183,11 @@ async function dispatch() {
     ))
       await boss.send("gift-discovery", { id: j.id }, { singletonKey: j.id });
     for (const j of s.imports.filter(
-      (j) => j.status === "pending" || j.status === "running",
+      (j) =>
+        (!j.draft || j.draft.state === "active") &&
+        (j.status === "pending" || j.status === "running") &&
+        (!j.providerState?.nextPollAt ||
+          Date.parse(j.providerState.nextPollAt) <= Date.now()),
     ))
       await boss.send("product-import", { id: j.id }, { singletonKey: j.id });
     for (const n of s.notices.filter(

@@ -301,8 +301,9 @@ Gift cards are unboxed links. A contained image or labeled fallback leads, follo
 
 List and event management menus have visible List actions and Event actions labels.
 Event metadata and privacy form one heading group; wish-list links, Manage/View
-event, and the action menu share a wrapping action row. List privacy places the
-disclosure caret immediately beside Privacy details, separately from its badge.
+event, and the action menu share a wrapping action row. List and event detail privacy uses one disclosure target combining the existing badge and an information icon. Collection-row badges remain passive. Menu rows are borderless and retain visible keyboard focus.
+
+Private product-import drafts use compact divided rows beside their destination list and in My lists. Status text names Finding details, Ready to review, or Needs details. A slow lookup offers Save draft and continue after 15 seconds; fields stay editable. Closing saves the latest edits before dismissing. Drafts remain owner-only until Review and add completes.
 
 ### Inputs / Fields
 

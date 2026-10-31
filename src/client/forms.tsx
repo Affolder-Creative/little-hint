@@ -1,7 +1,7 @@
 import { DiscoveryLink } from "./GiftPreferences";
 import { GuidelineField, guidelineValue } from "./SpendingGuidance";
 import { PrioritySelect } from "./Management";
-import type { ItemPriority } from "../shared/model";
+import type { ImportJob, ItemPriority } from "../shared/model";
 import { actionError } from "./copy";
 import { useNavigate } from "react-router-dom";
 import { familyGroupLabel } from "../shared/households";
@@ -244,6 +244,7 @@ export function GiftForm({
   recipientOptions,
   onSaved,
   draft,
+  importDraft,
 }: {
   gift?: GiftView;
   listId?: string;
@@ -251,6 +252,7 @@ export function GiftForm({
   recipientOptions?: string[];
   onSaved?: (gift: GiftView) => void;
   draft?: Draft;
+  importDraft?: ImportJob;
 }) {
   const { world, mutate, close, toast } = useApp();
   const lists = world.lists.filter((l) => l.canEdit && !l.archived);
@@ -262,19 +264,88 @@ export function GiftForm({
     image: gift?.image ?? "",
     tags: gift?.tags.join(", ") ?? "",
     quantity: gift?.quantity ?? 1,
+    ...(importDraft?.draft
+      ? Object.fromEntries(
+          Object.entries(importDraft.draft.fields).filter(([k]) =>
+            [
+              "title",
+              "url",
+              "description",
+              "price",
+              "image",
+              "tags",
+              "quantity",
+            ].includes(k),
+          ),
+        )
+      : {}),
   });
   const [priority, setPriority] = useState<ItemPriority | null>(
-    gift?.priority ?? null,
+    gift?.priority ??
+      (importDraft?.draft?.fields.priority as ItemPriority | null) ??
+      null,
   );
-  const touched = useRef(new Set<string>());
+  const touched = useRef(new Set<string>(importDraft?.draft?.touched ?? []));
   const [error, setError] = useState("");
-  const importQuery = useImportJob(world.me.id);
+  const importQuery = useImportJob(world.me.id, importDraft);
   const importing = importQuery.busy;
   const [uploading, setUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState("");
   const [duplicate, setDuplicate] = useState<GiftView | null>(null);
   const [allowDuplicate, setAllowDuplicate] = useState(false);
   const job = importQuery.job;
+  const [destination, setDestination] = useState(
+    importDraft?.draft?.listId ?? listId ?? lists[0]?.id ?? "",
+  );
+  const savedDraft = useRef(importDraft);
+  const [draftSaved, setDraftSaved] = useState("");
+  const [saveError, setSaveError] = useState("");
+  const saveQueue = useRef(Promise.resolve());
+  const snapshot = JSON.stringify({
+    fields: { ...data, priority },
+    touched: [...touched.current],
+    listId: destination,
+  });
+  const currentSnapshot = useRef(snapshot);
+  currentSnapshot.current = snapshot;
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    setSlow(false);
+    if (!importing) return;
+    const t = setTimeout(() => setSlow(true), 15000);
+    return () => clearTimeout(t);
+  }, [importing]);
+  async function flushDraft() {
+    const next = saveQueue.current
+      .catch(() => {})
+      .then(async () => {
+        const active = savedDraft.current;
+        if (!active?.draft) return;
+        const captured = currentSnapshot.current;
+        const updated = await api<ImportJob>("imports/update", {
+          id: active.id,
+          revision: active.draft.revision,
+          ...JSON.parse(captured),
+        });
+        savedDraft.current = updated;
+        setDraftSaved(captured);
+        setSaveError("");
+      });
+    saveQueue.current = next;
+    return next;
+  }
+  useEffect(() => {
+    if (!savedDraft.current?.draft || snapshot === draftSaved) return;
+    const timer = setTimeout(() => {
+      void flushDraft().catch(() =>
+        setSaveError(
+          "Your latest changes have not been saved. Try saving the draft again.",
+        ),
+      );
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [snapshot, draftSaved, job?.id]);
+
   const applied = useRef("");
   const recipients = world.people.filter(
     (person) =>
@@ -298,6 +369,15 @@ export function GiftForm({
   const sharingIdea = idea && visibility !== "private";
   const change = (key: keyof typeof data, v: string | number) => {
     if (key === "url") {
+      if (savedDraft.current?.draft) {
+        const previous = savedDraft.current;
+        savedDraft.current = undefined;
+        void api("imports/discard", { id: previous.id }).catch(() =>
+          setError(
+            "Could not remove the previous draft. You can remove it from My lists.",
+          ),
+        );
+      }
       importQuery.reset();
       setError("");
     }
@@ -336,7 +416,26 @@ export function GiftForm({
   async function importUrl(forceRefresh = false) {
     setError("");
     try {
-      await importQuery.start(data.url, forceRefresh);
+      if (savedDraft.current?.draft && job?.status === "failed") {
+        await api("imports/retry", { id: job.id });
+        await importQuery.retry();
+        return;
+      }
+      if (savedDraft.current?.draft)
+        await api("imports/discard", { id: savedDraft.current.id });
+      const created = await importQuery.start(
+        data.url,
+        forceRefresh,
+        !gift && !idea
+          ? {
+              listId: destination,
+              fields: { ...data, priority },
+              touched: [...touched.current],
+            }
+          : undefined,
+      );
+      savedDraft.current = created;
+      setDraftSaved(snapshot);
     } catch (e) {
       setError(actionError(e));
     }
@@ -365,6 +464,8 @@ export function GiftForm({
   }
   return (
     <Form
+      dirty={savedDraft.current?.draft ? snapshot !== draftSaved : undefined}
+      onBeforeClose={savedDraft.current?.draft ? flushDraft : undefined}
       submit={
         gift ? "Save changes" : idea ? "Save gift idea" : "Add to wish list"
       }
@@ -402,7 +503,9 @@ export function GiftForm({
               }),
           visibility,
           groupIds: sharingIdea ? audienceGroups.map((group) => group.id) : [],
-          importId: job?.status === "complete" ? job.id : undefined,
+          importId:
+            savedDraft.current?.id ??
+            (job?.status === "complete" ? job.id : undefined),
         };
         if (!navigator.onLine) {
           if (
@@ -421,11 +524,13 @@ export function GiftForm({
           close();
           return;
         }
+        await saveQueue.current.catch(() => {});
         const result = await mutate(gift ? "items/update" : "items", payload);
         if (result.duplicate) {
           setDuplicate(result.duplicate);
           return;
         }
+        savedDraft.current = undefined;
         if (draft)
           localStorage.setItem(
             draftKey(world.me.id),
@@ -551,6 +656,48 @@ export function GiftForm({
           )}
         </>
       )}
+      {job?.result?.warnings?.map((w) => (
+        <p className="notice" key={w}>
+          {w}
+        </p>
+      ))}
+      {savedDraft.current?.draft && (
+        <div className="import-draft-status">
+          {job?.status !== "complete" && (
+            <p role="status">
+              {slow
+                ? "This is taking a little longer. Save your draft and we’ll keep working."
+                : importing
+                  ? "Getting product details. You can keep editing."
+                  : job?.status === "failed"
+                    ? "Your draft is safe. Enter details or try again."
+                    : "Details are ready to review."}
+            </p>
+          )}
+          <button
+            type="button"
+            className="button secondary"
+            onClick={async () => {
+              try {
+                await flushDraft();
+                toast("Private draft saved. Find it in My lists.");
+                close();
+              } catch {
+                setSaveError(
+                  "Your draft could not be saved. Please try again.",
+                );
+              }
+            }}
+          >
+            {importing ? "Save draft and continue" : "Save for later"}
+          </button>
+          {saveError && (
+            <p role="alert" className="error">
+              {saveError}
+            </p>
+          )}
+        </div>
+      )}
       <div className="url-entry">
         <Field label="Start with a product link">
           <input
@@ -625,7 +772,8 @@ export function GiftForm({
           <select
             name="listId"
             required
-            defaultValue={listId ?? lists[0]?.id ?? ""}
+            value={destination}
+            onChange={(e) => setDestination(e.target.value)}
           >
             {!lists.length && <option value="">Create a list first</option>}
             {lists.map((l) => (

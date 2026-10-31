@@ -161,6 +161,8 @@ describe("staging scraping opt-in", () => {
           p.id === provider.id ? "staging-key" : "",
         );
       }
+      if (provider.id === "brightdata")
+        vi.stubEnv("STAGING_BRIGHTDATA_UNLOCKER_ZONE", "test-zone");
       const cfg = await config();
       expect(selectedScrapingProvider(cfg)).toBe(provider.id);
       expect(cfg.OPENAI_API_KEY).toBe("");

@@ -159,6 +159,12 @@ export function Modal({
   const requestClose = (afterClose?: () => void) => {
     if (ref.current?.querySelector('[data-busy="true"]')) return;
     afterDismiss.current = afterClose;
+    const saveEvent = new CustomEvent("draft-close", {
+      cancelable: true,
+      detail: finishClose,
+    });
+    ref.current?.querySelector("form")?.dispatchEvent(saveEvent);
+    if (saveEvent.defaultPrevented) return;
     if (ref.current?.querySelector('form[data-dirty="true"]')) {
       previousFocus.current = document.activeElement as HTMLElement;
       setDiscarding(true);
@@ -251,7 +257,9 @@ export function Form({
   cancel,
   busyLabel = "Saving…",
   onBusyChange,
+  onBeforeClose,
 }: {
+  onBeforeClose?: () => Promise<void>;
   onSubmit: (data: FormData) => Promise<unknown>;
   children: ReactNode;
   submit?: string;
@@ -270,6 +278,23 @@ export function Form({
     [error, setError] = useState(""),
     [changed, setDirty] = useState(false);
   const dirty = controlledDirty ?? changed;
+  const formRef = useRef<HTMLFormElement>(null);
+  const beforeClose = useRef(onBeforeClose);
+  beforeClose.current = onBeforeClose;
+  useEffect(() => {
+    const el = formRef.current;
+    const listener = (event: Event) => {
+      if (!beforeClose.current) return;
+      event.preventDefault();
+      void beforeClose
+        .current()
+        .then(() => (event as CustomEvent<() => void>).detail())
+        .catch((e) => setError(actionError(e)));
+    };
+    el?.addEventListener("draft-close", listener);
+    return () => el?.removeEventListener("draft-close", listener);
+  }, []);
+
   useEffect(() => onBusyChange?.(busy), [busy, onBusyChange]);
   const [pending, setPending] = useState<{
     data: FormData;
@@ -337,6 +362,7 @@ export function Form({
   }
   return (
     <form
+      ref={formRef}
       className={`form ${className}`.trim()}
       onSubmit={send}
       onChange={() => setDirty(true)}

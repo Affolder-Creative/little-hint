@@ -1,5 +1,6 @@
+import { dismissActionMenu } from "./menu-dismiss";
 import "./action-menu.css";
-import { useState, type ReactNode } from "react";
+import { useState, useRef, useEffect, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
@@ -46,11 +47,13 @@ export function RunButton({
         className={className}
         disabled={busy || disabled}
         aria-busy={busy}
-        onClick={async () => {
+        onClick={async (event) => {
+          const button = event.currentTarget;
           setBusy(true);
           setError("");
           try {
             await run();
+            dismissActionMenu(button);
           } catch (error) {
             setError(actionError(error));
           } finally {
@@ -77,8 +80,26 @@ export function ActionMenu({
   label?: string;
   children: ReactNode;
 }) {
+  const ref = useRef<HTMLDetailsElement>(null);
+  useEffect(() => {
+    const outside = (event: Event) => {
+      if (
+        event.target instanceof Node &&
+        !ref.current?.contains(event.target) &&
+        ref.current
+      )
+        ref.current.open = false;
+    };
+    document.addEventListener("pointerdown", outside);
+    document.addEventListener("focusin", outside);
+    return () => {
+      document.removeEventListener("pointerdown", outside);
+      document.removeEventListener("focusin", outside);
+    };
+  }, []);
   return (
     <details
+      ref={ref}
       className="entry-actions"
       onToggle={(event) => {
         if (!event.currentTarget.open) return;
@@ -99,10 +120,6 @@ export function ActionMenu({
           event.currentTarget.open = false;
           event.currentTarget.querySelector("summary")?.focus();
         }
-      }}
-      onBlur={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget))
-          event.currentTarget.open = false;
       }}
     >
       <summary aria-label={`${label ?? "Actions"} for ${name}`}>

@@ -1155,7 +1155,12 @@ function Admin() {
       api<{
         workerLastSeen: number | null;
         backupProvider: string;
-        imports: Array<{ id: string; status: string; error?: string }>;
+        imports: Array<{
+          id: string;
+          status: string;
+          error?: string;
+          diagnostic?: { stage: string; reason: string };
+        }>;
         notifications: Array<{
           id: string;
           status: string;
@@ -1406,6 +1411,11 @@ function Admin() {
               <span>
                 {j.error ?? "Shop lookup failed."} You can enter the gift
                 details manually.
+                {j.diagnostic && (
+                  <small>
+                    {j.diagnostic.stage}: {j.diagnostic.reason}
+                  </small>
+                )}
               </span>
             </div>
           ))}

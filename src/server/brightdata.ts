@@ -1,0 +1,218 @@
+import { transact } from "./db";
+import { spend } from "./settings";
+import { validateUrl, boundedBody } from "./imports";
+import type { ImportJob, Item } from "../shared/model";
+
+export class ImportPending extends Error {}
+const datasets: Record<string, string> = {
+  "amazon.com": "gd_l7q7dkf244hwjntr0",
+  "walmart.com": "gd_l95fol7l1ru6rlo116",
+  "target.com": "gd_ltppk5mx2lp0v1k0vo",
+  "bestbuy.com": "gd_ltre1jqe1jfr7cccf",
+};
+export function retailerDataset(value: string) {
+  const u = new URL(value),
+    host = u.hostname.replace(/^www\./, "");
+  const product =
+    host === "amazon.com"
+      ? /\/(dp|gp\/product)\/[A-Z0-9]{10}/i.test(u.pathname)
+      : host === "walmart.com"
+        ? u.pathname.startsWith("/ip/")
+        : host === "target.com"
+          ? u.pathname.startsWith("/p/")
+          : host === "bestbuy.com"
+            ? u.pathname.includes(".p")
+            : false;
+  return product ? datasets[host] : undefined;
+}
+export function normalizeRetailer(
+  row: any,
+  url: string,
+): Partial<Item> & { sourceTitle: string; remoteImage?: string } {
+  if (!row || row.error) throw new Error("Retailer returned no product");
+  const title = row.title ?? row.product_name ?? row.name;
+  if (typeof title !== "string" || !title.trim())
+    throw new Error("Retailer returned no product name");
+  const requested = new URL(url).pathname.match(
+    /\/(?:dp|gp\/product)\/([A-Z0-9]{10})/i,
+  )?.[1];
+  if (
+    requested &&
+    row.asin &&
+    requested.toUpperCase() !== String(row.asin).toUpperCase()
+  )
+    throw new Error("Product identity mismatch");
+  const host = new URL(url).hostname.replace(/^www\./, "");
+  const requestedId =
+    host === "walmart.com"
+      ? new URL(url).pathname.split("/").pop()
+      : host === "target.com"
+        ? new URL(url).pathname.match(/A-(\d+)/)?.[1]
+        : host === "bestbuy.com"
+          ? new URL(url).pathname.match(/\/(\d+)\.p/)?.[1]
+          : undefined;
+  const returnedId =
+    host === "target.com"
+      ? (row.tcin_id ?? row.product_id)
+      : host === "bestbuy.com"
+        ? (row.sku ?? row.product_id)
+        : row.product_id;
+  if (requestedId && returnedId && String(requestedId) !== String(returnedId))
+    throw new Error("Product identity mismatch");
+  const price = row.final_price ?? row.sale_price ?? row.price;
+  const amount =
+    typeof price === "number"
+      ? price
+      : typeof price === "string" && /^\$?[\d,]+(?:\.\d{1,2})?$/.test(price)
+        ? Number(price.replace(/[$,]/g, ""))
+        : NaN;
+  const image =
+    row.image_url ??
+    row.main_image ??
+    row.image ??
+    row.images?.[0] ??
+    row.image_urls?.[0];
+  return {
+    title: title.trim().slice(0, 160),
+    sourceTitle: title.trim().slice(0, 2000),
+    description: String(row.description ?? row.product_description ?? "").slice(
+      0,
+      5000,
+    ),
+    priceCents:
+      row.currency === "USD" &&
+      !row.final_price_high &&
+      !row.price_range &&
+      Number.isFinite(amount) &&
+      amount >= 0
+        ? Math.round(amount * 100)
+        : null,
+    currency: "USD",
+    tags: [],
+    source: new URL(url).hostname,
+    importedAt: new Date().toISOString(),
+    ...(typeof image === "string" ? { remoteImage: image } : {}),
+  };
+}
+async function jsonRequest(path: string, key: string, body?: unknown) {
+  const response = await fetch(`https://api.brightdata.com${path}`, {
+    method: body ? "POST" : "GET",
+    headers: {
+      Authorization: `Bearer ${key}`,
+      "Content-Type": "application/json",
+    },
+    ...(body ? { body: JSON.stringify(body) } : {}),
+    redirect: "error",
+    signal: AbortSignal.timeout(20000),
+  });
+  if (!response.ok) {
+    await response.body?.cancel();
+    throw new Error(`Bright Data HTTP ${response.status}`);
+  }
+  return JSON.parse((await boundedBody(response)).toString("utf8"));
+}
+export async function brightRetailer(url: string, key: string, jobId: string) {
+  await validateUrl(url);
+  let state: ImportJob["providerState"];
+  await transact((s) => {
+    const job = s.imports.find((j) => j.id === jobId);
+    if (!job) throw new Error("Import missing");
+    state = job.providerState;
+    if (!state)
+      job.providerState = {
+        submittedAt: new Date().toISOString(),
+        deadline: new Date(Date.now() + 180000).toISOString(),
+      };
+  });
+  if (!state) {
+    try {
+      await spend("brightdata");
+    } catch (error) {
+      await transact((s) => {
+        delete s.imports.find((j) => j.id === jobId)!.providerState;
+      });
+      throw error;
+    }
+    let result;
+    try {
+      result = await jsonRequest(
+        `/datasets/v3/trigger?dataset_id=${retailerDataset(url)}&include_errors=true&notify=false`,
+        key,
+        { input: [{ url, all_variations: false }], limit_per_input: 1 },
+      );
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        /^Bright Data HTTP (400|401|403|404|422|429)$/.test(error.message)
+      )
+        await transact((s) => {
+          delete s.imports.find((j) => j.id === jobId)!.providerState;
+        });
+      throw error;
+    }
+    if (typeof result.snapshot_id !== "string")
+      throw new Error("Missing collection ID");
+    await transact((s) => {
+      const j = s.imports.find((j) => j.id === jobId)!;
+      j.providerState!.snapshotId = result.snapshot_id;
+      j.providerState!.nextPollAt = new Date(Date.now() + 10000).toISOString();
+    });
+    throw new ImportPending();
+  }
+  if (!state.snapshotId)
+    throw new Error(
+      "Submission outcome uncertain; do not automatically resubmit",
+    );
+  if (Date.now() > Date.parse(state.deadline))
+    throw new Error("Collection timed out");
+  const path = encodeURIComponent(state.snapshotId);
+  const progress = await jsonRequest(`/datasets/v3/progress/${path}`, key);
+  if (["starting", "running"].includes(progress.status)) {
+    await transact((s) => {
+      s.imports.find((j) => j.id === jobId)!.providerState!.nextPollAt =
+        new Date(Date.now() + 10000).toISOString();
+    });
+    throw new ImportPending();
+  }
+  if (progress.status !== "ready") {
+    if (["failed", "canceled"].includes(progress.status))
+      await transact((s) => {
+        s.imports.find((j) => j.id === jobId)!.providerState!.terminal = true;
+      });
+    throw new Error("Collection failed");
+  }
+  const result = await jsonRequest(
+    `/datasets/v3/snapshot/${path}?format=json`,
+    key,
+  );
+  if (!Array.isArray(result) || result.length !== 1)
+    throw new Error("Unexpected product count");
+  return normalizeRetailer(result[0], url);
+}
+export async function unlockPage(url: string, cfg: Record<string, string>) {
+  await validateUrl(url);
+  await spend("brightdata");
+  const response = await fetch("https://api.brightdata.com/request", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${cfg.BRIGHTDATA_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      zone: cfg.BRIGHTDATA_UNLOCKER_ZONE,
+      url,
+      format: "json",
+      country: "us",
+    }),
+    redirect: "error",
+    signal: AbortSignal.timeout(100000),
+  });
+  if (!response.ok) {
+    await response.body?.cancel();
+    throw new Error(`Unlocker HTTP ${response.status}`);
+  }
+  const envelope = JSON.parse((await boundedBody(response)).toString("utf8"));
+  if (envelope.status_code !== 200 || typeof envelope.body !== "string")
+    throw new Error("Shop unavailable");
+  return envelope.body as string;
+}

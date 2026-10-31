@@ -1,0 +1,81 @@
+# Configure shop lookups with Bright Data
+
+Little Hint uses one Bright Data API key for two products. Dedicated Scraper APIs fetch Amazon, Walmart, Target, and Best Buy product details. Web Unlocker fetches HTML for other shops when built-in extraction cannot get a usable name or a requested photo. Other shops still use the built-in parser first.
+
+## Bright Data account setup
+
+1. Create a Bright Data account and review its current pay-as-you-go terms, account verification requirements, and spending controls. Free credits depend on account eligibility; the app does not assume they are available.
+2. In the Bright Data dashboard, enable Web Unlocker and create a zone, for example `little_hint_shops`. Copy the exact zone name. This is a Bright Data product configuration, not a DNS record or another server.
+3. Create an API token with access to Web Unlocker and the Scraper APIs. Store it in your deployment secret manager. Do not put it in Git or browser configuration.
+4. Confirm access to the four product scrapers below. Little Hint supplies the dataset IDs itself. You do not need a schedule, webhook, cloud storage destination, separate token per store, or a custom scraper.
+
+| Store | Product scraper dataset ID |
+| --- | --- |
+| Amazon | `gd_l7q7dkf244hwjntr0` |
+| Walmart | `gd_l95fol7l1ru6rlo116` |
+| Target | `gd_ltppk5mx2lp0v1k0vo` |
+| Best Buy | `gd_ltre1jqe1jfr7cccf` |
+
+These adapters target US product links. Category pages, search results, and other regional storefronts use the general website path. Retailer coverage is explicit: enabling Bright Data does not automatically install every scraper in its catalog.
+
+## Choose the paid provider
+
+Set `SCRAPING_PROVIDER` in production, or `STAGING_SCRAPING_PROVIDER` in staging. Supported values are:
+
+| Value | Behavior |
+| --- | --- |
+| `brightdata` | Bright Data retailer Scraper APIs and Web Unlocker |
+| `scrapingfish` | Scraping Fish |
+| `scrapingbee` | ScrapingBee |
+| `scrapedo` | Scrape.do |
+| `scrapingdog` | Scrapingdog |
+| `auto` | First configured provider in this order: Fish, Bee, Scrape.do, Dog, Bright Data |
+| `none` | Built-in extraction only; no paid scraping |
+
+An explicit selection never silently falls through to another paid provider. Supply that provider's credentials to both the app and worker. Bright Data also requires its Unlocker zone. Restart/recreate both services after changing the environment.
+
+## Production configuration
+
+Set these environment variables for **both the app and worker**, then recreate both services:
+
+```dotenv
+SCRAPING_PROVIDER=brightdata
+BRIGHTDATA_API_KEY=your-secret-api-token
+BRIGHTDATA_UNLOCKER_ZONE=little_hint_shops
+PAID_DAILY_LIMIT=50
+```
+
+Use a daily limit appropriate for your installation. This is a count of paid attempts per provider per UTC day, not a dollar limit. Failed dispatched attempts count. Bright Data retailer submissions and Unlocker requests share this allowance; polling an existing collection does not spend another attempt. Configure account-level spending controls in Bright Data as well.
+
+The supplied Compose files pass these settings through their shared app/worker environment. Configuration stays deployment-only; there are no credential fields in the PWA.
+
+## Staging configuration
+
+Staging ignores production credentials. Set these separately:
+
+```dotenv
+STAGING_SCRAPING_PROVIDER=brightdata
+STAGING_BRIGHTDATA_API_KEY=your-staging-api-token
+STAGING_BRIGHTDATA_UNLOCKER_ZONE=little_hint_shops
+STAGING_PAID_DAILY_LIMIT=10
+```
+
+Staging calls can use real provider credits. Preview environments do not inherit these credentials. A separate staging zone or account is optional, but can help separate provider-side usage.
+
+## Verify the setup
+
+Open Settings → Administration → Service status. Shop lookups should report **Configured — Bright Data**. This checks configuration presence, not connectivity or credit balance. Confirm the worker is running under Background jobs.
+
+Try one current product URL for each of the four stores, an Amazon short link, and an independent store. Check the imported product identity, selected option, currency, and photo. Repeat a successful lookup to exercise the cache. For a slow lookup, save the draft, close the PWA, and reopen it from My lists. It must remain private until you review and add it.
+
+Failed lookups retain the draft. Check Background jobs for sanitized diagnostics. HTTP 401/403 usually calls for checking token permissions; billing/allowance failures require checking the account and application limits. A missing zone prevents Bright Data selection. Never send API keys when reporting an error.
+
+Collections run asynchronously and normally get checked about every ten seconds for up to three minutes. A retry resumes a known collection before submitting another. If the submission outcome is uncertain, automatic resubmission is blocked to avoid duplicate charges; manual entry remains available.
+
+## Other providers and limitations
+
+To use Scraping Fish again, set `SCRAPING_PROVIDER=scrapingfish` and its API key, or use the corresponding staging variables. There is no automatic paid-provider cascade. Existing `auto` precedence is preserved.
+
+The app keeps currency in USD. Unknown prices, ranges, unavailable variants, and unverified currencies may require manual entry. Automatic-photo settings still apply. Scraping success depends on the shop and provider; configuration alone does not guarantee successful extraction.
+
+Official references, checked 2026-10-31: [Scraper catalog](https://docs.brightdata.com/scrapers.json), [asynchronous collections](https://docs.brightdata.com/api-reference/rest-api/scraper/asynchronous-requests), [Web Unlocker API](https://docs.brightdata.com/api-reference/rest-api/unlocker/unlock-website), [Scraper pricing](https://brightdata.com/pricing/web-scraper).

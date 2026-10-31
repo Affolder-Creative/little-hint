@@ -280,9 +280,7 @@ test("list dates lock at sharing, archives restore, and controls fit desktop and
     (await page.request.get(`/api/v1/lists/${list.id}/gift-summary`)).status(),
   ).toBe(409);
   await page.locator(".list-heading .entry-actions > summary").click();
-  await page
-    .getByRole("button", { name: "List settings", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Edit list", exact: true }).click();
   await expect(
     page.getByRole("radio", { name: /See the plans/ }),
   ).toBeChecked();

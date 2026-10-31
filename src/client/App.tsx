@@ -1,3 +1,4 @@
+import { ImportDrafts } from "./ImportDrafts";
 import { useProductImages } from "./useProductImages";
 import { BrowseTools } from "./BrowseTools";
 import { ProfileEditor, GiftPreferencesShortcut } from "./ProfileEditor";
@@ -80,7 +81,7 @@ import {
   Shuffle,
   Settings,
   Plus,
-  ChevronRight,
+  Info,
   ArrowRight,
   ArrowLeft,
   Check,
@@ -1303,9 +1304,9 @@ function Lists() {
             <ActionMenu name={list.name} label="List actions">
               <button
                 className="text-button"
-                onClick={() => open("List settings", <ListForm list={list} />)}
+                onClick={() => open("Edit list", <ListForm list={list} />)}
               >
-                List settings
+                Edit list
               </button>
               <FollowButton target="list" targetId={list.id} />
               <Action
@@ -1360,12 +1361,13 @@ function Lists() {
           <summary>
             <Privacy mode={list.mode} />{" "}
             <span className="privacy-disclosure-label">
-              <ChevronRight size={16} aria-hidden="true" />
-              Privacy details
+              <Info size={16} aria-hidden="true" />
+              <span className="sr-only">Privacy details</span>
             </span>
           </summary>
           <RevealPolicy list={list} />
         </details>
+        {list.canEdit && <ImportDrafts listId={list.id} />}
         {list.canEdit && list.revealAvailable && (
           <div className="tabs" role="group" aria-label="List view">
             <button

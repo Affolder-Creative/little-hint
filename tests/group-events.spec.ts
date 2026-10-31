@@ -165,7 +165,7 @@ test("leaders manage an occasion while recipients add wishes and unselected memb
     await leader.getByRole("button", { name: "Switch to light theme" }).click();
     await leader.locator(`a[href="/lists/${childList.id}"]`).click();
     await expect(
-      leader.getByRole("button", { name: "List settings", exact: true }),
+      leader.getByRole("button", { name: "Edit list", exact: true }),
     ).toHaveCount(0);
     await expect(
       leader.getByRole("button", { name: "Archive list", exact: true }),

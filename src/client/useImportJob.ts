@@ -3,11 +3,12 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ImportJob } from "../shared/model";
 import { api } from "./api";
 
-export function useImportJob(accountId: string) {
+export function useImportJob(accountId: string, initial?: ImportJob) {
   const client = useQueryClient();
-  const [id, setId] = useState("");
+  const [id, setId] = useState(initial?.id ?? "");
   const [creating, setCreating] = useState(false);
   const generation = useRef(0);
+  const starting = useRef(false);
   useEffect(
     () => () => {
       generation.current++;
@@ -21,6 +22,7 @@ export function useImportJob(accountId: string) {
     enabled: (q) =>
       !!id &&
       (!q.state.data || ["pending", "running"].includes(q.state.data.status)),
+    initialData: initial,
     staleTime: 0,
     retry: false,
     refetchIntervalInBackground: false,
@@ -36,18 +38,30 @@ export function useImportJob(accountId: string) {
     setId("");
     setCreating(false);
   }
-  async function start(url: string, forceRefresh = false) {
+  async function start(
+    url: string,
+    forceRefresh = false,
+    draft?: Pick<
+      NonNullable<ImportJob["draft"]>,
+      "listId" | "fields" | "touched"
+    >,
+  ) {
+    if (starting.current) return;
+    starting.current = true;
     reset();
     const current = generation.current;
     setCreating(true);
     try {
-      const job = await api<ImportJob>("imports", { url, forceRefresh });
+      const job = await api<ImportJob>("imports", { url, forceRefresh, draft });
       if (current !== generation.current) return;
       client.setQueryData(["import", accountId, job.id], job);
+      void client.invalidateQueries({ queryKey: ["world"] });
       setId(job.id);
+      return job;
     } catch (error) {
       if (current === generation.current) throw error;
     } finally {
+      starting.current = false;
       if (current === generation.current) setCreating(false);
     }
   }

@@ -158,6 +158,10 @@ async function preview(
     fixture.state.people.push(person);
   }
   const paths: Record<string, string> = {
+    imports: "imports.create",
+    "imports/update": "imports.update",
+    "imports/discard": "imports.discard",
+    "imports/retry": "imports.retry",
     preferences: "preferences.update",
     follows: "follows.update",
     invitations: "invitations.create",
@@ -210,6 +214,13 @@ async function preview(
       });
     if (path === "/api/v1/push")
       return route.fulfill({ json: { publicKey: null, devices: [] } });
+    if (
+      path.startsWith("/api/v1/imports/") &&
+      route.request().method() === "GET"
+    )
+      return route.fulfill({
+        json: fixture.state.imports.find((j) => j.id === path.split("/").pop()),
+      });
     const action = paths[path.replace("/api/v1/", "")];
     if (action && route.request().method() === "POST") {
       try {
@@ -2219,7 +2230,10 @@ test("photo upload blocks saving and reports completion", async ({ page }) => {
     });
   });
   await page.goto("/lists");
-  await page.getByRole("button", { name: "Add item", exact: true }).click();
+  await page
+    .getByRole("main")
+    .getByRole("button", { name: "Add item", exact: true })
+    .click();
   await page
     .getByLabel("Item name", { exact: true })
     .fill("A gift with a photo");
@@ -3185,7 +3199,7 @@ for (const width of [1440, 390]) {
         .getByRole("button", { name: "Add item", exact: true }),
     ).toBeVisible();
     await expect(
-      page.getByRole("button", { name: "List settings", exact: true }),
+      page.getByRole("button", { name: "Edit list", exact: true }),
     ).not.toBeVisible();
     await expect(
       page.getByRole("button", { name: "Archive list", exact: true }),
@@ -3207,9 +3221,7 @@ for (const width of [1440, 390]) {
     const menu = page.locator(".list-heading .entry-actions > summary");
     await menu.focus();
     await page.keyboard.press("Enter");
-    await page
-      .getByRole("button", { name: "List settings", exact: true })
-      .click();
+    await page.getByRole("button", { name: "Edit list", exact: true }).click();
     await expect(page.getByRole("dialog")).toBeVisible();
     await page
       .getByRole("button", { name: "Close dialog", exact: true })
@@ -3357,7 +3369,7 @@ for (const width of [320, 390, 650, 900, 1440]) {
       const menu = page.locator(".list-heading .entry-actions > summary");
       await menu.click();
       await page
-        .getByRole("button", { name: "List settings", exact: true })
+        .getByRole("button", { name: "Edit list", exact: true })
         .click();
       await expect(page.getByRole("dialog")).toBeVisible();
       await expect(
@@ -4292,7 +4304,10 @@ for (const browserName of ["chromium", "webkit"] as const) {
       const { state } = await preview(page);
       await page.setViewportSize({ width: 852, height: 393 });
       await page.goto("/lists");
-      await page.getByRole("button", { name: "Add item", exact: true }).click();
+      await page
+        .getByRole("main")
+        .getByRole("button", { name: "Add item", exact: true })
+        .click();
       const dialog = page.getByRole("dialog");
       const name = page.getByLabel("Item name", { exact: true });
       await expect(name).toHaveCSS("font-size", "16px");
@@ -4881,3 +4896,72 @@ test.describe("interface rhythm", () => {
     });
   }
 });
+
+for (const engine of ["chromium", "webkit"] as const) {
+  test(`private import drafts survive closing and protect edits in ${engine}`, async ({
+    page: defaultPage,
+  }, testInfo) => {
+    const browser =
+      engine === "webkit" ? await webkit.launch({ channel: "" }) : undefined;
+    const page = browser
+      ? await browser.newPage({
+          baseURL: process.env.E2E_BASE_URL ?? "http://localhost:5173",
+          viewport: { width: 393, height: 852 },
+        })
+      : defaultPage;
+    try {
+      await page.setViewportSize({
+        width: engine === "webkit" ? 393 : 1440,
+        height: 900,
+      });
+      const { state, actor } = await preview(page);
+      const list = world(state, actor).lists.find(
+        (l) => l.canEdit && !l.archived && !l.groupEventId,
+      )!;
+      await page.goto(`/lists/${list.id}`);
+      await page
+        .getByRole("main")
+        .getByRole("button", { name: "Add item", exact: true })
+        .click();
+      await page
+        .getByLabel("Start with a product link")
+        .fill("https://amazon.com/dp/B012345678");
+      await page
+        .getByRole("button", { name: "Get details", exact: true })
+        .click();
+      await expect(
+        page.getByRole("button", { name: "Save draft and continue" }),
+      ).toBeVisible();
+      await page
+        .getByLabel("Item name", { exact: true })
+        .fill("My chosen headphones");
+      await page.getByRole("button", { name: "Close dialog" }).click();
+      await expect(page.getByRole("dialog")).not.toBeVisible();
+      expect(state.imports[0].draft?.fields.title).toBe("My chosen headphones");
+      expect(state.items.some((i) => i.title === "My chosen headphones")).toBe(
+        false,
+      );
+      state.imports[0].status = "complete";
+      state.imports[0].result = { title: "Shop title", priceCents: 2500 };
+      await page.reload();
+      await page.getByRole("button", { name: "Review and add" }).click();
+      await expect(page.getByLabel("Item name", { exact: true })).toHaveValue(
+        "My chosen headphones",
+      );
+      await page.screenshot({
+        path: testInfo.outputPath(`draft-${engine}.png`),
+        fullPage: true,
+      });
+      await page
+        .getByRole("button", { name: "Add to wish list", exact: true })
+        .click();
+      await expect(page.getByRole("dialog")).not.toBeVisible();
+      expect(state.imports[0].draft?.state).toBe("published");
+      expect(
+        state.items.filter((i) => i.title === "My chosen headphones"),
+      ).toHaveLength(1);
+    } finally {
+      await browser?.close();
+    }
+  });
+}

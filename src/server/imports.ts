@@ -1,3 +1,9 @@
+import {
+  brightRetailer,
+  retailerDataset,
+  unlockPage,
+  ImportPending,
+} from "./brightdata";
 import { lookup } from "node:dns/promises";
 import { transact } from "./db";
 import { recordProductTokens } from "./usage";
@@ -19,6 +25,7 @@ import type { Item } from "../shared/model";
 type ProductPreview = Partial<Item> & {
   remoteImage?: string;
   sourceTitle?: string;
+  warnings?: string[];
 };
 export function publicAddress(address: string) {
   try {
@@ -28,6 +35,7 @@ export function publicAddress(address: string) {
     return false;
   }
 }
+export class UnsafeProductUrl extends Error {}
 export async function validateUrl(value: string) {
   const u = new URL(value);
   if (
@@ -36,7 +44,9 @@ export async function validateUrl(value: string) {
     u.password ||
     (u.port && !["80", "443"].includes(u.port))
   )
-    throw new Error("Only public HTTP and HTTPS URLs are supported.");
+    throw new UnsafeProductUrl(
+      "Only public HTTP and HTTPS URLs are supported.",
+    );
   const h = u.hostname.replace(/^\[|\]$/g, "");
   if (
     h === "localhost" ||
@@ -44,10 +54,10 @@ export async function validateUrl(value: string) {
     h.endsWith(".local") ||
     h.endsWith(".internal")
   )
-    throw new Error("Private network URLs are not allowed.");
+    throw new UnsafeProductUrl("Private network URLs are not allowed.");
   const addresses = isIP(h) ? [{ address: h }] : await lookup(h, { all: true });
   if (!addresses.length || addresses.some((x) => !publicAddress(x.address)))
-    throw new Error("Private network URLs are not allowed.");
+    throw new UnsafeProductUrl("Private network URLs are not allowed.");
   return u;
 }
 const dispatcher = new Agent({
@@ -79,15 +89,16 @@ export async function safeFetch(
   onUrl?: (url: string) => void | Promise<void>,
 ) {
   let url = value;
+  const signal = AbortSignal.timeout(15000);
   let cacheable = true;
   for (let n = 0; n < 6; n++) {
-    await onUrl?.(url);
     await validateUrl(url);
+    await onUrl?.(url);
     cacheable &&= !!productCacheUrl(url);
     const response = await request(url, {
       dispatcher,
       redirect: "manual",
-      signal: AbortSignal.timeout(15000),
+      signal,
       headers: {
         "user-agent": "LittleHint/1.0 product preview",
         accept: "text/html,application/xhtml+xml,image/*;q=0.8",
@@ -216,6 +227,7 @@ export function parseProduct(html: string, url: string): ProductPreview {
   ).slice(0, 2000);
   const title = sourceTitle.slice(0, 160);
   if (
+    (amazon && /^(amazon\.(com|ca|co\.uk)(:.*)?|amazon)$/i.test(title)) ||
     /^(amazon\s+)?(robot check|access denied|just a moment|verify (you|your)|captcha|pardon our interruption)/i.test(
       title,
     ) ||
@@ -235,12 +247,12 @@ export function parseProduct(html: string, url: string): ProductPreview {
   const image = [product.image].flat()[0];
   const remote =
     typeof image === "string" ? image : (image?.url ?? meta("og:image"));
-  const amount = String(
-    offer.price ?? offer.lowPrice ?? meta("product:price:amount"),
-  ).replace(/,/g, "");
+  const amount = String(offer.price ?? meta("product:price:amount")).replace(
+    /,/g,
+    "",
+  );
   const price = Number(amount);
-  const currency =
-    offer.priceCurrency ?? (meta("product:price:currency") || "USD");
+  const currency = offer.priceCurrency ?? meta("product:price:currency");
   return {
     title,
     sourceTitle,
@@ -393,6 +405,7 @@ const productMetadata = z.object({
   importedAt: z.iso.datetime(),
   remoteImage: z.url().max(2048).optional(),
   shareable: z.boolean(),
+  warnings: z.array(z.string()).optional(),
 });
 const enrichment = z.object({
   title: z.string().trim().min(1).max(160),
@@ -403,6 +416,7 @@ export async function importProduct(
   url: string,
   userId: string,
   forceRefresh = false,
+  jobId?: string,
 ): Promise<Partial<Item>> {
   // Snapshot policy when this attempt starts, including on cache hits.
   const importPhotos = await automaticallyImportProductPhotos();
@@ -410,14 +424,31 @@ export async function importProduct(
   const cfg = await config();
   const normalized = productCacheUrl(url);
   const provider = selectedScrapingProvider(cfg);
+  let lookupUrl = url;
+  if (
+    provider === "brightdata" &&
+    /^(a.co|amzn.to|www.a.co)$/.test(new URL(url).hostname)
+  ) {
+    try {
+      await safeFetch(url, 2_000_000, (target) => {
+        lookupUrl = target;
+        if (retailerDataset(target)) throw new Error("Destination resolved");
+      });
+    } catch (error) {
+      if (!retailerDataset(lookupUrl)) throw error;
+    }
+    if (!retailerDataset(lookupUrl))
+      throw new Error("Use the full product link");
+  }
   const providerKey = provider
     ? cfg[scrapingProviders.find((p) => p.id === provider)!.key]
     : "";
   const key = normalized
-    ? importCacheKey("metadata-v2", [
+    ? importCacheKey("metadata-v3", [
         normalized,
         provider,
         providerKey,
+        cfg.BRIGHTDATA_UNLOCKER_ZONE,
         importPhotos,
       ])
     : undefined;
@@ -427,16 +458,79 @@ export async function importProduct(
     async () => {
       let result: ProductPreview = {};
       let shareable = !!normalized;
+      let targetUrl = lookupUrl;
       try {
-        const page = await safeFetch(url, 2_000_000, (target) => {
-          shareable &&= !!productCacheUrl(target);
-        });
-        shareable &&= page.cacheable;
-        result = parseProduct(page.buffer.toString("utf8"), page.url);
-      } catch {
+        if (provider === "brightdata" && jobId && retailerDataset(lookupUrl)) {
+          result = await brightRetailer(
+            lookupUrl,
+            cfg.BRIGHTDATA_API_KEY,
+            jobId,
+          );
+        } else {
+          const page = await safeFetch(lookupUrl, 2_000_000, (target) => {
+            targetUrl = target;
+            shareable &&= !!productCacheUrl(target);
+          });
+          shareable &&= page.cacheable;
+          const html = page.buffer.toString("utf8");
+          result = parseProduct(html, page.url);
+          if (/cdn.shopify.com|Shopify\.shop|myshopify.com/.test(html)) {
+            const productPath = new URL(page.url).pathname.match(
+              /^(.*\/products\/[^/]+)/,
+            )?.[1];
+            if (productPath)
+              try {
+                const productPage = await safeFetch(
+                  new URL(`${productPath}.js`, page.url).href,
+                );
+                const product = JSON.parse(productPage.buffer.toString("utf8"));
+                result = applyShopifyVariant(result, product, page.url, html);
+              } catch {
+                if (new URL(page.url).searchParams.has("variant")) {
+                  result.priceCents = null;
+                  delete result.remoteImage;
+                  result.warnings = [
+                    "Check the selected option at the shop before adding this item.",
+                  ];
+                }
+              }
+          }
+        }
+      } catch (error) {
+        if (
+          error instanceof UnsafeProductUrl ||
+          error instanceof ImportPending ||
+          (provider === "brightdata" && retailerDataset(lookupUrl))
+        )
+          throw error;
         /* The configured provider may still supply usable metadata. */
       }
-      result = await paidProductPreview(url, result, cfg, importPhotos);
+      if (
+        provider === "brightdata" &&
+        jobId &&
+        targetUrl !== lookupUrl &&
+        retailerDataset(targetUrl)
+      )
+        result = await brightRetailer(targetUrl, cfg.BRIGHTDATA_API_KEY, jobId);
+      else if (
+        !result.warnings?.length &&
+        !(provider === "brightdata" && retailerDataset(lookupUrl))
+      )
+        result = await paidProductPreview(
+          targetUrl,
+          result,
+          cfg,
+          importPhotos,
+          jobId
+            ? async (reason) => {
+                await transact((s) => {
+                  const j = s.imports.find((j) => j.id === jobId);
+                  if (j) j.diagnostic = { stage: provider ?? "direct", reason };
+                });
+                console.info("Product lookup", { jobId, provider, reason });
+              }
+            : undefined,
+        );
       if (!result.title)
         throw new Error(
           "This shop blocked the preview. You can still add the gift manually.",
@@ -504,28 +598,40 @@ export async function paidProductPreview(
   result: ProductPreview,
   cfg: Record<string, string>,
   importPhotos = false,
+  report?: (reason: string) => Promise<void>,
 ): Promise<ProductPreview> {
   const provider = selectedScrapingProvider(cfg);
-  if ((result.title && (!importPhotos || result.remoteImage)) || !provider)
+  if ((result.title && (!importPhotos || result.remoteImage)) || !provider) {
+    await report?.(
+      !provider
+        ? "Paid fallback unavailable or disabled"
+        : "Direct metadata sufficient",
+    );
     return result;
+  }
   try {
     await validateUrl(url);
+    if (provider === "brightdata")
+      return parseProduct(await unlockPage(url, cfg), url);
     await spend(provider);
     const key = cfg[scrapingProviders.find((p) => p.id === provider)!.key];
     const request = scrapingRequest(provider, key, url);
     const response = await fetch(request.url, {
       headers: request.headers,
       redirect: "error",
-      signal: AbortSignal.timeout(35000),
+      signal: AbortSignal.timeout(provider === "scrapingfish" ? 100000 : 35000),
     });
     if (!response.ok) {
+      await report?.(`Provider HTTP ${response.status}`);
       await response.body?.cancel();
       return result;
     }
     const body = await boundedBody(response);
+    const resolved = response.headers.get("resolved-url") ?? url;
+    await validateUrl(resolved);
     const imported = request.amazon
       ? parseAmazonResponse(JSON.parse(body.toString("utf8")), url)
-      : parseProduct(body.toString("utf8"), url);
+      : parseProduct(body.toString("utf8"), resolved);
     return {
       ...result,
       ...Object.fromEntries(
@@ -534,7 +640,63 @@ export async function paidProductPreview(
         ),
       ),
     };
-  } catch {
+  } catch (error) {
+    await report?.(
+      error instanceof Error && /limit|allowance|budget/i.test(error.message)
+        ? "Daily attempt allowance exhausted"
+        : error instanceof Error && /timeout|abort/i.test(error.name)
+          ? "Provider timed out"
+          : "Provider response unavailable or unusable",
+    );
     return result;
   }
+}
+
+export function applyShopifyVariant(
+  result: ProductPreview,
+  product: any,
+  url: string,
+  html: string,
+): ProductPreview {
+  const selected = new URL(url).searchParams.get("variant");
+  const variants = Array.isArray(product?.variants) ? product.variants : [];
+  const variant = selected
+    ? variants.find((v: any) => String(v.id) === selected)
+    : variants.length === 1
+      ? variants[0]
+      : undefined;
+  if (!variant)
+    return {
+      ...result,
+      priceCents: null,
+      remoteImage: undefined,
+      warnings: [
+        "Check the selected option at the shop before adding this item.",
+      ],
+    };
+  const $ = load(html);
+  const currency = $(
+    'meta[property="product:price:currency"],meta[property="og:price:currency"]',
+  )
+    .first()
+    .attr("content");
+  const label =
+    typeof variant.title === "string" && variant.title !== "Default Title"
+      ? variant.title
+      : "";
+  return {
+    ...result,
+    title:
+      `${product.title ?? result.title}${label ? ` · ${label}` : ""}`.slice(
+        0,
+        160,
+      ),
+    priceCents:
+      currency === "USD" &&
+      Number.isSafeInteger(variant.price) &&
+      variant.price >= 0
+        ? variant.price
+        : null,
+    remoteImage: variant.featured_image?.src ?? result.remoteImage,
+  };
 }

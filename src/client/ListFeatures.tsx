@@ -5,7 +5,11 @@ import type { GiftSummary, List } from "../shared/model";
 import { api } from "./api";
 import { useApp } from "./context";
 
-export function RevealPolicy({ list }: { list: List }) {
+export function RevealPolicy({
+  list,
+}: {
+  list: Pick<List, "revealAfter" | "timeZone" | "revealExchangeGivers">;
+}) {
   const revealed = dateHasElapsed(list.revealAfter, list.timeZone);
   return (
     <p className="privacy-note">
