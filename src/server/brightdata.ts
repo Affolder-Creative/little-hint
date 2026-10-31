@@ -131,12 +131,23 @@ export function normalizeRetailer(
       "Returned product does not match the requested product or selected option",
     );
   const price = row.final_price ?? row.sale_price ?? row.price;
-  const amount =
-    typeof price === "number"
-      ? price
-      : typeof price === "string" && /^\$?[\d,]+(?:\.\d{1,2})?$/.test(price)
-        ? Number(price.replace(/[$,]/g, ""))
+  const parseAmount = (value: unknown) =>
+    typeof value === "number"
+      ? value
+      : typeof value === "string" &&
+          /^\$?[\d,]+(?:\.\d{1,2})?$/.test(value.trim())
+        ? Number(value.trim().replace(/[$,]/g, ""))
         : NaN;
+  const amount = parseAmount(price);
+  // Target also uses price_range for a single selected variant's price.
+  // Only accept a scalar that agrees with the selected product price.
+  const hasUncertainRange = [row.final_price_high, row.price_range].some(
+    (value) =>
+      value !== undefined &&
+      value !== null &&
+      value !== "" &&
+      parseAmount(value) !== amount,
+  );
   const image =
     row.image_url ??
     row.main_image ??
@@ -152,8 +163,7 @@ export function normalizeRetailer(
     ),
     priceCents:
       row.currency === "USD" &&
-      !row.final_price_high &&
-      !row.price_range &&
+      !hasUncertainRange &&
       Number.isFinite(amount) &&
       amount >= 0
         ? Math.round(amount * 100)

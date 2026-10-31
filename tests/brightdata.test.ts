@@ -64,6 +64,7 @@ describe("retailer imports", () => {
       tcin_id: "95250268",
       product_id: "95250268",
       final_price: 30,
+      price_range: "$30.00",
       currency: "USD",
     };
     expect(normalizeRetailer(row, url)).toMatchObject({
@@ -77,6 +78,22 @@ describe("retailer imports", () => {
       normalizeRetailer({ ...row, tcin_id: "95250269" }, url),
     ).toThrow("selected option");
   });
+  it.each(["$25.00 - $30.00", "$25.00", [25, 30], { low: 25, high: 30 }])(
+    "keeps uncertain or conflicting price ranges blank: %j",
+    (range) => {
+      expect(
+        normalizeRetailer(
+          {
+            title: "Slippers",
+            final_price: 30,
+            currency: "USD",
+            price_range: range,
+          },
+          "https://target.com/p/slippers/-/A-123",
+        ).priceCents,
+      ).toBeNull();
+    },
+  );
   it("validates the SKU in modern Best Buy product URLs", () => {
     const url = "https://www.bestbuy.com/product/lg-tv/JJ8VPZKKFW/sku/6673142";
     expect(

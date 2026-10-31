@@ -65,7 +65,7 @@ Direct-only probes from the staging worker on 2026-10-31 produced these results 
 
 These observations cover these product pages and the deployment's network, not every product at each store. Recheck representative pages before changing these exceptions. The probes disabled paid providers, AI, photo downloads, and caching.
 
-Target's `preselect` query identifies the selected variant and takes precedence over the parent product ID in the path. Best Buy supports both older `/<sku>.p` links and newer `/product/.../sku/<sku>` links. Little Hint includes the Best Buy dataset ID; confirm your API token has access to it. Its absence from the dashboard's recent scrapers list alone does not establish an access problem.
+Target's `preselect` query identifies the selected variant and takes precedence over the parent product ID in the path. Best Buy supports both older `/<sku>.p` links and newer `/product/.../sku/<sku>` links. Little Hint includes the Best Buy dataset ID; confirm your API token has access to it. During staging verification, Best Buy appeared automatically in My scrapers after the app's first dedicated API collection. No manual scraper creation or activation was needed with the existing token. The list shows scrapers used by the account; it is not the app's routing configuration.
 
 ### Network restrictions
 

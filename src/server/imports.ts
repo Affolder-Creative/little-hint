@@ -444,7 +444,7 @@ export async function importProduct(
     ? cfg[scrapingProviders.find((p) => p.id === provider)!.key]
     : "";
   const key = normalized
-    ? importCacheKey("metadata-v4", [
+    ? importCacheKey("metadata-v5", [
         normalized,
         provider,
         providerKey,
