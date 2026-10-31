@@ -37,3 +37,5 @@ Administration contains App settings, This month's usage, Service status, and Ba
 - Service status retains Off and incomplete-configuration explanations for administrators. Monthly usage appears for available services or current-month provider submissions/requests, retaining disabled usage as Currently off. Prior-month and skipped-only SMS history do not keep sections visible; hide the panel when no groups qualify.
 
 Product photo loading preserves the image area and contains the product. Visible thumbnails load promptly; detail photos retain the thumbnail until the larger image decodes. Administration has separate default-on caching and prefetching preferences with hosting overrides. Disabling caching suspends prefetching while retaining its saved preference.
+
+Administration groups all photo preferences under one save action, separate from family-group creation. Each form preserves its own draft through query refreshes and section changes. Preloading appears unchecked and disabled while caching is off, with an explanation that its previous choice will return. Save applies changes; Discard changes restores only that form.

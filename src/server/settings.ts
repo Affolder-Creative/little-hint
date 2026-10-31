@@ -207,10 +207,19 @@ function applySetting(s: State, k: string, value: string) {
   } else s.settings.push({ ...stamp(), key: k, encrypted: encrypt(value) });
 }
 export async function saveSetting(k: string, value: string) {
-  validateSetting(k, value);
+  await saveSettings([{ key: k, value }]);
+}
+export async function saveSettings(
+  updates: Array<{ key: string; value: string }>,
+) {
+  if (!updates.length || updates.length > applicationSettingKeys.length)
+    fail(400, "Choose between one and four settings to save.");
+  if (new Set(updates.map((update) => update.key)).size !== updates.length)
+    fail(400, "Each setting can only appear once.");
+  for (const update of updates) validateSetting(update.key, update.value);
   await transact((s) => {
-    validateSetting(k, value);
-    applySetting(s, k, value);
+    for (const update of updates) validateSetting(update.key, update.value);
+    for (const update of updates) applySetting(s, update.key, update.value);
   });
 }
 export async function spend(service: string) {

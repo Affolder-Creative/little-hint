@@ -27,6 +27,14 @@ async function setup(
     f.state.people.push(person);
   }
   const settings = [
+    ...["PRODUCT_IMAGE_CACHE_ENABLED", "PRODUCT_IMAGE_PREFETCH_ENABLED"].map(
+      (key) => ({
+        key,
+        value: "true",
+        source: options.locked ? "environment" : "settings",
+        configured: true,
+      }),
+    ),
     {
       key: "AUTO_IMPORT_PRODUCT_PHOTOS",
       value: "false",
@@ -77,7 +85,8 @@ async function setup(
     if (path === "admin/settings") {
       if (route.request().method() === "POST") {
         const body = route.request().postDataJSON();
-        settings.find((s) => s.key === body.key)!.value = body.value;
+        for (const update of body.updates ?? [body])
+          settings.find((s) => s.key === update.key)!.value = update.value;
       }
       return route.fulfill({ json: settings });
     }
@@ -169,16 +178,14 @@ test("administration has only app preferences and read-only services", async ({
   ).toHaveCount(0);
   await expect(page.getByText("SMTP_HOST", { exact: true })).toHaveCount(0);
   await page.getByLabel("Who can create family groups?").selectOption("admins");
-  await page
-    .getByRole("button", { name: "Save group creation setting" })
-    .click();
+  await page.getByRole("button", { name: "Save group setting" }).click();
   await expect(
-    page.getByText("Family-group creation setting saved.", { exact: true }),
+    page.getByText("Family-group creation saved.", { exact: true }),
   ).toBeVisible();
   await page.getByLabel("Add photos from shop links automatically").check();
-  await page.getByRole("button", { name: "Save photo preference" }).click();
+  await page.getByRole("button", { name: "Save photo settings" }).click();
   await expect(
-    page.getByText("Photo preference saved.", { exact: true }),
+    page.getByText("Product photos saved.", { exact: true }),
   ).toBeVisible();
 });
 test("locked preferences remain readable and usage can retry", async ({
@@ -188,7 +195,7 @@ test("locked preferences remain readable and usage can retry", async ({
   f.state.failUsage = true;
   await page.goto("/settings?section=admin");
   await expect(
-    page.getByRole("button", { name: "Save group creation setting" }),
+    page.getByRole("button", { name: "Save group setting" }),
   ).toHaveCount(0);
   await expect(
     page.getByLabel("Add photos from shop links automatically"),
@@ -436,4 +443,84 @@ test("family invitation confirmation shares its deep link", async ({
   expect(await page.evaluate(() => (window as any).shared.url)).toBe(
     new URL("/invite/family-invitation", page.url()).href,
   );
+});
+
+test("photo settings couple effective controls and remember preloading across reloads", async ({
+  page,
+}) => {
+  await setup(page);
+  await page.goto("/settings?section=admin");
+  const cache = page.getByLabel("Cache product photos on devices", {
+    exact: true,
+  });
+  const preload = page.getByLabel("Preload larger product photos", {
+    exact: true,
+  });
+  const save = page.getByRole("button", { name: "Save photo settings" });
+  await expect(save).toBeDisabled();
+  await cache.uncheck();
+  await expect(preload).not.toBeChecked();
+  await expect(preload).toBeDisabled();
+  await save.click();
+  await page.reload();
+  await expect(preload).not.toBeChecked();
+  await cache.check();
+  await expect(preload).toBeChecked();
+  await expect(preload).toBeEnabled();
+  await save.click();
+  await page.reload();
+  await expect(preload).toBeChecked();
+});
+
+test("groups preserve independent drafts and discard only their own changes", async ({
+  page,
+}) => {
+  await setup(page);
+  await page.goto("/settings?section=admin");
+  const group = page.getByRole("region", {
+    name: "Family-group creation",
+    exact: true,
+  });
+  const photos = page.getByRole("region", {
+    name: "Product photos",
+    exact: true,
+  });
+  await page.getByLabel("Who can create family groups?").selectOption("admins");
+  await page.getByLabel("Add photos from shop links automatically").check();
+  await group.getByRole("button", { name: "Save group setting" }).click();
+  await expect(
+    photos.getByRole("button", { name: "Save photo settings" }),
+  ).toBeEnabled();
+  await expect(
+    page.getByLabel("Add photos from shop links automatically"),
+  ).toBeChecked();
+  await photos.getByRole("button", { name: "Discard changes" }).click();
+  await expect(
+    page.getByLabel("Add photos from shop links automatically"),
+  ).not.toBeChecked();
+  await expect(page.getByLabel("Who can create family groups?")).toHaveValue(
+    "admins",
+  );
+});
+
+test("failed grouped saves retain edits for retry", async ({ page }) => {
+  await setup(page);
+  await page.goto("/settings?section=admin");
+  await page.getByLabel("Add photos from shop links automatically").check();
+  await page.route("**/api/v1/admin/settings", async (route) => {
+    if (route.request().method() === "POST")
+      return route.fulfill({
+        status: 500,
+        json: { error: "Save failed. Try again." },
+      });
+    return route.fallback();
+  });
+  await page.getByRole("button", { name: "Save photo settings" }).click();
+  await expect(page.getByRole("alert")).toContainText("Save failed");
+  await expect(
+    page.getByLabel("Add photos from shop links automatically"),
+  ).toBeChecked();
+  await expect(
+    page.getByRole("button", { name: "Save photo settings" }),
+  ).toBeEnabled();
 });
