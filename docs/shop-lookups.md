@@ -50,6 +50,23 @@ Prefix every variable with `STAGING_` for staging. Production credentials are ig
 
 These adapters target US product links. Category pages, search results, and other regional storefronts use the general website path. Retailer coverage is explicit: enabling Bright Data does not automatically install every scraper in its catalog.
 
+### Network restrictions
+
+In the Web Unlocker zone's security settings, configure these controls according to where Little Hint runs and which shops it should support:
+
+| Setting | Recommended configuration |
+| --- | --- |
+| Allowed IPs | Add the public outbound IP of the server running the app and worker. If production and staging share that address, one entry covers both; otherwise include both servers' outbound addresses. |
+| Allowed target hosts | Leave `any` to support product links from arbitrary shops. These are destination shop domains, such as `ombraz.com`, not Little Hint's production or staging domains. |
+
+For a typical Coolify deployment on a DigitalOcean VPS, the outbound address is the VPS's public IP. Confirm the address used by outbound requests if the server uses a NAT gateway, VPN, or other routing. Do not enter a Docker container's private IP or infer the outbound address from the app's DNS records, which may point to a CDN or reverse proxy. Update the allowlist if the deployment's outbound address changes.
+
+A target-host allowlist is optional if you deliberately support only specific shops, but it must be maintained as users add new stores. Do not add `littlehint.affolder.cloud` or `littlehint-staging.affolder.cloud` as target hosts for product lookups.
+
+These are zone settings. Do not assume they restrict the separate retailer Scraper API or every use of the API token; Bright Data distinguishes API-key access from native proxy access in its [authentication documentation](https://docs.brightdata.com/api-reference/authentication).
+
+After changing restrictions, test an ordinary-shop lookup that reaches Web Unlocker and a dedicated retailer lookup from each deployed environment. Use uncached product links so a cached result does not hide an access problem. A built-in-only lookup does not verify Web Unlocker access.
+
 ### Production environment
 
 Set these environment variables for **both the app and worker**, then recreate both services:
