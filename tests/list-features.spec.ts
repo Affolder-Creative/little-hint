@@ -700,6 +700,8 @@ test("provider configuration is deployment-only and service status is read-only"
   expect(settings.map((s: { key: string }) => s.key).sort()).toEqual([
     "AUTO_IMPORT_PRODUCT_PHOTOS",
     "FAMILY_GROUP_CREATION",
+    "PRODUCT_IMAGE_CACHE_ENABLED",
+    "PRODUCT_IMAGE_PREFETCH_ENABLED",
   ]);
   const rejected = await page.request.post("/api/v1/admin/settings", {
     headers: { Origin: new URL(page.url()).origin },
