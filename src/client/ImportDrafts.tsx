@@ -58,7 +58,7 @@ function DraftRow({ initial }: { initial: ImportJob }) {
       `Item from ${new URL(job.url).hostname}`,
   );
   return (
-    <div className="setting-row">
+    <div className="draft-row">
       <div>
         <strong>{title}</strong>
         <p role="status">
@@ -81,7 +81,7 @@ function DraftRow({ initial }: { initial: ImportJob }) {
         >
           {busy ? "Open draft" : "Review and add"}
         </button>
-        {job.status === "failed" && (
+        {world.productLookupEnabled !== false && job.status === "failed" && (
           <RunButton
             run={async () => {
               await mutate("imports/retry", { id: job.id });

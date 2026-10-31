@@ -39,3 +39,5 @@ Administration contains App settings, This month's usage, Service status, and Ba
 Product photo loading preserves the image area and contains the product. Visible thumbnails load promptly; detail photos retain the thumbnail until the larger image decodes. Administration has separate default-on caching and prefetching preferences with hosting overrides. Disabling caching suspends prefetching while retaining its saved preference.
 
 Administration groups all photo preferences under one save action, separate from family-group creation. Each form preserves its own draft through query refreshes and section changes. Preloading appears unchecked and disabled while caching is off, with an explanation that its previous choice will return. Save applies changes; Discard changes restores only that form.
+
+Failed jobs are collapsed by category with counts, ten newest rows and Show 10 more. Each row labels its creation timestamp Queued and separates diagnostics. Phone management separates saving consent from replacement/removal, with inline removal confirmation. Manual product entry disables automatic shop-photo controls without clearing their preference.

@@ -698,8 +698,16 @@ export function GiftForm({
           )}
         </div>
       )}
-      <div className="url-entry">
-        <Field label="Start with a product link">
+      <div
+        className={`url-entry${world.productLookupEnabled === false ? " manual-entry" : ""}`}
+      >
+        <Field
+          label={
+            world.productLookupEnabled === false
+              ? "Product link (optional)"
+              : "Start with a product link"
+          }
+        >
           <input
             type="url"
             value={data.url}
@@ -707,19 +715,21 @@ export function GiftForm({
             placeholder="Paste a link from your favorite shop"
           />
         </Field>
-        <button
-          className="button secondary small"
-          type="button"
-          disabled={!data.url || importing}
-          onClick={() => importUrl()}
-        >
-          {importing ? (
-            <LoaderCircle className="spin" size={16} />
-          ) : (
-            <LinkIcon size={16} />
-          )}{" "}
-          {importing ? "Finding details…" : "Get details"}
-        </button>
+        {world.productLookupEnabled !== false && (
+          <button
+            className="button secondary small"
+            type="button"
+            disabled={!data.url || importing}
+            onClick={() => importUrl()}
+          >
+            {importing ? (
+              <LoaderCircle className="spin" size={16} />
+            ) : (
+              <LinkIcon size={16} />
+            )}{" "}
+            {importing ? "Finding details…" : "Get details"}
+          </button>
+        )}
       </div>
       {error && (
         <p className="error" role="alert">
@@ -741,7 +751,7 @@ export function GiftForm({
           </button>
         </div>
       )}
-      {job?.status === "complete" && (
+      {world.productLookupEnabled !== false && job?.status === "complete" && (
         <button
           type="button"
           className="text-button"
@@ -751,7 +761,7 @@ export function GiftForm({
           Refresh from shop
         </button>
       )}
-      {job?.status === "complete" && (
+      {world.productLookupEnabled !== false && job?.status === "complete" && (
         <p className="success" role="status">
           <Check size={16} /> Details found. Check them before saving.
         </p>

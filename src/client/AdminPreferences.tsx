@@ -1,3 +1,4 @@
+import { useApp } from "./context";
 import { useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { api } from "./api";
@@ -109,6 +110,7 @@ function PreferenceGroup({
 }
 
 export function AdminPreferences({ settings }: { settings: Setting[] }) {
+  const { world } = useApp();
   const group = settings.filter((s) => s.key === groupKey);
   const photos = settings.filter((s) => photoKeys.includes(s.key));
   const locked = (key: string) =>
@@ -187,7 +189,12 @@ export function AdminPreferences({ settings }: { settings: Setting[] }) {
                         <input
                           type="checkbox"
                           checked={!paused && value(key) === "true"}
-                          disabled={locked(key) || paused}
+                          disabled={
+                            locked(key) ||
+                            paused ||
+                            (key === photoKey &&
+                              world.productLookupEnabled === false)
+                          }
                           onChange={(e) =>
                             change(key, String(e.target.checked))
                           }
@@ -196,7 +203,10 @@ export function AdminPreferences({ settings }: { settings: Setting[] }) {
                         {label}
                       </label>
                       <p className="muted" id={`${key}-help`}>
-                        {help}
+                        {key === photoKey &&
+                        world.productLookupEnabled === false
+                          ? "Automatic shop lookups are off. Your photo preference is saved; you can still upload photos."
+                          : help}
                       </p>
                       {paused && (
                         <p className="muted" id={`${key}-paused`}>

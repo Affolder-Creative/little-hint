@@ -7,6 +7,7 @@ export function Action({
   onClick,
   children,
   secondary = false,
+  danger = false,
   label,
   disabled = false,
 }: {
@@ -15,6 +16,7 @@ export function Action({
   onClick: () => Promise<unknown>;
   children: ReactNode;
   secondary?: boolean;
+  danger?: boolean;
 }) {
   const [busy, setBusy] = useState(false),
     [error, setError] = useState("");
@@ -22,7 +24,7 @@ export function Action({
   return (
     <span className="action-wrap">
       <button
-        className={`button small ${secondary ? "secondary" : ""}`}
+        className={`button small ${secondary ? "secondary" : ""} ${danger ? "danger secondary" : ""}`}
         type="button"
         aria-label={label}
         title={!online ? "Reconnect to complete this action" : undefined}

@@ -1,3 +1,5 @@
+import type { AdminJobs } from "../shared/admin-jobs";
+import { AdminJobFailures } from "./AdminJobFailures";
 import { AdminPreferences } from "./AdminPreferences";
 import { availableNotificationChannels } from "../shared/channel-availability";
 import { SmsSettings } from "./SmsSettings";
@@ -1151,23 +1153,7 @@ function Admin() {
   });
   const jobs = useQuery({
     queryKey: ["admin-jobs"],
-    queryFn: () =>
-      api<{
-        workerLastSeen: number | null;
-        backupProvider: string;
-        imports: Array<{
-          id: string;
-          status: string;
-          error?: string;
-          diagnostic?: { stage: string; reason: string };
-        }>;
-        notifications: Array<{
-          id: string;
-          status: string;
-          error?: string;
-          attempts: number;
-        }>;
-      }>("admin/jobs"),
+    queryFn: () => api<AdminJobs>("admin/jobs"),
   });
   const services = useQuery({
     queryKey: ["admin-services"],
@@ -1189,7 +1175,7 @@ function Admin() {
       <AdminUsage />
       <section className="admin-panel" aria-label="Service status">
         <h3>Service status</h3>
-        <p>
+        <p className="muted">
           Services are managed in hosting configuration. Configured means setup
           is present; connections have not been tested here.
         </p>
@@ -1218,7 +1204,7 @@ function Admin() {
       </section>
       <section className="admin-panel" aria-label="Background jobs">
         <h3>Background jobs</h3>
-        <p>
+        <p className="muted">
           Backups are managed by your hosting provider. Backup status is
           unavailable here.
         </p>
@@ -1257,39 +1243,22 @@ function Admin() {
             </p>
           </>
         )}
-        {jobs.data?.imports
-          .filter((j) => j.status === "failed")
-          .map((j) => (
-            <div className="setting-row admin-job-row" key={j.id}>
-              <span>
-                {j.error ?? "Shop lookup failed."} You can enter the gift
-                details manually.
-                {j.diagnostic && (
-                  <small>
-                    {j.diagnostic.stage}: {j.diagnostic.reason}
-                  </small>
-                )}
-              </span>
-            </div>
-          ))}
-        {jobs.data?.notifications
-          .filter((j) => j.status === "failed")
-          .map((j) => (
-            <div className="setting-row admin-job-row" key={j.id}>
-              <span>
-                {j.error ?? "Delivery failed"} · {j.attempts} attempts
-              </span>
-              <Action
-                secondary
-                onClick={async () => {
-                  await api("admin/jobs/retry", { id: j.id });
-                  await client.invalidateQueries({ queryKey: ["admin-jobs"] });
-                }}
-              >
-                Retry
-              </Action>
-            </div>
-          ))}
+        {jobs.data && (
+          <>
+            <AdminJobFailures
+              title="Failed shop lookups"
+              jobs={jobs.data.imports}
+            />
+            <AdminJobFailures
+              title="Failed updates"
+              jobs={jobs.data.notifications}
+              retry={async (id) => {
+                await api("admin/jobs/retry", { id });
+                await client.invalidateQueries({ queryKey: ["admin-jobs"] });
+              }}
+            />
+          </>
+        )}
       </section>
       {settings.error && (
         <div role="alert">

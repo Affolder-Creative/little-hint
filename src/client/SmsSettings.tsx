@@ -16,6 +16,7 @@ export function SmsSettings() {
   const [phone, setPhone] = useState("");
   const [linked, setLinked] = useState(!!world.preferences.phoneVerified);
   const [login, setLogin] = useState(!!world.preferences.smsLogin);
+  const [removing, setRemoving] = useState(false);
   const [notice, setNotice] = useState("");
   async function changed(message: string) {
     await cache.invalidateQueries({ queryKey: ["world"] });
@@ -39,9 +40,46 @@ export function SmsSettings() {
         </Action>
       </>
     );
+  if (removing)
+    return (
+      <section className="sms-settings">
+        <h3
+          tabIndex={-1}
+          ref={(el) => {
+            el?.focus();
+          }}
+        >
+          Remove phone number?
+        </h3>
+        <p>
+          SMS sign-in and recurring text updates will turn off. Email and
+          passkeys remain available.
+        </p>
+        <div className="actions">
+          <button
+            className="button secondary"
+            onClick={() => setRemoving(false)}
+          >
+            Keep phone number
+          </button>
+          <Action
+            danger
+            onClick={async () => {
+              await api("channels/sms/login", { enabled: false, remove: true });
+              await changed(
+                "Phone removed. SMS sign-in and text updates are off.",
+              );
+              close();
+            }}
+          >
+            Remove phone number
+          </Action>
+        </div>
+      </section>
+    );
   if (step === "manage")
     return (
-      <>
+      <section className="sms-settings">
         <p>
           {notice ||
             (linked
@@ -62,7 +100,12 @@ export function SmsSettings() {
             }}
           >
             <label className="check">
-              <input type="checkbox" name="login" defaultChecked={login} />
+              <input
+                type="checkbox"
+                name="login"
+                checked={login}
+                onChange={(e) => setLogin(e.target.checked)}
+              />
               {smsLoginConsent}
             </label>
             <p className="muted">
@@ -72,35 +115,27 @@ export function SmsSettings() {
             </p>
           </Form>
         )}
-        <div className="actions">
+        <div className="sms-number-actions">
           <button className="button secondary" onClick={() => setStep("phone")}>
             {linked ? "Replace phone number" : "Link phone number"}
           </button>
           {linked && (
-            <Action
-              secondary
-              onClick={async () => {
-                await api("channels/sms/login", {
-                  enabled: false,
-                  remove: true,
-                });
-                await changed(
-                  "Phone removed. SMS sign-in and text updates are off.",
-                );
-                close();
-              }}
+            <button
+              className="text-button danger"
+              onClick={() => setRemoving(true)}
             >
               Remove phone number
-            </Action>
+            </button>
           )}
         </div>
-      </>
+      </section>
     );
   const emailStep = step === "email-code",
     codeStep = emailStep || step === "phone-code";
   return (
     <Form
       key={step}
+      className="sms-settings"
       submit={codeStep ? "Verify code" : "Send verification code"}
       onSubmit={async (f) => {
         if (emailStep) {

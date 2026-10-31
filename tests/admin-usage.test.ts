@@ -16,7 +16,11 @@ const cfg = {
 it("hides unused disabled services and reveals enabled empty services", () => {
   const s = emptyState();
   expect(adminUsage(s, cfg, now).visible).toBe(false);
-  const report = adminUsage(s, { ...cfg, OPENAI_API_KEY: "secret" }, now);
+  const report = adminUsage(
+    s,
+    { ...cfg, SCRAPING_PROVIDER: "auto", OPENAI_API_KEY: "secret" },
+    now,
+  );
   expect(report.visible).toBe(true);
   expect(report.productDetails).toMatchObject({
     enabled: true,

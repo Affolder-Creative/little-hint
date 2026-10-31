@@ -1,4 +1,8 @@
 import {
+  productLookupEnabled,
+  lookupDisabledMessage,
+} from "../shared/product-lookup";
+import {
   brightRetailer,
   retailerDataset,
   unlockPage,
@@ -418,10 +422,11 @@ export async function importProduct(
   forceRefresh = false,
   jobId?: string,
 ): Promise<Partial<Item>> {
+  const cfg = await config();
+  if (!productLookupEnabled(cfg)) throw new Error(lookupDisabledMessage);
   // Snapshot policy when this attempt starts, including on cache hits.
   const importPhotos = await automaticallyImportProductPhotos();
   await validateUrl(url);
-  const cfg = await config();
   const normalized = productCacheUrl(url);
   const provider = selectedScrapingProvider(cfg);
   let lookupUrl = url;

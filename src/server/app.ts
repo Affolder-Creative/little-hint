@@ -1,3 +1,4 @@
+import { productLookupEnabled } from "../shared/product-lookup";
 import { importView } from "../shared/imports";
 import { telegramInfo } from "./channel-availability";
 import { smsInfo, verifyTextbelt, normalizePhone } from "./sms-provider";
@@ -232,6 +233,7 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
     const cfg = await config();
     return {
       ...world(state, a),
+      productLookupEnabled: productLookupEnabled(cfg),
       sms: smsInfo(cfg),
       telegram: telegramInfo(cfg),
       canCreateGroups: canCreateGroups(state, a),
@@ -545,12 +547,15 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
       workerLastSeen:
         s.usage.find((u) => u.key === "worker-heartbeat")?.count ?? null,
       backupProvider: "backup-sidecar",
-      imports: s.imports.map(({ id, status, error, diagnostic }) => ({
-        diagnostic,
-        id,
-        status,
-        error,
-      })),
+      imports: s.imports.map(
+        ({ id, status, error, diagnostic, createdAt }) => ({
+          createdAt,
+          diagnostic,
+          id,
+          status,
+          error,
+        }),
+      ),
       notifications: [
         ...s.notificationBatches.map(batchJob),
         ...s.notices
@@ -562,6 +567,7 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
             const terminal = failedPush.some((d) => d.attempts >= 5);
             return {
               id: n.id,
+              createdAt: n.createdAt,
               status: terminal
                 ? "failed"
                 : failedPush.length && !n.pushComplete

@@ -16,6 +16,7 @@ async function setup(
     restricted?: boolean;
     solo?: boolean;
     admin?: boolean;
+    lookup?: boolean;
   } = {},
 ) {
   const f = stagingFixtures();
@@ -80,6 +81,7 @@ async function setup(
           ...world(f.state, actor),
           canCreateGroups: !options.restricted || person.admin,
           environment: "development",
+          productLookupEnabled: options.lookup !== false,
         },
       });
     if (path === "admin/settings") {
@@ -97,6 +99,7 @@ async function setup(
             json: serviceStatuses(
               {
                 GIFT_DISCOVERY_MODE: "both",
+                SCRAPING_PROVIDER: options.lookup === false ? "none" : "auto",
                 GIFT_DISCOVERY_USER_WEEKLY_LIMIT: "3",
                 GIFT_DISCOVERY_MONTHLY_LIMIT: "100",
                 OPENAI_API_KEY: "synthetic",
@@ -118,6 +121,7 @@ async function setup(
         json: {
           ...adminUsage(f.state, {
             GIFT_DISCOVERY_MODE: "both",
+                SCRAPING_PROVIDER: options.lookup === false ? "none" : "auto",
             OPENAI_API_KEY: "synthetic",
             PAID_DAILY_LIMIT: "50",
             SCRAPINGFISH_API_KEY: "synthetic",
@@ -131,7 +135,12 @@ async function setup(
         json: {
           workerLastSeen: Date.now(),
           imports: [
-            { id: "import", status: "failed", error: "Shop lookup failed." },
+            {
+              id: "import",
+              createdAt: "2026-10-31T16:00:00Z",
+              status: "failed",
+              error: "Shop lookup failed.",
+            },
           ],
           notifications: state.retried
             ? []
@@ -163,7 +172,7 @@ async function setup(
       json: { error: "Not in this fixture" },
     });
   });
-  return { ...f, actor, person, settings, state };
+  return { ...f, modelState: f.state, actor, person, settings, state };
 }
 test("administration has only app preferences and read-only services", async ({
   page,
@@ -236,6 +245,12 @@ test("service status can recover and failed jobs remain actionable", async ({
   await expect(jobs).toContainText(
     "0 shop lookups waiting · 0 updates waiting",
   );
+  await jobs.getByText("Failed shop lookups (1)", { exact: true }).click();
+  await expect(jobs.locator("time")).toHaveAttribute(
+    "datetime",
+    "2026-10-31T16:00:00Z",
+  );
+  await jobs.getByText("Failed updates (1)", { exact: true }).click();
   await jobs.getByRole("button", { name: "Retry", exact: true }).click();
   await expect(jobs).not.toContainText("Delivery failed");
   expect(f.state.retried).toBe(true);
@@ -524,3 +539,71 @@ test("failed grouped saves retain edits for retry", async ({ page }) => {
     page.getByRole("button", { name: "Save photo settings" }),
   ).toBeEnabled();
 });
+
+for (const width of [393, 1440]) {
+  test(`manual entry and list polish at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    const f = await setup(page, { lookup: false });
+    const list = world(f.modelState, f.actor).lists.find(
+      (l) => l.canEdit && !l.archived,
+    )!;
+    f.modelState.imports.push({
+      id: "00000000-0000-4000-8000-000000000011",
+      revision: 1,
+      createdAt: new Date().toISOString(),
+      userId: f.actor.id,
+      url: "https://example.com/product",
+      status: "failed",
+      draft: {
+        listId: list.id,
+        state: "active",
+        revision: 1,
+        fields: { title: "A saved draft" },
+        touched: [],
+      },
+    });
+    await page.goto(`/lists/${list.id}`);
+    await expect(
+      page.getByRole("button", { name: "Try again", exact: true }),
+    ).toHaveCount(0);
+    const privacy = page.locator(".list-privacy > summary");
+    await privacy.click();
+    await expect(privacy.locator(".privacy-disclosure-label svg")).toHaveCSS(
+      "transform",
+      "none",
+    );
+    for (const theme of ["light", "dark"]) {
+      await page.evaluate(
+        (theme) => (document.documentElement.dataset.theme = theme),
+        theme,
+      );
+      await page.screenshot({
+        path: `/tmp/little-hint-list-${width}-${theme}.png`,
+        fullPage: true,
+      });
+    }
+    await page
+      .locator("main")
+      .getByRole("button", { name: "Add item", exact: true })
+      .click();
+    await expect(
+      page.getByRole("button", { name: "Get details", exact: true }),
+    ).toHaveCount(0);
+    await expect(page.getByLabel("Product link (optional)")).toBeVisible();
+    await page.getByRole("button", { name: "Close dialog" }).click();
+    await page.goto("/settings?section=admin");
+    await expect(
+      page.getByLabel("Add photos from shop links automatically"),
+    ).toBeDisabled();
+    for (const theme of ["light", "dark"]) {
+      await page.evaluate(
+        (theme) => (document.documentElement.dataset.theme = theme),
+        theme,
+      );
+      await page.screenshot({
+        path: `/tmp/little-hint-admin-${width}-${theme}.png`,
+        fullPage: true,
+      });
+    }
+  });
+}

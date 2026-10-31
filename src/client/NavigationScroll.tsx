@@ -113,7 +113,14 @@ function RestoreNavigation({ account }: { account: string }) {
 
   useLayoutEffect(() => {
     const previous = history.scrollRestoration;
-    history.scrollRestoration = "manual";
+    // iOS Safari and installed apps animate history using native page snapshots.
+    // Keep native restoration available during that gesture. The entry-based
+    // restore below still corrects positions when React content becomes ready.
+    const appleTouchBrowser =
+      /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1) ||
+      (navigator as Navigator & { standalone?: boolean }).standalone === true;
+    history.scrollRestoration = appleTouchBrowser ? "auto" : "manual";
     return () => {
       history.scrollRestoration = previous;
     };
@@ -254,7 +261,10 @@ function RestoreNavigation({ account }: { account: string }) {
     // Missing targets and removed content must not keep controlling the viewport.
     timeout = window.setTimeout(finish, 10000);
     main?.focus({ preventScroll: true });
-    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    if (!restore) {
+      if (navigation !== "POP")
+        window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    }
     // Apply available coordinates before paint; defer fragment focus until
     // route effects settle. Observers retry when lazy content increases height.
     if (!restore && fragment) schedule();

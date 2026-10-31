@@ -404,6 +404,14 @@ Wish-list rows reserve a text column for the title and sharing description. Priv
 sits below that copy rather than competing for its width. The Settings introduction
 remains visible in every section, including Family groups.
 
+### List maintenance and account dialogs
+
+List-action menus use neutral text and consistently aligned outline icons. Destructive actions use the error color and a preceding divider. Privacy badges and their stationary info icon form one disclosure trigger with a 6px gap. Draft rows use 12px vertical padding, 8px action gaps, and a stacked mobile layout with 44px touch targets.
+
+Administration introductions use muted body copy beneath the shared panel heading. Failed shop lookups and updates use separate collapsed disclosures with counts, ten newest entries at a time, and localized queue timestamps. Diagnostics occupy a separate supporting line.
+
+Phone management separates the primary SMS-choice form from number actions with a divider and 16px spacing. Replace is secondary; Remove uses destructive text and an inline confirmation. Consent boxes align with the first text line. Mobile primary actions fill their row.
+
 ## Do's and Don'ts
 
 ### Do:

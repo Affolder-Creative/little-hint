@@ -3867,3 +3867,86 @@ main {
 .form-actions .form-status {
   margin: 0;
 }
+
+/* List maintenance is neutral; destructive actions retain their semantic color. */
+.entry-actions-content :is(.button, .text-button):not(.danger) {
+  color: var(--text);
+}
+.entry-actions-content :is(.button, .text-button) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.list-privacy > summary {
+  gap: 6px;
+}
+.list-privacy > summary .privacy {
+  margin: 0;
+}
+.import-drafts {
+  margin-block: 16px;
+}
+.import-drafts > p {
+  color: var(--muted);
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+.draft-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-block: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.draft-row > div {
+  min-width: 0;
+}
+.draft-row p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+.draft-row .actions {
+  gap: 8px;
+}
+.manual-entry > .field {
+  width: 100%;
+}
+.admin-job-row .job-message {
+  color: var(--text);
+  font-size: 14px;
+  margin: 0;
+}
+.admin-job-row .job-diagnostic {
+  overflow-wrap: anywhere;
+}
+.sms-settings .check {
+  align-items: flex-start;
+}
+.sms-settings .check input {
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+.sms-number-actions {
+  display: grid;
+  justify-items: start;
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+@media (max-width: 650px) {
+  .draft-row {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .draft-row .actions > .button {
+    flex-basis: 100%;
+  }
+  .sms-settings .form-actions > button,
+  .sms-number-actions > .button {
+    width: 100%;
+  }
+}

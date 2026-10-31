@@ -1,3 +1,4 @@
+import { Pencil, Archive, ArchiveRestore } from "lucide-react";
 import { ImportDrafts } from "./ImportDrafts";
 import { useNavigationState } from "./NavigationScroll";
 import { Link, useSearchParams } from "react-router-dom";
@@ -130,7 +131,7 @@ export function ListIndex() {
                       className="text-button"
                       onClick={() => open("Edit list", <ListForm list={l} />)}
                     >
-                      Edit list
+                      <Pencil size={16} aria-hidden="true" /> Edit list
                     </button>
                     <RunButton
                       run={() =>
@@ -141,6 +142,11 @@ export function ListIndex() {
                         })
                       }
                     >
+                      {l.archived ? (
+                        <ArchiveRestore size={16} aria-hidden="true" />
+                      ) : (
+                        <Archive size={16} aria-hidden="true" />
+                      )}{" "}
                       {l.archived ? "Restore list" : "Archive list"}
                     </RunButton>
                     <TrashButton kind="lists" entry={l} />

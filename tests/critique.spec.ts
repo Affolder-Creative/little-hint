@@ -2437,6 +2437,44 @@ test("SMS verification offers resend and number correction", async ({
       .getByRole("status")
       .filter({ hasText: "Enter the code sent to +12025550123" }),
   ).toBeVisible();
+  await page.route("**/api/v1/channels/sms/verify", (route) =>
+    route.fulfill({ json: { ok: true } }),
+  );
+  let removals = 0;
+  await page.route("**/api/v1/channels/sms/login", (route) => {
+    if (route.request().postDataJSON().remove) removals++;
+    return route.fulfill({ json: { ok: true } });
+  });
+  await page.getByLabel("Six-digit code").fill("123456");
+  await page.getByRole("button", { name: "Verify code", exact: true }).click();
+  const choice = page.getByRole("checkbox", { name: /Allow Little Hint/ });
+  await choice.check();
+  for (const width of [393, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    for (const theme of ["light", "dark"]) {
+      await page.evaluate(
+        (theme) => (document.documentElement.dataset.theme = theme),
+        theme,
+      );
+      await page.screenshot({
+        path: `/tmp/little-hint-sms-${width}-${theme}.png`,
+      });
+    }
+  }
+  await page
+    .getByRole("button", { name: "Remove phone number", exact: true })
+    .click();
+  expect(removals).toBe(0);
+  await page.getByRole("button", { name: "Keep phone number" }).click();
+  await expect(choice).toBeChecked();
+  await page
+    .getByRole("button", { name: "Remove phone number", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Remove phone number", exact: true })
+    .click();
+  await expect(page.getByRole("dialog")).not.toBeVisible();
+  expect(removals).toBe(1);
 });
 
 test("adding a saved draft refreshes the device list", async ({ page }) => {
@@ -3872,43 +3910,60 @@ test.describe("navigation scroll restoration", () => {
     await expect.poll(() => page.evaluate(() => scrollY)).toBeCloseTo(y, 0);
   }
 
-  for (const width of [1440, 390]) {
-    test(`new pages start at the top and history restores distinct entries at ${width}px`, async ({
-      page,
-    }) => {
-      await page.setViewportSize({ width, height: 720 });
-      const { list } = await longList(page);
-      await page.goto(`/lists/${list.id}`);
-      await expect(page.locator(".gift-card")).toHaveCount(46);
-      const gift = page.locator(".gift-card").nth(15);
-      await gift.scrollIntoViewIfNeeded();
-      await page.evaluate(() => new Promise(requestAnimationFrame));
-      const first = await page.evaluate(() => scrollY);
-      expect(first).toBeGreaterThan(500);
-      await gift.click();
-      await expect(page).toHaveURL(/\/gift\//);
-      await expectScroll(page, 0);
-      await expect(page.getByRole("main")).toBeFocused();
-      // A link creates a second entry for the same list, starting at the top.
-      await page.getByRole("link", { name: "Back to wish list" }).click();
-      await expect(page.locator(".gift-card")).toHaveCount(46);
-      await expectScroll(page, 0);
-      await scroll(page, 500);
-      await page.locator('a[href="/people"]:visible').first().click();
-      await expect(page).toHaveURL(/\/people$/);
-      await expectScroll(page, 0);
-      await page.goBack();
-      await expectScroll(page, 500);
-      await page.goBack();
-      await expectScroll(page, 0);
-      await page.goBack();
-      await expectScroll(page, first);
-      await page.goForward();
-      await expectScroll(page, 0);
-      await page.goForward();
-      await expectScroll(page, 500);
-    });
-  }
+  for (const width of [1440, 390])
+    for (const appleMode of ["browser", "standalone", "safari", "ipad"]) {
+      test(`new pages start at the top and history restores distinct entries at ${width}px mode=${appleMode}`, async ({
+        page,
+      }) => {
+        await page.setViewportSize({ width, height: 720 });
+        await page.addInitScript((mode) => {
+          if (mode === "standalone")
+            Object.defineProperty(navigator, "standalone", { value: true });
+          if (mode === "safari")
+            Object.defineProperty(navigator, "userAgent", {
+              value:
+                "Mozilla/5.0 (iPhone; CPU iPhone OS 27_0_1 like Mac OS X) AppleWebKit/605.1.15 Version/27.0 Mobile/15E148 Safari/604.1",
+            });
+          if (mode === "ipad") {
+            Object.defineProperty(navigator, "platform", { value: "MacIntel" });
+            Object.defineProperty(navigator, "maxTouchPoints", { value: 5 });
+          }
+        }, appleMode);
+        const { list } = await longList(page);
+        await page.goto(`/lists/${list.id}`);
+        await expect(page.locator(".gift-card")).toHaveCount(46);
+        expect(await page.evaluate(() => history.scrollRestoration)).toBe(
+          appleMode !== "browser" ? "auto" : "manual",
+        );
+        const gift = page.locator(".gift-card").nth(15);
+        await gift.scrollIntoViewIfNeeded();
+        await page.evaluate(() => new Promise(requestAnimationFrame));
+        const first = await page.evaluate(() => scrollY);
+        expect(first).toBeGreaterThan(500);
+        await gift.click();
+        await expect(page).toHaveURL(/\/gift\//);
+        await expectScroll(page, 0);
+        await expect(page.getByRole("main")).toBeFocused();
+        // A link creates a second entry for the same list, starting at the top.
+        await page.getByRole("link", { name: "Back to wish list" }).click();
+        await expect(page.locator(".gift-card")).toHaveCount(46);
+        await expectScroll(page, 0);
+        await scroll(page, 500);
+        await page.locator('a[href="/people"]:visible').first().click();
+        await expect(page).toHaveURL(/\/people$/);
+        await expectScroll(page, 0);
+        await page.goBack();
+        await expectScroll(page, 500);
+        await page.goBack();
+        await expectScroll(page, 0);
+        await page.goBack();
+        await expectScroll(page, first);
+        await page.goForward();
+        await expectScroll(page, 0);
+        await page.goForward();
+        await expectScroll(page, 500);
+      });
+    }
 
   for (const width of [1440, 390]) {
     test(`history preserves filters, gift focus, and distinct visits at ${width}px`, async ({
