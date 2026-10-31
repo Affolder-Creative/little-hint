@@ -1,3 +1,7 @@
+import {
+  productLookupEnabled,
+  lookupDisabledMessage,
+} from "../shared/product-lookup";
 import { importView, retailerCollectionTimeoutMs } from "../shared/imports";
 import { effectiveConfig } from "./runtime-config";
 import { unavailableChannels } from "./channel-availability";
@@ -2054,6 +2058,8 @@ export function command(
         return importView(j);
       }
       if (action === "imports.retry") {
+        if (!productLookupEnabled(effectiveConfig()))
+          fail(403, lookupDisabledMessage);
         if (j.status !== "failed") return importView(j);
         if (j.providerState?.terminal) delete j.providerState;
         if (j.providerState && !j.providerState.snapshotId)
@@ -2097,6 +2103,8 @@ export function command(
       return importView(j);
     }
     case "imports.create": {
+      if (!productLookupEnabled(effectiveConfig()))
+        fail(403, lookupDisabledMessage);
       const p = z
         .object({
           url: z.url().max(2048),

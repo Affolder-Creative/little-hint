@@ -62,6 +62,7 @@ export function batchJob(batch: NotificationBatch) {
   const deliveries = Object.values(batch.deliveries);
   return {
     id: batch.id,
+    createdAt: batch.createdAt,
     status: batch.status,
     attempts: Math.max(0, ...deliveries.map((d) => d.attempts)),
     error:

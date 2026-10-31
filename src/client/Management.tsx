@@ -1,3 +1,4 @@
+import { Trash2 } from "lucide-react";
 import { dismissActionMenu } from "./menu-dismiss";
 import "./action-menu.css";
 import { useState, useRef, useEffect, type ReactNode } from "react";
@@ -196,7 +197,7 @@ export function TrashButton({
         )
       }
     >
-      Move to Trash
+      <Trash2 size={16} aria-hidden="true" /> Move to Trash
     </button>
   );
 }

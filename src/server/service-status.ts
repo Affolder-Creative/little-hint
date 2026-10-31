@@ -1,3 +1,4 @@
+import { productLookupEnabled } from "../shared/product-lookup";
 import { telegramInfo } from "./channel-availability";
 import { smsInfo } from "./sms-provider";
 import type { AdminServiceStatus } from "../shared/admin-services";
@@ -51,8 +52,9 @@ export function serviceStatuses(
     {
       id: "shops",
       label: "Shop lookups",
-      status:
-        provider && Number(cfg.PAID_DAILY_LIMIT) > 0
+      status: !productLookupEnabled(cfg)
+        ? "Off"
+        : provider && Number(cfg.PAID_DAILY_LIMIT) > 0
           ? "Configured"
           : "Direct lookup only",
       ...(provider && Number(cfg.PAID_DAILY_LIMIT) > 0
@@ -68,7 +70,7 @@ export function serviceStatuses(
       id: "product-ai",
       label: "AI product details",
       status:
-        Number(cfg.PAID_DAILY_LIMIT) === 0
+        !productLookupEnabled(cfg) || Number(cfg.PAID_DAILY_LIMIT) === 0
           ? "Off"
           : configured(cfg.OPENAI_API_KEY),
     },

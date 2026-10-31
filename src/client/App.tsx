@@ -1,3 +1,4 @@
+import { Pencil, Archive, ArchiveRestore } from "lucide-react";
 import { ImportDrafts } from "./ImportDrafts";
 import { useProductImages } from "./useProductImages";
 import { BrowseTools } from "./BrowseTools";
@@ -1306,7 +1307,7 @@ function Lists() {
                 className="text-button"
                 onClick={() => open("Edit list", <ListForm list={list} />)}
               >
-                Edit list
+                <Pencil size={16} aria-hidden="true" /> Edit list
               </button>
               <FollowButton target="list" targetId={list.id} />
               <Action
@@ -1319,6 +1320,11 @@ function Lists() {
                   })
                 }
               >
+                {list.archived ? (
+                  <ArchiveRestore size={16} aria-hidden="true" />
+                ) : (
+                  <Archive size={16} aria-hidden="true" />
+                )}{" "}
                 {list.archived ? "Restore list" : "Archive list"}
               </Action>
               <TrashButton kind="lists" entry={list} />

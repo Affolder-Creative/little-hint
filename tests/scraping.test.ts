@@ -271,7 +271,7 @@ describe("product-detail AI accounting", () => {
       vi.mocked(config).mockResolvedValue({
         OPENAI_API_KEY: "test-key",
         OPENAI_MODEL: "gpt-6-luna",
-        SCRAPING_PROVIDER: "none",
+        SCRAPING_PROVIDER: "auto",
       } as Awaited<ReturnType<typeof config>>);
       vi.mocked(spend).mockResolvedValue("2026-10-31T23:59:59.000Z");
       mocks.direct.mockResolvedValue(
@@ -328,4 +328,20 @@ describe("product-detail AI accounting", () => {
       }
     },
   );
+});
+
+it("manual mode blocks direct extraction and paid calls before lookup", async () => {
+  vi.mocked(config).mockResolvedValue({
+    SCRAPING_PROVIDER: "none",
+    OPENAI_API_KEY: "test",
+    ...keys,
+  } as Awaited<ReturnType<typeof config>>);
+  const external = vi.fn();
+  vi.stubGlobal("fetch", external);
+  await expect(importProduct(target, "user")).rejects.toThrow(
+    "Automatic shop lookups are off",
+  );
+  expect(mocks.direct).not.toHaveBeenCalled();
+  expect(external).not.toHaveBeenCalled();
+  expect(spend).not.toHaveBeenCalled();
 });

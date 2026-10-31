@@ -18,6 +18,7 @@ import { writeFile } from "node:fs/promises";
 import { stamp, archiveDueLists } from "./domain";
 import { PgBoss } from "pg-boss";
 import { readState, transact, pool } from "./db";
+import { lookupDisabledMessage } from "../shared/product-lookup";
 import { importProduct } from "./imports";
 import { pruneImportCache } from "./import-cache";
 import { deliverNotice, pollTelegram } from "./notifications";
@@ -144,7 +145,9 @@ await boss.work<{ id: string }>(
                       : "No usable product details",
                 };
           row.error =
-            "We could not get details from that shop. You can still enter them yourself.";
+            error instanceof Error && error.message === lookupDisabledMessage
+              ? lookupDisabledMessage
+              : "We could not get details from that shop. You can still enter them yourself.";
           row.revision++;
         });
       }

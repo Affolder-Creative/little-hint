@@ -309,10 +309,10 @@ export function AdminUsage() {
       <details className="usage-details">
         <summary>About this report</summary>
         <p>
-          One Get details lookup can use both paid scraping and product-detail
-          AI. Direct website lookups and cached results do not add paid
-          requests. Web searches for gift suggestions are counted separately
-          from shop scraping.
+          Recorded usage includes attempted paid requests, even when they fail.
+          Direct website lookups and cached results do not add paid requests.
+          Gift suggestion searches are counted separately. Disabling a service
+          preserves charges already recorded this month.
         </p>
         <p>
           AI estimates use rates recorded on {u.pricingAsOf}. Models without

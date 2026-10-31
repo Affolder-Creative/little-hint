@@ -254,7 +254,10 @@ function RestoreNavigation({ account }: { account: string }) {
     // Missing targets and removed content must not keep controlling the viewport.
     timeout = window.setTimeout(finish, 10000);
     main?.focus({ preventScroll: true });
-    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    if (!restore) {
+      if (navigation !== "POP")
+        window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    }
     // Apply available coordinates before paint; defer fragment focus until
     // route effects settle. Observers retry when lazy content increases height.
     if (!restore && fragment) schedule();

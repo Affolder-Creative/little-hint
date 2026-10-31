@@ -2437,6 +2437,44 @@ test("SMS verification offers resend and number correction", async ({
       .getByRole("status")
       .filter({ hasText: "Enter the code sent to +12025550123" }),
   ).toBeVisible();
+  await page.route("**/api/v1/channels/sms/verify", (route) =>
+    route.fulfill({ json: { ok: true } }),
+  );
+  let removals = 0;
+  await page.route("**/api/v1/channels/sms/login", (route) => {
+    if (route.request().postDataJSON().remove) removals++;
+    return route.fulfill({ json: { ok: true } });
+  });
+  await page.getByLabel("Six-digit code").fill("123456");
+  await page.getByRole("button", { name: "Verify code", exact: true }).click();
+  const choice = page.getByRole("checkbox", { name: /Allow Little Hint/ });
+  await choice.check();
+  for (const width of [393, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    for (const theme of ["light", "dark"]) {
+      await page.evaluate(
+        (theme) => (document.documentElement.dataset.theme = theme),
+        theme,
+      );
+      await page.screenshot({
+        path: `/tmp/little-hint-sms-${width}-${theme}.png`,
+      });
+    }
+  }
+  await page
+    .getByRole("button", { name: "Remove phone number", exact: true })
+    .click();
+  expect(removals).toBe(0);
+  await page.getByRole("button", { name: "Keep phone number" }).click();
+  await expect(choice).toBeChecked();
+  await page
+    .getByRole("button", { name: "Remove phone number", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Remove phone number", exact: true })
+    .click();
+  await expect(page.getByRole("dialog")).not.toBeVisible();
+  expect(removals).toBe(1);
 });
 
 test("adding a saved draft refreshes the device list", async ({ page }) => {

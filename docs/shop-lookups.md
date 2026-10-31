@@ -2,7 +2,7 @@
 
 Little Hint first uses its built-in product parser for ordinary shops. You can choose one paid provider to help with blocked or incomplete pages. Bright Data additionally supports dedicated product APIs for Amazon, Walmart, Target, and Best Buy US product links.
 
-## Choose the paid provider
+## Choose lookup behavior
 
 Set `SCRAPING_PROVIDER` in production, or `STAGING_SCRAPING_PROVIDER` in staging. Supported values are:
 
@@ -14,7 +14,7 @@ Set `SCRAPING_PROVIDER` in production, or `STAGING_SCRAPING_PROVIDER` in staging
 | `scrapedo`     | Scrape.do                                                                       |
 | `scrapingdog`  | Scrapingdog                                                                     |
 | `auto`         | First configured provider in this order: Fish, Bee, Scrape.do, Dog, Bright Data |
-| `none`         | Built-in extraction only; no paid scraping                                      |
+| `none`         | Manual entry only; no extraction, automatic photos, or product-detail AI                                      |
 
 An explicit selection never silently falls through to another paid provider. Supply that provider's credentials to both the app and worker. Bright Data also requires its Unlocker zone. Restart/recreate both services after changing the environment.
 
@@ -133,3 +133,9 @@ To use Scraping Fish again, set `SCRAPING_PROVIDER=scrapingfish` and its API key
 The app keeps currency in USD. Unknown prices, ranges, unavailable variants, and unverified currencies may require manual entry. Automatic-photo settings still apply. Scraping success depends on the shop and provider; configuration alone does not guarantee successful extraction.
 
 Official references, checked 2026-10-31: [Scraper catalog](https://docs.brightdata.com/scrapers.json), [asynchronous collections](https://docs.brightdata.com/api-reference/rest-api/scraper/asynchronous-requests), [Web Unlocker API](https://docs.brightdata.com/api-reference/rest-api/unlocker/unlock-website), [Scraper pricing](https://brightdata.com/pricing/web-scraper).
+
+### Manual operation
+
+Set `SCRAPING_PROVIDER=none`, or `STAGING_SCRAPING_PROVIDER=none` in staging, on both app and worker and recreate both services. This now disables the entire product-detail pipeline, including direct extraction and cached lookups. Existing private drafts remain editable and can be added manually. Pending jobs stop with manual-entry guidance. Requests already dispatched cannot be recalled.
+
+Use `auto` for direct extraction and optional product-detail AI. With provider credentials configured, `auto` also selects the first available paid provider. To use direct extraction without paid requests, set `PAID_DAILY_LIMIT=0`. AI gift suggestions have their own configuration and are not disabled by manual product entry. Current-month usage remains visible after disabling a service.

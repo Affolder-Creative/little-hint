@@ -1,3 +1,4 @@
+import { productLookupEnabled } from "../shared/product-lookup";
 import { smsUsage } from "./sms-usage";
 import type { State } from "../shared/model";
 import type { AdminUsage, AiUsage } from "../shared/admin-usage";
@@ -119,7 +120,9 @@ export function adminUsage(
     s,
     `imports:metrics:${month}:`,
     daily("openai"),
-    !!cfg.OPENAI_API_KEY && Number(cfg.PAID_DAILY_LIMIT) > 0,
+    productLookupEnabled(cfg) &&
+      !!cfg.OPENAI_API_KEY &&
+      Number(cfg.PAID_DAILY_LIMIT) > 0,
   );
   const selected = selectedScrapingProvider(cfg);
   const providers = scrapingProviders.map((p) => ({

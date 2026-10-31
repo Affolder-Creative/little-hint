@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-31T15:12:38.438720+00:00",
+  "generatedAt": "2026-10-31T18:55:07.038477+00:00",
   "title": "Design System: Little Hint",
   "extensions": {
     "colorMeta": {
@@ -968,7 +968,10 @@
       "src/client/ProfileEditor.tsx",
       "src/client/AdminUsage.tsx",
       "src/client/InvitationShare.tsx",
-      "src/client/AdminPreferences.tsx"
+      "src/client/AdminPreferences.tsx",
+      "src/client/AdminJobFailures.tsx",
+      "src/client/SmsSettings.tsx",
+      "src/client/ImportDrafts.tsx"
     ],
     "tonalRampNote": "Synthesized OKLCH previews at constant hue/chroma; these ramps are panel metadata, not additional application tokens.",
     "layout": {
@@ -1003,6 +1006,20 @@
       "install-icon": {
         "purpose": ".install > img only"
       }
+    },
+    "maintenancePatterns": {
+      "listActions": "Neutral icon-and-label actions; destructive color and divider for Trash.",
+      "privacyDisclosure": {
+        "gap": "6px",
+        "iconMotion": "none"
+      },
+      "draftRows": {
+        "paddingBlock": "12px",
+        "actionGap": "8px",
+        "phoneLayout": "stacked"
+      },
+      "jobFailures": "Collapsed categories with counts, queued timestamps and ten-row increments.",
+      "phoneManagement": "Separate primary save from number actions and inline removal confirmation."
     }
   },
   "components": [
