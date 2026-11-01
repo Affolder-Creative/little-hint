@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.13.1](https://github.com/Affolder-Creative/little-hint/compare/v0.13.0...v0.13.1) (2026-11-01)
+
+
+### Fixes
+
+* add an app-wide AI enable switch ([#125](https://github.com/Affolder-Creative/little-hint/issues/125)) ([0c560c0](https://github.com/Affolder-Creative/little-hint/commit/0c560c0a584b6a5321991f3217bd83a35868e331))
+* improve wish-list hierarchy, private notes, and gift idea drafts ([#127](https://github.com/Affolder-Creative/little-hint/issues/127)) ([a64cdd0](https://github.com/Affolder-Creative/little-hint/commit/a64cdd03ceb69b201b62cb6d72ef14b92754149d))
+
 ## [0.13.0](https://github.com/Affolder-Creative/little-hint/compare/v0.12.1...v0.13.0) (2026-10-31)
 
 
