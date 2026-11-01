@@ -3,6 +3,7 @@ import type { State } from "../src/shared/model";
 const mocks = vi.hoisted(() => ({
   state: {} as State,
   mode: "both",
+  aiEnabled: true,
   configReads: 0,
   disableBeforeDispatch: false,
   clearOverridesBeforeDispatch: false,
@@ -28,6 +29,7 @@ vi.mock("../src/server/settings", () => ({
     if (mocks.disableBeforeDispatch && mocks.configReads === 3)
       mocks.mode = "off";
     return {
+      AI_ENABLED: String(mocks.aiEnabled),
       OPENAI_API_KEY: "fake",
       GIFT_DISCOVERY_MODEL: "gpt-6-luna",
       GIFT_DISCOVERY_MODE: mocks.mode,
@@ -35,14 +37,14 @@ vi.mock("../src/server/settings", () => ({
   },
   discoveryConfiguration: () => ({
     mode: mocks.mode,
-    available: mocks.mode !== "off",
+    available: mocks.aiEnabled && mocks.mode !== "off",
     weeklyLimit: 3,
     monthlyLimit: 100,
     model: "gpt-6-luna",
   }),
   discoveryConfigForState: () => ({
     mode: mocks.mode,
-    available: mocks.mode !== "off",
+    available: mocks.aiEnabled && mocks.mode !== "off",
     weeklyLimit: 3,
     monthlyLimit: 100,
     model: "gpt-6-luna",
@@ -114,6 +116,7 @@ beforeEach(() => {
   vi.stubEnv("GIFT_DISCOVERY_USER_OVERRIDES", "");
   vi.clearAllMocks();
   mocks.mode = "both";
+  mocks.aiEnabled = true;
   mocks.configReads = 0;
   mocks.disableBeforeDispatch = false;
   mocks.clearOverridesBeforeDispatch = false;
@@ -313,4 +316,13 @@ it("keeps missing provider usage unreported instead of recording zero tokens as 
     mocks.state.usage.find((u) => u.key.endsWith(":reported"))?.count ?? 0,
   ).toBe(0);
   expect(discoveryMonthlyUsage(mocks.state).searches).toBe(1);
+});
+
+it("cancels queued discovery without dispatch when AI is off with credentials retained", async () => {
+  mocks.aiEnabled = false;
+  const request = vi.fn();
+  vi.stubGlobal("fetch", request);
+  await processDiscovery(mocks.state.giftDiscoveryJobs[0].id);
+  expect(request).not.toHaveBeenCalled();
+  expect(mocks.state.giftDiscoveryJobs[0].status).toBe("cancelled");
 });

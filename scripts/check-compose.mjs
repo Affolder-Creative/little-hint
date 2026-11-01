@@ -496,3 +496,23 @@ for (const file of [
 console.log(
   "SMS Compose checks passed: production/staging app-worker parity and credential separation.",
 );
+
+for (const [file, variables, prefix] of [
+  ["compose.yaml", required, ""],
+  ["compose.production.yaml", productionVars, ""],
+  ["compose.staging.yaml", stagingVars, "STAGING_"],
+]) {
+  for (const value of [undefined, "", "true", "false"]) {
+    const key = `${prefix}AI_ENABLED`;
+    const result = config(file, {
+      ...variables,
+      ...(value === undefined ? {} : { [key]: value }),
+    });
+    assert.equal(result.status, 0, result.stderr);
+    for (const name of ["app", "worker"]) {
+      const environment = JSON.parse(result.stdout).services[name].environment;
+      assert.equal(environment[key], value || "false");
+      if (prefix) assert.equal(environment.AI_ENABLED, undefined);
+    }
+  }
+}

@@ -269,6 +269,7 @@ describe("product-detail AI accounting", () => {
     "records returned tokens before content parsing: %s",
     async (outcome) => {
       vi.mocked(config).mockResolvedValue({
+        AI_ENABLED: "true",
         OPENAI_API_KEY: "test-key",
         OPENAI_MODEL: "gpt-6-luna",
         SCRAPING_PROVIDER: "auto",
@@ -333,6 +334,7 @@ describe("product-detail AI accounting", () => {
 it("manual mode blocks direct extraction and paid calls before lookup", async () => {
   vi.mocked(config).mockResolvedValue({
     SCRAPING_PROVIDER: "none",
+    AI_ENABLED: "true",
     OPENAI_API_KEY: "test",
     ...keys,
   } as Awaited<ReturnType<typeof config>>);

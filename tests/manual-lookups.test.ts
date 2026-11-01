@@ -47,6 +47,7 @@ it("manual mode reports AI off even with credentials and keeps recorded charges"
   const { state } = stagingFixtures();
   const cfg = {
     SCRAPING_PROVIDER: "none",
+    AI_ENABLED: "true",
     OPENAI_API_KEY: "synthetic",
     PAID_DAILY_LIMIT: "50",
     GIFT_DISCOVERY_MODE: "off",

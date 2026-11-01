@@ -52,6 +52,7 @@ const headers = {
 };
 beforeEach(async () => {
   vi.stubEnv("APP_ENV", "test");
+  vi.stubEnv("AI_ENABLED", "true");
   vi.stubEnv("OPENAI_API_KEY", "synthetic-key");
   vi.stubEnv("SETTINGS_ENCRYPTION_KEY", Buffer.alloc(32, 5).toString("base64"));
   vi.stubEnv("GIFT_DISCOVERY_MODE", "");
@@ -165,28 +166,31 @@ it("requires authentication, scopes jobs and reauthorizes idempotent replays", a
     404,
   );
 });
-it("reconciles the deployment kill switch, preserves wishes/preferences and cannot revive old results", async () => {
-  const j = createDiscovery(mocks.state, f.actors[1], cfg, f.input);
-  j.status = "complete";
-  j.candidates = [candidate()];
-  const items = structuredClone(mocks.state.items);
-  vi.stubEnv("GIFT_DISCOVERY_MODE", "off");
-  pruneDiscovery(mocks.state, discoveryConfigForState(mocks.state));
-  expect(mocks.state.giftDiscoveryJobs[0]).toMatchObject({
-    status: "cancelled",
-    candidates: [],
-  });
-  expect(mocks.state.items).toEqual(items);
-  vi.stubEnv("GIFT_DISCOVERY_MODE", "both");
-  expect((await app.inject(`/api/v1/gift-discovery/${j.id}`)).statusCode).toBe(
-    404,
-  );
-  expect(
-    (
-      await app.inject(`/api/v1/gift-discovery/context/${f.people[0].id}`)
-    ).json().recent,
-  ).toBeUndefined();
-});
+it.each(["GIFT_DISCOVERY_MODE", "AI_ENABLED"])(
+  "reconciles %s, preserves wishes/preferences and cannot revive old results",
+  async (flag) => {
+    const j = createDiscovery(mocks.state, f.actors[1], cfg, f.input);
+    j.status = "complete";
+    j.candidates = [candidate()];
+    const items = structuredClone(mocks.state.items);
+    vi.stubEnv(flag, flag === "AI_ENABLED" ? "false" : "off");
+    pruneDiscovery(mocks.state, discoveryConfigForState(mocks.state));
+    expect(mocks.state.giftDiscoveryJobs[0]).toMatchObject({
+      status: "cancelled",
+      candidates: [],
+    });
+    expect(mocks.state.items).toEqual(items);
+    vi.stubEnv(flag, flag === "AI_ENABLED" ? "true" : "both");
+    expect(
+      (await app.inject(`/api/v1/gift-discovery/${j.id}`)).statusCode,
+    ).toBe(404);
+    expect(
+      (
+        await app.inject(`/api/v1/gift-discovery/context/${f.people[0].id}`)
+      ).json().recent,
+    ).toBeUndefined();
+  },
+);
 it("locks environment overrides and validates limits, mode and staging isolation", async () => {
   expect(discoveryConfiguration(await config())).toMatchObject({
     mode: "givers",
@@ -248,23 +252,26 @@ it("excludes job data and unshared preferences from world and denies non-admin c
     ).statusCode,
   ).toBe(403);
 });
-it("blocks unsaved discovery images immediately when an environment override disables AI", async () => {
-  const j = createDiscovery(mocks.state, f.actors[1], cfg, f.input);
-  const c = candidate(),
-    id = c.id;
-  c.image = `/api/v1/media/${id}`;
-  j.status = "complete";
-  j.candidates = [c];
-  mocks.state.media.push({
-    id,
-    revision: 1,
-    createdAt: new Date().toISOString(),
-    userId: f.actors[1].id,
-    file: "not-read.webp",
-  });
-  vi.stubEnv("GIFT_DISCOVERY_MODE", "off");
-  expect((await app.inject(`/api/v1/media/${id}`)).statusCode).toBe(404);
-});
+it.each(["GIFT_DISCOVERY_MODE", "AI_ENABLED"])(
+  "blocks unsaved discovery images when %s disables AI",
+  async (flag) => {
+    const j = createDiscovery(mocks.state, f.actors[1], cfg, f.input);
+    const c = candidate(),
+      id = c.id;
+    c.image = `/api/v1/media/${id}`;
+    j.status = "complete";
+    j.candidates = [c];
+    mocks.state.media.push({
+      id,
+      revision: 1,
+      createdAt: new Date().toISOString(),
+      userId: f.actors[1].id,
+      file: "not-read.webp",
+    });
+    vi.stubEnv(flag, flag === "AI_ENABLED" ? "false" : "off");
+    expect((await app.inject(`/api/v1/media/${id}`)).statusCode).toBe(404);
+  },
+);
 
 it("exposes only preferences and safe service status to administrators", async () => {
   expect((await app.inject("/api/v1/admin/services")).statusCode).toBe(403);

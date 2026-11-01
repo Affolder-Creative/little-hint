@@ -30,6 +30,7 @@ export const settingKeys = [
   "TWILIO_AUTH_TOKEN",
   "TWILIO_FROM",
   "TWILIO_VERIFY_SERVICE_SID",
+  "AI_ENABLED",
   "OPENAI_API_KEY",
   "OPENAI_MODEL",
   "SCRAPINGBEE_API_KEY",
@@ -47,6 +48,7 @@ const defaults: Partial<Record<SettingKey, string>> = {
   GIFT_DISCOVERY_USER_WEEKLY_LIMIT: "3",
   GIFT_DISCOVERY_MONTHLY_LIMIT: "100",
   GIFT_DISCOVERY_MODEL: "gpt-6-luna",
+  AI_ENABLED: "false",
   SMS_ENABLED: "false",
   TELEGRAM_ENABLED: "false",
   SMS_PROVIDER: "none",
@@ -85,6 +87,14 @@ export function stagingSettings(): Record<SettingKey, string> {
         ["OPENAI_MODEL", defaults.OPENAI_MODEL!],
       ]),
   ) as Record<SettingKey, string>;
+  result.AI_ENABLED = String(
+    channelFlag(
+      deploymentEnvironment() === "staging"
+        ? process.env.STAGING_AI_ENABLED
+        : "false",
+      "STAGING_AI_ENABLED",
+    ),
+  );
   if (
     deploymentEnvironment() === "staging" &&
     process.env.STAGING_OPENAI_API_KEY
@@ -171,7 +181,8 @@ export function discoveryConfiguration(
     throw new Error("Invalid GIFT_DISCOVERY_MODEL.");
   return {
     mode: mode as DiscoveryConfig["mode"],
-    available: mode !== "off" && !!cfg.OPENAI_API_KEY,
+    available:
+      cfg.AI_ENABLED === "true" && mode !== "off" && !!cfg.OPENAI_API_KEY,
     weeklyLimit: Number(
       cfg.GIFT_DISCOVERY_USER_WEEKLY_LIMIT ||
         defaults.GIFT_DISCOVERY_USER_WEEKLY_LIMIT,
@@ -211,6 +222,6 @@ function validateSmsConfig(cfg: Record<string, string>) {
 }
 
 function validateChannelFlags(cfg: Record<string, string>, prefix = "") {
-  for (const key of ["SMS_ENABLED", "TELEGRAM_ENABLED"])
+  for (const key of ["AI_ENABLED", "SMS_ENABLED", "TELEGRAM_ENABLED"])
     cfg[key] = String(channelFlag(cfg[key], `${prefix}${key}`));
 }

@@ -37,11 +37,8 @@ export function GiftDiscoveryPage() {
   if (!permitted)
     return (
       <>
-        <h1>Gift suggestions are unavailable</h1>
-        <p>
-          This feature is not enabled for this person. You can still add gift
-          ideas manually.
-        </p>
+        <h1>This page is unavailable</h1>
+        <p>You can still add gift ideas manually.</p>
         <Link className="button secondary" to={`/people/${id}`}>
           Back to profile
         </Link>
@@ -50,7 +47,7 @@ export function GiftDiscoveryPage() {
   if (context.error)
     return (
       <>
-        <h1>Gift suggestions are unavailable</h1>
+        <h1>This page is unavailable</h1>
         <p role="alert">{context.error.message}</p>
         <button className="button secondary" onClick={() => context.refetch()}>
           Retry

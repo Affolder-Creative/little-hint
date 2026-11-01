@@ -66,24 +66,30 @@ export function serviceStatuses(
             }
           : {}),
     },
-    {
-      id: "product-ai",
-      label: "AI product details",
-      status:
-        !productLookupEnabled(cfg) || Number(cfg.PAID_DAILY_LIMIT) === 0
-          ? "Off"
-          : configured(cfg.OPENAI_API_KEY),
-    },
-    {
-      id: "suggestions",
-      label: "AI gift suggestions",
-      status:
-        discovery.mode === "off" ? "Off" : configured(discovery.available),
-      ...(discovery.available
-        ? {
-            detail: `${discovery.mode === "givers" ? "For others" : discovery.mode === "receivers" ? "For own lists" : "For others and own lists"}. ${discovery.weeklyLimit} new searches per account each week; ${discovery.monthlyLimit} shared each month. Server-managed exceptions may apply.`,
-          }
-        : {}),
-    },
+    ...(cfg.AI_ENABLED === "true"
+      ? ([
+          {
+            id: "product-ai",
+            label: "AI product details",
+            status:
+              !productLookupEnabled(cfg) || Number(cfg.PAID_DAILY_LIMIT) === 0
+                ? "Off"
+                : configured(cfg.OPENAI_API_KEY),
+          },
+          {
+            id: "suggestions",
+            label: "AI gift suggestions",
+            status:
+              discovery.mode === "off"
+                ? "Off"
+                : configured(discovery.available),
+            ...(discovery.available
+              ? {
+                  detail: `${discovery.mode === "givers" ? "For others" : discovery.mode === "receivers" ? "For own lists" : "For others and own lists"}. ${discovery.weeklyLimit} new searches per account each week; ${discovery.monthlyLimit} shared each month. Server-managed exceptions may apply.`,
+                }
+              : {}),
+          },
+        ] as AdminServiceStatus[])
+      : []),
   ];
 }

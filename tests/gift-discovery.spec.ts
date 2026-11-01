@@ -290,7 +290,7 @@ test("preferences work while AI is off, require sharing review, and hide discove
   expect(f.counts.search).toBe(0);
   await page.goto(`/people/${f.people[0].id}/gift-ideas`);
   await expect(
-    page.getByRole("heading", { name: "Gift suggestions are unavailable" }),
+    page.getByRole("heading", { name: "This page is unavailable" }),
   ).toBeVisible();
 });
 test("new users can skip preferences without sharing unfinished edits", async ({
@@ -817,7 +817,7 @@ test("discovery titles follow delayed content, failures, retries, and navigation
   fail = true;
   await page.reload();
   await expect(page).toHaveTitle(
-    "Gift suggestions are unavailable · Little Hint",
+    "This page is unavailable · Little Hint",
   );
   fail = false;
   await page.getByRole("button", { name: "Retry", exact: true }).click();
