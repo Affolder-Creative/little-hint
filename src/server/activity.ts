@@ -20,6 +20,7 @@ import {
   recipient,
   itemVisible,
   listVisible,
+  personVisible,
   preferences,
   stamp,
   fail,
@@ -59,6 +60,7 @@ export function mentionCandidates(
   a: Actor,
   itemId: string,
   query = "",
+  commentId?: string,
 ) {
   const item = s.items.find((i) => i.id === itemId);
   if (
@@ -68,7 +70,14 @@ export function mentionCandidates(
     s.lists.some((l) => l.id === item.listId && listIsArchived(l))
   )
     fail(404, "Private notes are not available for this item.");
-  const giverId = noteGiver(s, a, itemId);
+  const comment = commentId
+    ? s.comments.find(
+        (c) => c.id === commentId && c.itemId === itemId && c.authorId === a.id,
+      )
+    : undefined;
+  if (commentId && (!comment || !noteVisible(s, a, item, comment.giverId)))
+    fail(404, "Note not available.");
+  const giverId = comment ? comment.giverId : noteGiver(s, a, itemId);
   const people = s.people
     .filter(
       (p, index, people) =>
@@ -101,8 +110,10 @@ export function validateMentions(
   item: Item,
   body: string,
   mentions: Mention[],
+  storedGiverId?: string,
+  editing = false,
 ) {
-  const giverId = noteGiver(s, a, item.id);
+  const giverId = editing ? storedGiverId : noteGiver(s, a, item.id);
   let end = 0;
   for (const m of [...mentions].sort((a, b) => a.start - b.start)) {
     const person = s.people.find((p) => p.userId === m.userId);
@@ -337,7 +348,12 @@ export function activityAllowed(s: State, n: Notice): boolean {
       const comment = s.comments.find(
         (c) => c.id === n.commentId && c.itemId === item.id,
       );
-      return !!comment && noteVisible(s, a, item, comment.giverId);
+      return (
+        !!comment &&
+        noteVisible(s, a, item, comment.giverId) &&
+        (n.event !== "mention" ||
+          !!comment.mentions?.some((m) => m.userId === a.id))
+      );
     }
     if (recipient(s, a, item)) {
       const list = s.lists.find((l) => l.id === item.listId);
@@ -478,7 +494,17 @@ function renderActivity(s: State, n: Notice): NotificationView {
         ? s.exchanges.find((e) => e.id === n.exchangeId)?.name
         : undefined),
     href: n.importId
-      ? `/lists?draft=${n.importId}`
+      ? (() => {
+          const j = s.imports.find((j) => j.id === n.importId);
+          return j?.draft?.kind === "idea" &&
+            s.people.some(
+              (p) =>
+                p.id === j.draft?.recipientId &&
+                personVisible(s, actor(s, n.userId), p),
+            )
+            ? `/people/${j.draft.recipientId}?tab=ideas&draft=${n.importId}`
+            : `/lists?draft=${n.importId}`;
+        })()
       : n.invitationId
         ? `/invite/${n.invitationId}`
         : n.event === "invitation" && n.listId

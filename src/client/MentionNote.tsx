@@ -8,15 +8,26 @@ import {
 } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useApp } from "./context";
-import { api } from "./api";
+import { api, ApiError } from "./api";
 import { Form } from "./components";
-import type { Mention } from "../shared/model";
+import type { GiftView, Mention, World } from "../shared/model";
 
 type Candidate = { userId: string; name: string; detail: string };
-export function MentionNote({ itemId }: { itemId: string }) {
+export function MentionNote({
+  itemId,
+  note,
+  onDone,
+}: {
+  itemId: string;
+  note?: NonNullable<GiftView["comments"]>[number];
+  onDone?: () => void;
+}) {
   const { mutate, toast } = useApp();
-  const [body, setBody] = useState("");
-  const [mentions, setMentions] = useState<Mention[]>([]);
+  const [revision, setRevision] = useState(note?.revision);
+  const [conflict, setConflict] = useState(false);
+  const [reloadError, setReloadError] = useState("");
+  const [body, setBody] = useState(note?.body ?? "");
+  const [mentions, setMentions] = useState<Mention[]>(note?.mentions ?? []);
   const [caret, setCaret] = useState(0);
   const [dismissed, setDismissed] = useState(false);
   const [selected, setSelected] = useState(0);
@@ -111,10 +122,10 @@ export function MentionNote({ itemId }: { itemId: string }) {
     };
   }, [active, body, caret]);
   const candidates = useQuery({
-    queryKey: ["mention-candidates", itemId, match?.[1]],
+    queryKey: ["mention-candidates", itemId, note?.id, match?.[1]],
     queryFn: () =>
       api<Candidate[]>(
-        `items/${itemId}/mention-candidates?q=${encodeURIComponent(match?.[1] ?? "")}`,
+        `items/${itemId}/mention-candidates?q=${encodeURIComponent(match?.[1] ?? "")}${note ? `&commentId=${note.id}` : ""}`,
       ),
     enabled: active,
   });
@@ -135,21 +146,80 @@ export function MentionNote({ itemId }: { itemId: string }) {
   };
   return (
     <Form
-      submit="Add private note"
+      submit={note ? "Save changes" : "Add private note"}
+      cancel={onDone}
+      dirty={
+        note
+          ? body !== note.body ||
+            JSON.stringify(mentions) !== JSON.stringify(note.mentions ?? [])
+          : undefined
+      }
       onSubmit={async () => {
-        await mutate("comments", { itemId, body, mentions });
+        try {
+          await mutate(note ? "comments/update" : "comments", {
+            itemId,
+            body,
+            mentions,
+            ...(note ? { id: note.id, revision } : {}),
+          });
+        } catch (error) {
+          if (error instanceof ApiError && error.status === 409)
+            setConflict(true);
+          throw error;
+        }
+        if (note) {
+          toast("Note updated.");
+          onDone?.();
+          return;
+        }
         setBody("");
         setMentions([]);
         setCaret(0);
         toast("Private note added.");
       }}
     >
+      {conflict && (
+        <div>
+          <p>
+            Your text is still here. Reload the saved note before editing again.
+          </p>
+          <button
+            type="button"
+            className="text-button"
+            onClick={async () => {
+              try {
+                const latest = await api<World>("world");
+                const current = latest.items
+                  .find((i) => i.id === itemId)
+                  ?.comments?.find((c) => c.id === note?.id);
+                if (!current?.canEdit)
+                  throw new Error("This note is no longer editable.");
+                setBody(current.body);
+                setMentions(current.mentions ?? []);
+                setRevision(current.revision);
+                setConflict(false);
+                setReloadError("");
+              } catch (error) {
+                setReloadError(
+                  error instanceof Error
+                    ? error.message
+                    : "Could not reload the note.",
+                );
+              }
+            }}
+          >
+            Reload note and discard edits
+          </button>
+          {reloadError && <p role="alert">{reloadError}</p>}
+        </div>
+      )}
       <div className="field">
         <label htmlFor={`${listId}-input`}>Your note</label>
         <div className="mention-composer">
           <textarea
             id={`${listId}-input`}
             ref={textarea}
+            autoFocus={!!note}
             name="body"
             required
             maxLength={4000}

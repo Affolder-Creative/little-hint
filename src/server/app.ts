@@ -293,9 +293,18 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
     async (req) => {
       const a = await actor(req);
       const q = z
-        .object({ q: z.string().max(160).default("") })
+        .object({
+          q: z.string().max(160).default(""),
+          commentId: z.string().uuid().optional(),
+        })
         .parse(req.query);
-      return mentionCandidates(await readState(), a, req.params.id, q.q);
+      return mentionCandidates(
+        await readState(),
+        a,
+        req.params.id,
+        q.q,
+        q.commentId,
+      );
     },
   );
   app.get("/api/v1/push", async (req) => {
@@ -390,6 +399,8 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
     contributions: "contributions.create",
     "contributions/update": "contributions.update",
     comments: "comments.create",
+    "comments/update": "comments.update",
+    "comments/delete": "comments.delete",
     "notifications/read": "notifications.read",
     follows: "follows.update",
     watches: "watches.update",

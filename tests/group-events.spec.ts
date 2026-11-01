@@ -225,6 +225,9 @@ test("leaders manage an occasion while recipients add wishes and unselected memb
 
     await leader.getByRole("link", { name: "Manage event" }).click();
     await leader
+      .getByLabel("Event actions for Christmas 2026", { exact: true })
+      .click();
+    await leader
       .getByRole("button", { name: "Edit event", exact: true })
       .click();
     await leader.setViewportSize({ width: 320, height: 852 });
@@ -259,6 +262,9 @@ test("leaders manage an occasion while recipients add wishes and unselected memb
         ?.archived,
     ).toBe(true);
     await leader
+      .getByLabel("Event actions for Christmas 2026", { exact: true })
+      .click();
+    await leader
       .getByRole("button", { name: "Edit event", exact: true })
       .click();
     await leader
@@ -279,6 +285,9 @@ test("leaders manage an occasion while recipients add wishes and unselected memb
     ).toBe(true);
 
     await leader
+      .getByLabel("Event actions for Christmas 2026", { exact: true })
+      .click();
+    await leader
       .getByRole("button", { name: "Archive event", exact: true })
       .click();
     await leader
@@ -291,6 +300,9 @@ test("leaders manage an occasion while recipients add wishes and unselected memb
       ),
     ).toBeVisible();
     await leader
+      .getByLabel("Event actions for Christmas 2026", { exact: true })
+      .click();
+    await leader
       .getByRole("button", { name: "Restore event", exact: true })
       .click();
     await leader
@@ -298,7 +310,7 @@ test("leaders manage an occasion while recipients add wishes and unselected memb
       .getByRole("button", { name: "Restore event", exact: true })
       .click();
     await expect(
-      leader.getByRole("button", { name: "Archive event", exact: true }),
+      leader.getByLabel("Event actions for Christmas 2026", { exact: true }),
     ).toBeVisible();
     await page.goto(
       `/settings?section=groups&view=events&group=${familyGroup.id}`,

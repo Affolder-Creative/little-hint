@@ -1,4 +1,5 @@
-import { Pencil, Archive, ArchiveRestore } from "lucide-react";
+import { PrivateNote } from "./PrivateNotes";
+import { Pencil, Archive, ArchiveRestore, CalendarDays } from "lucide-react";
 import { ImportDrafts } from "./ImportDrafts";
 import { useProductImages } from "./useProductImages";
 import { BrowseTools } from "./BrowseTools";
@@ -50,7 +51,7 @@ import {
   PushLifecycle,
   clearPushBinding,
 } from "./Notifications";
-import { MentionNote, MentionText } from "./MentionNote";
+import { MentionNote } from "./MentionNote";
 import { actionError, contributionStatus } from "./copy";
 import { Confirm } from "./Confirm";
 import { canManageGroupEvents } from "../shared/group-events";
@@ -608,6 +609,7 @@ function Browser({
   listId,
   headingLevel = 2,
   personScoped = false,
+  compactEmpty = false,
 }: {
   items: GiftView[];
   emptyTitle?: string;
@@ -618,6 +620,7 @@ function Browser({
   listId?: string;
   headingLevel?: 2 | 3;
   personScoped?: boolean;
+  compactEmpty?: boolean;
 }) {
   const [search, setSearch] = useNavigationState<string>("search", ""),
     [tag, setTag] = useNavigationState<string>("tag", ""),
@@ -829,6 +832,7 @@ function Browser({
         </div>
       ) : (
         <Empty
+          compact={compactEmpty}
           title={
             visibleItems.length
               ? "No matches found"
@@ -1142,6 +1146,7 @@ function PersonPage() {
         aria-labelledby={`person-tab-${tab}`}
         tabIndex={0}
       >
+        {tab === "ideas" && <ImportDrafts recipientId={id} />}
         {tab === "wishes" && lists.length > 0 && (
           <>
             <nav
@@ -1151,8 +1156,23 @@ function PersonPage() {
               <ul>
                 {lists.map((list) => (
                   <li key={list.id}>
-                    <Link className="text-button" to={`/lists/${list.id}`}>
-                      {list.name} <ArrowRight size={16} aria-hidden="true" />
+                    <Link
+                      className="person-list-link"
+                      to={`/lists/${list.id}`}
+                      aria-labelledby={`person-list-name-${list.id}`}
+                      aria-describedby={`person-list-type-${list.id}`}
+                    >
+                      <span>
+                        <strong id={`person-list-name-${list.id}`}>
+                          {list.name}
+                        </strong>
+                        <small id={`person-list-type-${list.id}`}>
+                          {list.groupEventId
+                            ? "Group event wish list"
+                            : "Wish list"}
+                        </small>
+                      </span>{" "}
+                      <ArrowRight size={16} aria-hidden="true" />
                     </Link>
                   </li>
                 ))}
@@ -1244,6 +1264,51 @@ function Lists() {
         This list may no longer be shared with you.
       </Empty>
     );
+  const event = world.groupEvents.find((e) => e.id === list?.groupEventId);
+  const eventName = event?.name ?? list?.name;
+  const eventDescription = event?.description ?? list?.description;
+  const giftIdeas = list && !list.canEdit && ideaRecipients.length > 0 && (
+    <section className="list-gift-ideas">
+      <h2>Gift ideas for {ideaRecipients.map((p) => p.name).join(" & ")}</h2>
+      <p className="muted">
+        {list.groupEventId
+          ? `Save your own ideas for ${ideaRecipients.map((p) => p.name).join(" & ")} here, separately from this wish list.`
+          : "Gift ideas are saved for a person, separately from this wish list."}
+      </p>
+      {!list.canEdit && !list.archived && ideaRecipients.length > 0 && (
+        <button
+          className="button secondary"
+          onClick={() =>
+            open(
+              ideaRecipients.length === 1
+                ? `Gift idea for ${ideaRecipients[0].name}`
+                : "Add gift idea",
+              <GiftForm
+                recipientOptions={ideaRecipients.map((person) => person.id)}
+                onSaved={(gift) => navigate(`/gift/${gift.id}`)}
+              />,
+            )
+          }
+        >
+          <Plus size={17} /> Add gift idea
+        </button>
+      )}
+      <nav aria-label="Saved gift ideas">
+        {ideaRecipients.map((person) => (
+          <Link
+            className="gift-ideas-link"
+            key={person.id}
+            to={`/people/${person.id}?tab=ideas`}
+          >
+            {list.groupEventId && ideaRecipients.length === 1
+              ? "View gift ideas"
+              : `View gift ideas for ${person.name}`}
+            <ArrowRight size={16} aria-hidden="true" />
+          </Link>
+        ))}
+      </nav>
+    </section>
+  );
   if (list)
     return (
       <>
@@ -1258,9 +1323,68 @@ function Lists() {
               "On their wish lists")}
         </Link>
         <Header
-          className="list-heading"
-          title={list.name}
-          description={list.description}
+          className={`list-heading${list.groupEventId ? " event-wish-heading" : ""}`}
+          metadataBelow={!!list.groupEventId}
+          title={
+            list.groupEventId
+              ? list.ownerIds.some((id) =>
+                  world.people.some(
+                    (p) => p.id === id && p.userId === world.me.id,
+                  ),
+                )
+                ? "Your wish list"
+                : `${list.ownerIds.map((id) => world.people.find((p) => p.id === id)?.name ?? "Recipient").join(" & ")}’s wish list`
+              : list.name
+          }
+          description={list.groupEventId ? undefined : list.description}
+          metadata={
+            <>
+              {list.groupEventId && (
+                <div className="event-list-context">
+                  <h2>
+                    <CalendarDays size={20} aria-hidden="true" />
+                    {eventName}
+                  </h2>
+                  {eventDescription && (
+                    <p className="muted">{eventDescription}</p>
+                  )}
+                </div>
+              )}
+              <div
+                className={
+                  list.groupEventId ? "event-wish-metadata" : undefined
+                }
+              >
+                <details
+                  className="list-privacy"
+                  key={list.id}
+                  open={privacyOpen}
+                  onToggle={(event) => setPrivacyOpen(event.currentTarget.open)}
+                >
+                  <summary>
+                    <Privacy mode={list.mode} />{" "}
+                    <span className="privacy-disclosure-label">
+                      <Info size={16} aria-hidden="true" />
+                      <span className="sr-only">Privacy details</span>
+                    </span>
+                  </summary>
+                  <RevealPolicy list={list} />
+                </details>
+                {list.groupEventId && event && (
+                  <Link
+                    className="text-button event-wish-manage"
+                    to={`/events/${event.id}`}
+                  >
+                    {event.canManage ? "Manage event" : "View group event"}
+                    <ArrowRight size={16} aria-hidden="true" />
+                  </Link>
+                )}
+              </div>
+              {list.groupEventId && (
+                <ManagedEventNotice list={list} showLink={false} />
+              )}
+            </>
+          }
         >
           {list.canEdit && !list.archived && (
             <button
@@ -1268,24 +1392,6 @@ function Lists() {
               onClick={() => open("Add item", <GiftForm listId={list.id} />)}
             >
               <Plus size={17} /> Add item
-            </button>
-          )}
-          {!list.canEdit && !list.archived && ideaRecipients.length > 0 && (
-            <button
-              className="button secondary"
-              onClick={() =>
-                open(
-                  ideaRecipients.length === 1
-                    ? `Gift idea for ${ideaRecipients[0].name}`
-                    : "Add gift idea",
-                  <GiftForm
-                    recipientOptions={ideaRecipients.map((person) => person.id)}
-                    onSaved={(gift) => navigate(`/gift/${gift.id}`)}
-                  />,
-                )
-              }
-            >
-              <Plus size={17} /> Add gift idea
             </button>
           )}
           {list.canEdit && !list.archived && (
@@ -1309,7 +1415,9 @@ function Lists() {
               >
                 <Pencil size={16} aria-hidden="true" /> Edit list
               </button>
-              <FollowButton target="list" targetId={list.id} />
+              {(!list.canEdit || list.hasOtherItemEditors) && (
+                <FollowButton target="list" targetId={list.id} />
+              )}
               <Action
                 secondary
                 onClick={() =>
@@ -1329,50 +1437,19 @@ function Lists() {
               </Action>
               <TrashButton kind="lists" entry={list} />
             </ActionMenu>
-          ) : (
+          ) : !list.canEdit || list.hasOtherItemEditors ? (
             <FollowButton target="list" targetId={list.id} />
-          )}
+          ) : null}
         </Header>
-        {!list.canEdit && ideaRecipients.length > 0 && (
-          <div className="list-gift-ideas">
-            <p className="muted">
-              Gift ideas are saved for a person, separately from this wish list.
-            </p>
-            <nav aria-label="Saved gift ideas">
-              {ideaRecipients.map((person) => (
-                <Link
-                  className="gift-ideas-link"
-                  key={person.id}
-                  to={`/people/${person.id}?tab=ideas`}
-                >
-                  View gift ideas for {person.name}
-                  <ArrowRight size={16} aria-hidden="true" />
-                </Link>
-              ))}
-            </nav>
-          </div>
-        )}
         {list.archived && (
           <p className="notice">
             This list is archived. Existing purchase history is preserved.
           </p>
         )}
-        {list.groupEventId && <ManagedEventNotice list={list} />}
-        <details
-          className="list-privacy"
-          key={list.id}
-          open={privacyOpen}
-          onToggle={(event) => setPrivacyOpen(event.currentTarget.open)}
-        >
-          <summary>
-            <Privacy mode={list.mode} />{" "}
-            <span className="privacy-disclosure-label">
-              <Info size={16} aria-hidden="true" />
-              <span className="sr-only">Privacy details</span>
-            </span>
-          </summary>
-          <RevealPolicy list={list} />
-        </details>
+        {!list.groupEventId && giftIdeas}
+        {list.groupEventId && (
+          <h2 className="event-wish-items-heading">On this wish list</h2>
+        )}
         {list.canEdit && <ImportDrafts listId={list.id} />}
         {list.canEdit && list.revealAvailable && (
           <div className="tabs" role="group" aria-label="List view">
@@ -1395,22 +1472,28 @@ function Lists() {
         ) : (
           <Browser
             listId={list.id}
+            compactEmpty={!!list.groupEventId}
             items={world.items.filter((i) => i.listId === list.id)}
             searchLabel="Search items"
             emptyTitle={
-              list.canEdit && !list.archived
+              list.canEdit && !list.archived && !list.groupEventId
                 ? "Something in mind?"
                 : "No items yet"
             }
             emptyText={
               list.archived
                 ? "This archived wish list has no items."
-                : list.canEdit
-                  ? "Add your first item to this wish list."
-                  : "Check back when they have added a few hints."
+                : list.groupEventId
+                  ? list.canEdit
+                    ? `Add a few things you would love for ${eventName}.`
+                    : `${list.ownerIds.map((id) => world.people.find((p) => p.id === id)?.name ?? "The recipient").join(" & ")} hasn’t added any wishes for ${eventName} yet.`
+                  : list.canEdit
+                    ? "Add your first item to this wish list."
+                    : "Check back when they have added a few hints."
             }
           />
         )}
+        {list.groupEventId && giftIdeas}
       </>
     );
   return <ListIndex />;
@@ -1742,23 +1825,22 @@ function GiftDetail() {
             giver are visible only to that giver and anyone managing their
             profile.
           </p>
+          {noteLocation.hash.startsWith("#note-") &&
+            !gift.comments.some(
+              (c) => `#note-${c.id}` === noteLocation.hash,
+            ) && (
+              <p role="status">
+                This note was deleted or is no longer available.
+              </p>
+            )}
           {gift.comments.length ? (
             gift.comments.map((c) => (
-              <div
-                className={`comment${noteLocation.hash === `#note-${c.id}` ? " targeted-note" : ""}`}
+              <PrivateNote
                 key={c.id}
-                id={`note-${c.id}`}
-                tabIndex={-1}
-              >
-                <Avatar name={c.author} small />
-                <div>
-                  <strong>{c.author}</strong>
-                  <small>{new Date(c.createdAt).toLocaleDateString()}</small>
-                  <p>
-                    <MentionText body={c.body} mentions={c.mentions} />
-                  </p>
-                </div>
-              </div>
+                note={c}
+                itemId={gift.id}
+                targeted={noteLocation.hash === `#note-${c.id}`}
+              />
             ))
           ) : (
             <p>No notes yet. Sizes, plans, and helpful details go here.</p>

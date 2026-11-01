@@ -305,13 +305,6 @@ export function GiftForm({
   const [draftSaved, setDraftSaved] = useState("");
   const [saveError, setSaveError] = useState("");
   const saveQueue = useRef(Promise.resolve());
-  const snapshot = JSON.stringify({
-    fields: { ...data, priority },
-    touched: [...touched.current],
-    listId: destination,
-  });
-  const currentSnapshot = useRef(snapshot);
-  currentSnapshot.current = snapshot;
   const [slow, setSlow] = useState(false);
   useEffect(() => {
     setSlow(false);
@@ -338,6 +331,42 @@ export function GiftForm({
     saveQueue.current = next;
     return next;
   }
+
+  const applied = useRef("");
+  const recipients = world.people.filter(
+    (person) =>
+      recipientOptions?.includes(person.id) &&
+      person.userId !== world.me.id &&
+      !person.guardians.includes(world.me.id),
+  );
+  const [recipientId, setRecipientId] = useState(
+    importDraft?.draft?.recipientId ??
+      initialRecipientId ??
+      (recipients.length === 1 ? recipients[0].id : ""),
+  );
+  const idea =
+    importDraft?.draft?.kind === "idea" ||
+    !!initialRecipientId ||
+    !!recipientOptions ||
+    (!!gift && !gift.listId);
+  const recipientName =
+    gift?.recipientNames.join(" & ") ??
+    world.people.find((person) => person.id === recipientId)?.name;
+  const [visibility, setVisibility] = useState(
+    importDraft?.draft?.visibility ?? gift?.visibility ?? "private",
+  );
+  const [groupIds, setGroupIds] = useState(
+    importDraft?.draft?.groupIds ?? gift?.groupIds ?? [],
+  );
+  const snapshot = JSON.stringify({
+    fields: { ...data, priority },
+    touched: [...touched.current],
+    ...(idea
+      ? { kind: "idea", recipientId, visibility, groupIds }
+      : { listId: destination }),
+  });
+  const currentSnapshot = useRef(snapshot);
+  currentSnapshot.current = snapshot;
   useEffect(() => {
     if (!savedDraft.current?.draft || snapshot === draftSaved) return;
     const timer = setTimeout(() => {
@@ -349,24 +378,6 @@ export function GiftForm({
     }, 500);
     return () => clearTimeout(timer);
   }, [snapshot, draftSaved, job?.id]);
-
-  const applied = useRef("");
-  const recipients = world.people.filter(
-    (person) =>
-      recipientOptions?.includes(person.id) &&
-      person.userId !== world.me.id &&
-      !person.guardians.includes(world.me.id),
-  );
-  const [recipientId, setRecipientId] = useState(
-    initialRecipientId ?? (recipients.length === 1 ? recipients[0].id : ""),
-  );
-  const idea =
-    !!initialRecipientId || !!recipientOptions || (!!gift && !gift.listId);
-  const recipientName =
-    gift?.recipientNames.join(" & ") ??
-    world.people.find((person) => person.id === recipientId)?.name;
-  const [visibility, setVisibility] = useState(gift?.visibility ?? "private");
-  const [groupIds, setGroupIds] = useState(gift?.groupIds ?? []);
   const audienceGroups = world.groups.filter((group) =>
     groupIds.includes(group.id),
   );
@@ -408,7 +419,12 @@ export function GiftForm({
             price: r.priceCents == null ? "" : String(r.priceCents / 100),
             image: r.image,
             tags: r.tags?.join(", "),
-          }).filter(([k, v]) => v !== undefined && !touched.current.has(k)),
+          }).filter(
+            ([k, v]) =>
+              v !== undefined &&
+              !touched.current.has(k) &&
+              !d[k as keyof typeof d],
+          ),
         ),
       }));
     }
@@ -422,6 +438,8 @@ export function GiftForm({
   async function importUrl(forceRefresh = false) {
     setError("");
     try {
+      if (idea && !recipientId)
+        throw new Error("Choose who this idea is for first.");
       if (savedDraft.current?.draft && job?.status === "failed") {
         await api("imports/retry", { id: job.id });
         await importQuery.retry();
@@ -435,9 +453,11 @@ export function GiftForm({
       const created = await importQuery.start(
         data.url,
         forceRefresh,
-        !gift && !idea
+        !gift
           ? {
-              listId: destination,
+              ...(idea
+                ? { kind: "idea" as const, recipientId, visibility, groupIds }
+                : { listId: destination }),
               fields: { ...data, priority },
               touched: [...touched.current],
             }
@@ -489,7 +509,11 @@ export function GiftForm({
                 setDraftSaving(true);
                 try {
                   await flushDraft();
-                  toast("Private draft saved. Find it in My lists.");
+                  toast(
+                    idea
+                      ? `Private draft saved. Find it in Gift ideas for ${recipientName ?? "this person"}.`
+                      : "Private draft saved. Find it in My lists.",
+                  );
                   close();
                 } catch {
                   setSaveError(
@@ -531,7 +555,9 @@ export function GiftForm({
         !!localStorage.getItem(`little-hint:draft-optin:${world.me.id}`)
       }
       onSubmit={async (f) => {
+        if (savedDraft.current?.draft) await flushDraft();
         const payload = {
+          importDraftRevision: savedDraft.current?.draft?.revision,
           ...data,
           ...(!idea ? { priority } : {}),
           tags: data.tags
@@ -603,6 +629,28 @@ export function GiftForm({
         onSaved?.(result);
       }}
     >
+      {idea && importDraft && (
+        <Field label="Who is this idea for?">
+          <select
+            value={recipientId}
+            onChange={(e) => setRecipientId(e.target.value)}
+            required
+          >
+            <option value="">Choose a person</option>
+            {world.people
+              .filter(
+                (p) =>
+                  p.userId !== world.me.id &&
+                  !p.guardians.includes(world.me.id),
+              )
+              .map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+          </select>
+        </Field>
+      )}
       {idea && (
         <>
           {recipientOptions && !gift && recipients.length > 1 && (
