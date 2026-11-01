@@ -120,7 +120,8 @@ export function adminUsage(
     s,
     `imports:metrics:${month}:`,
     daily("openai"),
-    productLookupEnabled(cfg) &&
+    cfg.AI_ENABLED === "true" &&
+      productLookupEnabled(cfg) &&
       !!cfg.OPENAI_API_KEY &&
       Number(cfg.PAID_DAILY_LIMIT) > 0,
   );
@@ -138,6 +139,7 @@ export function adminUsage(
   };
   const sms = smsUsage(s, cfg, now);
   return {
+    aiEnabled: cfg.AI_ENABLED === "true",
     sms,
     month,
     resetsAt: new Date(
@@ -147,9 +149,10 @@ export function adminUsage(
     visible:
       sms.enabled ||
       sms.requests > 0 ||
-      [suggestions, productDetails, scraping].some(
-        (g) => g.enabled || g.requests > 0,
-      ),
+      [
+        ...(cfg.AI_ENABLED === "true" ? [suggestions, productDetails] : []),
+        scraping,
+      ].some((g) => g.enabled || g.requests > 0),
     suggestions,
     productDetails,
     scraping,

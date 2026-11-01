@@ -127,3 +127,11 @@ Sign-out and account changes clear images and cancel downloads; a cross-tab sign
 Visible thumbnails load first. Once visible card images finish, a sequential queue warms at most two larger photos per route visit. Pointer, focus and touch can queue likely detail photos. Foreground image demand cancels unrelated prefetch work; route changes, hidden pages, offline status and disabled policy cancel speculative work. Save-data and slow effective connection types suppress it where supported.
 
 Administration stores PRODUCT_IMAGE_CACHE_ENABLED and PRODUCT_IMAGE_PREFETCH_ENABLED as application preferences, both defaulting to true. Explicit true/false environment values override and lock their controls; blank leaves them editable. The world exposes effective imageDelivery flags. Caching off also disables prefetching without changing the stored prefetch preference. Unknown client configuration disables both features.
+
+## Master AI switch
+
+Set `AI_ENABLED=true` to enable AI with the configured API key. Missing, blank, or `false` disables all AI requests and hides AI features, service rows, and usage explanations, including historical AI usage sections. Other values are rejected. Keys can remain configured. Existing deployments must explicitly opt in after upgrading.
+
+Gift discovery still requires an enabled audience mode; product enrichment still respects shop-lookup settings and spending limits. Disabled AI bypasses cached enrichment too. Ordinary shop lookups, photos, manual entry, preferences, saved gifts, and stored usage history remain available or preserved. Unsaved discovery batches follow existing cancellation and cleanup rules. Re-enabling restores historical reporting, not cancelled batches.
+
+Recreate both app and worker after changing the flag. Clients update on normal refresh; previously dispatched requests may still be billed. Staging uses only `STAGING_AI_ENABLED`; preview always disables AI.

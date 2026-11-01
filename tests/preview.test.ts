@@ -76,6 +76,7 @@ describe("preview boundaries", () => {
       SMTP_HOST: "mailpit",
       SMTP_PORT: "1025",
       SMTP_PASS: "",
+      AI_ENABLED: "false",
       OPENAI_API_KEY: "",
       TWILIO_AUTH_TOKEN: "",
       TELEGRAM_BOT_TOKEN: "",

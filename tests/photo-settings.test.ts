@@ -80,6 +80,7 @@ describe("automatic product photo preference", () => {
   });
   it("never exposes the staging AI secret in the settings summary", async () => {
     vi.stubEnv("APP_ENV", "staging");
+    vi.stubEnv("STAGING_AI_ENABLED", "true");
     vi.stubEnv("STAGING_OPENAI_API_KEY", "staging-secret-must-not-leak");
     const summary = await settingsSummary();
     expect(summary.some((setting) => setting.key === "OPENAI_API_KEY")).toBe(
@@ -94,6 +95,7 @@ describe("automatic product photo preference", () => {
   });
   it("allows the preference in staging without unlocking providers", async () => {
     vi.stubEnv("APP_ENV", "staging");
+    vi.stubEnv("AI_ENABLED", "true");
     vi.stubEnv("OPENAI_API_KEY", "must-not-use");
     await saveSetting(key, "true");
     expect(await settingsSummary()).toContainEqual(
@@ -101,6 +103,7 @@ describe("automatic product photo preference", () => {
     );
     expect(await config()).toMatchObject({
       SMTP_HOST: "mailpit",
+      AI_ENABLED: "false",
       OPENAI_API_KEY: "",
       SCRAPING_PROVIDER: "auto",
       PAID_DAILY_LIMIT: "0",

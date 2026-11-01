@@ -14,6 +14,7 @@ export interface AiUsage {
   }>;
 }
 export interface AdminUsage {
+  aiEnabled: boolean;
   sms: SmsUsage;
   visible: boolean;
   month: string;

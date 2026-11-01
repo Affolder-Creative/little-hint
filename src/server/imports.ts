@@ -564,7 +564,7 @@ export async function importProduct(
       /* A photo failure must not discard usable product details. */
     }
   }
-  if (cfg.OPENAI_API_KEY) {
+  if (cfg.AI_ENABLED === "true" && cfg.OPENAI_API_KEY) {
     try {
       const enrichmentKey = shareable
         ? importCacheKey("enrichment-v2", [

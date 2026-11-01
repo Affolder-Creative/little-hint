@@ -144,7 +144,11 @@ describe("AI product copy", () => {
       ],
     });
   const enable = () => {
-    mocks.cfg = { OPENAI_API_KEY: "synthetic-key", OPENAI_MODEL: "test-model" };
+    mocks.cfg = {
+      AI_ENABLED: "true",
+      OPENAI_API_KEY: "synthetic-key",
+      OPENAI_MODEL: "test-model",
+    };
   };
 
   it("cleans titles and descriptions from complete source text, caches them, and keeps retailer facts", async () => {
@@ -200,6 +204,18 @@ describe("AI product copy", () => {
     expect(spend).toHaveBeenCalledExactlyOnceWith("openai");
     await importProduct("https://example.com/product", "alice", true);
     expect(ai).toHaveBeenCalledTimes(2);
+    mocks.cfg.AI_ENABLED = "false";
+    const withoutAi = await importProduct(
+      "https://example.com/product",
+      "alice",
+    );
+    expect(withoutAi.title).not.toBe(cleaned.title);
+    expect(ai).toHaveBeenCalledTimes(2);
+    mocks.cfg.AI_ENABLED = "true";
+    expect(
+      (await importProduct("https://example.com/product", "alice")).title,
+    ).toBe(cleaned.title);
+    expect(ai).toHaveBeenCalledTimes(2);
   });
 
   it.each([undefined, "", "   ", "X".repeat(161), 123])(
@@ -234,7 +250,7 @@ describe("AI product copy", () => {
     "keeps retailer data when AI is %s",
     async (failure) => {
       enable();
-      if (failure === "disabled") mocks.cfg.OPENAI_API_KEY = "";
+      if (failure === "disabled") mocks.cfg.AI_ENABLED = "false";
       if (failure === "quota")
         vi.mocked(spend).mockRejectedValueOnce(
           new Error("Daily limit reached"),
@@ -385,6 +401,7 @@ describe("shared product metadata cache", () => {
   });
   it("does not cache failures and retries enrichment independently", async () => {
     mocks.cfg = {
+      AI_ENABLED: "true",
       OPENAI_API_KEY: "synthetic-secret",
       OPENAI_MODEL: "test-model",
     };

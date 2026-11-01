@@ -256,7 +256,7 @@ export function addDiscoveryUsage(s: State, key: string, count: number) {
 function authorize(s: State, a: Actor, cfg: DiscoveryConfig, personId: string) {
   visiblePerson(s, a, personId);
   if (!discoveryAllowed(cfg, controls(s, a, personId)))
-    fail(403, "AI gift suggestions are not enabled for this person.");
+    fail(403, "This feature is not enabled for this person.");
 }
 export function discoveryJob(
   s: State,

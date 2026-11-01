@@ -4,6 +4,7 @@ import { serviceStatuses } from "../src/server/service-status";
 afterEach(() => vi.unstubAllEnvs());
 it("reports capability requirements without exposing values", () => {
   const cfg = {
+    AI_ENABLED: "true",
     GIFT_DISCOVERY_MODE: "off",
     PAID_DAILY_LIMIT: "50",
     SMTP_HOST: "private-host",
@@ -25,6 +26,7 @@ it("reports capability requirements without exposing values", () => {
     {
       ...cfg,
       GIFT_DISCOVERY_MODE: "both",
+      AI_ENABLED: "true",
       OPENAI_API_KEY: "secret",
       SCRAPINGFISH_API_KEY: "secret",
       TELEGRAM_BOT_NAME: "private-bot",
@@ -52,16 +54,18 @@ it.each([
 });
 it("synthetic deployments ignore external services and invalid dormant configuration", () => {
   vi.stubEnv("APP_ENV", "staging");
+  vi.stubEnv("AI_ENABLED", "true");
   vi.stubEnv("OPENAI_API_KEY", "secret");
   vi.stubEnv("SMTP_PORT", "invalid");
   const rows = serviceStatuses(effectiveConfig(), false);
   expect(rows.find((r) => r.id === "email")?.status).toBe("Configured");
-  expect(rows.find((r) => r.id === "suggestions")?.status).toBe("Off");
+  expect(rows.find((r) => r.id === "suggestions")).toBeUndefined();
   expect(rows.find((r) => r.id === "shops")?.status).toBe("Direct lookup only");
 });
 
 it("requires a password only when SMTP authentication is enabled", () => {
   const cfg = {
+    AI_ENABLED: "true",
     GIFT_DISCOVERY_MODE: "off",
     SMTP_HOST: "host",
     SMTP_USER: "account",

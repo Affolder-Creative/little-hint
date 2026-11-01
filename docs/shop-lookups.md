@@ -138,4 +138,12 @@ Official references, checked 2026-10-31: [Scraper catalog](https://docs.brightda
 
 Set `SCRAPING_PROVIDER=none`, or `STAGING_SCRAPING_PROVIDER=none` in staging, on both app and worker and recreate both services. This now disables the entire product-detail pipeline, including direct extraction and cached lookups. Existing private drafts remain editable and can be added manually. Pending jobs stop with manual-entry guidance. Requests already dispatched cannot be recalled.
 
-Use `auto` for direct extraction and optional product-detail AI. With provider credentials configured, `auto` also selects the first available paid provider. To use direct extraction without paid requests, set `PAID_DAILY_LIMIT=0`. AI gift suggestions have their own configuration and are not disabled by manual product entry. Current-month usage remains visible after disabling a service.
+Use `auto` for direct extraction and optional product-detail AI. With provider credentials configured, `auto` also selects the first available paid provider. To use direct extraction without paid requests, set `PAID_DAILY_LIMIT=0`. AI gift suggestions have their own configuration and are not disabled by manual product entry. Current-month usage remains visible after disabling a service, except AI usage hidden by the master switch.
+
+## Master AI switch
+
+Set `AI_ENABLED=true` to enable AI with the configured API key. Missing, blank, or `false` disables all AI requests and hides AI features, service rows, and usage explanations, including historical AI usage sections. Other values are rejected. Keys can remain configured. Existing deployments must explicitly opt in after upgrading.
+
+Gift discovery still requires an enabled audience mode; product enrichment still respects shop-lookup settings and spending limits. Disabled AI bypasses cached enrichment too. Ordinary shop lookups, photos, manual entry, preferences, saved gifts, and stored usage history remain available or preserved. Unsaved discovery batches follow existing cancellation and cleanup rules. Re-enabling restores historical reporting, not cancelled batches.
+
+Recreate both app and worker after changing the flag. Clients update on normal refresh; previously dispatched requests may still be billed. Staging uses only `STAGING_AI_ENABLED`; preview always disables AI.

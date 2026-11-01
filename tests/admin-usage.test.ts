@@ -8,6 +8,7 @@ import {
 } from "../src/server/usage";
 const now = new Date("2026-10-28T12:00:00Z");
 const cfg = {
+  AI_ENABLED: "true",
   GIFT_DISCOVERY_MODE: "off",
   GIFT_DISCOVERY_MODEL: "gpt-6-luna",
   PAID_DAILY_LIMIT: "50",

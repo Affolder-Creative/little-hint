@@ -218,7 +218,7 @@ export function AdminUsage() {
           </details>
         </section>
       )}
-      {(u.suggestions.enabled || u.suggestions.requests > 0) && (
+      {u.aiEnabled && (u.suggestions.enabled || u.suggestions.requests > 0) && (
         <section className="usage-group" aria-label="Gift suggestions">
           <h4>
             Gift suggestions
@@ -250,30 +250,31 @@ export function AdminUsage() {
           <AiDetails usage={u.suggestions} />
         </section>
       )}
-      {(u.productDetails.enabled || u.productDetails.requests > 0) && (
-        <section className="usage-group" aria-label="Product-detail AI">
-          <h4>
-            Product-detail AI
-            {!u.productDetails.enabled && (
-              <span className="usage-state">Currently off</span>
+      {u.aiEnabled &&
+        (u.productDetails.enabled || u.productDetails.requests > 0) && (
+          <section className="usage-group" aria-label="Product-detail AI">
+            <h4>
+              Product-detail AI
+              {!u.productDetails.enabled && (
+                <span className="usage-state">Currently off</span>
+              )}
+            </h4>
+            <p className="muted">
+              Cleans up names, descriptions, and tags when you use Get details.
+            </p>
+            <dl className="usage-metrics">
+              <div>
+                <dt>AI requests</dt>
+                <dd>{number(u.productDetails.requests)}</dd>
+              </div>
+              <Estimate usage={u.productDetails} />
+            </dl>
+            {!u.productDetails.requests && (
+              <p className="muted">No product-detail AI requests this month.</p>
             )}
-          </h4>
-          <p className="muted">
-            Cleans up names, descriptions, and tags when you use Get details.
-          </p>
-          <dl className="usage-metrics">
-            <div>
-              <dt>AI requests</dt>
-              <dd>{number(u.productDetails.requests)}</dd>
-            </div>
-            <Estimate usage={u.productDetails} />
-          </dl>
-          {!u.productDetails.requests && (
-            <p className="muted">No product-detail AI requests this month.</p>
-          )}
-          <AiDetails usage={u.productDetails} />
-        </section>
-      )}
+            <AiDetails usage={u.productDetails} />
+          </section>
+        )}
       {(u.scraping.enabled || u.scraping.requests > 0) && (
         <section className="usage-group" aria-label="Paid shop lookups">
           <h4>
@@ -310,14 +311,17 @@ export function AdminUsage() {
         <summary>About this report</summary>
         <p>
           Recorded usage includes attempted paid requests, even when they fail.
-          Direct website lookups and cached results do not add paid requests.
-          Gift suggestion searches are counted separately. Disabling a service
-          preserves charges already recorded this month.
+          Direct website lookups and cached results do not add paid requests.{" "}
+          {u.aiEnabled && "Gift suggestion searches are counted separately. "}
+          Disabling a service preserves charges already recorded this month.
         </p>
-        <p>
-          AI estimates use rates recorded on {u.pricingAsOf}. Models without
-          known rates show Unavailable. Check provider billing for actual costs.
-        </p>
+        {u.aiEnabled && (
+          <p>
+            AI estimates use rates recorded on {u.pricingAsOf}. Models without
+            known rates show Unavailable. Check provider billing for actual
+            costs.
+          </p>
+        )}
       </details>
     </section>
   );

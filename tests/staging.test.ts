@@ -57,12 +57,14 @@ describe("staging boundaries", () => {
     vi.stubEnv("APP_ENV", "staging");
     vi.stubEnv("SMTP_HOST", "real-mail.example.com");
     vi.stubEnv("TWILIO_AUTH_TOKEN", "must-not-use");
+    vi.stubEnv("AI_ENABLED", "true");
     vi.stubEnv("OPENAI_API_KEY", "must-not-use");
     expect(await config()).toMatchObject({
       SMTP_HOST: "mailpit",
       SMTP_PORT: "1025",
       SMTP_PASS: "",
       TWILIO_AUTH_TOKEN: "",
+      AI_ENABLED: "false",
       OPENAI_API_KEY: "",
       SCRAPING_PROVIDER: "auto",
       PAID_DAILY_LIMIT: "0",
@@ -75,7 +77,9 @@ describe("staging boundaries", () => {
 describe("staging AI opt-in", () => {
   it("uses only staging credentials and shares discovery configuration with transaction guards", async () => {
     vi.stubEnv("APP_ENV", "staging");
+    vi.stubEnv("STAGING_AI_ENABLED", "true");
     vi.stubEnv("STAGING_OPENAI_API_KEY", "staging-test-key");
+    vi.stubEnv("AI_ENABLED", "true");
     vi.stubEnv("OPENAI_API_KEY", "production-must-not-use");
     vi.stubEnv("STAGING_GIFT_DISCOVERY_MODE", "both");
     vi.stubEnv("STAGING_GIFT_DISCOVERY_MONTHLY_LIMIT", "20");
@@ -83,6 +87,7 @@ describe("staging AI opt-in", () => {
     vi.stubEnv("SMTP_HOST", "real.example.com");
     vi.stubEnv("SCRAPINGBEE_API_KEY", "must-not-use");
     expect(await config()).toMatchObject({
+      AI_ENABLED: "true",
       OPENAI_API_KEY: "staging-test-key",
       GIFT_DISCOVERY_MODE: "both",
       GIFT_DISCOVERY_MONTHLY_LIMIT: "20",
@@ -97,15 +102,18 @@ describe("staging AI opt-in", () => {
       mode: "both",
       monthlyLimit: 20,
     });
+    vi.stubEnv("STAGING_AI_ENABLED", "false");
     vi.stubEnv("STAGING_OPENAI_API_KEY", "");
     expect(discoveryConfigForState(state).available).toBe(false);
     expect((await config()).PAID_DAILY_LIMIT).toBe("0");
   });
   it("keeps preview isolated even with a staging key and validates staging limits", async () => {
+    vi.stubEnv("STAGING_AI_ENABLED", "true");
     vi.stubEnv("STAGING_OPENAI_API_KEY", "staging-test-key");
     vi.stubEnv("STAGING_GIFT_DISCOVERY_MODE", "both");
     vi.stubEnv("APP_ENV", "preview");
     expect(await config()).toMatchObject({
+      AI_ENABLED: "false",
       OPENAI_API_KEY: "",
       GIFT_DISCOVERY_MODE: "off",
     });
@@ -151,6 +159,7 @@ describe("staging scraping opt-in", () => {
     "enables $id without AI using only its staging key",
     async (provider) => {
       vi.stubEnv("APP_ENV", "staging");
+      vi.stubEnv("STAGING_AI_ENABLED", "false");
       vi.stubEnv("STAGING_OPENAI_API_KEY", "");
       vi.stubEnv("STAGING_SCRAPING_PROVIDER", "auto");
       vi.stubEnv("STAGING_PAID_DAILY_LIMIT", "10");
@@ -182,6 +191,7 @@ describe("staging scraping opt-in", () => {
   );
   it("respects selection, missing keys, limits, and disabling", async () => {
     vi.stubEnv("APP_ENV", "staging");
+    vi.stubEnv("STAGING_AI_ENABLED", "false");
     vi.stubEnv("STAGING_OPENAI_API_KEY", "");
     for (const p of scrapingProviders) vi.stubEnv(`STAGING_${p.key}`, "");
     vi.stubEnv("SCRAPINGFISH_API_KEY", "production-must-not-use");

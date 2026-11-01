@@ -17,6 +17,7 @@ async function setup(
     solo?: boolean;
     admin?: boolean;
     lookup?: boolean;
+    ai?: boolean;
   } = {},
 ) {
   const f = stagingFixtures();
@@ -102,6 +103,7 @@ async function setup(
                 SCRAPING_PROVIDER: options.lookup === false ? "none" : "auto",
                 GIFT_DISCOVERY_USER_WEEKLY_LIMIT: "3",
                 GIFT_DISCOVERY_MONTHLY_LIMIT: "100",
+                AI_ENABLED: String(options.ai !== false),
                 OPENAI_API_KEY: "synthetic",
                 SMTP_HOST: "synthetic",
                 PAID_DAILY_LIMIT: "50",
@@ -121,7 +123,8 @@ async function setup(
         json: {
           ...adminUsage(f.state, {
             GIFT_DISCOVERY_MODE: "both",
-                SCRAPING_PROVIDER: options.lookup === false ? "none" : "auto",
+            SCRAPING_PROVIDER: options.lookup === false ? "none" : "auto",
+            AI_ENABLED: String(options.ai !== false),
             OPENAI_API_KEY: "synthetic",
             PAID_DAILY_LIMIT: "50",
             SCRAPINGFISH_API_KEY: "synthetic",
@@ -605,5 +608,23 @@ for (const width of [393, 1440]) {
         fullPage: true,
       });
     }
+  });
+}
+
+for (const width of [393, 1280]) {
+  test(`AI off hides admin references with historical usage at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await setup(page, { ai: false });
+    await page.goto("/settings?section=admin");
+    await expect(
+      page.getByRole("heading", { name: "Paid shop lookups" }),
+    ).toBeVisible();
+    await expect(
+      page.getByText(
+        /AI product details|AI gift suggestions|Product-detail AI|AI estimates|Reported AI estimate|Gift suggestion searches/,
+      ),
+    ).toHaveCount(0);
   });
 }

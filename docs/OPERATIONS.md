@@ -239,7 +239,7 @@ and the limits of the recorded results.
 
 ## Monthly service usage
 
-Administration separates gift-suggestion searches, product-detail AI requests made by Get details, and paid shop lookup attempts by provider. The report is visible if any relevant service is enabled or current-month activity exists. Disabling a service does not hide its recorded activity. Periods use UTC.
+Administration separates gift-suggestion searches, product-detail AI requests made by Get details, and paid shop lookup attempts by provider. The report is visible if any relevant service is enabled or current-month activity exists. Disabling an individual service does not hide its recorded activity while the master AI switch is enabled. Periods use UTC.
 
 Request totals include dispatched failures. Cached results and direct website lookups do not increment paid counters. A single Get details operation may use both a scraping provider and AI cleanup, so these counts are not counts of unique gifts. Suggestion web-search calls belong to discovery, not the paid scraping providers.
 
@@ -248,3 +248,11 @@ Product-detail AI token tracking starts with this release. Historical request co
 `GET /api/v1/admin/usage` returns the grouped report to administrators only. `GET /api/v1/admin/services` returns service configuration status without credentials or raw setup fields. It does not perform connection tests. The settings API reads and writes only family-group creation and automatic product photos. Deployment-setting writes are rejected; the discovery batch-save endpoint has been removed.
 
 All SMTP, Telegram, Twilio, scraping, AI, and paid-request configuration comes from environment variables or built-in defaults. Saved database values for those settings are ignored. Recreate both app and worker after changing deployment configuration. Administration retains app preferences, usage, service status, and background jobs.
+
+## Master AI switch
+
+Set `AI_ENABLED=true` to enable AI with the configured API key. Missing, blank, or `false` disables all AI requests and hides AI features, service rows, and usage explanations, including historical AI usage sections. Other values are rejected. Keys can remain configured. Existing deployments must explicitly opt in after upgrading.
+
+Gift discovery still requires an enabled audience mode; product enrichment still respects shop-lookup settings and spending limits. Disabled AI bypasses cached enrichment too. Ordinary shop lookups, photos, manual entry, preferences, saved gifts, and stored usage history remain available or preserved. Unsaved discovery batches follow existing cancellation and cleanup rules. Re-enabling restores historical reporting, not cancelled batches.
+
+Recreate both app and worker after changing the flag. Clients update on normal refresh; previously dispatched requests may still be billed. Staging uses only `STAGING_AI_ENABLED`; preview always disables AI.
