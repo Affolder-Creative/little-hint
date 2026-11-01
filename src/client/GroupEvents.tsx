@@ -647,8 +647,10 @@ export function EventPage() {
 
 export function ManagedEventNotice({
   list,
+  showLink = true,
 }: {
   list: List & { canEdit?: boolean };
+  showLink?: boolean;
 }) {
   const { world } = useApp();
   const event = world.groupEvents.find(
@@ -672,7 +674,7 @@ export function ManagedEventNotice({
           leader can restore the event.
         </p>
       )}
-      {event && (
+      {event && showLink && (
         <Link className="text-button" to={`/events/${event.id}`}>
           {event.canManage ? "Manage event" : "View group event"}
           <ArrowRight size={16} />

@@ -134,6 +134,8 @@ export function stagingFixtures() {
   command(state, actors[1], "group-events.create", {
     groupId: family.id,
     name: "Family celebration",
+    description:
+      "Share a few things you would love, and help the family choose something thoughtful.",
     mode: "surprise",
     participantIds: [people[0].id, people[2].id],
     timeZone: "America/Indiana/Indianapolis",

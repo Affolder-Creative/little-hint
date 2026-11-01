@@ -4089,3 +4089,123 @@ main {
 .list-gift-ideas + .browser .empty {
   padding-block: 32px;
 }
+
+/* Event lists keep identity, context, and item actions in distinct rows. */
+button[class]:hover,
+button[class]:focus,
+button[class]:active,
+a.button:is(:hover, :focus, :active),
+.event-wishlist-link:is(:hover, :focus, :active) {
+  text-decoration: none;
+}
+.page-heading.event-wish-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px 24px;
+  margin-bottom: 24px;
+}
+.event-wish-heading h1 {
+  margin: 0;
+}
+.event-wish-heading > .actions {
+  justify-content: flex-end;
+}
+.event-wish-heading .heading-metadata {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+.event-wish-heading .event-list-context {
+  margin: 0 0 16px;
+}
+.event-wish-heading .event-list-context h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 12px;
+}
+.event-wish-heading .event-list-context > p {
+  white-space: pre-wrap;
+}
+.event-wish-metadata {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 20px;
+  align-items: center;
+}
+.event-wish-metadata .list-privacy {
+  display: contents;
+}
+.event-wish-metadata .list-privacy > summary {
+  grid-column: 1;
+  grid-row: 1;
+  list-style: none;
+}
+.event-wish-metadata summary::-webkit-details-marker {
+  display: none;
+}
+.event-wish-metadata .privacy-note {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  margin: 0;
+}
+.event-wish-manage {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: end;
+}
+.event-wish-heading .managed-event-notice {
+  display: block;
+  border: 0;
+  padding: 0;
+  margin: 8px 0 0;
+}
+.event-wish-heading .managed-event-notice p {
+  font-size: 13px;
+  margin: 0;
+}
+.event-wish-items-heading {
+  border-top: 1px solid var(--border);
+  padding-top: 24px;
+  margin: 0 0 16px;
+}
+.empty.empty-compact {
+  margin: 0;
+  max-width: none;
+  text-align: left;
+  padding: 16px 0 24px;
+}
+.empty-compact h3 {
+  font-size: 17px;
+  margin: 0 0 8px;
+}
+.empty-compact p {
+  margin: 0;
+  max-width: 65ch;
+}
+.event-wish-heading ~ .list-gift-ideas {
+  border-bottom: 0;
+  margin-top: 24px;
+  padding-top: 24px;
+}
+.event-wish-heading ~ .list-gift-ideas .gift-ideas-link {
+  text-decoration: none;
+}
+.event-wish-heading ~ .list-gift-ideas .gift-ideas-link:hover {
+  text-decoration: underline;
+}
+@media (max-width: 650px) {
+  .page-heading.event-wish-heading {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+  .event-wish-heading > .actions {
+    justify-content: flex-start;
+  }
+  .event-wish-heading .heading-metadata {
+    grid-column: 1;
+  }
+  .event-wish-metadata {
+    gap: 8px;
+  }
+}

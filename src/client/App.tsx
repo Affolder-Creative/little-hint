@@ -1,5 +1,5 @@
 import { PrivateNote } from "./PrivateNotes";
-import { Pencil, Archive, ArchiveRestore } from "lucide-react";
+import { Pencil, Archive, ArchiveRestore, CalendarDays } from "lucide-react";
 import { ImportDrafts } from "./ImportDrafts";
 import { useProductImages } from "./useProductImages";
 import { BrowseTools } from "./BrowseTools";
@@ -609,6 +609,7 @@ function Browser({
   listId,
   headingLevel = 2,
   personScoped = false,
+  compactEmpty = false,
 }: {
   items: GiftView[];
   emptyTitle?: string;
@@ -619,6 +620,7 @@ function Browser({
   listId?: string;
   headingLevel?: 2 | 3;
   personScoped?: boolean;
+  compactEmpty?: boolean;
 }) {
   const [search, setSearch] = useNavigationState<string>("search", ""),
     [tag, setTag] = useNavigationState<string>("tag", ""),
@@ -830,6 +832,7 @@ function Browser({
         </div>
       ) : (
         <Empty
+          compact={compactEmpty}
           title={
             visibleItems.length
               ? "No matches found"
@@ -1261,6 +1264,51 @@ function Lists() {
         This list may no longer be shared with you.
       </Empty>
     );
+  const event = world.groupEvents.find((e) => e.id === list?.groupEventId);
+  const eventName = event?.name ?? list?.name;
+  const eventDescription = event?.description ?? list?.description;
+  const giftIdeas = list && !list.canEdit && ideaRecipients.length > 0 && (
+    <section className="list-gift-ideas">
+      <h2>Gift ideas for {ideaRecipients.map((p) => p.name).join(" & ")}</h2>
+      <p className="muted">
+        {list.groupEventId
+          ? `Save your own ideas for ${ideaRecipients.map((p) => p.name).join(" & ")} here, separately from this wish list.`
+          : "Gift ideas are saved for a person, separately from this wish list."}
+      </p>
+      {!list.canEdit && !list.archived && ideaRecipients.length > 0 && (
+        <button
+          className="button secondary"
+          onClick={() =>
+            open(
+              ideaRecipients.length === 1
+                ? `Gift idea for ${ideaRecipients[0].name}`
+                : "Add gift idea",
+              <GiftForm
+                recipientOptions={ideaRecipients.map((person) => person.id)}
+                onSaved={(gift) => navigate(`/gift/${gift.id}`)}
+              />,
+            )
+          }
+        >
+          <Plus size={17} /> Add gift idea
+        </button>
+      )}
+      <nav aria-label="Saved gift ideas">
+        {ideaRecipients.map((person) => (
+          <Link
+            className="gift-ideas-link"
+            key={person.id}
+            to={`/people/${person.id}?tab=ideas`}
+          >
+            {list.groupEventId && ideaRecipients.length === 1
+              ? "View gift ideas"
+              : `View gift ideas for ${person.name}`}
+            <ArrowRight size={16} aria-hidden="true" />
+          </Link>
+        ))}
+      </nav>
+    </section>
+  );
   if (list)
     return (
       <>
@@ -1275,7 +1323,8 @@ function Lists() {
               "On their wish lists")}
         </Link>
         <Header
-          className="list-heading"
+          className={`list-heading${list.groupEventId ? " event-wish-heading" : ""}`}
+          metadataBelow={!!list.groupEventId}
           title={
             list.groupEventId
               ? list.ownerIds.some((id) =>
@@ -1292,28 +1341,48 @@ function Lists() {
             <>
               {list.groupEventId && (
                 <div className="event-list-context">
-                  <h2>{list.name}</h2>
-                  {list.description && (
-                    <p className="muted">{list.description}</p>
+                  <h2>
+                    <CalendarDays size={20} aria-hidden="true" />
+                    {eventName}
+                  </h2>
+                  {eventDescription && (
+                    <p className="muted">{eventDescription}</p>
                   )}
-                  <ManagedEventNotice list={list} />
                 </div>
               )}
-              <details
-                className="list-privacy"
-                key={list.id}
-                open={privacyOpen}
-                onToggle={(event) => setPrivacyOpen(event.currentTarget.open)}
+              <div
+                className={
+                  list.groupEventId ? "event-wish-metadata" : undefined
+                }
               >
-                <summary>
-                  <Privacy mode={list.mode} />{" "}
-                  <span className="privacy-disclosure-label">
-                    <Info size={16} aria-hidden="true" />
-                    <span className="sr-only">Privacy details</span>
-                  </span>
-                </summary>
-                <RevealPolicy list={list} />
-              </details>
+                <details
+                  className="list-privacy"
+                  key={list.id}
+                  open={privacyOpen}
+                  onToggle={(event) => setPrivacyOpen(event.currentTarget.open)}
+                >
+                  <summary>
+                    <Privacy mode={list.mode} />{" "}
+                    <span className="privacy-disclosure-label">
+                      <Info size={16} aria-hidden="true" />
+                      <span className="sr-only">Privacy details</span>
+                    </span>
+                  </summary>
+                  <RevealPolicy list={list} />
+                </details>
+                {list.groupEventId && event && (
+                  <Link
+                    className="text-button event-wish-manage"
+                    to={`/events/${event.id}`}
+                  >
+                    {event.canManage ? "Manage event" : "View group event"}
+                    <ArrowRight size={16} aria-hidden="true" />
+                  </Link>
+                )}
+              </div>
+              {list.groupEventId && (
+                <ManagedEventNotice list={list} showLink={false} />
+              )}
             </>
           }
         >
@@ -1377,47 +1446,9 @@ function Lists() {
             This list is archived. Existing purchase history is preserved.
           </p>
         )}
-        {!list.canEdit && ideaRecipients.length > 0 && (
-          <section className="list-gift-ideas">
-            <h2>
-              Gift ideas for {ideaRecipients.map((p) => p.name).join(" & ")}
-            </h2>
-            <p className="muted">
-              Gift ideas are saved for a person, separately from this wish list.
-            </p>
-            {!list.canEdit && !list.archived && ideaRecipients.length > 0 && (
-              <button
-                className="button secondary"
-                onClick={() =>
-                  open(
-                    ideaRecipients.length === 1
-                      ? `Gift idea for ${ideaRecipients[0].name}`
-                      : "Add gift idea",
-                    <GiftForm
-                      recipientOptions={ideaRecipients.map(
-                        (person) => person.id,
-                      )}
-                      onSaved={(gift) => navigate(`/gift/${gift.id}`)}
-                    />,
-                  )
-                }
-              >
-                <Plus size={17} /> Add gift idea
-              </button>
-            )}
-            <nav aria-label="Saved gift ideas">
-              {ideaRecipients.map((person) => (
-                <Link
-                  className="gift-ideas-link"
-                  key={person.id}
-                  to={`/people/${person.id}?tab=ideas`}
-                >
-                  View gift ideas for {person.name}
-                  <ArrowRight size={16} aria-hidden="true" />
-                </Link>
-              ))}
-            </nav>
-          </section>
+        {!list.groupEventId && giftIdeas}
+        {list.groupEventId && (
+          <h2 className="event-wish-items-heading">On this wish list</h2>
         )}
         {list.canEdit && <ImportDrafts listId={list.id} />}
         {list.canEdit && list.revealAvailable && (
@@ -1441,22 +1472,28 @@ function Lists() {
         ) : (
           <Browser
             listId={list.id}
+            compactEmpty={!!list.groupEventId}
             items={world.items.filter((i) => i.listId === list.id)}
             searchLabel="Search items"
             emptyTitle={
-              list.canEdit && !list.archived
+              list.canEdit && !list.archived && !list.groupEventId
                 ? "Something in mind?"
                 : "No items yet"
             }
             emptyText={
               list.archived
                 ? "This archived wish list has no items."
-                : list.canEdit
-                  ? "Add your first item to this wish list."
-                  : "Check back when they have added a few hints."
+                : list.groupEventId
+                  ? list.canEdit
+                    ? `Add a few things you would love for ${eventName}.`
+                    : `${list.ownerIds.map((id) => world.people.find((p) => p.id === id)?.name ?? "The recipient").join(" & ")} hasn’t added any wishes for ${eventName} yet.`
+                  : list.canEdit
+                    ? "Add your first item to this wish list."
+                    : "Check back when they have added a few hints."
             }
           />
         )}
+        {list.groupEventId && giftIdeas}
       </>
     );
   return <ListIndex />;

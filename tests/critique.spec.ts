@@ -5196,6 +5196,25 @@ for (const width of [390, 1440]) {
         exact: true,
       }),
     ).toBeVisible();
+    await expect(
+      page.getByText("Bring your favorite gift ideas.", { exact: true }),
+    ).toBeVisible();
+    await expect(page.locator(".event-list-context h2 svg")).toBeVisible();
+    const ideas = await page.locator(".list-gift-ideas").boundingBox();
+    const itemsHeading = await page
+      .getByRole("heading", { name: "On this wish list", exact: true })
+      .boundingBox();
+    expect(ideas!.y).toBeGreaterThan(itemsHeading!.y);
+    if (width === 1440) {
+      const follow = await page
+        .getByRole("button", { name: "Follow wish list", exact: true })
+        .boundingBox();
+      const title = await page.locator("h1").boundingBox();
+      expect(Math.abs(follow!.y - title!.y)).toBeLessThan(20);
+      const privacy = await page.locator(".list-privacy summary").boundingBox();
+      const manage = await page.locator(".event-wish-manage").boundingBox();
+      expect(Math.abs(privacy!.y - manage!.y)).toBeLessThan(10);
+    }
     const heading = await page.locator("h1").boundingBox();
     await page.locator(".list-privacy summary").click();
     expect((await page.locator("h1").boundingBox())!.y).toBe(heading!.y);
@@ -5309,3 +5328,45 @@ test("event management actions open from the keyboard menu", async ({
   await page.keyboard.press("Escape");
   await expect(menu).toBeFocused();
 });
+
+for (const width of [390, 1440]) {
+  test(`owner event header and button states at ${width}px`, async ({
+    page,
+  }, info) => {
+    const { state, actor } = await preview(page);
+    await page.setViewportSize({ width, height: 900 });
+    const list = world(state, actor).lists.find(
+      (l) => l.groupEventId && l.canEdit,
+    )!;
+    await page.goto(`/lists/${list.id}`);
+    await expect(
+      page.getByRole("heading", { name: "Your wish list", exact: true }),
+    ).toBeVisible();
+    const add = page
+      .locator(".event-wish-heading")
+      .getByRole("button", { name: "Add item", exact: true });
+    if (width === 1440) {
+      const title = await page.locator("h1").boundingBox();
+      expect(Math.abs((await add.boundingBox())!.y - title!.y)).toBeLessThan(
+        20,
+      );
+    }
+    await expect(page.locator(".list-gift-ideas")).toHaveCount(0);
+    await page.screenshot({
+      path: info.outputPath(`owner-event-${width}.png`),
+      fullPage: true,
+    });
+    await page.goto("/lists");
+    const own = page
+      .getByRole("link", { name: "Your wish list", exact: true })
+      .first();
+    await own.hover();
+    expect(
+      await own.evaluate((e) => getComputedStyle(e).textDecorationLine),
+    ).toBe("none");
+    await own.focus();
+    expect(
+      await own.evaluate((e) => getComputedStyle(e).textDecorationLine),
+    ).toBe("none");
+  });
+}

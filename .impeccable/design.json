@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-01T20:03:42.367192+00:00",
+  "generatedAt": "2026-11-01T22:09:14.209137+00:00",
   "title": "Design System: Little Hint",
   "extensions": {
     "colorMeta": {
@@ -1148,9 +1148,9 @@
     {
       "name": "Event wish-list heading",
       "kind": "custom",
-      "description": "Recipient identity leads; the event name, note, management context, and inline privacy disclosure sit together beneath it.",
-      "html": "<header class=\"ds-recipient-heading\"><h1>Your wish list</h1><h2>Family celebration</h2><p>Share a few things you would love.</p><p class=\"ds-context\">You manage the items. Event leaders manage the settings.</p><details><summary>Keep it a surprise ⓘ</summary><p>Recipients cannot see who reserves or buys their gifts.</p></details></header>",
-      "css": ".ds-recipient-heading{font:14px/1.6 system-ui;color:var(--text,#2b201d)}.ds-recipient-heading h1{font-size:34px;line-height:1.15;margin:0 0 12px}.ds-recipient-heading h2{font-size:20px;margin:0 0 8px}.ds-recipient-heading p{color:var(--muted,#746057);max-width:65ch}.ds-recipient-heading .ds-context{font-size:13px}.ds-recipient-heading summary{display:list-item;cursor:pointer;min-height:44px;align-content:center}.ds-recipient-heading summary:focus-visible{outline:3px solid var(--accent,#aa4d37);outline-offset:3px}"
+      "description": "Recipient title and page actions share the desktop top row; calendar/event name and description follow. Privacy and event management share a row above compact guidance. Items precede related gift ideas.",
+      "html": "<header class=\"ds-recipient-heading\"><div class=\"ds-title-row\"><h1>Your wish list</h1><button>Add item</button></div><h2>Family celebration</h2><p>Share a few things you would love.</p><div class=\"ds-metadata-row\"><details><summary>Keep it a surprise</summary><p>Recipients cannot see who reserves or buys their gifts.</p></details><a href=\"#event\">Manage event →</a></div><p class=\"ds-context\">You manage the items. Event leaders manage the settings.</p></header>",
+      "css": ".ds-recipient-heading{font:14px/1.6 system-ui;color:var(--text,#2b201d)}.ds-recipient-heading h1{font-size:34px;line-height:1.15;margin:0 0 12px}.ds-recipient-heading h2{font-size:20px;margin:0 0 8px}.ds-recipient-heading p{color:var(--muted,#746057);max-width:65ch}.ds-recipient-heading .ds-context{font-size:13px}.ds-recipient-heading summary{display:list-item;cursor:pointer;min-height:44px;align-content:center}.ds-recipient-heading summary:focus-visible{outline:3px solid var(--accent,#aa4d37);outline-offset:3px}.ds-title-row,.ds-metadata-row{display:flex;justify-content:space-between;gap:16px;align-items:center;flex-wrap:wrap}.ds-title-row button{min-height:44px;border:0;border-radius:8px;padding:10px 16px;background:var(--accent,#aa4d37);color:var(--on-accent,#fff8f0);font:inherit}.ds-metadata-row a{color:var(--accent,#aa4d37)}"
     }
   ],
   "narrative": {

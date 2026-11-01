@@ -20,5 +20,5 @@ related_targets: ["src/client/ListPolicyFields.tsx", "src/client/ListIndex.tsx",
 - Active, Archived, and Trash are distinct. Removing an event archives and preserves its participant lists. Permanent event deletion detaches those lists as standalone archived lists while retaining owners, sharing, privacy, and reveal policy.
 - Notification counts describe processed updates and sit apart from exchange actions.
 
-- Event-created lists lead with recipient identity, followed by event name/description, inline privacy disclosure, compact management guidance, and item actions. Event pages keep the event name as their heading and use a single Event actions menu.
-- Event index rows separate outlined participant-list destinations from header-level event management. Person-page list navigation uses divided rows. Gift-idea creation and browsing share a distinct supporting section above the item collection.
+- Event-created lists lead with recipient identity, with primary actions beside the title, followed by calendar/event name, description, a shared privacy/management row, and compact management guidance. Event pages keep the event name as their heading and use a single Event actions menu.
+- Event index rows separate outlined participant-list destinations from header-level event management. Person-page list navigation uses divided rows. Gift-idea creation and browsing share a distinct supporting section below the item collection.

@@ -498,25 +498,29 @@ export function Empty({
   children,
   action,
   page = false,
+  compact = false,
 }: {
   title: string;
   children: ReactNode;
   action?: ReactNode;
   page?: boolean;
+  compact?: boolean;
 }) {
   const { dark } = useApp();
-  const Heading = page ? "h1" : "h2";
+  const Heading = page ? "h1" : compact ? "h3" : "h2";
   useEffect(() => {
     if (page) document.title = `${title} · Little Hint`;
   }, [page, title]);
   return (
-    <div className="empty">
-      <img
-        src={`/brand/little-hint/symbols/little-hint-tag-${dark ? "dark" : "color"}.svg`}
-        width="56"
-        height="64"
-        alt=""
-      />
+    <div className={`empty${compact ? " empty-compact" : ""}`}>
+      {!compact && (
+        <img
+          src={`/brand/little-hint/symbols/little-hint-tag-${dark ? "dark" : "color"}.svg`}
+          width="56"
+          height="64"
+          alt=""
+        />
+      )}
       <Heading>{title}</Heading>
       <p>{children}</p>
       {action}
@@ -636,6 +640,7 @@ export function GiftCard({
 }
 export function Header({
   metadata,
+  metadataBelow = false,
   title,
   description,
   children,
@@ -643,6 +648,7 @@ export function Header({
 }: {
   title: string;
   metadata?: ReactNode;
+  metadataBelow?: boolean;
   description?: string;
   children?: ReactNode;
   className?: string;
@@ -652,9 +658,10 @@ export function Header({
       <div>
         <h1>{title}</h1>
         {description && <p>{description}</p>}
-        {metadata}
+        {!metadataBelow && metadata}
       </div>
       {children && <div className="actions">{children}</div>}
+      {metadataBelow && <div className="heading-metadata">{metadata}</div>}
     </div>
   );
 }
