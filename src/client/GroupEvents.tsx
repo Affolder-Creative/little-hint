@@ -413,6 +413,39 @@ export function GroupEventsSection({ archived }: { archived: boolean }) {
                 </p>
               </div>
               <Privacy mode={event.mode} />
+              <div className="event-management-actions">
+                {" "}
+                <Link className="text-button" to={`/events/${event.id}`}>
+                  {event.canManage ? "Manage event" : "View event"}
+                  <ArrowRight size={16} />
+                </Link>{" "}
+                {event.canManage && (
+                  <ActionMenu name={event.name} label="Event actions">
+                    <button
+                      className="text-button"
+                      onClick={() =>
+                        open("Edit group event", <EventForm event={event} />)
+                      }
+                    >
+                      Edit event
+                    </button>
+                    <button
+                      className="text-button"
+                      onClick={() =>
+                        open(
+                          event.archived
+                            ? "Restore group event"
+                            : "Archive group event",
+                          <EventArchiveForm event={event} />,
+                        )
+                      }
+                    >
+                      {event.archived ? "Restore event" : "Archive event"}
+                    </button>
+                    <TrashButton kind="group-events" entry={event} />
+                  </ActionMenu>
+                )}
+              </div>
             </div>
             <div className="event-entry-links">
               {mine.map((list) => {
@@ -438,36 +471,6 @@ export function GroupEventsSection({ archived }: { archived: boolean }) {
                   </Link>
                 );
               })}
-              <Link className="text-button" to={`/events/${event.id}`}>
-                {event.canManage ? "Manage event" : "View event"}
-                <ArrowRight size={16} />
-              </Link>{" "}
-              {event.canManage && (
-                <ActionMenu name={event.name} label="Event actions">
-                  <button
-                    className="text-button"
-                    onClick={() =>
-                      open("Edit group event", <EventForm event={event} />)
-                    }
-                  >
-                    Edit event
-                  </button>
-                  <button
-                    className="text-button"
-                    onClick={() =>
-                      open(
-                        event.archived
-                          ? "Restore group event"
-                          : "Archive group event",
-                        <EventArchiveForm event={event} />,
-                      )
-                    }
-                  >
-                    {event.archived ? "Restore event" : "Archive event"}
-                  </button>
-                  <TrashButton kind="group-events" entry={event} />
-                </ActionMenu>
-              )}
             </div>
           </article>
         );
@@ -561,19 +564,8 @@ export function EventPage() {
           event.description || `Individual wish lists for ${group.name}.`
         }
       >
-        <details
-          className="list-privacy"
-          open={event.revealAfter ? true : undefined}
-        >
-          <summary>
-            <Privacy mode={event.mode} />
-            <Info size={16} aria-hidden="true" />
-            <span className="sr-only">Privacy details</span>
-          </summary>
-          <RevealPolicy list={event} />
-        </details>
         {event.canManage && (
-          <>
+          <ActionMenu name={event.name} label="Event actions">
             <button
               className="button secondary"
               onClick={() =>
@@ -596,9 +588,20 @@ export function EventPage() {
               Edit event
             </button>
             <TrashButton kind="group-events" entry={event} />
-          </>
+          </ActionMenu>
         )}
       </Header>
+      <details
+        className="list-privacy"
+        open={event.revealAfter ? true : undefined}
+      >
+        <summary>
+          <Privacy mode={event.mode} />
+          <Info size={16} aria-hidden="true" />
+          <span className="sr-only">Privacy details</span>
+        </summary>
+        <RevealPolicy list={event} />
+      </details>
       <p className="muted">
         Shared with everyone in {group.name}. Each person manages their own
         wish-list items.
@@ -642,7 +645,11 @@ export function EventPage() {
   );
 }
 
-export function ManagedEventNotice({ list }: { list: List }) {
+export function ManagedEventNotice({
+  list,
+}: {
+  list: List & { canEdit?: boolean };
+}) {
   const { world } = useApp();
   const event = world.groupEvents.find(
     (event) => event.id === list.groupEventId,
@@ -654,8 +661,10 @@ export function ManagedEventNotice({ list }: { list: List }) {
     <div className="managed-event-notice">
       <GuidelineLabel amount={event?.spendingGuidelineCents} />
       <p>
-        Wish list for {names}. Event leaders manage this list’s settings; the
-        recipient or the person managing their profile edits the items.
+        {list.canEdit
+          ? "You manage the items."
+          : `${names} or their profile manager manages the items.`}{" "}
+        Event leaders manage the list’s settings.
       </p>
       {!event && (
         <p>

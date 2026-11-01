@@ -276,12 +276,16 @@ export function PreferenceSummary({ personId }: { personId: string }) {
       <h2>Gift preferences</h2>
       <>
         {!!p.categoryIds.length && (
-          <p>
+          <ul
+            className="preference-categories"
+            aria-label="Interest categories"
+          >
             {giftCategories
               .filter(([id]) => p.categoryIds.includes(id))
-              .map(([, name]) => name)
-              .join(" · ")}
-          </p>
+              .map(([id, name]) => (
+                <li key={id}>{name}</li>
+              ))}
+          </ul>
         )}
         {p.interests && <p>{p.interests}</p>}
         {p.likes && <p>Likes: {p.likes}</p>}

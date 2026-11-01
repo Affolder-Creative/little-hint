@@ -43,7 +43,13 @@ export function useImportJob(accountId: string, initial?: ImportJob) {
     forceRefresh = false,
     draft?: Pick<
       NonNullable<ImportJob["draft"]>,
-      "listId" | "fields" | "touched"
+      | "listId"
+      | "kind"
+      | "recipientId"
+      | "visibility"
+      | "groupIds"
+      | "fields"
+      | "touched"
     >,
   ) {
     if (starting.current) return;

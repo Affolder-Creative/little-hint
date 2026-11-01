@@ -323,7 +323,12 @@ export function Form({
   const wasReviewing = useRef(false);
   useLayoutEffect(() => {
     if (pending) {
-      reviewRef.current?.focus();
+      const heading = reviewRef.current?.querySelector<HTMLElement>("h2, h3");
+      if (heading) {
+        heading.tabIndex = -1;
+        heading.classList.add("review-focus-heading");
+        heading.focus();
+      } else reviewRef.current?.focus();
       wasReviewing.current = true;
     } else if (wasReviewing.current) {
       wasReviewing.current = false;
@@ -630,12 +635,14 @@ export function GiftCard({
   );
 }
 export function Header({
+  metadata,
   title,
   description,
   children,
   className = "",
 }: {
   title: string;
+  metadata?: ReactNode;
   description?: string;
   children?: ReactNode;
   className?: string;
@@ -645,6 +652,7 @@ export function Header({
       <div>
         <h1>{title}</h1>
         {description && <p>{description}</p>}
+        {metadata}
       </div>
       {children && <div className="actions">{children}</div>}
     </div>

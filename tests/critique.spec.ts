@@ -170,6 +170,8 @@ async function preview(
     items: "items.create",
     "items/update": "items.update",
     comments: "comments.create",
+    "comments/update": "comments.update",
+    "comments/delete": "comments.delete",
     reservations: "reservations.create",
     "reservations/update": "reservations.update",
     lists: "lists.create",
@@ -5158,4 +5160,149 @@ test("item editor keeps failed lookup and draft-save recovery separate", async (
     .click();
   await expect(dialog).not.toBeVisible();
   expect(state.imports[0].draft?.fields.title).toBe("Keep my item");
+});
+
+for (const width of [390, 1440]) {
+  test(`recipient headers and note actions at ${width}px`, async ({
+    page,
+  }, info) => {
+    const { state, actor } = await preview(page, 1);
+    await page.setViewportSize({ width, height: 1000 });
+    const recipient = state.people.find(
+      (p) => p.userId !== actor.id && p.userId,
+    )!;
+    const group = state.groups.find((g) => g.memberIds.includes(actor.id))!;
+    const leader = state.people.find((p) => p.userId === group.ownerId)!;
+    const event = command(
+      state,
+      { id: leader.userId!, name: leader.name, email: "fixture@example.test" },
+      "group-events.create",
+      {
+        name: "Winter gathering",
+        description: "Bring your favorite gift ideas.",
+        groupId: group.id,
+        participantIds: [recipient.id],
+        mode: "surprise",
+      },
+    ) as any;
+    const list = state.lists.find((l) => l.groupEventId === event.id)!;
+    await page.goto(`/lists/${list.id}`);
+    await expect(
+      page.getByRole("heading", {
+        name: `${recipient.name}’s wish list`,
+        exact: true,
+      }),
+    ).toBeVisible();
+    const heading = await page.locator("h1").boundingBox();
+    await page.locator(".list-privacy summary").click();
+    expect((await page.locator("h1").boundingBox())!.y).toBe(heading!.y);
+    await page.screenshot({
+      path: info.outputPath(`recipient-${width}.png`),
+      fullPage: true,
+    });
+    const item = world(state, actor).items.find(
+      (i) => i.comments && !i.archived,
+    )!;
+    command(state, actor, "comments.create", {
+      itemId: item.id,
+      body: "Original helpful note",
+    });
+    const note = state.comments.at(-1)!;
+    await page.goto(`/gift/${item.id}`);
+    const row = page.locator(`#note-${note.id}`);
+    await row.locator("summary").click();
+    await row.getByRole("button", { name: "Edit note" }).click();
+    await row.getByLabel("Your note").fill("Updated helpful note");
+    await row.getByRole("button", { name: "Save changes" }).click();
+    await expect(row).toContainText("Updated helpful note");
+    await expect(row).toContainText("Edited");
+    await page.screenshot({
+      path: info.outputPath(`notes-${width}.png`),
+      fullPage: true,
+    });
+    await row.locator("summary").click();
+    await row.getByRole("button", { name: "Delete note" }).click();
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: "Delete note" })
+      .click();
+    await expect(row).toHaveCount(0);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth - innerWidth,
+      ),
+    ).toBeLessThanOrEqual(1);
+  });
+}
+
+test("gift idea draft restores recipient, audience and manual fields", async ({
+  page,
+}) => {
+  const { state, actor } = await preview(page, 1);
+  const person = world(state, actor).people.find(
+    (p) => p.userId && p.userId !== actor.id && !p.guardians.includes(actor.id),
+  )!;
+  await page.goto(`/people/${person.id}?tab=ideas`);
+  await page
+    .getByRole("button", { name: "Add gift idea", exact: true })
+    .first()
+    .click();
+  const dialog = page.getByRole("dialog");
+  await dialog
+    .getByLabel("Product link (optional)", { exact: true })
+    .fill("https://example.com/draft-gift");
+  await dialog.getByRole("button", { name: "Get details" }).click();
+  await dialog
+    .getByLabel("Gift idea name", { exact: true })
+    .fill("My manual name");
+  await dialog.getByRole("button", { name: "Save for later" }).click();
+  await expect(dialog).toHaveCount(0);
+  const job = state.imports.find((j) => j.draft?.kind === "idea")!;
+  expect(job.draft?.recipientId).toBe(person.id);
+  job.status = "complete";
+  job.result = { title: "Shop title", priceCents: 2599 };
+  await page.reload();
+  await page.getByRole("button", { name: "Review and add" }).click();
+  await expect(
+    dialog.getByLabel("Gift idea name", { exact: true }),
+  ).toHaveValue("My manual name");
+  await expect(
+    dialog.getByLabel("Who is this idea for?", { exact: true }),
+  ).toHaveValue(person.id);
+  await dialog
+    .getByRole("button", { name: "Save gift idea", exact: true })
+    .click();
+  await expect(dialog).toHaveCount(0);
+  expect(state.items.find((i) => i.title === "My manual name")).toMatchObject({
+    recipientIds: [person.id],
+    visibility: "private",
+    priceCents: 2599,
+  });
+});
+
+test("event management actions open from the keyboard menu", async ({
+  page,
+}) => {
+  const { state, actor } = await preview(page);
+  const group = state.groups.find((g) => g.ownerId === actor.id)!;
+  const person = state.people.find((p) => p.userId === actor.id)!;
+  const event = command(state, actor, "group-events.create", {
+    name: "Menu test event",
+    groupId: group.id,
+    participantIds: [person.id],
+    mode: "surprise",
+  }) as any;
+  await page.goto(`/events/${event.id}`);
+  const menu = page.getByLabel("Event actions for Menu test event", {
+    exact: true,
+  });
+  await expect(
+    page.getByRole("button", { name: "Edit event", exact: true }),
+  ).not.toBeVisible();
+  await menu.focus();
+  await page.keyboard.press("Enter");
+  await page.getByRole("button", { name: "Edit event", exact: true }).click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(menu).toBeFocused();
 });

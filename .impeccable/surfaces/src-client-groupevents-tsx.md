@@ -18,4 +18,7 @@ related_targets: ["src/client/ListPolicyFields.tsx", "src/client/ListIndex.tsx",
 - My lists shows each event once, with “Shared with:” and separate “Your wish list”, managed-profile wish-list, and Manage/View event links. Standalone lists remain a separate section.
 - Optional recipient priorities are independent of shared item order. Sorting is labeled; personal collection and viewer sort preferences persist across devices. Reordering uses a Save/Cancel dialog with drag handles and keyboard/touch move buttons.
 - Active, Archived, and Trash are distinct. Removing an event archives and preserves its participant lists. Permanent event deletion detaches those lists as standalone archived lists while retaining owners, sharing, privacy, and reveal policy.
-- Notification counts describe processed updates and sit apart from exchange actions. The footer has one unlinked “Created by Affolder Creative” attribution.
+- Notification counts describe processed updates and sit apart from exchange actions.
+
+- Event-created lists lead with recipient identity, followed by event name/description, inline privacy disclosure, compact management guidance, and item actions. Event pages keep the event name as their heading and use a single Event actions menu.
+- Event index rows separate outlined participant-list destinations from header-level event management. Person-page list navigation uses divided rows. Gift-idea creation and browsing share a distinct supporting section above the item collection.

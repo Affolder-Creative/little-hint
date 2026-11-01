@@ -109,3 +109,5 @@ re-enabling. Configured but unconnected channels still offer setup.
 Product lookups support Bright Data retailer scrapers for Amazon, Walmart, Target, and Best Buy US product pages, plus Web Unlocker after built-in extraction for other shops. New wish-list imports are private server-saved drafts until explicitly added. Configuration and limitations are documented in [Shop lookup configuration](docs/shop-lookups.md).
 
 `SCRAPING_PROVIDER=none` means manual product entry, including no direct extraction or product-detail AI. Existing drafts and uploaded photos remain usable. `auto` retains direct extraction and configured paid services. Gift discovery is independently configured.
+
+Private-note authors may edit active notes and delete visible notes, including archived notes. App administrators may delete already-visible notes but cannot edit others’ notes or bypass surprise/exchange privacy. Edits notify newly added mentions only. Gift-idea import drafts remain private until explicitly saved, retain recipient and audience choices, and recover on the recipient’s Gift ideas tab or in Your drafts.

@@ -24,6 +24,7 @@ import {
   accountIds,
   watchesItem,
   validateMentions,
+  noteVisible,
   topicIds,
 } from "./activity";
 import { randomUUID, createHash } from "node:crypto";
@@ -275,7 +276,7 @@ export const isAdmin = (s: State, a: Actor) =>
 const ownedGroup = (s: State, a: Actor, id: string) =>
   s.groups.find((g) => g.id === id && g.ownerId === a.id) ??
   fail(404, "Family group not found.");
-const personVisible = (s: State, a: Actor, p: Person) =>
+export const personVisible = (s: State, a: Actor, p: Person) =>
   controllers(p).includes(a.id) ||
   s.groups.some(
     (g) => member(g, a) && controllers(p).some((u) => g.memberIds.includes(u)),
@@ -448,6 +449,10 @@ export function giftView(s: State, a: Actor, i: Item): GiftView {
       )
       .map((c) => ({
         id: c.id,
+        revision: c.revision,
+        canEdit: c.authorId === a.id && !archived(s, i),
+        canDelete: c.authorId === a.id || isAdmin(s, a),
+        editedAt: c.editedAt,
         author: name(s, c.authorId),
         body: c.body,
         mentions: c.mentions,
@@ -587,6 +592,11 @@ export function world(s: State, a: Actor): World {
         ...l,
         archived: listIsArchived(l),
         canEdit: l.ownerIds.some((p) => ps.includes(p)),
+        hasOtherItemEditors: s.people.some(
+          (p) =>
+            l.ownerIds.includes(p.id) &&
+            controllers(p).some((id) => id !== a.id),
+        ),
         canManageSettings:
           !l.groupEventId && l.ownerIds.some((p) => ps.includes(p)),
         revealAvailable: dateHasElapsed(l.revealAfter, l.timeZone),
@@ -1265,6 +1275,7 @@ export function command(
             .default("private"),
           allowDuplicate: z.boolean().default(false),
           importId: id.optional(),
+          importDraftRevision: z.number().int().optional(),
         })
         .parse(b);
       checkImage(s, a, p.image);
@@ -1300,7 +1311,7 @@ export function command(
       );
       if (duplicate && !p.allowDuplicate)
         return { duplicate: giftView(s, a, duplicate) };
-      const { allowDuplicate, importId, ...fields } = p;
+      const { allowDuplicate, importId, importDraftRevision, ...fields } = p;
       const imported = s.imports.find(
         (j) =>
           j.id === importId &&
@@ -1326,6 +1337,17 @@ export function command(
         (j) => j.id === importId && j.userId === a.id && j.draft,
       );
       if (draftImport) {
+        if (
+          importDraftRevision !== undefined &&
+          importDraftRevision !== draftImport.draft!.revision
+        )
+          fail(409, "This draft changed. Reopen it before saving.");
+        if (
+          draftImport.draft!.kind === "idea"
+            ? !!p.listId || p.recipientIds[0] !== draftImport.draft!.recipientId
+            : p.listId !== draftImport.draft!.listId
+        )
+          fail(409, "The draft destination changed. Reopen it before saving.");
         if (draftImport.draft!.state !== "active" || draftImport.url !== p.url)
           fail(409, "This draft has already been added or changed.");
         draftImport.draft!.state = "published";
@@ -1350,6 +1372,7 @@ export function command(
           visibility: z.enum(["private", "hidden", "visible"]),
           groupIds: ids,
           importId: id.optional(),
+          importDraftRevision: z.number().int().optional(),
         })
         .parse(b);
       const i = getItem(s, a, p.id);
@@ -1363,7 +1386,7 @@ export function command(
       }
       if (!i.listId && p.priority)
         fail(400, "Only wish-list items have a recipient priority.");
-      const { importId, ...fields } = p;
+      const { importId, importDraftRevision, ...fields } = p;
       if (fields.priority === undefined) delete fields.priority;
       const imported = s.imports.find(
         (j) =>
@@ -1651,6 +1674,67 @@ export function command(
         actorId: a.id,
       });
       return c;
+    }
+    case "comments.update":
+    case "comments.delete": {
+      const p = z
+        .object({
+          id,
+          revision,
+          body: z
+            .string()
+            .min(1)
+            .max(4000)
+            .refine((v) => !!v.trim(), "Write a note.")
+            .optional(),
+          mentions: z
+            .array(
+              z.object({
+                userId: z.string(),
+                start: z.number().int().min(0),
+                end: z.number().int().positive(),
+              }),
+            )
+            .max(20)
+            .default([]),
+        })
+        .parse(b);
+      const c =
+        s.comments.find((c) => c.id === p.id) ??
+        fail(404, "Note not available.");
+      const i = getItem(s, a, c.itemId);
+      if (!noteVisible(s, a, i, c.giverId)) fail(404, "Note not available.");
+      if (
+        c.authorId !== a.id &&
+        !(action === "comments.delete" && isAdmin(s, a))
+      )
+        fail(403, "You cannot change this note.");
+      checkRevision(c, p.revision);
+      if (action === "comments.delete") {
+        s.comments = s.comments.filter((entry) => entry.id !== c.id);
+        s.notices = s.notices.filter((n) => n.commentId !== c.id);
+        return { ok: true };
+      }
+      if (archived(s, i)) fail(403, "Archived notes cannot be edited.");
+      if (!p.body) fail(400, "Write a note.");
+      validateMentions(s, a, i, p.body, p.mentions, c.giverId, true);
+      const previous = new Set(c.mentions?.map((m) => m.userId));
+      if (
+        c.body === p.body &&
+        JSON.stringify(c.mentions ?? []) === JSON.stringify(p.mentions)
+      )
+        return { ok: true };
+      c.body = p.body;
+      c.mentions = p.mentions;
+      c.editedAt = new Date().toISOString();
+      touch(c);
+      emitActivity(
+        s,
+        "mention",
+        p.mentions.map((m) => m.userId).filter((id) => !previous.has(id)),
+        { itemId: i.id, commentId: c.id, actorId: a.id },
+      );
+      return { ok: true };
     }
     case "comments.create": {
       const p = z
@@ -2045,6 +2129,10 @@ export function command(
             .optional(),
           touched: z.array(z.string().max(40)).max(20).optional(),
           listId: id.optional(),
+          kind: z.enum(["item", "idea"]).optional(),
+          recipientId: id.optional(),
+          visibility: z.enum(["private", "hidden", "visible"]).optional(),
+          groupIds: ids.optional(),
         })
         .parse(b);
       const j =
@@ -2095,7 +2183,17 @@ export function command(
         )
       )
         fail(404, "List not found.");
-      if (p.listId) j.draft!.listId = p.listId;
+      if (j.draft!.kind === "idea") {
+        const recipientId = p.recipientId ?? j.draft!.recipientId!;
+        checkRecipients(s, a, [recipientId]);
+        if (controls(s, a, recipientId)) fail(400, "Choose another recipient.");
+        checkGroups(s, a, p.groupIds ?? j.draft!.groupIds ?? []);
+        Object.assign(j.draft!, {
+          recipientId,
+          visibility: p.visibility ?? j.draft!.visibility,
+          groupIds: p.groupIds ?? j.draft!.groupIds,
+        });
+      } else if (p.listId) j.draft!.listId = p.listId;
       if (p.fields) j.draft!.fields = p.fields;
       if (p.touched) j.draft!.touched = p.touched;
       j.draft!.revision++;
@@ -2111,7 +2209,11 @@ export function command(
           forceRefresh: z.boolean().default(false),
           draft: z
             .object({
-              listId: id,
+              listId: id.optional(),
+              kind: z.enum(["item", "idea"]).optional(),
+              recipientId: id.optional(),
+              visibility: z.enum(["private", "hidden", "visible"]).optional(),
+              groupIds: ids.optional(),
               fields: z.record(
                 z.string().max(40),
                 z.union([z.string().max(5000), z.number().finite(), z.null()]),
@@ -2125,6 +2227,7 @@ export function command(
         fail(400, "Use a full shop link starting with https:// or http://.");
       if (
         p.draft &&
+        p.draft.kind !== "idea" &&
         !s.lists.some(
           (l) =>
             l.id === p.draft!.listId &&
@@ -2134,6 +2237,14 @@ export function command(
         )
       )
         fail(404, "List not found.");
+      if (p.draft?.kind === "idea") {
+        if (!p.draft.recipientId) fail(400, "Choose a recipient.");
+        checkRecipients(s, a, [p.draft.recipientId]);
+        if (controls(s, a, p.draft.recipientId))
+          fail(400, "Choose another recipient.");
+        checkGroups(s, a, p.draft.groupIds ?? []);
+        delete p.draft.listId;
+      }
       const j = {
         ...stamp(),
         ...(p.draft

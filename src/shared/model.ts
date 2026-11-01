@@ -153,6 +153,7 @@ export interface Contribution extends Base {
   status: "pledged" | "sent" | "received" | "cancelled";
 }
 export interface Comment extends Base {
+  editedAt?: string;
   giverId?: string;
   itemId: string;
   authorId: string;
@@ -295,7 +296,11 @@ export interface Preferences extends Base {
   smsConsentedDailyLimit?: number;
 }
 export interface ImportDraft {
-  listId: string;
+  kind?: "item" | "idea";
+  recipientId?: string;
+  visibility?: Visibility;
+  groupIds?: string[];
+  listId?: string;
   revision: number;
   state: "active" | "published" | "discarded";
   fields: Record<string, string | number | null>;
@@ -497,6 +502,10 @@ export interface GiftView extends Omit<Item, "creatorId"> {
     contributions?: Contribution[];
   }>;
   comments?: Array<{
+    revision: number;
+    canEdit: boolean;
+    canDelete: boolean;
+    editedAt?: string;
     id: string;
     author: string;
     body: string;
@@ -532,6 +541,7 @@ export interface World {
     List & {
       canEdit: boolean;
       canManageSettings: boolean;
+      hasOtherItemEditors: boolean;
       revealAvailable: boolean;
     }
   >;

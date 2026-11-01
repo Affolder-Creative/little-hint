@@ -25,6 +25,7 @@ function fixture() {
     userId: a.id,
     name: a.name,
     guardians: [] as string[],
+    admin: false,
   }));
   s.people.push(...people);
   const group = {
@@ -319,4 +320,185 @@ describe("notification inbox and audiences", () => {
     command(f.s, f.actors[2], "lists.accept", { id: list.id });
     expect(activityAllowed(f.s, n)).toBe(false);
   });
+});
+
+describe("private note maintenance", () => {
+  it("allows author edits, rejects stale edits and limits administrators to visible-note deletion", () => {
+    const f = fixture();
+    command(f.s, f.actors[1], "comments.create", {
+      itemId: f.item.id,
+      body: "Original",
+    });
+    const c = f.s.comments[0];
+    f.people[2].admin = true;
+    expect(giftView(f.s, f.actors[2], f.item).comments![0]).toMatchObject({
+      canEdit: false,
+      canDelete: true,
+    });
+    expect(() =>
+      command(f.s, f.actors[2], "comments.update", {
+        id: c.id,
+        revision: c.revision,
+        body: "Forged",
+      }),
+    ).toThrow();
+    command(f.s, f.actors[1], "comments.update", {
+      id: c.id,
+      revision: c.revision,
+      body: "Updated",
+    });
+    expect(c.editedAt).toBeTruthy();
+    expect(() =>
+      command(f.s, f.actors[1], "comments.update", {
+        id: c.id,
+        revision: 1,
+        body: "Stale",
+      }),
+    ).toThrow();
+    f.people[0].admin = true;
+    expect(() =>
+      command(f.s, f.actors[0], "comments.delete", {
+        id: c.id,
+        revision: c.revision,
+      }),
+    ).toThrow();
+    f.list.archived = true;
+    expect(() =>
+      command(f.s, f.actors[1], "comments.update", {
+        id: c.id,
+        revision: c.revision,
+        body: "Archived edit",
+      }),
+    ).toThrow();
+    command(f.s, f.actors[2], "comments.delete", {
+      id: c.id,
+      revision: c.revision,
+    });
+    expect(f.s.comments).toHaveLength(0);
+  });
+  it("notifies only added mentions and invalidates removed mentions", () => {
+    const f = fixture();
+    command(f.s, f.actors[1], "comments.create", {
+      itemId: f.item.id,
+      body: "Original",
+    });
+    const c = f.s.comments[0];
+    const mentions = [{ userId: f.actors[2].id, start: 0, end: 7 }];
+    command(f.s, f.actors[1], "comments.update", {
+      id: c.id,
+      revision: c.revision,
+      body: "@Helper hi",
+      mentions,
+    });
+    const count = f.s.notices.length;
+    command(f.s, f.actors[1], "comments.update", {
+      id: c.id,
+      revision: c.revision,
+      body: "@Helper hello",
+      mentions,
+    });
+    expect(f.s.notices).toHaveLength(count);
+    command(f.s, f.actors[1], "comments.update", {
+      id: c.id,
+      revision: c.revision,
+      body: "hello",
+    });
+    expect(inbox(f.s, f.actors[2]).entries).toHaveLength(0);
+  });
+  it("retains the original restricted audience after the reservation changes", () => {
+    const f = fixture();
+    command(f.s, f.actors[1], "comments.create", {
+      itemId: f.item.id,
+      body: "Restricted",
+    });
+    const c = f.s.comments[0];
+    c.giverId = f.people[1].id;
+    f.people[2].admin = true;
+    expect(() =>
+      command(f.s, f.actors[2], "comments.delete", {
+        id: c.id,
+        revision: c.revision,
+      }),
+    ).toThrow();
+    expect(() =>
+      command(f.s, f.actors[1], "comments.update", {
+        id: c.id,
+        revision: c.revision,
+        body: "@Helper hi",
+        mentions: [{ userId: f.actors[2].id, start: 0, end: 7 }],
+      }),
+    ).toThrow();
+    expect(mentionCandidates(f.s, f.actors[1], f.item.id, "", c.id)).toEqual(
+      [],
+    );
+  });
+});
+
+it("keeps idea drafts private and validates their destination and publication revision", () => {
+  const f = fixture();
+  const job = command(f.s, f.actors[1], "imports.create", {
+    url: "https://example.com/gift",
+    draft: {
+      kind: "idea",
+      recipientId: f.people[0].id,
+      visibility: "hidden",
+      groupIds: [f.group.id],
+      fields: { title: "Manual title" },
+      touched: ["title"],
+    },
+  }) as import("../src/shared/model").ImportJob;
+  expect(job.draft).toMatchObject({
+    kind: "idea",
+    recipientId: f.people[0].id,
+    visibility: "hidden",
+  });
+  expect(f.s.items).toHaveLength(1);
+  f.s.notices.push({
+    ...stamp(),
+    userId: f.actors[1].id,
+    event: "import",
+    importId: job.id,
+    inbox: true,
+    status: "sent",
+    attempts: 0,
+    delivered: [],
+  });
+  expect(inbox(f.s, f.actors[1]).entries[0].href).toBe(
+    `/people/${f.people[0].id}?tab=ideas&draft=${job.id}`,
+  );
+  const members = f.group.memberIds;
+  f.group.memberIds = members.filter((id) => id !== f.actors[1].id);
+  expect(inbox(f.s, f.actors[1]).entries[0].href).toBe(
+    `/lists?draft=${job.id}`,
+  );
+  f.group.memberIds = members;
+  expect(() =>
+    command(f.s, f.actors[2], "imports.update", {
+      id: job.id,
+      revision: 1,
+      fields: {},
+    }),
+  ).toThrow();
+  command(f.s, f.actors[1], "imports.update", {
+    id: job.id,
+    revision: 1,
+    fields: { title: "Edited" },
+  });
+  const payload = {
+    title: "Edited",
+    url: job.url,
+    recipientIds: [f.people[0].id],
+    importId: job.id,
+  };
+  expect(() =>
+    command(f.s, f.actors[1], "items.create", {
+      ...payload,
+      importDraftRevision: 1,
+    }),
+  ).toThrow();
+  command(f.s, f.actors[1], "items.create", {
+    ...payload,
+    importDraftRevision: 2,
+  });
+  expect(job.draft!.state).toBe("published");
 });

@@ -428,6 +428,18 @@ Administration introductions use muted body copy beneath the shared panel headin
 
 Phone management separates the primary SMS-choice form from number actions with a divider and 16px spacing. Replace is secondary; Remove uses destructive text and an inline confirmation. Consent boxes align with the first text line. Mobile primary actions fill their row.
 
+### Wish-list identity and private notes
+
+Event-generated lists lead with the recipient: Your wish list or the recipient’s name. Event context sits directly beneath the heading. Privacy is an inline disclosure beside that context, with an explanation in its own row so controls do not rearrange. Event maintenance uses the existing labeled action menu. Event index rows separate outlined participant-list links from event management. Person-page lists use divided navigation rows with secondary type labels.
+
+Profile interest categories are non-interactive tags with the soft background, 13px text, 4px corners, and 4px by 10px padding. Longer preference text remains body copy.
+
+Private-note authors use an ellipsis menu to edit inline or delete with confirmation. Moderators can only delete notes already visible to them. Editing preserves mention behavior, shows Save changes and Cancel, and adds an Edited timestamp label after saving. Menus remain visible on touch devices.
+
+Gift-idea imports use the same private Save for later workflow as item imports. Drafts retain their recipient and intended audience, appear under that person’s Gift ideas and in Your drafts, and never publish automatically. Manual and intentionally cleared fields are protected from shop results.
+
+Focus uses the existing accent outline for every focusable element. Sharing reviews focus a compact heading; the dialog shell has no redundant outline. Forced-color mode uses the system Highlight color. Follow is omitted for a list’s sole editor and retained when other owners or guardians can add items.
+
 ## Do's and Don'ts
 
 ### Do:
