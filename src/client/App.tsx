@@ -1153,10 +1153,17 @@ function PersonPage() {
               <ul>
                 {lists.map((list) => (
                   <li key={list.id}>
-                    <Link className="person-list-link" to={`/lists/${list.id}`}>
+                    <Link
+                      className="person-list-link"
+                      to={`/lists/${list.id}`}
+                      aria-labelledby={`person-list-name-${list.id}`}
+                      aria-describedby={`person-list-type-${list.id}`}
+                    >
                       <span>
-                        <strong>{list.name}</strong>
-                        <small>
+                        <strong id={`person-list-name-${list.id}`}>
+                          {list.name}
+                        </strong>
+                        <small id={`person-list-type-${list.id}`}>
                           {list.groupEventId
                             ? "Group event wish list"
                             : "Wish list"}

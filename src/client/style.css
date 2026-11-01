@@ -4015,6 +4015,10 @@ main {
   display: block;
   color: var(--muted);
 }
+.person-list-link > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 .person-list-link:hover strong {
   color: var(--accent);
   text-decoration: underline;

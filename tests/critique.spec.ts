@@ -1291,6 +1291,9 @@ test("person pages link accessible wish lists and keep all items with their sour
   await expect(
     links.getByRole("link", { name: "Birthday plans", exact: true }),
   ).toHaveAttribute("href", `/lists/${empty.id}`);
+  await expect(
+    links.getByRole("link", { name: "Birthday plans", exact: true }),
+  ).toHaveAccessibleDescription("Wish list");
   for (const list of [privateList, pending, archived])
     await expect(
       links.getByRole("link", { name: list.name, exact: true }),
