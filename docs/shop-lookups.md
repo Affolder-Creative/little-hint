@@ -2,6 +2,8 @@
 
 Little Hint first uses its built-in product parser for ordinary shops. You can choose one paid provider to help with blocked or incomplete pages. Bright Data additionally supports dedicated product APIs for Amazon, Walmart, Target, and Best Buy US product links.
 
+A generic page title that only repeats the shop name or hostname does not count as a product name. Little Hint tries another available title, retailer-specific data, and then the configured paid provider. If none supplies a product name, the draft stays editable for manual entry. A real product title can still import without a price, description, or photo.
+
 ## Choose lookup behavior
 
 Set `SCRAPING_PROVIDER` in production, or `STAGING_SCRAPING_PROVIDER` in staging. Supported values are:
