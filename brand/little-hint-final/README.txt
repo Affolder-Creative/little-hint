@@ -98,7 +98,7 @@ Set LITTLE_HINT_BROWSER to a Chromium executable if needed.
 source/render_brand_preview.cjs renders the additional brand board; its
 executable path can be adjusted for the local browser installation.
 
-Python dependencies: fonttools 4.68.0, uharfbuzz 0.56.4.
+Python dependencies: fonttools 4.68.0, uharfbuzz 0.57.0.
 Node dependencies: sharp 0.35.5, playwright 1.62.1.
 Wordmark axes: weight 650, optical size 60, softness 65, wonk 1.
 Tagline axes: weight 480, optical size 60, softness 65, wonk 1, with simplified
