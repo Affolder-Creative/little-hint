@@ -3344,7 +3344,7 @@ for (const width of [320, 390, 650, 900, 1440]) {
       );
       await page.reload();
       const privacy = page.locator(".list-privacy");
-      const disclosure = privacy.locator("summary");
+      const disclosure = privacy.locator(".privacy-trigger");
       await expect(disclosure.locator(".privacy-label")).toHaveText(
         "Keep it a surprise",
       );
@@ -3454,7 +3454,7 @@ for (const width of [320, 390, 650, 900, 1440]) {
   });
 }
 
-test("privacy disclosure stays expanded when returning from a gift", async ({
+test("privacy popover stays closed when returning from a gift", async ({
   page,
 }) => {
   const { state, actor } = await preview(page);
@@ -3464,7 +3464,7 @@ test("privacy disclosure stays expanded when returning from a gift", async ({
   )!;
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`/lists/${list.id}`);
-  const disclosure = page.locator(".list-privacy > summary");
+  const disclosure = page.locator(".list-privacy > .privacy-trigger");
   await disclosure.click();
   await expect(page.locator(".list-privacy .privacy-note")).toBeVisible();
   const gift = page.locator(".gift-card").first();
@@ -3474,14 +3474,14 @@ test("privacy disclosure stays expanded when returning from a gift", async ({
   await gift.click();
   await expect(page.locator(".gift-detail")).toBeVisible();
   await page.goBack();
-  await expect(page.locator(".list-privacy .privacy-note")).toBeVisible();
+  await expect(page.locator(".list-privacy .privacy-note")).not.toBeVisible();
   await expect(gift).toBeFocused();
   await expect
     .poll(() => page.evaluate(() => scrollY))
     .toBeCloseTo(position, 0);
 });
 
-test("scheduled summaries remain expanded and both list privacy modes stay visible", async ({
+test("scheduled summaries open on request in both privacy modes without moving content", async ({
   page,
 }) => {
   const { state, actor } = await preview(page);
@@ -3498,10 +3498,33 @@ test("scheduled summaries remain expanded and both list privacy modes stay visib
     await expect(page.locator(".list-privacy .privacy-label")).toHaveText(
       mode === "surprise" ? "Keep it a surprise" : "See the plans",
     );
-    await expect(page.locator(".list-privacy .privacy-note")).toBeVisible();
-    await expect(page.locator(".list-privacy .privacy-note")).toContainText(
-      "2099-12-25",
+    const trigger = page.locator(".privacy-trigger");
+    const panel = page.getByRole("dialog", { name: "Gift privacy" });
+    await expect(panel).not.toBeVisible();
+    await expect(trigger).toHaveAttribute("aria-expanded", "false");
+    const before = await page.locator(".page-heading").boundingBox();
+    await trigger.focus();
+    await page.keyboard.press("Enter");
+    await expect(panel).toBeVisible();
+    await expect(trigger).toHaveAttribute("aria-expanded", "true");
+    await expect(panel).toContainText("2099-12-25");
+    await expect(panel).toContainText(
+      "Contribution amounts and private notes stay private.",
     );
+    expect(await page.locator(".page-heading").boundingBox()).toEqual(before);
+    const bounds = (await panel.boundingBox())!;
+    expect(bounds.x).toBeGreaterThanOrEqual(16);
+    expect(bounds.x + bounds.width).toBeLessThanOrEqual(304);
+    await page.keyboard.press("Escape");
+    await expect(panel).not.toBeVisible();
+    await expect(trigger).toBeFocused();
+    await trigger.click();
+    await panel.getByRole("button", { name: "Close privacy details" }).click();
+    await expect(panel).not.toBeVisible();
+    await expect(trigger).toBeFocused();
+    await trigger.click();
+    await page.locator("h1").click();
+    await expect(panel).not.toBeVisible();
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth - innerWidth,
@@ -5211,12 +5234,14 @@ for (const width of [390, 1440]) {
         .boundingBox();
       const title = await page.locator("h1").boundingBox();
       expect(Math.abs(follow!.y - title!.y)).toBeLessThan(20);
-      const privacy = await page.locator(".list-privacy summary").boundingBox();
+      const privacy = await page
+        .locator(".list-privacy .privacy-trigger")
+        .boundingBox();
       const manage = await page.locator(".event-wish-manage").boundingBox();
       expect(Math.abs(privacy!.y - manage!.y)).toBeLessThan(10);
     }
     const heading = await page.locator("h1").boundingBox();
-    await page.locator(".list-privacy summary").click();
+    await page.locator(".list-privacy .privacy-trigger").click();
     expect((await page.locator("h1").boundingBox())!.y).toBe(heading!.y);
     await page.screenshot({
       path: info.outputPath(`recipient-${width}.png`),
@@ -5368,5 +5393,107 @@ for (const width of [390, 1440]) {
     expect(
       await own.evaluate((e) => getComputedStyle(e).textDecorationLine),
     ).toBe("none");
+  });
+}
+
+for (const width of [320, 768, 1440]) {
+  test(`event lists stay connected to compact event rows at ${width}px`, async ({
+    page,
+  }, info) => {
+    const { state, actor } = await preview(page);
+    await page.setViewportSize({ width, height: 1000 });
+    const person = state.people.find((p) => p.userId === actor.id)!;
+    const event = state.groupEvents.find((e) =>
+      e.participantIds.includes(person.id),
+    )!;
+    event.description =
+      "Calling all Morgans! Fill out your wish list and give your fellow elves some ideas.";
+    event.revealAfter = "2099-12-26";
+    event.archiveAfter = "2099-12-31";
+    event.spendingGuidelineCents = 5000;
+    const own = state.lists.find(
+      (l) => l.groupEventId === event.id && l.ownerIds.includes(person.id),
+    )!;
+    state.groupEvents = [event];
+    state.lists = state.lists.filter((l) => l.groupEventId === event.id);
+    await page.goto("/lists");
+    const row = page.locator(".event-entry");
+    const wishList = row.getByRole("link", {
+      name: "Your wish list",
+      exact: true,
+    });
+    const menu = row.getByLabel(`Event actions for ${event.name}`, {
+      exact: true,
+    });
+    await expect(wishList).toHaveAttribute("href", `/lists/${own.id}`);
+    await expect(
+      page.getByRole("heading", { name: "Other wish lists" }),
+    ).toBeVisible();
+    await expect(
+      page.getByText(/Your event wish lists are above/),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "A list for any occasion" }),
+    ).toHaveCount(0);
+    await expect(
+      row.getByRole("link", { name: "Manage event", exact: true }),
+    ).not.toBeVisible();
+    if (width === 1440) {
+      const heading = (await row
+        .locator(".event-entry-heading")
+        .boundingBox())!;
+      const actions = (await row
+        .locator(".event-entry-actions")
+        .boundingBox())!;
+      expect(
+        Math.abs(
+          heading.y + heading.height / 2 - actions.y - actions.height / 2,
+        ),
+      ).toBeLessThan(2);
+      expect(actions.x).toBeGreaterThan(heading.x + heading.width);
+    }
+    await page.screenshot({
+      path: info.outputPath(`event-index-${width}.png`),
+      fullPage: true,
+    });
+    await menu.focus();
+    await page.keyboard.press("Enter");
+    await row.getByRole("link", { name: "Manage event", exact: true }).click();
+    await expect(page).toHaveURL(new RegExp(`/events/${event.id}$`));
+    await expect(page.getByText("After December 31, 2099")).toBeVisible();
+    const panel = page.getByRole("dialog", { name: "Gift privacy" });
+    await expect(panel).not.toBeVisible();
+    const participants = page.getByRole("heading", {
+      name: "Participants",
+      exact: true,
+    });
+    const before = await participants.boundingBox();
+    await page.locator(".privacy-trigger").click();
+    await expect(panel).toBeVisible();
+    await expect(panel).toContainText("2099-12-26");
+    expect(await participants.boundingBox()).toEqual(before);
+    expect(
+      (await new AxeBuilder({ page }).include("main").analyze()).violations,
+    ).toEqual([]);
+    await page.screenshot({
+      path: info.outputPath(`event-privacy-${width}.png`),
+      fullPage: true,
+    });
+    await page.keyboard.press("Escape");
+    for (const theme of ["light", "dark"]) {
+      await page.evaluate(
+        (theme) => (document.documentElement.dataset.theme = theme),
+        theme,
+      );
+      await page.screenshot({
+        path: info.outputPath(`event-overview-${width}-${theme}.png`),
+        fullPage: true,
+      });
+    }
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth - innerWidth,
+      ),
+    ).toBeLessThanOrEqual(1);
   });
 }

@@ -27,6 +27,12 @@ export function ListIndex() {
     [group, setGroup] = useNavigationState<string>("listGroup", "");
   const settings = useOrganization("lists");
   const archived = status === "archived";
+  const hasEventLists = world.lists.some(
+    (l) =>
+      l.canEdit &&
+      l.archived === archived &&
+      world.groupEvents.some((event) => event.id === l.groupEventId),
+  );
   const rows = world.lists.filter(
     (l) =>
       l.canEdit &&
@@ -86,7 +92,9 @@ export function ListIndex() {
         <>
           <GroupEventsSection archived={archived} />
           <section aria-labelledby="standalone-lists-heading">
-            <h2 id="standalone-lists-heading">Your lists</h2>
+            <h2 id="standalone-lists-heading">
+              {hasEventLists ? "Other wish lists" : "Your lists"}
+            </h2>
             {pending.map((l) => (
               <div className="invitation" key={l.id}>
                 <p>You are invited to share ownership of “{l.name}”.</p>
@@ -154,22 +162,31 @@ export function ListIndex() {
                 )}
               </div>
             ))}
-            {!filtered.length && (
-              <Empty
-                title={
-                  search || group
-                    ? "No matching lists"
+            {!filtered.length && hasEventLists && !search && !group ? (
+              <p className="muted standalone-lists-empty">
+                Your event wish lists are above.{" "}
+                {archived
+                  ? "Other lists you archive will appear here."
+                  : "Create a list for another occasion whenever you like."}
+              </p>
+            ) : (
+              !filtered.length && (
+                <Empty
+                  title={
+                    search || group
+                      ? "No matching lists"
+                      : archived
+                        ? "No archived lists"
+                        : "A list for any occasion"
+                  }
+                >
+                  {search || group
+                    ? "Try another search or family group."
                     : archived
-                      ? "No archived lists"
-                      : "A list for any occasion"
-                }
-              >
-                {search || group
-                  ? "Try another search or family group."
-                  : archived
-                    ? "Finished occasions can go here. Restore a list whenever you need it."
-                    : "Create a wish list, then add a few things you would love."}
-              </Empty>
+                      ? "Finished occasions can go here. Restore a list whenever you need it."
+                      : "Create a wish list, then add a few things you would love."}
+                </Empty>
+              )
             )}
           </section>
         </>

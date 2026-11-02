@@ -83,7 +83,6 @@ import {
   Shuffle,
   Settings,
   Plus,
-  Info,
   ArrowRight,
   ArrowLeft,
   Check,
@@ -102,7 +101,6 @@ import { AppContext, useApp } from "./context";
 import {
   Logo,
   Avatar,
-  Privacy,
   Modal,
   Form,
   Field,
@@ -127,6 +125,7 @@ import {
 import { Install, UpdateNotice, useOnline } from "./pwa";
 import { Login } from "./Login";
 import { RevealPolicy, GiftSummaryPanel } from "./ListFeatures";
+import { PrivacyDetails } from "./PrivacyDetails";
 import { EventPage, ManagedEventNotice } from "./GroupEvents";
 import { ExchangeReview, exchangeMissingLists } from "./ExchangeReview";
 import "./gift-actions.css";
@@ -1246,10 +1245,6 @@ function Lists() {
       person.userId !== world.me.id &&
       !person.guardians.includes(world.me.id),
   );
-  const [privacyOpen, setPrivacyOpen] = useNavigationState<boolean>(
-    `listPrivacy:${list?.revealAfter ?? "unscheduled"}`,
-    !!list?.revealAfter,
-  );
   if (id && !list)
     return (
       <Empty
@@ -1355,21 +1350,7 @@ function Lists() {
                   list.groupEventId ? "event-wish-metadata" : undefined
                 }
               >
-                <details
-                  className="list-privacy"
-                  key={list.id}
-                  open={privacyOpen}
-                  onToggle={(event) => setPrivacyOpen(event.currentTarget.open)}
-                >
-                  <summary>
-                    <Privacy mode={list.mode} />{" "}
-                    <span className="privacy-disclosure-label">
-                      <Info size={16} aria-hidden="true" />
-                      <span className="sr-only">Privacy details</span>
-                    </span>
-                  </summary>
-                  <RevealPolicy list={list} />
-                </details>
+                <PrivacyDetails key={list.id} list={list} />
                 {list.groupEventId && event && (
                   <Link
                     className="text-button event-wish-manage"

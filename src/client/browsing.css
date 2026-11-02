@@ -83,25 +83,6 @@
   font-size: 16px;
   font-weight: 400;
 }
-.list-privacy > summary {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px;
-  list-style: none;
-}
-.list-privacy > summary::-webkit-details-marker {
-  display: none;
-}
-.list-privacy > summary .privacy {
-  margin: 0;
-}
-.privacy-disclosure-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
 .managed-list-row:has(.entry-actions-label) {
   display: block;
   padding-bottom: 16px;
@@ -113,6 +94,12 @@
   margin-inline-start: 64px;
   width: fit-content;
 }
+.event-entry {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px 24px;
+}
 .event-entry .event-entry-heading {
   display: grid;
   grid-template-columns: 52px minmax(0, 1fr);
@@ -122,7 +109,7 @@
 .event-entry .event-entry-heading > .list-symbol {
   grid-row: 1 / span 2;
 }
-.event-entry .event-entry-heading > div {
+.event-entry .event-entry-copy {
   grid-column: 2;
 }
 .event-entry .event-entry-heading > .privacy {
@@ -135,11 +122,36 @@
 .event-entry .event-entry-links {
   display: flex;
   flex-wrap: wrap;
-  margin: 16px 0 0 68px;
-  gap: 8px 16px;
+  min-width: 0;
+  margin: 0;
+  gap: 8px;
 }
-.event-entry .event-entry-links .text-button {
-  text-decoration: none;
+.event-entry-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  max-width: 32rem;
+  min-width: 0;
+}
+.event-entry-actions > .entry-actions {
+  flex: none;
+}
+.event-entry-copy h3 a:hover {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+@media (max-width: 1100px) {
+  .event-entry {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .event-entry-actions {
+    justify-content: flex-start;
+    margin-inline-start: 68px;
+    max-width: none;
+  }
 }
 @media (max-width: 650px) {
   .page-heading.list-heading:has(.entry-actions) h1 {
@@ -149,8 +161,8 @@
     position: static;
     margin: 0;
   }
-  .event-entry .event-entry-links {
-    margin-left: 0;
+  .event-entry-actions {
+    margin-inline-start: 0;
   }
   .group-events-section > .section-heading {
     flex-wrap: wrap;
@@ -161,12 +173,6 @@
     flex: 1 1 220px;
   }
 }
-@media (prefers-reduced-motion: reduce) {
-  .privacy-disclosure-label svg {
-    transition: none;
-  }
-}
-
 /* Privacy belongs below the title, never in competition with its text column. */
 .managed-list-row > .list-row {
   display: grid;

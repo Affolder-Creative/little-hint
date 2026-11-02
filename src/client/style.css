@@ -2449,6 +2449,18 @@ main {
 .group-events-section {
   margin-bottom: 32px;
 }
+.group-events-section > .section-heading {
+  margin-bottom: 8px;
+}
+.group-events-section > .section-heading p {
+  margin: 4px 0 0;
+  font-size: 14px;
+}
+.standalone-lists-empty {
+  margin: 8px 0 24px;
+  font-size: 14px;
+  max-width: 65ch;
+}
 .group-events-section .section-heading h2,
 .group-event-settings .section-heading h4 {
   margin-bottom: 0;
@@ -3103,16 +3115,8 @@ main {
   flex-shrink: 0;
 }
 .event-entry {
-  padding: 24px 0;
+  padding: 16px 0;
   border-bottom: 1px solid var(--border);
-}
-.event-entry-heading {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-.event-entry-heading > div {
-  flex: 1;
 }
 .event-entry-heading h3 {
   margin-bottom: 4px;
@@ -3123,13 +3127,6 @@ main {
   color: var(--muted);
   font-size: 13px;
 }
-.event-entry-links {
-  margin: 16px 0 0 68px;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 24px;
-}
 .event-wishlist-link {
   display: flex;
   align-items: center;
@@ -3137,6 +3134,9 @@ main {
   padding: 10px 0;
   min-height: 44px;
   font-weight: 600;
+  font-size: 14px;
+  max-width: 100%;
+  overflow-wrap: anywhere;
   color: var(--accent);
 }
 .event-wishlist-link:hover {
@@ -3235,24 +3235,6 @@ main {
   margin-bottom: 4px;
 }
 @media (max-width: 650px) {
-  .event-entry-heading {
-    flex-wrap: wrap;
-    gap: 12px;
-  }
-  .event-entry-heading > div {
-    flex-basis: calc(100% - 108px);
-  }
-  .event-entry-heading > .privacy {
-    margin-left: 64px;
-  }
-  .event-entry-heading > .entry-actions {
-    margin-left: auto;
-  }
-  .event-entry-links {
-    margin-left: 0;
-    display: grid;
-    gap: 4px;
-  }
   .collection-tools > .search {
     flex-basis: 100%;
   }
@@ -3473,21 +3455,6 @@ main {
 }
 .list-privacy {
   margin-bottom: 16px;
-}
-.list-privacy > summary {
-  cursor: pointer;
-  min-height: 44px;
-  padding-block: 8px;
-  color: var(--muted);
-  font-size: 13px;
-}
-.list-privacy > summary .privacy {
-  margin-inline-end: 8px;
-  max-width: 100%;
-  white-space: normal;
-}
-.list-privacy .privacy-note {
-  margin: 8px 0 0;
 }
 @media (max-width: 650px) {
   .back-link:has(+ .list-heading) {
@@ -3872,12 +3839,6 @@ main {
   align-items: center;
   gap: 8px;
 }
-.list-privacy > summary {
-  gap: 6px;
-}
-.list-privacy > summary .privacy {
-  margin: 0;
-}
 .import-drafts {
   margin-block: 16px;
 }
@@ -3982,13 +3943,6 @@ main {
   flex-wrap: wrap;
   margin-inline-start: 16px;
 }
-.event-management-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-items: center;
-  margin-inline-start: auto;
-}
 .event-entry-links .event-wishlist-link {
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -4052,10 +4006,6 @@ main {
   margin-top: 12px;
 }
 @media (max-width: 650px) {
-  .event-management-actions {
-    margin-inline-start: 0;
-    width: 100%;
-  }
   .list-gift-ideas nav {
     display: flex;
     margin: 8px 0 0;
@@ -4082,9 +4032,6 @@ main {
 .list-heading .list-privacy {
   margin-top: 12px;
   margin-bottom: 0;
-}
-.list-heading .list-privacy .privacy-note {
-  max-width: 65ch;
 }
 .list-gift-ideas + .browser .empty {
   padding-block: 32px;
@@ -4123,9 +4070,18 @@ a.button:is(:hover, :focus, :active),
   align-items: center;
   gap: 10px;
   margin: 0 0 12px;
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1.4;
+  letter-spacing: normal;
 }
+.page-heading.event-heading > div:first-child > p,
 .event-wish-heading .event-list-context > p {
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.6;
   white-space: pre-wrap;
+  max-width: 65ch;
 }
 .event-wish-metadata {
   display: grid;
@@ -4134,20 +4090,9 @@ a.button:is(:hover, :focus, :active),
   align-items: center;
 }
 .event-wish-metadata .list-privacy {
-  display: contents;
-}
-.event-wish-metadata .list-privacy > summary {
+  margin: 0;
   grid-column: 1;
   grid-row: 1;
-  list-style: none;
-}
-.event-wish-metadata summary::-webkit-details-marker {
-  display: none;
-}
-.event-wish-metadata .privacy-note {
-  grid-column: 1 / -1;
-  grid-row: 2;
-  margin: 0;
 }
 .event-wish-manage {
   grid-column: 2;
@@ -4168,6 +4113,46 @@ a.button:is(:hover, :focus, :active),
   border-top: 1px solid var(--border);
   padding-top: 24px;
   margin: 0 0 16px;
+}
+.event-overview {
+  margin-bottom: 24px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--border);
+}
+.event-overview .list-privacy {
+  margin-bottom: 12px;
+}
+.event-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 40px;
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.event-facts > div {
+  min-width: 0;
+  max-width: 65ch;
+}
+.event-facts dt {
+  margin-bottom: 4px;
+  font-size: 13px;
+  font-weight: 550;
+  color: var(--muted);
+}
+.event-facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.event-facts dd span {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+}
+.event-overview > p {
+  margin: 12px 0 0;
+  max-width: 65ch;
+  font-size: 14px;
 }
 .empty.empty-compact {
   margin: 0;
@@ -4201,6 +4186,7 @@ a.button:is(:hover, :focus, :active),
   }
   .event-wish-heading > .actions {
     justify-content: flex-start;
+    margin-top: 0;
   }
   .event-wish-heading .heading-metadata {
     grid-column: 1;

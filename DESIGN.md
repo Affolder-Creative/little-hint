@@ -103,6 +103,15 @@ typography:
     fontSize: "8px"
   row-title:
     fontSize: "18px"
+  event-context:
+    fontSize: '18px'
+    fontWeight: 500
+    lineHeight: 1.4
+    letterSpacing: 'normal'
+  event-description:
+    fontSize: '16px'
+    fontWeight: 400
+    lineHeight: 1.6
   list-title:
     fontSize: "19px"
   panel-title:
@@ -300,8 +309,9 @@ Gift cards are unboxed links. A contained image or labeled fallback leads, follo
 ### Collection actions
 
 List and event management menus have visible List actions and Event actions labels.
-Event metadata and privacy form one heading group; wish-list links, Manage/View
-event, and the action menu share a wrapping action row. List and event detail privacy uses one disclosure target combining the existing badge and an information icon. Collection-row badges remain passive. Menu rows are borderless and retain visible keyboard focus.
+Event metadata and privacy form one heading group. On wide screens, participant-list links and Event actions sit beside that group, centered vertically. Manage event is the first menu destination, and the event title also opens the event. View event remains visible for viewers who cannot manage it. At 1100px and below, actions wrap immediately beneath the heading; at 650px and below, they align with the row's left edge. Event rows use 16px vertical padding and 14px action labels. List and event detail privacy uses one button combining the existing badge and an information icon. Collection-row badges remain passive. Menu rows are borderless and retain visible keyboard focus.
+
+Event wish lists stay nested beside their event. When the selected Active or Archived view contains an editable event list, the lower collection is labeled Other wish lists. Its empty state is a short sentence pointing to the event lists above. Without editable event lists, retain Your lists and the existing first-list empty state. Lists from unavailable events remain accessible in the lower collection.
 
 Private product-import drafts use compact divided rows beside their destination list and in My lists. Status text names Finding details, Ready to review, or Needs details. A slow lookup offers Save draft and continue after 15 seconds; fields stay editable. Closing saves the latest edits before dismissing. Drafts remain owner-only until Review and add completes.
 
@@ -422,7 +432,7 @@ remains visible in every section, including Family groups.
 
 ### List maintenance and account dialogs
 
-List-action menus use neutral text and consistently aligned outline icons. Destructive actions use the error color and a preceding divider. Privacy badges and their stationary info icon form one disclosure trigger with a 6px gap. Draft rows use 12px vertical padding, 8px action gaps, and a stacked mobile layout with 44px touch targets.
+List-action menus use neutral text and consistently aligned outline icons. Destructive actions use the error color and a preceding divider. Privacy badges and their stationary info icon form one 44px button with a 6px gap. Privacy help opens in a nonmodal native popover and starts closed, including when a gift summary is scheduled or when returning to a list. It keeps the complete reveal policy available without reflowing the page. Tap/click and keyboard activation open it; its close button, Escape, or an outside click dismiss it. Close and Escape restore trigger focus. The panel uses the paper background, control border, 12px corners, 16px padding, and 14px text. Its width is at most 24rem, with 16px viewport insets and internal scrolling for long content. Draft rows use 12px vertical padding, 8px action gaps, and a stacked mobile layout with 44px touch targets.
 
 Administration introductions use muted body copy beneath the shared panel heading. Failed shop lookups and updates use separate collapsed disclosures with counts, ten newest entries at a time, and localized queue timestamps. Diagnostics occupy a separate supporting line.
 
@@ -430,7 +440,9 @@ Phone management separates the primary SMS-choice form from number actions with 
 
 ### Wish-list identity and private notes
 
-Event-generated lists lead with the recipient: Your wish list or the recipient’s name. Desktop page actions sit beside the recipient heading. Event context sits directly beneath it, with a calendar icon and the saved event description. Privacy and the event-management link share a row, followed by compact management guidance. The privacy explanation expands in its own full-width row so controls do not rearrange. Event lists have an On this wish list section with a compact left-aligned empty state. The visitor’s gift-idea section follows the item collection. Event maintenance uses the existing labeled action menu. Event index rows separate outlined participant-list links from event management. Person-page lists use divided navigation rows with secondary type labels.
+Event-generated lists lead with the recipient: Your wish list or the recipient’s name. Desktop page actions sit beside the recipient heading. Event context sits directly beneath it, with a 20px calendar icon and an 18px, weight-500 event name. Owner and visitor views share that treatment. Saved event descriptions use 16px regular text, 1.6 line height, preserved line breaks, and a 65ch maximum measure on both wish-list and event pages. Privacy and the event-management link share a row, followed by compact management guidance. The privacy explanation appears in an anchored popover. Event lists have an On this wish list section with a compact left-aligned empty state. The visitor’s gift-idea section follows the item collection. Event maintenance uses the existing labeled action menu. Person-page lists use divided navigation rows with secondary type labels.
+
+Event overview pages place sharing and archive information in a wrapping definition list above Participants. Labels use 13px medium text; values and supporting explanations use 14px text. Archive dates use a written month and retain the After qualifier and event timezone to preserve end-of-day meaning. A divider with 24px of space separates these facts from participant navigation.
 
 Profile interest categories are non-interactive tags with the soft background, 13px text, 4px corners, and 4px by 10px padding. Longer preference text remains body copy.
 
