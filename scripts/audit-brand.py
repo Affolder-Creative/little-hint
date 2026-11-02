@@ -5,7 +5,7 @@ from pathlib import Path
 
 expected = {
     "fonttools": ("4.68.0", "MIT"),
-    "uharfbuzz": ("0.56.4", "Apache License 2.0"),
+    "uharfbuzz": ("0.57.0", "Apache License 2.0"),
 }
 inventory, notices = [], []
 for requirement in Path("brand/little-hint-final/source/requirements.txt").read_text().splitlines():
