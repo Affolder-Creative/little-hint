@@ -1,0 +1,144 @@
+.spending-purchase .purchase-hint {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--muted);
+  margin: 6px 0;
+}
+.purchase-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 550;
+  margin-bottom: 8px;
+}
+.purchase-source strong {
+  display: block;
+}
+.purchase-search {
+  position: relative;
+}
+.purchase-search:focus-within {
+  z-index: 2;
+}
+.purchase-options {
+  position: absolute;
+  top: calc(100% + 4px);
+  inset-inline: 0;
+  z-index: 5;
+  max-height: 240px;
+  overflow: auto;
+  background: var(--paper);
+  border: 1px solid var(--control-border);
+  border-radius: 8px;
+  padding: 4px;
+}
+.purchase-option {
+  padding: 10px 12px;
+  min-height: 44px;
+  cursor: pointer;
+  font-size: 14px;
+}
+.purchase-option.active,
+.purchase-option:hover {
+  background: var(--soft);
+}
+.purchase-option small {
+  display: block;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.purchase-option > span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.purchase-check {
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--control-border);
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.purchase-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.purchase-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 8px;
+  padding: 4px 8px;
+  background: var(--soft);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.purchase-chip button {
+  display: inline-flex;
+  min-width: 44px;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+}
+.purchase-payment {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+}
+.purchase-details {
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+}
+.purchase-details summary {
+  font-size: 14px;
+  font-weight: 550;
+  cursor: pointer;
+  min-height: 44px;
+}
+.purchase-details .field {
+  margin-top: 12px;
+}
+.purchase-private {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  min-height: 44px;
+  font-size: 14px;
+}
+.purchase-private input {
+  width: auto;
+}
+.spending-purchase .text-button {
+  min-height: 44px;
+}
+@media (max-width: 500px) {
+  .purchase-payment {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.purchase-search-anchor {
+  position: relative;
+}
+.purchase-option {
+  display: block;
+  width: 100%;
+  text-align: start;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text);
+  font-weight: 400;
+}
+
+.spending-purchase > .form-actions > .spending-privacy {
+  flex-basis: 100%;
+  margin: 0;
+}
+/* Focus and option scrolling must never move the dialog's fixed heading. */
+dialog.dialog:has(.spending-purchase) {
+  overflow: clip;
+}

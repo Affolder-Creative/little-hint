@@ -1,3 +1,4 @@
+import { spendingAvailable } from "./deployment";
 import { spendingMatches, spendingTotals } from "../shared/spending";
 import { z } from "zod";
 import type { Actor, State } from "../shared/model";
@@ -144,6 +145,7 @@ function snapshot(s: State, a: Actor, reservationId: string): SpendingRecord {
 }
 // Called only inside the domain transaction. Importing legacy status never invents cost or dates.
 export function syncSpending(s: State, a: Actor) {
+  if (!spendingAvailable()) return;
   if (!spendingSettings(s, a).enabled) return;
   for (const r of s.reservations.filter((r) => r.buyerId === a.id)) {
     let plan = s.spendingRecords.find(
@@ -187,7 +189,11 @@ export function syncSpending(s: State, a: Actor) {
       });
   }
 }
-export function syncContributions(s: State) {
+export function syncContributions(
+  s: State,
+  shareSources: readonly string[] = [],
+) {
+  if (!spendingAvailable()) return;
   for (const c of s.contributions) {
     const reservation = s.reservations.find((r) => r.id === c.reservationId);
     if (!reservation) continue;
@@ -216,7 +222,10 @@ export function syncContributions(s: State) {
           sharing: "private",
         };
         s.spendingRecords.push(entry);
-        if (c.createdAt >= spendingSettings(s, actor).createdAt)
+        if (
+          shareSources.includes(c.id) &&
+          c.createdAt >= spendingSettings(s, actor).createdAt
+        )
           autoShare(s, actor, entry);
       }
       entry.kind = receiving
@@ -231,7 +240,22 @@ export function syncContributions(s: State) {
   }
 }
 
+/** Reconcile offline purchase-status changes before displaying a restored tracker. */
+export function reconcileSpending(s: State, a: Actor): boolean {
+  if (!spendingAvailable()) return false;
+  const before = JSON.stringify(s.spendingRecords);
+  syncSpending(s, a);
+  const c = connection(s, a);
+  if (active(s, c)) {
+    const partner = c.users.find((user) => user !== a.id)!;
+    syncSpending(s, { id: partner, name: "", email: "" });
+  }
+  syncContributions(s);
+  return before !== JSON.stringify(s.spendingRecords);
+}
+
 export function spendingView(s: State, a: Actor): SpendingView {
+  if (!spendingAvailable()) fail(404, "Spending is unavailable.");
   const settings = spendingSettings(s, a);
   const c = connection(s, a);
   const allowed = settings.enabled
@@ -286,6 +310,7 @@ export function spendingCommand(
   action: string,
   raw: unknown,
 ): unknown {
+  if (!spendingAvailable()) fail(404, "Spending is unavailable.");
   const b = raw as any;
   if (action === "spending.settings") {
     const p = z
@@ -480,6 +505,8 @@ export function spendingCommand(
     const p = z
       .object({
         reservationId: id.optional(),
+        itemId: id.optional(),
+        itemRevision: z.number().int().optional(),
         title: z.string().trim().min(1).max(200),
         recipientIds: z.array(id).min(1).max(20),
         amountCents: cents.nullable(),
@@ -492,6 +519,24 @@ export function spendingCommand(
         planRevision: z.number().int().optional(),
       })
       .parse(b);
+    if (p.itemId && p.reservationId) fail(400, "Choose one purchase source.");
+    const sourceItem = p.itemId
+      ? s.items.find((i) => i.id === p.itemId && itemVisible(s, a, i))
+      : undefined;
+    if (p.itemId) {
+      if (!sourceItem?.listId || recipient(s, a, sourceItem))
+        fail(404, "This gift is not available for purchase.");
+      revision(sourceItem, { revision: p.itemRevision });
+      if (
+        s.reservations.some(
+          (r) =>
+            r.itemId === p.itemId &&
+            r.buyerId === a.id &&
+            r.quantity > r.purchased,
+        )
+      )
+        fail(409, "Choose your existing reservation for this gift.");
+    }
     const c = connection(s, a);
     let base: SpendingRecord | undefined;
     let reservation = p.reservationId
@@ -547,6 +592,18 @@ export function spendingCommand(
       )
     )
       fail(403, "You cannot record a purchase for that payer.");
+    if (sourceItem) {
+      const created = command(s, a, "reservations.create", {
+        itemId: sourceItem.id,
+        quantity: p.quantity,
+      }) as { id: string };
+      p.reservationId = created.id;
+      reservation = s.reservations.find((r) => r.id === created.id)!;
+      base = s.spendingRecords.find(
+        (r) =>
+          r.reservationId === created.id && r.kind === "plan" && !r.sourceId,
+      )!;
+    }
     if (reservation) {
       const item = s.items.find((i) => i.id === reservation.itemId);
       if (!item || !itemVisible(s, a, item) || recipient(s, a, item))
@@ -590,7 +647,9 @@ export function spendingCommand(
       occasionId: p.occasionId ?? base?.occasionId,
       protected: base?.protected,
     };
-    if (!p.keepPrivate && base && shared(s, base, c)) {
+    if (!p.keepPrivate && sourceItem) {
+      autoShare(s, a, r);
+    } else if (!p.keepPrivate && base && shared(s, base, c)) {
       r.connectionId = c!.id;
       r.sharing = base.ownerId === payer ? base.sharing : "explicit";
       r.rule = base.ownerId === payer ? base.rule : undefined;
@@ -688,6 +747,7 @@ export function spendingCommand(
 }
 
 export function registerSpendingReservation(s: State, a: Actor, id: string) {
+  if (!spendingAvailable()) return;
   syncSpending(s, a);
   const r = s.spendingRecords.find(
     (p) =>
@@ -710,6 +770,7 @@ export function spendingHistory(s: State, a: Actor, raw: unknown) {
       occasion: id.optional(),
       year: z.coerce.number().int().min(1900).max(2200).optional(),
       page: z.coerce.number().int().min(1).max(100000).default(1),
+      missingAmounts: z.enum(["actual", "planned"]).optional(),
     })
     .parse(raw);
   const view = spendingView(s, a);
@@ -725,6 +786,14 @@ export function spendingHistory(s: State, a: Actor, raw: unknown) {
   );
   const rows = ledger
     .filter((r) => spendingMatches(r, { ...q, shared: isShared }))
+    .filter(
+      (r) =>
+        !q.missingAmounts ||
+        (r.amountCents === null &&
+          (q.missingAmounts === "planned"
+            ? r.kind === "plan"
+            : r.kind !== "plan")),
+    )
     .sort(
       (a, b) =>
         (b.date ?? b.createdAt).localeCompare(a.date ?? a.createdAt) ||

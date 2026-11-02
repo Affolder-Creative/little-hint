@@ -79,7 +79,7 @@ export function validateState(state, root) {
   return state;
 }
 
-export function runtimeConfiguration(state, origin) {
+export function runtimeConfiguration(state, origin, env = process.env) {
   const url = new URL(origin);
   if (
     url.origin !== origin ||
@@ -103,6 +103,8 @@ export function runtimeConfiguration(state, origin) {
     UPLOAD_DIR: "/data/uploads",
     CLOUDFLARE_WEB_ANALYTICS: "false",
     AUTO_IMPORT_PRODUCT_PHOTOS: "false",
+    SPENDING_ENABLED:
+      env.SPENDING_ENABLED?.trim().toLowerCase() === "false" ? "false" : "true",
   };
 }
 

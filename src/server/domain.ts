@@ -1,3 +1,4 @@
+import { spendingAvailable } from "./deployment";
 import {
   spendingCommand,
   syncSpending,
@@ -548,12 +549,15 @@ export function world(s: State, a: Actor): World {
   const people = s.people.filter((p) => personVisible(s, a, p));
   const ps = ownIds(s, a);
   return {
-    spendingInvitation: s.spendingConnections.some(
-      (c) => c.status === "pending" && c.users[1] === a.id,
-    ),
-    spendingEnabled: s.spendingSettings.some(
-      (p) => p.userId === a.id && p.enabled,
-    ),
+    spendingAvailable: spendingAvailable(),
+    spendingInvitation:
+      spendingAvailable() &&
+      s.spendingConnections.some(
+        (c) => c.status === "pending" && c.users[1] === a.id,
+      ),
+    spendingEnabled:
+      spendingAvailable() &&
+      s.spendingSettings.some((p) => p.userId === a.id && p.enabled),
     giftPreferences: preferenceViews(s, a),
     organization: s.organization.filter((o) => o.userId === a.id),
     me: {

@@ -1,11 +1,13 @@
+import { spendingAvailable } from "../src/server/deployment";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { emptyState } from "../src/shared/model";
-import { command, stamp, world } from "../src/server/domain";
+import { command, stamp, world, idempotent } from "../src/server/domain";
 import {
   spendingView,
   spendingHistory,
   syncContributions,
   syncSpending,
+  reconcileSpending,
 } from "../src/server/spending";
 import {
   spendingTotals,
@@ -16,7 +18,10 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date("2026-11-02T12:00:00Z"));
 });
-afterEach(() => vi.useRealTimers());
+afterEach(() => {
+  vi.useRealTimers();
+  vi.unstubAllEnvs();
+});
 function fixture() {
   const s = emptyState();
   const actors = ["Alex", "Jamie", "Emma"].map((name) => ({
@@ -82,7 +87,7 @@ describe("private spending", () => {
       amountCents: 500,
       date: "2026-11-02",
     });
-    expect(spendingTotals(f.s.spendingRecords)).toEqual({
+    expect(spendingTotals(f.s.spendingRecords)).toMatchObject({
       spent: 4000,
       planned: 0,
       missing: 1,
@@ -261,7 +266,7 @@ describe("spending ledger regressions", () => {
       [1, null, "2026-11-02"],
     ]);
     expect(gift.reservation.purchased).toBe(2);
-    expect(spendingTotals(records)).toEqual({
+    expect(spendingTotals(records)).toMatchObject({
       spent: 4200,
       planned: 5000,
       missing: 1,
@@ -279,7 +284,9 @@ describe("spending ledger regressions", () => {
       splits: [1],
     });
     gift.buy(4000);
-    expect(spendingTotals(spendingView(f.s, f.actors[0]).records)).toEqual({
+    expect(
+      spendingTotals(spendingView(f.s, f.actors[0]).records),
+    ).toMatchObject({
       spent: 4000,
       planned: 4000,
       missing: 0,
@@ -565,7 +572,7 @@ describe("shared purchase and contribution integration", () => {
       amountCents: 4000,
     }) as { id: string };
     const contribution = f.s.contributions.find((c) => c.id === result.id)!;
-    syncContributions(f.s);
+    syncContributions(f.s, [contribution.id]);
     const personal = (i: number) =>
       spendingTotals(
         spendingView(f.s, f.actors[i]).records.filter(
@@ -581,7 +588,7 @@ describe("shared purchase and contribution integration", () => {
         true,
       );
     expect(personal(0).planned).toBe(6000);
-    expect(personal(1)).toEqual({ spent: 0, planned: 4000, missing: 0 });
+    expect(personal(1)).toMatchObject({ spent: 0, planned: 4000, missing: 0 });
     expect(together().planned).toBe(10000);
     gift.buy(10000);
     command(f.s, f.actors[1], "contributions.update", {
@@ -589,7 +596,7 @@ describe("shared purchase and contribution integration", () => {
       revision: contribution.revision,
       status: "sent",
     });
-    syncContributions(f.s);
+    syncContributions(f.s, [contribution.id]);
     expect(personal(0).spent).toBe(10000);
     expect(personal(1).spent).toBe(4000);
     expect(together().spent).toBe(10000);
@@ -598,7 +605,7 @@ describe("shared purchase and contribution integration", () => {
       revision: contribution.revision,
       status: "received",
     });
-    syncContributions(f.s);
+    syncContributions(f.s, [contribution.id]);
     expect(personal(0).spent).toBe(6000);
     expect(together().spent).toBe(10000);
   });
@@ -715,5 +722,291 @@ describe("authorized spending history API", () => {
     expect(
       f.s.spendingRecords.filter((r) => r.kind === "purchase"),
     ).toHaveLength(0);
+  });
+});
+
+describe("spending availability and linked entry", () => {
+  it("defaults to available and disables only false", () => {
+    for (const value of [undefined, "", "true", "0", "other"])
+      expect(spendingAvailable({ SPENDING_ENABLED: value })).toBe(true);
+    for (const value of ["false", " FALSE "])
+      expect(spendingAvailable({ SPENDING_ENABLED: value })).toBe(false);
+  });
+  it("hides capability and blocks reads/writes while keeping ordinary buying and saved settings", () => {
+    const f = fixture();
+    const gift = reserved(f);
+    gift.buy(4200);
+    const before = structuredClone(f.s.spendingRecords);
+    vi.stubEnv("SPENDING_ENABLED", "false");
+    expect(world(f.s, f.actors[0])).toMatchObject({
+      spendingAvailable: false,
+      spendingEnabled: false,
+      spendingInvitation: false,
+    });
+    expect(() => spendingView(f.s, f.actors[0])).toThrow("unavailable");
+    expect(() => f.add()).toThrow("unavailable");
+    expect(() =>
+      f.run(0, "settings", { enabled: false, summaries: false }),
+    ).toThrow("unavailable");
+    command(f.s, f.actors[0], "reservations.update", {
+      id: gift.reservation.id,
+      revision: gift.reservation.revision,
+      quantity: 2,
+      purchased: 2,
+    });
+    syncSpending(f.s, f.actors[0]);
+    syncContributions(f.s);
+    expect(f.s.spendingRecords).toEqual(before);
+    expect(f.s.spendingSettings[0].enabled).toBe(true);
+    vi.stubEnv("SPENDING_ENABLED", "");
+    expect(reconcileSpending(f.s, f.actors[0])).toBe(true);
+    expect(reconcileSpending(f.s, f.actors[0])).toBe(false);
+    const purchases = f.s.spendingRecords.filter((r) => r.kind === "purchase");
+    expect(purchases).toHaveLength(2);
+    expect(purchases[0].amountCents).toBe(4200);
+    expect(purchases[1]).toMatchObject({
+      amountCents: null,
+      date: null,
+      sharing: "private",
+    });
+    expect(world(f.s, f.actors[0]).spendingEnabled).toBe(true);
+  });
+  it("separates known zero from missing actual and planned values", () => {
+    const f = fixture();
+    f.add(0, undefined, 0);
+    f.add(0, undefined, null);
+    const gift = reserved(f);
+    gift.plan().amountCents = null;
+    expect(spendingTotals(f.s.spendingRecords)).toMatchObject({
+      spent: 0,
+      planned: 0,
+      knownActual: 1,
+      missingActual: 1,
+      knownPlanned: 0,
+      missingPlanned: 1,
+    });
+    const actual = spendingHistory(f.s, f.actors[0], {
+      missingAmounts: "actual",
+    });
+    expect(actual.records).toHaveLength(1);
+    expect(actual.records[0].kind).toBe("purchase");
+    const planned = spendingHistory(f.s, f.actors[0], {
+      missingAmounts: "planned",
+    });
+    expect(planned.records).toHaveLength(1);
+    expect(planned.records[0].id).toBe(gift.plan().id);
+    expect(
+      spendingHistory(f.s, f.actors[1], { missingAmounts: "actual" }).records,
+    ).toHaveLength(0);
+  });
+  it("creates a linked purchased reservation and derives source metadata", () => {
+    const f = fixture();
+    const old = reserved(f);
+    command(f.s, f.actors[0], "reservations.update", {
+      id: old.reservation.id,
+      revision: old.reservation.revision,
+      quantity: 0,
+      purchased: 0,
+    });
+    const result = f.run(0, "purchase", {
+      itemId: old.gift.id,
+      itemRevision: old.gift.revision,
+      title: "Ignored title",
+      recipientIds: [f.s.people[1].id],
+      amountCents: 0,
+      date: "2026-11-02",
+      quantity: 1,
+    }) as { id: string };
+    const payment = f.s.spendingRecords.find((r) => r.id === result.id)!;
+    expect(payment).toMatchObject({
+      title: "Books",
+      recipientIds: [f.s.people[2].id],
+      amountCents: 0,
+      listId: old.gift.listId,
+    });
+    expect(
+      f.s.reservations.find((r) => r.id === payment.reservationId),
+    ).toMatchObject({ purchased: 1, quantity: 1 });
+    expect(
+      f.s.spendingRecords.filter((r) => r.kind === "purchase"),
+    ).toHaveLength(1);
+  });
+  it("applies personal-occasion sharing to a newly linked gift and respects its private override", () => {
+    const f = fixture();
+    const c = f.connect();
+    const occasion = f.run(0, "occasion", {
+      name: "Birthday",
+      shared: true,
+    }) as { id: string };
+    f.run(0, "connection", {
+      id: c.id,
+      revision: c.revision,
+      operation: "rules",
+      rules: ["occasion:" + occasion.id],
+    });
+    const gift = reserved(f);
+    command(f.s, f.actors[0], "reservations.update", {
+      id: gift.reservation.id,
+      revision: gift.reservation.revision,
+      quantity: 0,
+      purchased: 0,
+    });
+    const payload = {
+      itemId: gift.gift.id,
+      itemRevision: gift.gift.revision,
+      title: "Books",
+      recipientIds: gift.gift.recipientIds,
+      amountCents: 5000,
+      date: "2026-11-02",
+      quantity: 1,
+      occasionId: occasion.id,
+    };
+    const first = f.run(0, "purchase", payload) as { id: string };
+    expect(
+      spendingView(f.s, f.actors[1]).records.some((r) => r.id === first.id),
+    ).toBe(true);
+    const second = f.run(0, "purchase", { ...payload, keepPrivate: true }) as {
+      id: string;
+    };
+    expect(
+      spendingView(f.s, f.actors[1]).records.some((r) => r.id === second.id),
+    ).toBe(false);
+  });
+  it("does not inherit a new reservation's sharing for a backdated purchase", () => {
+    const f = fixture();
+    const c = f.connect();
+    f.run(0, "connection", {
+      id: c.id,
+      revision: c.revision,
+      operation: "rules",
+      rules: ["person:" + f.s.people[2].id],
+    });
+    const gift = reserved(f);
+    command(f.s, f.actors[0], "reservations.update", {
+      id: gift.reservation.id,
+      revision: gift.reservation.revision,
+      quantity: 0,
+      purchased: 0,
+    });
+    const payment = f.run(0, "purchase", {
+      itemId: gift.gift.id,
+      itemRevision: gift.gift.revision,
+      title: "Books",
+      recipientIds: gift.gift.recipientIds,
+      amountCents: 5000,
+      date: "2020-11-02",
+      quantity: 1,
+    }) as { id: string };
+    expect(
+      spendingView(f.s, f.actors[1]).records.some((r) => r.id === payment.id),
+    ).toBe(false);
+  });
+  it("keeps contribution backfills private even when current automatic sharing rules match", () => {
+    const f = fixture();
+    const c = f.connect();
+    for (const i of [0, 1])
+      f.run(i, "connection", {
+        id: c.id,
+        revision: c.revision,
+        operation: "rules",
+        rules: ["person:" + f.s.people[2].id],
+      });
+    const gift = reserved(f, 1, 10000);
+    command(f.s, f.actors[0], "reservations.update", {
+      id: gift.reservation.id,
+      revision: gift.reservation.revision,
+      quantity: 1,
+      purchased: 0,
+      poolTargetCents: 10000,
+    });
+    vi.stubEnv("SPENDING_ENABLED", "false");
+    const result = command(f.s, f.actors[1], "contributions.create", {
+      reservationId: gift.reservation.id,
+      amountCents: 4000,
+    }) as { id: string };
+    syncContributions(f.s, [result.id]);
+    vi.stubEnv("SPENDING_ENABLED", "");
+    reconcileSpending(f.s, f.actors[0]);
+    const entry = f.s.spendingRecords.find((r) => r.sourceId === result.id)!;
+    expect(entry.sharing).toBe("private");
+    expect(
+      spendingView(f.s, f.actors[0]).records.some((r) => r.id === entry.id),
+    ).toBe(false);
+    expect(reconcileSpending(f.s, f.actors[0])).toBe(false);
+  });
+  it("does not duplicate a linked purchase when the same save is retried", () => {
+    const f = fixture();
+    const gift = reserved(f);
+    command(f.s, f.actors[0], "reservations.update", {
+      id: gift.reservation.id,
+      revision: gift.reservation.revision,
+      quantity: 0,
+      purchased: 0,
+    });
+    const payload = {
+      itemId: gift.gift.id,
+      itemRevision: gift.gift.revision,
+      title: "Books",
+      recipientIds: gift.gift.recipientIds,
+      amountCents: null,
+      date: "2026-11-02",
+      quantity: 1,
+    };
+    idempotent(
+      f.s,
+      f.actors[0],
+      "linked_purchase_retry",
+      "spending.purchase",
+      payload,
+    );
+    expect(
+      idempotent(
+        f.s,
+        f.actors[0],
+        "linked_purchase_retry",
+        "spending.purchase",
+        payload,
+      ),
+    ).toMatchObject({ replayed: true });
+    expect(f.s.reservations.reduce((total, r) => total + r.purchased, 0)).toBe(
+      1,
+    );
+    expect(
+      f.s.spendingRecords.filter((r) => r.kind === "purchase"),
+    ).toHaveLength(1);
+    expect(() =>
+      command(f.s, f.actors[2], "spending.purchase", payload),
+    ).toThrow("not available");
+  });
+  it("rejects existing reservations, stale items, unavailable quantities and invalid occasions before creating records", () => {
+    const f = fixture();
+    const gift = reserved(f);
+    const payload = {
+      itemId: gift.gift.id,
+      itemRevision: gift.gift.revision,
+      title: "Books",
+      recipientIds: gift.gift.recipientIds,
+      amountCents: 4200,
+      date: "2026-11-02",
+      quantity: 1,
+    };
+    expect(() => f.run(0, "purchase", payload)).toThrow("existing reservation");
+    command(f.s, f.actors[0], "reservations.update", {
+      id: gift.reservation.id,
+      revision: gift.reservation.revision,
+      quantity: 0,
+      purchased: 0,
+    });
+    const before = structuredClone(f.s);
+    expect(() => f.run(0, "purchase", { ...payload, itemRevision: 0 })).toThrow(
+      "changed",
+    );
+    expect(() => f.run(0, "purchase", { ...payload, quantity: 3 })).toThrow(
+      "reserved that quantity",
+    );
+    expect(() =>
+      f.run(0, "purchase", { ...payload, occasionId: stamp().id }),
+    ).toThrow("Occasion not available");
+    expect(f.s).toEqual(before);
   });
 });

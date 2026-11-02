@@ -87,6 +87,16 @@ test("only Docker client settings cross the process boundary", () => {
   assert.equal(env.OPENAI_API_KEY, undefined);
   assert.equal(env.SMTP_PASS, undefined);
   assert.equal(env.CLOUDFLARE_WEB_ANALYTICS, "false");
+  assert.equal(
+    runtimeConfiguration(state, "http://localhost:49123", {}).SPENDING_ENABLED,
+    "true",
+  );
+  assert.equal(
+    runtimeConfiguration(state, "http://localhost:49123", {
+      SPENDING_ENABLED: " FALSE ",
+    }).SPENDING_ENABLED,
+    "false",
+  );
   assert.throws(() => envFile({ BAD: "$(oops)" }));
   assert.throws(() => runtimeConfiguration(state, "http://example.com"));
 });

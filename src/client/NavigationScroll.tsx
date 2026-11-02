@@ -110,6 +110,11 @@ function RestoreNavigation({ account }: { account: string }) {
   const positions = useContext(HistoryContext)!;
   const current = useRef<Position | null>(null);
   const url = location.pathname + location.search + location.hash;
+  const previousRoute = useRef<{
+    account: string;
+    pathname: string;
+    hash: string;
+  } | null>(null);
 
   useLayoutEffect(() => {
     const previous = history.scrollRestoration;
@@ -127,6 +132,18 @@ function RestoreNavigation({ account }: { account: string }) {
   }, []);
 
   useLayoutEffect(() => {
+    const previous = previousRoute.current;
+    previousRoute.current = {
+      account,
+      pathname: location.pathname,
+      hash: location.hash,
+    };
+    const spendingFilterChange =
+      navigation !== "POP" &&
+      previous?.account === account &&
+      previous.pathname === "/buying/spending" &&
+      location.pathname === previous.pathname &&
+      previous.hash === location.hash;
     const saved =
       navigation === "POP" ? positions.get(location.key) : undefined;
     const restore = saved?.url === url ? saved : undefined;
@@ -136,7 +153,11 @@ function RestoreNavigation({ account }: { account: string }) {
     } catch {
       // A malformed fragment should behave like a missing target.
     }
-    const target = restore ?? { url, x: 0, y: 0 };
+    const target = restore ?? {
+      url,
+      x: spendingFilterChange ? window.scrollX : 0,
+      y: spendingFilterChange ? window.scrollY : 0,
+    };
     current.current = { url, x: target.x, y: target.y };
     let pending = true;
     let frame = 0;
@@ -260,8 +281,8 @@ function RestoreNavigation({ account }: { account: string }) {
     document.addEventListener("click", onFocus, true);
     // Missing targets and removed content must not keep controlling the viewport.
     timeout = window.setTimeout(finish, 10000);
-    main?.focus({ preventScroll: true });
-    if (!restore) {
+    if (!spendingFilterChange) main?.focus({ preventScroll: true });
+    if (!restore && !spendingFilterChange) {
       if (navigation !== "POP")
         window.scrollTo({ top: 0, left: 0, behavior: "instant" });
     }

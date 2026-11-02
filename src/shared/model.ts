@@ -533,6 +533,7 @@ export interface GiftView extends Omit<Item, "creatorId"> {
   }>;
 }
 export interface World {
+  spendingAvailable?: boolean;
   spendingEnabled?: boolean;
   spendingInvitation?: boolean;
   productLookupEnabled?: boolean;

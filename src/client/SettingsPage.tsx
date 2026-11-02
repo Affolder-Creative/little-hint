@@ -56,7 +56,10 @@ export default function SettingsPage({
   const [params, setParams] = useSearchParams();
   const requestedSection = params.get("section");
   const section = settingsSections.some(
-    (s) => s.id === requestedSection && (s.id !== "admin" || world.me.admin),
+    (s) =>
+      s.id === requestedSection &&
+      (s.id !== "admin" || world.me.admin) &&
+      (s.id !== "spending" || world.spendingAvailable !== false),
   )
     ? requestedSection!
     : "profile";
@@ -113,6 +116,7 @@ export default function SettingsPage({
           section={section}
           admin={world.me.admin}
           pendingRequests={pendingGroupRequests}
+          spendingAvailable={world.spendingAvailable !== false}
         />
         {/* Keep panels mounted so switching sections preserves unsaved form values. */}
         <div className="settings-content">

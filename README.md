@@ -200,3 +200,7 @@ and [outside contribution policy](CONTRIBUTING.md) are documented separately.
 Use the [persistent staging guide](docs/STAGING.md) to test feature branches on a separate server with synthetic data and a private Mailpit inbox. Images are built manually in GitHub Actions and deployed by digest; production data and credentials stay separate.
 
 For paid shop lookups, see [Shop lookup configuration](docs/shop-lookups.md), including production and staging credentials, the Web Unlocker zone, retailer scrapers, and verification.
+
+### Spending availability
+
+`SPENDING_ENABLED` is deployment-only. Leave it unset or blank to make optional spending tracking available; each person still opts in under Settings → Spending. Only `false` disables it, ignoring surrounding whitespace and letter case. Restart the app after changing this environment variable. Disabled deployments hide the new spending and budget UI and reject its endpoints. Existing preferences and records remain stored. Ordinary reservations, purchase status, contributions, listed prices, and older event/exchange spending guidelines still work. When re-enabled, missed purchases reconcile privately without inventing paid amounts or dates.

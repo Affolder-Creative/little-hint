@@ -74,6 +74,7 @@ import {
   useLocation,
   useParams,
   useNavigate,
+  Navigate,
   useSearchParams,
 } from "react-router-dom";
 import {
@@ -421,14 +422,15 @@ export function App() {
               </div>
             )}
             <main id="main" tabIndex={-1}>
-              {world.spendingInvitation && (
-                <p className="notice">
-                  <Link to="/settings?section=spending">
-                    You have a spending partner invitation. Review it in
-                    Settings.
-                  </Link>
-                </p>
-              )}
+              {world.spendingAvailable !== false &&
+                world.spendingInvitation && (
+                  <p className="notice">
+                    <Link to="/settings?section=spending">
+                      You have a spending partner invitation. Review it in
+                      Settings.
+                    </Link>
+                  </p>
+                )}
               <GiftPreferenceOnboarding key={world.me.id}>
                 <Routes>
                   <Route path="/" element={<Home />} />
@@ -459,7 +461,16 @@ export function App() {
                   <Route path="/events/:id" element={<EventPage />} />
                   <Route path="/gift/:id" element={<GiftDetail />} />
                   <Route path="/buying" element={<Buying />} />
-                  <Route path="/buying/spending" element={<SpendingPage />} />
+                  <Route
+                    path="/buying/spending"
+                    element={
+                      world.spendingAvailable === false ? (
+                        <Navigate to="/buying" replace />
+                      ) : (
+                        <SpendingPage />
+                      )
+                    }
+                  />
                   <Route path="/exchanges" element={<Exchanges />} />
                   <Route
                     path="/settings"

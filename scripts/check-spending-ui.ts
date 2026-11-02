@@ -122,9 +122,17 @@ try {
   ).toBeVisible();
   await expect(page.locator(".spending-numbers")).toContainText("$85");
   await page.screenshot({ path: out + "/desktop.png", fullPage: true });
+  const personFilter = page.getByLabel("Person", { exact: true });
+  await personFilter.focus();
+  await personFilter.selectOption(s.people[2].id);
+  await expect(personFilter).toBeFocused();
+  await expect(page.locator(".spending-numbers")).toContainText("$85");
+  await personFilter.selectOption("");
+  await expect(personFilter).toBeFocused();
   await page.getByRole("button", { name: "Add purchase", exact: true }).click();
   await page.getByLabel("Gift name").fill("Art easel");
-  await page.getByRole("checkbox", { name: "Emma", exact: true }).check();
+  await page.getByRole("combobox", { name: "Search people" }).fill("Emma");
+  await page.getByRole("dialog").getByRole("option", { name: /Emma/ }).click();
   await page.getByLabel("Amount paid in USD, optional").fill("60");
   await page
     .getByRole("button", { name: "Save purchase", exact: true })
@@ -182,18 +190,25 @@ try {
     server.resolvedUrls!.local[0] + "buying/spending?view=shared",
   );
   await expect(page.locator(".spending-numbers")).toContainText("$120");
-  await expect(page.getByRole("status")).toContainText("amount missing");
+  await expect(page.locator(".spending-numbers")).toContainText("amount");
   await page.screenshot({ path: out + "/shared-mobile.png" });
   await page
-    .getByRole("button", { name: "Mark as purchased", exact: true })
+    .getByRole("button", { name: "Mark purchased", exact: true })
     .click();
   await page.getByLabel("Quantity bought").fill("2");
+  await expect(page.getByLabel("Amount paid in USD, optional")).toHaveValue("");
+  await page.getByRole("button", { name: "Use $120", exact: true }).click();
   await expect(page.getByLabel("Amount paid in USD, optional")).toHaveValue(
     "120",
   );
   await expect(
     page.getByRole("dialog").locator(".spending-privacy"),
   ).toContainText("Shared with Jamie");
+  await expect(
+    page
+      .getByRole("dialog")
+      .getByRole("heading", { name: "Mark as purchased", exact: true }),
+  ).toBeInViewport();
   await page.screenshot({ path: out + "/purchase-mobile.png" });
   await page
     .getByRole("checkbox", { name: "Keep this purchase private" })
@@ -210,6 +225,41 @@ try {
   );
   if (privateRecord?.sharing !== "private")
     throw new Error("Keep private was not enforced");
+  const linkedGift = command(s, users[2], "items.create", {
+    title: "Linked watercolor brushes",
+    listId: list.id,
+    priceCents: 2500,
+    quantity: 1,
+  }) as { id: string };
+  await page.goto(server.resolvedUrls!.local[0] + "buying/spending");
+  await page.getByRole("button", { name: "Add purchase", exact: true }).click();
+  await page
+    .getByRole("combobox", { name: "Gift name" })
+    .fill("Linked watercolor");
+  await page
+    .getByRole("dialog")
+    .getByRole("option", { name: /Linked watercolor brushes/ })
+    .click();
+  await expect(page.getByLabel("Amount paid in USD, optional")).toHaveValue("");
+  await page
+    .getByRole("button", { name: "Save purchase", exact: true })
+    .click();
+  await expect(page.getByRole("dialog")).toBeHidden();
+  const linkedReservation = s.reservations.find(
+    (r) => r.itemId === linkedGift.id,
+  );
+  if (
+    linkedReservation?.purchased !== 1 ||
+    !s.spendingRecords.some(
+      (r) =>
+        r.reservationId === linkedReservation.id &&
+        r.kind === "purchase" &&
+        r.amountCents === null,
+    )
+  )
+    throw new Error(
+      "Linked purchase did not atomically preserve unknown cost and update status",
+    );
   await page.goto(server.resolvedUrls!.local[0] + "settings?section=spending");
   await page
     .getByRole("button", { name: "Allow joint editing", exact: true })
@@ -225,6 +275,15 @@ try {
     .getByRole("heading", { name: "Joint editing", exact: true })
     .scrollIntoViewIfNeeded();
   await page.screenshot({ path: out + "/joint-editing-mobile.png" });
+  await page.setViewportSize({ width: 1280, height: 960 });
+  await page.goto(server.resolvedUrls!.local[0] + "people/" + s.people[2].id);
+  await expect(page.locator(".spending-quick")).toBeVisible();
+  await expect(
+    page
+      .locator(".spending-quick")
+      .getByRole("link", { name: /View spending/ }),
+  ).toBeVisible();
+  await page.screenshot({ path: out + "/person-desktop.png", fullPage: true });
   await page.setViewportSize({ width: 320, height: 900 });
   await page.evaluate(() => (document.documentElement.style.fontSize = "200%"));
   await page.goto(server.resolvedUrls!.local[0] + "buying/spending");
@@ -234,6 +293,18 @@ try {
   );
   if (overflow) throw new Error("Spending overflows at 320px");
   await page.keyboard.press("Tab");
+  process.env.SPENDING_ENABLED = "false";
+  await page.goto(server.resolvedUrls!.local[0] + "buying/spending");
+  await expect(page).toHaveURL(/\/buying$/);
+  await expect(page.locator(".spending-quick")).toHaveCount(0);
+  await page.goto(server.resolvedUrls!.local[0] + "settings?section=spending");
+  await expect(
+    page.getByRole("link", { name: "Spending", exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByText("Track my spending", { exact: true }),
+  ).toHaveCount(0);
+  delete process.env.SPENDING_ENABLED;
   if (errors.length) throw new Error(errors.join("\n"));
   console.log(
     "Spending browser checks passed; desktop, mobile, settings and dark captures saved.",

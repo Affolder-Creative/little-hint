@@ -17,13 +17,18 @@ export function SettingsNavigation({
   section,
   admin,
   pendingRequests,
+  spendingAvailable = true,
 }: {
   section: string;
   admin: boolean;
   pendingRequests: number;
+  spendingAvailable?: boolean;
 }) {
   const [params, setParams] = useSearchParams();
-  const sections = settingsSections.filter((s) => admin || s.id !== "admin");
+  const sections = settingsSections.filter(
+    (s) =>
+      (admin || s.id !== "admin") && (spendingAvailable || s.id !== "spending"),
+  );
   const label = (s: (typeof settingsSections)[number]) =>
     s.id === "groups" && pendingRequests
       ? `${s.label} · ${pendingRequests} pending`

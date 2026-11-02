@@ -112,7 +112,11 @@ export function spendingTotals(
 ) {
   let spent = 0,
     planned = 0,
-    missing = 0;
+    missing = 0,
+    knownActual = 0,
+    missingActual = 0,
+    knownPlanned = 0,
+    missingPlanned = 0;
   const rows = records.filter((r) => !r.voided);
   const internal = shared
     ? authorizedRecords.filter(
@@ -148,18 +152,33 @@ export function spendingTotals(
     const amount = allocatedCents(estimate, person);
     if (amount === null) {
       missing++;
+      if (r.kind === "plan") missingPlanned++;
+      else missingActual++;
       continue;
     }
-    if (r.kind === "plan") planned += amount;
-    else spent += r.kind === "refund" ? -amount : amount;
+    if (r.kind === "plan") {
+      planned += amount;
+      knownPlanned++;
+    } else {
+      spent += r.kind === "refund" ? -amount : amount;
+      knownActual++;
+    }
   }
-  return { spent, planned, missing };
+  return {
+    spent,
+    planned,
+    missing,
+    knownActual,
+    missingActual,
+    knownPlanned,
+    missingPlanned,
+  };
 }
 
 export interface SpendingHistoryView {
   records: SpendingView["records"];
   total: number;
-  summary: { spent: number; planned: number; missing: number };
+  summary: ReturnType<typeof spendingTotals>;
   years: number[];
   recipients: Array<{ id: string; name: string }>;
   lists: Array<{ id: string; name: string }>;

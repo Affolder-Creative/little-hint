@@ -1,35 +1,44 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, type ComponentProps } from "react";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
-import { LockKeyhole, Users, ArrowRight } from "lucide-react";
+import {
+  LockKeyhole,
+  Users,
+  ArrowRight,
+  Plus,
+  Settings,
+  SlidersHorizontal,
+} from "lucide-react";
 import { api, dollars } from "./api";
 import { useApp } from "./context";
-import { Form, Field, Header } from "./components";
+import { Form, Field, Header, useModalDismiss } from "./components";
 import { Action } from "./Action";
-import type { World } from "../shared/model";
+import { PurchaseForm } from "./SpendingPurchase";
+export { PurchaseForm } from "./SpendingPurchase";
 import {
   allocatedCents,
-  spendingMatches,
-  spendingTotals,
   type SpendingView,
   type SpendingHistoryView,
   type SpendingRecord,
 } from "../shared/spending";
 import "./spending.css";
 const today = () => new Date().toLocaleDateString("en-CA");
-function useSpending() {
+function useSpending(enabled = true) {
   const { world } = useApp();
   return useQuery({
     queryKey: ["spending", world.me.id],
     queryFn: () => api<SpendingView>("spending"),
+    enabled: enabled && world.spendingAvailable !== false,
     refetchInterval: 20000,
   });
 }
-function useSpendingHistory(params: URLSearchParams) {
+function useSpendingHistory(params: URLSearchParams, enabled = true) {
   const { world } = useApp();
   return useQuery({
     queryKey: ["spending", world.me.id, "history", params.toString()],
     queryFn: () => api<SpendingHistoryView>("spending/history?" + params),
+    enabled: enabled && world.spendingAvailable !== false,
+    placeholderData: keepPreviousData,
     refetchInterval: 20000,
   });
 }
@@ -96,6 +105,13 @@ export function SpendingSettingsPanel() {
     <section className="spending-settings">
       <h2>Spending</h2>
       <Form
+        secondaryActions={() =>
+          settings.enabled ? (
+            <Link className="button secondary" to="/buying/spending">
+              View your spending
+            </Link>
+          ) : null
+        }
         submit="Save spending settings"
         onSubmit={async (f) => {
           await update(f.get("enabled") === "on", f.get("summaries") === "on");
@@ -130,12 +146,10 @@ export function SpendingSettingsPanel() {
       )}
       {settings.enabled && (
         <>
-          <Link className="button secondary" to="/buying/spending">
-            View your spending
-          </Link>
           <h2>Spending partner</h2>
           {!c ? (
             <Form
+              className="spending-partner-form"
               submit="Invite spending partner"
               onSubmit={async (f) => {
                 await mutate("spending/connect", { userId: f.get("partner") });
@@ -254,264 +268,22 @@ export function SpendingSettingsPanel() {
     </section>
   );
 }
-export function PurchaseForm({
-  reservation,
+function SpendingDialogForm(
+  props: Omit<ComponentProps<typeof Form>, "cancel" | "dialogLayout">,
+) {
+  const dismiss = useModalDismiss();
+  return <Form {...props} dialogLayout cancel={() => dismiss?.()} />;
+}
+function RecordForm({
+  record: r,
   onSuccess,
 }: {
+  record: SpendingRecord;
   onSuccess?: () => void;
-  reservation?: Pick<
-    World["buying"][number],
-    "id" | "revision" | "quantity" | "purchased" | "titleSnapshot" | "item"
-  >;
 }) {
-  const { world, mutate, close } = useApp();
-  const { data, error, refetch } = useSpending();
-  const [amountEdited, setAmountEdited] = useState(false);
-  const [skip, setSkip] = useState(false);
-  const [keepPrivate, setKeepPrivate] = useState(false);
-  const [payer, setPayer] = useState(world.me.id);
-  const [selectedRecipients, setSelectedRecipients] = useState<string[]>([]);
-  const [selectedEvent, setSelectedEvent] = useState("");
-  const [selectedOccasion, setSelectedOccasion] = useState("");
-  const [purchaseDate, setPurchaseDate] = useState(today());
-  if (error)
-    return (
-      <div role="alert">
-        <p>Unable to load purchase details.</p>
-        <button onClick={() => void refetch()}>Try again</button>
-      </div>
-    );
-  if (!data) return <p>Loading purchase details…</p>;
-  const plan = data.records.find(
-    (r) =>
-      r.reservationId === reservation?.id && r.kind === "plan" && !r.sourceId,
-  );
-  if (!data.settings.enabled && reservation)
-    return (
-      <Form
-        submit="Mark as purchased"
-        onSubmit={async () => {
-          await mutate("reservations/update", {
-            id: reservation.id,
-            revision: reservation.revision,
-            quantity: reservation.quantity,
-            purchased: reservation.quantity,
-          });
-          close();
-          onSuccess?.();
-        }}
-      >
-        <p>{reservation.titleSnapshot}</p>
-      </Form>
-    );
-  const c = data.connection;
-  const protectedGift = (plan?.recipientIds ?? selectedRecipients).some((id) =>
-    world.people.some(
-      (p) => p.id === id && !!p.userId && c?.users.includes(p.userId),
-    ),
-  );
-  const prospectiveShared =
-    !keepPrivate &&
-    !protectedGift &&
-    !!c &&
-    c.status === "active" &&
-    c.resumed.length === 2 &&
-    (plan
-      ? !!plan.connectionId && plan.sharing !== "private"
-      : purchaseDate >= c.createdAt.slice(0, 10) &&
-        [
-          ...selectedRecipients.map((id) => "person:" + id),
-          "event:" + selectedEvent,
-          "occasion:" + selectedOccasion,
-        ].some((rule) => c.rules[world.me.id]?.includes(rule)));
-  return (
-    <Form
-      submit="Save purchase"
-      onSubmit={async (f) => {
-        await mutate("spending/purchase", {
-          keepPrivate: keepPrivate || !prospectiveShared,
-          reservationId: reservation?.id,
-          title: reservation?.titleSnapshot ?? String(f.get("title")),
-          recipientIds: plan?.recipientIds ?? f.getAll("recipients"),
-          amountCents: skip ? null : amount(f),
-          date: String(f.get("date")),
-          quantity: Number(f.get("quantity") ?? 1),
-          occasionId: String(f.get("occasion") ?? "") || undefined,
-          eventId: String(f.get("event") ?? "") || undefined,
-          payerId: String(f.get("payer") ?? world.me.id),
-          planRevision: plan?.revision,
-        });
-        close();
-        onSuccess?.();
-      }}
-    >
-      {reservation ? (
-        <p>
-          <strong>{reservation.titleSnapshot}</strong>
-        </p>
-      ) : (
-        <>
-          <Field label="Gift name">
-            <input name="title" required maxLength={200} />
-          </Field>
-          <fieldset>
-            <legend>For</legend>
-            {world.people
-              .filter((p) => p.userId !== world.me.id)
-              .map((p) => (
-                <label className="spending-choice" key={p.id}>
-                  <input
-                    type="checkbox"
-                    name="recipients"
-                    value={p.id}
-                    onChange={(e) =>
-                      setSelectedRecipients((ids) =>
-                        e.target.checked
-                          ? [...ids, p.id]
-                          : ids.filter((id) => id !== p.id),
-                      )
-                    }
-                  />
-                  {p.name}
-                </label>
-              ))}
-          </fieldset>
-        </>
-      )}
-      <div onInput={() => setAmountEdited(true)}>
-        <MoneyField
-          value={
-            reservation?.item?.priceCents ??
-            (plan?.amountCents == null
-              ? null
-              : Math.round(plan.amountCents / Math.max(1, plan.quantity)))
-          }
-        />
-      </div>
-      <p className="muted">
-        Suggested prices are estimates. Enter the total you paid, including tax
-        and shipping.
-      </p>
-      <label>
-        <input
-          type="checkbox"
-          checked={skip}
-          onChange={(e) => setSkip(e.target.checked)}
-        />{" "}
-        Skip the amount for now
-      </label>
-      <Field label="Purchase date">
-        <input
-          name="date"
-          type="date"
-          required
-          value={purchaseDate}
-          onChange={(e) => setPurchaseDate(e.target.value)}
-        />
-      </Field>
-      {reservation && reservation.quantity - reservation.purchased > 1 && (
-        <Field label="Quantity bought">
-          <input
-            name="quantity"
-            onChange={(e) => {
-              if (!amountEdited) {
-                const input = e.currentTarget.form?.elements.namedItem(
-                  "amount",
-                ) as HTMLInputElement | null;
-                const price =
-                  reservation?.item?.priceCents ??
-                  (plan?.amountCents == null
-                    ? null
-                    : plan.amountCents / Math.max(1, plan.quantity));
-                if (input && price !== null)
-                  input.value = String(
-                    Math.round(price * Number(e.target.value)) / 100,
-                  );
-              }
-            }}
-            type="number"
-            min={1}
-            max={reservation.quantity - reservation.purchased}
-            defaultValue={1}
-            required
-          />
-        </Field>
-      )}
-      <Field label="Personal occasion, optional">
-        <select
-          name="occasion"
-          onChange={(e) => setSelectedOccasion(e.target.value)}
-          defaultValue={plan?.occasionId ?? ""}
-        >
-          <option value="">No personal occasion</option>
-          {data.occasions.map((o) => (
-            <option value={o.id} key={o.id}>
-              {o.name}
-            </option>
-          ))}
-        </select>
-      </Field>
-      {!reservation && (
-        <Field label="Group event, optional">
-          <select
-            name="event"
-            onChange={(e) => setSelectedEvent(e.target.value)}
-          >
-            <option value="">No group event</option>
-            {world.groupEvents.map((e) => (
-              <option value={e.id} key={e.id}>
-                {e.name}
-              </option>
-            ))}
-          </select>
-        </Field>
-      )}
-      {plan?.connectionId &&
-        data.connection?.users.every((u) =>
-          data.connection!.editing.includes(u),
-        ) && (
-          <Field label="Who paid">
-            <select
-              name="payer"
-              value={payer}
-              onChange={(e) => {
-                setPayer(e.target.value);
-                if (e.target.value !== world.me.id) setKeepPrivate(false);
-              }}
-            >
-              {data.connection.users.map((u) => (
-                <option key={u} value={u}>
-                  {u === world.me.id ? "You" : data.partnerName}
-                </option>
-              ))}
-            </select>
-          </Field>
-        )}
-      {c?.status === "active" && (
-        <label>
-          <input
-            type="checkbox"
-            disabled={payer !== world.me.id}
-            checked={keepPrivate}
-            onChange={(e) => setKeepPrivate(e.target.checked)}
-          />{" "}
-          Keep this purchase private
-        </label>
-      )}
-      {payer !== world.me.id && (
-        <p>Purchases recorded for your partner stay shared.</p>
-      )}
-      <p className="spending-privacy">
-        <LockKeyhole size={16} />
-        {prospectiveShared ? `Shared with ${data.partnerName}` : "Only me"}
-      </p>
-    </Form>
-  );
-}
-function RecordForm({ record: r }: { record: SpendingRecord }) {
   const { mutate, close } = useApp();
   return (
-    <Form
+    <SpendingDialogForm
       submit="Save changes"
       onSubmit={async (f) => {
         await mutate("spending/record", {
@@ -522,7 +294,8 @@ function RecordForm({ record: r }: { record: SpendingRecord }) {
           planningYear: Number(f.get("year") ?? r.planningYear),
           splits: r.recipientIds.map((_, i) => Number(f.get("split" + i))),
         });
-        close();
+        if (onSuccess) onSuccess();
+        else close();
       }}
     >
       <p>{r.title}</p>
@@ -569,8 +342,27 @@ function RecordForm({ record: r }: { record: SpendingRecord }) {
           </Field>
         ))}
       </fieldset>
-    </Form>
+    </SpendingDialogForm>
   );
+}
+type Totals = SpendingHistoryView["summary"];
+function totalLabel(t: Totals, planned = false) {
+  return planned
+    ? !t.knownPlanned && t.missingPlanned
+      ? "Not estimated"
+      : dollars(t.planned)
+    : !t.knownActual && t.missingActual
+      ? "Not recorded"
+      : dollars(t.spent);
+}
+function dateLabel(date: string | null) {
+  return date
+    ? new Date(date + "T12:00:00").toLocaleDateString(undefined, {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      })
+    : "Date not recorded";
 }
 export function SpendingSummary({
   person,
@@ -581,47 +373,368 @@ export function SpendingSummary({
   list?: string;
   event?: string;
 }) {
+  const { world } = useApp();
   const { data } = useSpending();
-  const historyParams = new URLSearchParams(
+  const scoped = !!(person || list || event);
+  const params = new URLSearchParams(
     Object.entries({ person, list, event }).filter(
       (v): v is [string, string] => !!v[1],
     ),
   );
-  const history = useSpendingHistory(historyParams);
-  const { world } = useApp();
-  if (!data) return null;
+  const visible =
+    !!data?.settings.enabled && (!scoped || !!data.settings.summaries);
+  const history = useSpendingHistory(params, visible);
+  if (world.spendingAvailable === false || !data) return null;
   if (!data.settings.enabled)
-    return person || list || event ? null : (
+    return scoped ? null : (
       <p>
-        <Link to="/settings?section=spending">
+        <Link className="button secondary" to="/settings?section=spending">
           Track what you spend on gifts <ArrowRight size={16} />
         </Link>
       </p>
     );
-  if (!data.settings.summaries && (person || list || event)) return null;
-  const filter = { person, list, event };
-  const totals = history.data?.summary;
-  if (!totals) return null;
-  const params = new URLSearchParams(
-    Object.entries(filter).filter((v): v is [string, string] => !!v[1]),
-  );
+  if (!visible || !history.data) return null;
+  const totals = history.data.summary;
   return (
     <section className="spending-quick" aria-label="Your spending">
-      <span>
-        Spent <strong>{dollars(totals.spent)}</strong>
-      </span>
-      <span>
-        Still planning <strong>{dollars(totals.planned)}</strong> · estimated
-      </span>
-      {totals.missing > 0 && (
-        <span>
-          {totals.missing} {totals.missing === 1 ? "amount" : "amounts"} missing
-        </span>
-      )}
-      <Link to={"/buying/spending?" + params}>
+      <div className="spending-quick-title">
+        Your spending <span>· All time</span>
+      </div>
+      <div className="spending-quick-metric">
+        <span>Recorded spending</span>
+        <strong>{totalLabel(totals)}</strong>
+        {totals.missingActual > 0 && (
+          <small>
+            {totals.missingActual}{" "}
+            {totals.missingActual === 1 ? "entry needs" : "entries need"} an
+            amount
+          </small>
+        )}
+      </div>
+      <div className="spending-quick-metric">
+        <span>Still planning · Estimated</span>
+        <strong>{totalLabel(totals, true)}</strong>
+        {totals.missingPlanned > 0 && (
+          <small>
+            {totals.missingPlanned}{" "}
+            {totals.missingPlanned === 1 ? "plan needs" : "plans need"} an
+            estimate
+          </small>
+        )}
+      </div>
+      <Link className="button secondary" to={"/buying/spending?" + params}>
         View spending <ArrowRight size={16} />
       </Link>
     </section>
+  );
+}
+function MissingAmounts({
+  params,
+  kind,
+}: {
+  params: string;
+  kind: "actual" | "planned";
+}) {
+  const [page, setPage] = useState(1);
+  const [editing, setEditing] = useState<SpendingRecord>();
+  const query = new URLSearchParams(params);
+  query.set("missingAmounts", kind);
+  query.set("page", String(page));
+  const history = useSpendingHistory(query);
+  if (editing)
+    return (
+      <RecordForm
+        record={editing}
+        onSuccess={() => {
+          setEditing(undefined);
+          setPage(1);
+        }}
+      />
+    );
+  return (
+    <div className="spending-missing-list">
+      <p>Amounts missing from this view. Adding them updates your totals.</p>
+      {history.error && (
+        <p role="alert">
+          Unable to load entries.{" "}
+          <button
+            className="text-button"
+            onClick={() => void history.refetch()}
+          >
+            Try again
+          </button>
+        </p>
+      )}
+      {(!history.data || history.isPlaceholderData) && (
+        <p role="status">Loading entries…</p>
+      )}
+      {!history.isPlaceholderData &&
+        history.data?.records.map((r) => (
+          <article className="spending-missing-row" key={r.id}>
+            <div>
+              <strong>{r.title}</strong>
+              <p className="muted">For {r.recipientNames.join(" & ")}</p>
+            </div>
+            {r.canEdit ? (
+              <button
+                className="button secondary"
+                onClick={() => setEditing(r)}
+              >
+                {kind === "planned" ? "Add estimate" : "Add amount"}
+              </button>
+            ) : (
+              <span className="muted">{r.payerName} can update this entry</span>
+            )}
+          </article>
+        ))}
+      {history.data?.total === 0 && (
+        <p>No amounts are missing from this view.</p>
+      )}
+      <div className="spending-pagination">
+        {page > 1 && (
+          <button
+            className="button secondary"
+            onClick={() => setPage(page - 1)}
+          >
+            Previous page
+          </button>
+        )}
+        {!!history.data && history.data.total > page * 30 && (
+          <button
+            className="button secondary"
+            onClick={() => setPage(page + 1)}
+          >
+            Next page
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+function SpendingRow({
+  r,
+  data,
+  person,
+}: {
+  r: SpendingView["records"][number];
+  data: SpendingView;
+  person?: string;
+}) {
+  const { world, open, close, mutate } = useApp();
+  const edit = () =>
+    open(
+      r.kind === "plan" ? "Update plan" : "Edit purchase",
+      <RecordForm record={r} />,
+    );
+  const canPurchase =
+    r.kind === "plan" && r.canEdit && !!r.reservationId && !r.sourceId;
+  return (
+    <article className="spending-row">
+      <div className="spending-row-description">
+        <h3>{r.title}</h3>
+        <p>
+          For {r.recipientNames.join(" & ")}{" "}
+          <span className="spending-row-status">
+            ·{" "}
+            {r.kind === "plan"
+              ? "Reserved"
+              : r.kind === "refund"
+                ? "Refund"
+                : r.kind === "contribution"
+                  ? "Contribution"
+                  : "Purchased"}
+          </span>
+        </p>
+        <p className="spending-row-meta">
+          {r.kind === "plan"
+            ? `Planned for ${r.planningYear}`
+            : dateLabel(r.date)}{" "}
+          · {r.kind === "plan" ? "Planned by" : "Paid by"}{" "}
+          {r.ownerId === world.me.id ? "you" : r.payerName}
+        </p>
+        {(r.eventName || r.occasionId) && (
+          <p className="spending-row-meta">
+            {[
+              r.eventName,
+              data.occasions.find((o) => o.id === r.occasionId)?.name,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          </p>
+        )}
+        <span className="spending-privacy">
+          {r.connectionId && r.sharing !== "private" ? (
+            <Users size={15} />
+          ) : (
+            <LockKeyhole size={15} />
+          )}{" "}
+          {r.connectionId && r.sharing !== "private"
+            ? `Shared with ${data.partnerName}`
+            : "Only me"}
+        </span>
+      </div>
+      <div className="spending-row-controls">
+        <div
+          className={
+            r.amountCents === null
+              ? "spending-amount spending-unknown"
+              : "spending-amount"
+          }
+        >
+          {r.amountCents === null
+            ? r.kind === "plan"
+              ? "Estimate not recorded"
+              : "Amount not recorded"
+            : dollars(allocatedCents(r, person))}
+          {r.kind === "plan" && r.amountCents !== null && (
+            <small>Estimated</small>
+          )}
+          {person && r.recipientIds.length > 1 && r.amountCents !== null && (
+            <small>of {dollars(r.amountCents)} total</small>
+          )}
+        </div>
+        <div className="spending-row-actions">
+          {canPurchase ? (
+            <button
+              className="button secondary"
+              onClick={() =>
+                open(
+                  "Mark as purchased",
+                  <PurchaseForm
+                    reservation={
+                      world.buying.find((v) => v.id === r.reservationId) ?? {
+                        id: r.reservationId!,
+                        revision: 0,
+                        quantity: r.quantity,
+                        purchased: 0,
+                        titleSnapshot: r.title,
+                      }
+                    }
+                  />,
+                )
+              }
+            >
+              Mark purchased
+            </button>
+          ) : (
+            r.canEdit && (
+              <button className="button secondary" onClick={edit}>
+                {r.amountCents === null
+                  ? r.kind === "plan"
+                    ? "Add estimate"
+                    : "Add amount"
+                  : r.kind === "plan"
+                    ? "Edit plan"
+                    : "Edit purchase"}
+              </button>
+            )
+          )}
+          {(r.canEdit ||
+            r.history.length > 0 ||
+            (r.ownerId === world.me.id &&
+              data.connection?.status === "active" &&
+              !r.protected)) && (
+            <details className="spending-more-actions">
+              <summary>More actions</summary>
+              <div>
+                {canPurchase && (
+                  <button className="text-button" onClick={edit}>
+                    {r.amountCents === null ? "Add estimate" : "Edit plan"}
+                  </button>
+                )}
+                {r.ownerId === world.me.id &&
+                  data.connection?.status === "active" &&
+                  !r.protected && (
+                    <Action
+                      secondary
+                      onClick={() =>
+                        mutate("spending/share", {
+                          id: r.id,
+                          revision: r.revision,
+                          shared: r.sharing === "private",
+                        })
+                      }
+                    >
+                      {r.sharing === "private"
+                        ? "Share with partner"
+                        : "Keep private"}
+                    </Action>
+                  )}
+                {r.canEdit && r.kind === "purchase" && (
+                  <button
+                    className="text-button"
+                    onClick={() =>
+                      open(
+                        "Record refund",
+                        <SpendingDialogForm
+                          submit="Save refund"
+                          onSubmit={async (f) => {
+                            await mutate("spending/refund", {
+                              id: r.id,
+                              revision: r.revision,
+                              amountCents: amount(f),
+                              date: f.get("date"),
+                            });
+                            close();
+                          }}
+                        >
+                          <MoneyField label="Refund received in USD" required />
+                          <Field label="Refund date">
+                            <input
+                              name="date"
+                              type="date"
+                              defaultValue={today()}
+                              required
+                            />
+                          </Field>
+                          <p>
+                            This records a refund already received. It does not
+                            contact the shop.
+                          </p>
+                        </SpendingDialogForm>,
+                      )
+                    }
+                  >
+                    Record refund
+                  </button>
+                )}
+                {r.history.length > 0 && (
+                  <details>
+                    <summary>Purchase history</summary>
+                    {r.history.map((h, i) => (
+                      <p key={i}>
+                        {h.description} · {new Date(h.at).toLocaleDateString()}
+                        {h.changes &&
+                          Object.entries(h.changes).map(([key, change]) => (
+                            <span className="spending-change" key={key}>
+                              {(
+                                {
+                                  amountCents: "Amount paid",
+                                  date: "Purchase date",
+                                  planningYear: "Planning year",
+                                  splits: "Recipient shares",
+                                } as Record<string, string>
+                              )[key] ?? key}
+                              :{" "}
+                              {key === "amountCents"
+                                ? dollars(change.before as number | null)
+                                : String(change.before ?? "Not recorded")}{" "}
+                              →{" "}
+                              {key === "amountCents"
+                                ? dollars(change.after as number | null)
+                                : String(change.after ?? "Not recorded")}
+                            </span>
+                          ))}
+                      </p>
+                    ))}
+                  </details>
+                )}
+              </div>
+            </details>
+          )}
+        </div>
+      </div>
+    </article>
   );
 }
 export function SpendingPage() {
@@ -629,16 +742,14 @@ export function SpendingPage() {
   const { data, error } = useSpending();
   const [params, setParams] = useSearchParams();
   const [page, setPage] = useState(1);
+  const shared =
+    params.get("view") === "shared" && data?.connection?.status === "active";
   const historyParams = new URLSearchParams(params);
   historyParams.delete("view");
-  historyParams.set(
-    "shared",
-    String(
-      params.get("view") === "shared" && data?.connection?.status === "active",
-    ),
-  );
+  historyParams.set("shared", String(shared));
   historyParams.set("page", String(page));
-  const history = useSpendingHistory(historyParams);
+  const history = useSpendingHistory(historyParams, !!data?.settings.enabled);
+  if (world.spendingAvailable === false) return null;
   if (error)
     return <p role="alert">Unable to load spending. Refresh to try again.</p>;
   if (!data) return <p>Loading spending…</p>;
@@ -652,8 +763,6 @@ export function SpendingPage() {
         <SpendingSettingsPanel />
       </>
     );
-  const shared =
-    params.get("view") === "shared" && data.connection?.status === "active";
   const filter = {
     person: params.get("person") || undefined,
     list: params.get("list") || undefined,
@@ -661,20 +770,40 @@ export function SpendingPage() {
     occasion: params.get("occasion") || undefined,
     year: params.get("year") ? Number(params.get("year")) : undefined,
   };
+  const setParamsQuiet = (next: URLSearchParams) => {
+    setParams(next, {
+      preventScrollReset: true,
+      state: { preserveFocus: true },
+    });
+    setPage(1);
+  };
   const set = (key: string, value: string) => {
     const next = new URLSearchParams(params);
     if (value) next.set(key, value);
     else next.delete(key);
-    setParams(next);
-    setPage(1);
+    setParamsQuiet(next);
   };
-  if (history.error)
-    return (
-      <p role="alert">Unable to load spending history. Refresh to try again.</p>
-    );
-  if (!history.data) return <p>Loading spending history…</p>;
-  const records = history.data.records;
-  const totals = history.data.summary;
+  const recipients = [
+    ...new Map(
+      [...world.people, ...(history.data?.recipients ?? [])].map((p) => [
+        p.id,
+        p,
+      ]),
+    ).values(),
+  ];
+  const lists = [
+    ...new Map(
+      [...(history.data?.lists ?? []), ...world.lists].map((l) => [l.id, l]),
+    ).values(),
+  ];
+  const events = [
+    ...new Map(
+      [...(history.data?.events ?? []), ...world.groupEvents].map((e) => [
+        e.id,
+        e,
+      ]),
+    ).values(),
+  ];
   const scope =
     [
       filter.person && "person:" + filter.person,
@@ -684,6 +813,22 @@ export function SpendingPage() {
     ]
       .filter(Boolean)
       .join("|") || "all";
+  const scopeLabel = [
+    filter.person
+      ? (recipients.find((p) => p.id === filter.person)?.name ??
+        "Selected person")
+      : "Everyone",
+    filter.list &&
+      (lists.find((l) => l.id === filter.list)?.name ?? "Selected wish list"),
+    filter.event &&
+      (events.find((e) => e.id === filter.event)?.name ?? "Selected event"),
+    filter.occasion &&
+      (data.occasions.find((o) => o.id === filter.occasion)?.name ??
+        "Selected occasion"),
+    filter.year ?? "All time",
+  ]
+    .filter(Boolean)
+    .join(" · ");
   const budget = data.budgets.find(
     (b) =>
       b.scope === scope &&
@@ -693,7 +838,7 @@ export function SpendingPage() {
   const budgetForm = () =>
     open(
       "Set a budget",
-      <Form
+      <SpendingDialogForm
         submit="Save budget"
         onSubmit={async (f) => {
           await mutate("spending/budget", {
@@ -706,8 +851,8 @@ export function SpendingPage() {
           close();
         }}
       >
-        <p>
-          For the people, collection, and period currently selected.{" "}
+        <p>{scopeLabel}</p>
+        <p className="muted">
           {shared
             ? "Both partners can edit this budget."
             : "Only you can see this budget."}
@@ -717,136 +862,150 @@ export function SpendingPage() {
           label="Budget in USD"
           required
         />
-      </Form>,
+      </SpendingDialogForm>,
+    );
+  const occasionForm = () =>
+    open(
+      "Add personal occasion",
+      <SpendingDialogForm
+        submit="Add occasion"
+        onSubmit={async (f) => {
+          const result = (await mutate("spending/occasion", {
+            name: f.get("name"),
+            shared: !!shared,
+          })) as { id: string };
+          const next = new URLSearchParams(params);
+          next.delete("event");
+          next.set("occasion", result.id);
+          setParamsQuiet(next);
+          close();
+        }}
+      >
+        <Field label="Occasion name">
+          <input
+            name="name"
+            required
+            maxLength={150}
+            placeholder="A birthday or celebration"
+          />
+        </Field>
+        <p>{shared ? `Shared with ${data.partnerName}` : "Only me"}</p>
+      </SpendingDialogForm>,
+    );
+  const totals = history.data?.summary;
+  const ready = !!totals && !history.isPlaceholderData;
+  const paused = shared && data.connection?.resumed.length !== 2;
+  const review = (kind: "actual" | "planned") =>
+    open(
+      kind === "actual" ? "Missing purchase amounts" : "Missing estimates",
+      <MissingAmounts params={historyParams.toString()} kind={kind} />,
     );
   return (
     <div className="spending-page">
       <Header
         title="Your spending"
         description="Gift costs, plans, and history."
-      />
-      <div className="spending-toolbar">
-        <div className="tabs" role="group" aria-label="Spending view">
-          <button aria-pressed={!shared} onClick={() => set("view", "")}>
-            Only me
-          </button>
-          {data.connection?.status === "active" && (
-            <button
-              aria-pressed={!!shared}
-              onClick={() => set("view", "shared")}
-            >
-              You + {data.partnerName}
-            </button>
-          )}
-        </div>
+      >
+        <Link className="button secondary" to="/settings?section=spending">
+          <Settings size={17} />
+          Sharing settings
+        </Link>
         <button
           className="button"
-          onClick={() => open("Add purchase", <PurchaseForm />)}
+          onClick={() =>
+            open(
+              "Add purchase",
+              <PurchaseForm
+                initialPerson={filter.person}
+                initialEvent={filter.event}
+                initialOccasion={filter.occasion}
+              />,
+            )
+          }
         >
+          <Plus size={18} />
           Add purchase
         </button>
-        <Link to="/settings?section=spending">Sharing settings</Link>
-      </div>
-      {shared && data.connection?.resumed.length !== 2 && (
-        <p role="status">
-          Sharing is paused. Shared totals are unavailable until both people
-          resume sharing in Settings.
-        </p>
+      </Header>
+      {data.connection?.status === "active" && (
+        <div className="spending-view" role="group" aria-label="Spending view">
+          <button aria-pressed={!shared} onClick={() => set("view", "")}>
+            My spending
+          </button>
+          <button aria-pressed={!!shared} onClick={() => set("view", "shared")}>
+            You + {data.partnerName}
+          </button>
+        </div>
       )}
-      <div className="spending-filters">
-        <Field label="Person">
-          <select
-            value={filter.person ?? ""}
-            onChange={(e) => set("person", e.target.value)}
-          >
-            <option value="">Everyone</option>
-            {[
-              ...new Map(
-                [...world.people, ...history.data.recipients].map((p) => [
-                  p.id,
-                  p,
-                ]),
-              ).values(),
-            ].map((p) => (
-              <option value={p.id} key={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label="Occasion">
-          <select
-            value={
-              filter.event
-                ? "event:" + filter.event
-                : filter.occasion
-                  ? "occasion:" + filter.occasion
-                  : ""
-            }
-            onChange={(e) => {
-              const next = new URLSearchParams(params);
-              next.delete("event");
-              next.delete("occasion");
-              if (e.target.value) {
-                const [kind, id] = e.target.value.split(":");
-                next.set(kind, id);
-              }
-              setParams(next);
-              setPage(1);
-            }}
-          >
-            <option value="">All occasions</option>
-            {[
-              ...new Map(
-                [...world.groupEvents, ...history.data.events]
-                  .reverse()
-                  .map((e) => [e.id, e]),
-              ).values(),
-            ].map((e) => (
-              <option value={"event:" + e.id} key={e.id}>
-                {e.name}
-              </option>
-            ))}
-            {data.occasions.map((o) => (
-              <option value={"occasion:" + o.id} key={o.id}>
-                {o.name}
-              </option>
-            ))}
-          </select>
-        </Field>
-      </div>
-      <details className="spending-extra-filters">
-        <summary>
-          More filters{filter.year ? " · " + filter.year : ""}
-          {filter.list ? " · Wish list" : ""}
-        </summary>
+      <section className="spending-filter-section" aria-label="Filter spending">
+        <h2>Show spending for</h2>
         <div className="spending-filters">
-          <Field label="Wish list">
+          <Field label="Person">
             <select
-              value={filter.list ?? ""}
-              onChange={(e) => set("list", e.target.value)}
+              value={filter.person ?? ""}
+              onChange={(e) => set("person", e.target.value)}
             >
-              <option value="">All wish lists</option>
-              {[
-                ...new Map(
-                  [...world.lists, ...history.data.lists]
-                    .reverse()
-                    .map((l) => [l.id, l]),
-                ).values(),
-              ].map((l) => (
-                <option value={l.id} key={l.id}>
-                  {l.name}
+              <option value="">Everyone</option>
+              {recipients.map((p) => (
+                <option value={p.id} key={p.id}>
+                  {p.name}
                 </option>
               ))}
             </select>
           </Field>
+          <div>
+            <Field label="Occasion">
+              <select
+                value={
+                  filter.event
+                    ? "event:" + filter.event
+                    : filter.occasion
+                      ? "occasion:" + filter.occasion
+                      : ""
+                }
+                onChange={(e) => {
+                  const next = new URLSearchParams(params);
+                  next.delete("event");
+                  next.delete("occasion");
+                  if (e.target.value) {
+                    const [kind, id] = e.target.value.split(":");
+                    next.set(kind, id);
+                  }
+                  setParamsQuiet(next);
+                }}
+              >
+                <option value="">All occasions</option>
+                <optgroup label="Group events">
+                  {events.map((e) => (
+                    <option value={"event:" + e.id} key={e.id}>
+                      {e.name}
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="Personal occasions">
+                  {data.occasions.map((o) => (
+                    <option value={"occasion:" + o.id} key={o.id}>
+                      {o.name}
+                    </option>
+                  ))}
+                </optgroup>
+              </select>
+            </Field>
+            <button
+              className="text-button spending-occasion-action"
+              onClick={occasionForm}
+            >
+              <Plus size={15} />
+              Add personal occasion
+            </button>
+          </div>
           <Field label="Period">
             <select
               value={filter.year ?? ""}
               onChange={(e) => set("year", e.target.value)}
             >
               <option value="">All time</option>
-              {history.data.years
+              {[...(history.data?.years ?? [new Date().getFullYear()])]
                 .sort((a, b) => b - a)
                 .map((y) => (
                   <option value={y} key={y}>
@@ -855,287 +1014,193 @@ export function SpendingPage() {
                 ))}
             </select>
           </Field>
+          <details className="spending-extra-filters">
+            <summary>
+              <SlidersHorizontal size={17} />
+              More filters{filter.list ? " (1)" : ""}
+            </summary>
+            <Field label="Wish list">
+              <select
+                value={filter.list ?? ""}
+                onChange={(e) => set("list", e.target.value)}
+              >
+                <option value="">All wish lists</option>
+                {lists.map((l) => (
+                  <option value={l.id} key={l.id}>
+                    {l.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          </details>
         </div>
-      </details>
-      <button
-        className="text-button"
-        onClick={() =>
-          open(
-            "Add personal occasion",
-            <Form
-              submit="Add occasion"
-              onSubmit={async (f) => {
-                await mutate("spending/occasion", {
-                  name: f.get("name"),
-                  shared: !!shared,
-                });
-                close();
+        <div className="spending-filter-help">
+          <p>Filters update totals, budget, and gift history.</p>
+          {Object.values(filter).some(Boolean) && (
+            <button
+              className="text-button"
+              onClick={() => {
+                const next = new URLSearchParams();
+                if (shared) next.set("view", "shared");
+                setParamsQuiet(next);
               }}
             >
-              <Field label="Occasion name">
-                <input
-                  name="name"
-                  required
-                  maxLength={150}
-                  placeholder="Mom’s birthday 2025"
-                />
-              </Field>
-              <p>{shared ? `Shared with ${data.partnerName}` : "Only me"}</p>
-            </Form>,
-          )
-        }
-      >
-        Add personal occasion
-      </button>
-      {(!shared || data.connection?.resumed.length === 2) && (
-        <section className="spending-numbers" aria-live="polite">
-          <div>
-            <span>{shared ? "Spent together" : "Spent"}</span>
-            <strong>{dollars(totals.spent)}</strong>
-          </div>
-          <div>
-            <span>Still planning · estimated</span>
-            <strong>{dollars(totals.planned)}</strong>
-          </div>
-        </section>
-      )}
-      {!!totals.missing && (
-        <p role="status">
-          {totals.missing} {totals.missing === 1 ? "amount" : "amounts"}{" "}
-          missing. Totals and remaining budget use recorded amounts only.
-        </p>
-      )}
-      {budget ? (
-        <section className="spending-budget">
-          <div className="spending-toolbar">
-            <h2>Budget {dollars(budget.amountCents)}</h2>
-            <button className="text-button" onClick={budgetForm}>
-              Edit
+              Clear filters
             </button>
-          </div>
-          <p>{dollars(budget.amountCents - totals.spent)} left to spend</p>
-          <p>
-            {dollars(budget.amountCents - totals.spent - totals.planned)} left
-            after planned gifts
-          </p>
-          <div className="spending-meter" aria-hidden="true">
-            <span
-              style={{
-                width:
-                  Math.min(
-                    100,
-                    (Math.max(0, totals.spent) / (budget.amountCents || 1)) *
-                      100,
-                  ) + "%",
-              }}
-            />
-            <span
-              style={{
-                width:
-                  Math.min(
-                    100,
-                    (totals.planned / (budget.amountCents || 1)) * 100,
-                  ) + "%",
-              }}
-            />
-          </div>
-          {totals.spent + totals.planned > budget.amountCents && (
-            <p>
-              {dollars(totals.spent + totals.planned - budget.amountCents)} over
-              your plan. You can still buy or reserve gifts.
-            </p>
           )}
-        </section>
-      ) : (
-        <button className="text-button" onClick={budgetForm}>
-          Set a budget
-        </button>
-      )}
-      <h2>Gift history and plans</h2>
-      {records.length === 0 && (
-        <p>
-          No gifts match this view. Add a purchase or reserve a gift to get
-          started.
+        </div>
+        <p className="spending-scope">{scopeLabel}</p>
+      </section>
+      {paused && (
+        <p role="status">
+          Sharing is paused. Shared totals are unavailable until both people
+          resume sharing in Settings.
         </p>
       )}
-      {records.map((r) => (
-        <article className="spending-row" key={r.id}>
-          <div>
-            <h3>{r.title}</h3>
-            <p>
-              {r.recipientNames.join(" & ")} ·{" "}
-              {r.kind === "plan"
-                ? "Reserved · estimated"
-                : r.kind === "refund"
-                  ? "Refund"
-                  : r.kind === "contribution"
-                    ? "Contribution"
-                    : "Purchased"}
-            </p>
-            <p className="muted">
-              {r.kind === "plan"
-                ? `Planned for ${r.planningYear}`
-                : (r.date ?? "Purchase date not recorded")}{" "}
-              · {r.payerName}
-            </p>
-            <span className="spending-privacy">
-              {r.connectionId && r.sharing !== "private" ? (
-                <Users size={16} />
-              ) : (
-                <LockKeyhole size={16} />
-              )}
-              {r.connectionId && r.sharing !== "private"
-                ? `Shared with ${data.partnerName}`
-                : "Only me"}
-            </span>
-          </div>
-          <strong className="spending-amount">
-            {r.amountCents === null
-              ? "Amount missing"
-              : dollars(allocatedCents(r, filter.person))}
-            {filter.person && r.recipientIds.length > 1 && (
-              <small> of {dollars(r.amountCents)} total</small>
-            )}
-          </strong>
-          <div className="spending-row-actions">
-            {r.kind === "plan" && r.canEdit && r.reservationId && (
-              <button
-                className="button secondary"
-                onClick={() => {
-                  const reservation = world.buying.find(
-                    (v) => v.id === r.reservationId,
-                  );
-                  open(
-                    "Mark as purchased",
-                    <PurchaseForm
-                      reservation={
-                        reservation ?? {
-                          id: r.reservationId!,
-                          revision: 0,
-                          quantity: r.quantity,
-                          purchased: 0,
-                          titleSnapshot: r.title,
-                        }
-                      }
-                    />,
-                  );
-                }}
-              >
-                Mark as purchased
-              </button>
-            )}
-            {r.canEdit && (
-              <button
-                className="button secondary"
-                onClick={() =>
-                  open(
-                    r.kind === "plan" ? "Update plan" : "Edit purchase",
-                    <RecordForm record={r} />,
-                  )
-                }
-              >
-                Edit {r.kind === "plan" ? "plan" : "purchase"}
-              </button>
-            )}
-            {r.ownerId === world.me.id &&
-              data.connection?.status === "active" &&
-              !r.protected && (
-                <Action
-                  secondary
-                  onClick={() =>
-                    mutate("spending/share", {
-                      id: r.id,
-                      revision: r.revision,
-                      shared: r.sharing === "private",
-                    })
-                  }
-                >
-                  {r.sharing === "private"
-                    ? "Share with partner"
-                    : "Keep private"}
-                </Action>
-              )}
-            {r.canEdit && r.kind === "purchase" && (
-              <button
-                className="text-button"
-                onClick={() =>
-                  open(
-                    "Record refund",
-                    <Form
-                      submit="Save refund"
-                      onSubmit={async (f) => {
-                        await mutate("spending/refund", {
-                          id: r.id,
-                          revision: r.revision,
-                          amountCents: amount(f),
-                          date: f.get("date"),
-                        });
-                        close();
-                      }}
-                    >
-                      <MoneyField label="Refund received in USD" required />
-                      <Field label="Refund date">
-                        <input
-                          name="date"
-                          type="date"
-                          defaultValue={today()}
-                          required
-                        />
-                      </Field>
-                      <p>
-                        This records a refund already received. It does not
-                        contact the shop.
-                      </p>
-                    </Form>,
-                  )
-                }
-              >
-                Record refund
-              </button>
-            )}
-          </div>
-          {r.history.length > 0 && (
-            <details>
-              <summary>Purchase history</summary>
-              {r.history.map((h, i) => (
-                <p key={i}>
-                  {h.description} · {new Date(h.at).toLocaleDateString()}
-                  {h.changes &&
-                    Object.entries(h.changes).map(([key, change]) => (
-                      <span className="spending-change" key={key}>
-                        {(
-                          {
-                            amountCents: "Amount paid",
-                            date: "Purchase date",
-                            planningYear: "Planning year",
-                            splits: "Recipient shares",
-                          } as Record<string, string>
-                        )[key] ?? key}
-                        :{" "}
-                        {key === "amountCents"
-                          ? dollars(change.before as number | null)
-                          : String(change.before ?? "Not recorded")}{" "}
-                        →{" "}
-                        {key === "amountCents"
-                          ? dollars(change.after as number | null)
-                          : String(change.after ?? "Not recorded")}
-                      </span>
-                    ))}
-                </p>
-              ))}
-            </details>
-          )}
-        </article>
-      ))}
-      {page > 1 && (
-        <button className="button secondary" onClick={() => setPage(page - 1)}>
-          Previous page
-        </button>
+      {history.error && (
+        <p role="alert">
+          Unable to load spending history.{" "}
+          <button
+            className="text-button"
+            onClick={() => void history.refetch()}
+          >
+            Try again
+          </button>
+        </p>
       )}
-      {history.data.total > page * 30 && (
-        <button className="button secondary" onClick={() => setPage(page + 1)}>
-          Next page
-        </button>
+      {!ready && !history.error && <p role="status">Updating spending…</p>}
+      {ready && !paused && (
+        <>
+          <section className="spending-overview" aria-label="Spending totals">
+            <div className="spending-numbers">
+              <div>
+                <span>
+                  {shared ? "Recorded spending together" : "Recorded spending"}
+                </span>
+                <strong>{totalLabel(totals)}</strong>
+                {totals.missingActual > 0 && (
+                  <p className="spending-completeness">
+                    {totals.missingActual}{" "}
+                    {totals.missingActual === 1
+                      ? "entry needs"
+                      : "entries need"}{" "}
+                    an amount.{" "}
+                    <button
+                      className="text-button"
+                      onClick={() => review("actual")}
+                    >
+                      Review
+                    </button>
+                  </p>
+                )}
+              </div>
+              <div>
+                <span>Still planning</span>
+                <strong>{totalLabel(totals, true)}</strong>
+                <small>Estimated</small>
+                {totals.missingPlanned > 0 && (
+                  <p className="spending-completeness">
+                    {totals.missingPlanned}{" "}
+                    {totals.missingPlanned === 1 ? "plan needs" : "plans need"}{" "}
+                    an estimate.{" "}
+                    <button
+                      className="text-button"
+                      onClick={() => review("planned")}
+                    >
+                      Review
+                    </button>
+                  </p>
+                )}
+              </div>
+            </div>
+            <section className="spending-budget">
+              <h2>Budget{budget ? " " + dollars(budget.amountCents) : ""}</h2>
+              <button className="button secondary" onClick={budgetForm}>
+                {budget ? "Edit budget" : "Set a budget"}
+              </button>
+              <p className="muted">{scopeLabel}</p>
+              {budget && (
+                <>
+                  <p>
+                    {dollars(budget.amountCents - totals.spent)} left to spend
+                  </p>
+                  <p className="muted">
+                    {dollars(
+                      budget.amountCents - totals.spent - totals.planned,
+                    )}{" "}
+                    after planned gifts
+                  </p>
+                  {totals.missing > 0 && (
+                    <p className="muted">
+                      Based on recorded amounts; missing amounts are not
+                      included.
+                    </p>
+                  )}
+                  <div className="spending-meter" aria-hidden="true">
+                    <span
+                      style={{
+                        width:
+                          Math.min(
+                            100,
+                            (Math.max(0, totals.spent) /
+                              Math.max(1, budget.amountCents)) *
+                              100,
+                          ) + "%",
+                      }}
+                    />
+                    <span
+                      style={{
+                        width:
+                          Math.min(
+                            100,
+                            (totals.planned / Math.max(1, budget.amountCents)) *
+                              100,
+                          ) + "%",
+                      }}
+                    />
+                  </div>
+                  {totals.spent + totals.planned > budget.amountCents && (
+                    <p>
+                      {dollars(
+                        totals.spent + totals.planned - budget.amountCents,
+                      )}{" "}
+                      over your plan. You can still buy or reserve gifts.
+                    </p>
+                  )}
+                </>
+              )}
+            </section>
+          </section>
+          <h2 className="spending-history-title">Gift history and plans</h2>
+          <p className="spending-scope">
+            {history.data!.total}{" "}
+            {history.data!.total === 1 ? "entry" : "entries"}
+          </p>
+          {history.data!.records.length === 0 && (
+            <p>No purchases or plans match these filters.</p>
+          )}
+          {history.data!.records.map((r) => (
+            <SpendingRow key={r.id} r={r} data={data} person={filter.person} />
+          ))}
+          <div className="spending-pagination">
+            {page > 1 && (
+              <button
+                className="button secondary"
+                onClick={() => setPage(page - 1)}
+              >
+                Previous page
+              </button>
+            )}
+            {history.data!.total > page * 30 && (
+              <button
+                className="button secondary"
+                onClick={() => setPage(page + 1)}
+              >
+                Next page
+              </button>
+            )}
+          </div>
+        </>
       )}
     </div>
   );

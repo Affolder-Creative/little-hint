@@ -474,3 +474,9 @@ Button-style controls never underline on hover, focus, or activation; ordinary t
 - Don't add shadows to ordinary gift cards or list rows.
 - Don't use invented product photography or present demonstration fixtures as real gifts.
 - Don't rely on color alone to explain availability or list privacy.
+
+### Spending controls and purchase entry
+
+Spending pages separate header actions, personal/shared view selection, and the filter scope. Person, occasion, and period remain visible; less common filters expand. Filters retain focus and scroll while results refresh. Recorded amounts and outstanding estimates have separate completeness explanations. Unknown-only totals never look like a confirmed zero.
+
+Purchase entry uses an anchored gift combobox with an explicit manual option, bounded recipient search, and the existing fixed dialog action footer. A linked gift inherits recipients and event context. Listed prices are suggestions accepted explicitly. Optional occasion details preserve both personal occasions and group events. History rows keep their amount and primary action together; secondary operations use a labeled disclosure. Quick totals remain compact, with a clear View spending button. Settings action groups use 12–16px gaps and comfortable desktop field widths.
