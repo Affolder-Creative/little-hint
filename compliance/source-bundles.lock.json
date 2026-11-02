@@ -48,7 +48,7 @@
   },
   {
     "file": "alpine-3.24.3-sources.tar.gz",
-    "sha256": "bf1d790f03d5bd879392832485467bceee0c3fa8efa6cff66e3af35135b8f74d",
+    "sha256": "8c66ccc0d0ce3623a7cb671c6850c4d81dd2a57ca3c5f3346a69660b277addbe",
     "size": 201927743,
     "covers": [
       "apk:alpine-baselayout-data@3.7.2-r1#60a7585bbab2fa0f762504eb617dbca90216e31f",
