@@ -129,5 +129,6 @@ for variant in ['color','dark','adaptive']:
 # A black silhouette with transparent cutouts for browser pinned-tab masks.
 save('favicons/safari-pinned-tab.svg',svg(256,256,tag(micro=True),style('black'),'Little Hint'))
 save('tokens.json', json.dumps({'version':1,'status':'Final Little Hint identity','colors':COLORS,'wordmark':{'font':'Fraunces','axes':{'wght':650,'opsz':60,'SOFT':65,'WONK':1},'pairAdjustmentsFontUnits':PAIR_SPACING,'fontUnitsPerEm':2000,'wordSpaceAdjustmentFontUnits':-60,'wordSpaceReductionPercent':15.04},'tagline':{'axes':{'wght':480,'opsz':60,'SOFT':65,'WONK':1},'customGlyphs':'Simplified outlined lowercase f; original font file unchanged','tagAlignment':'Lower edge aligned to complete text block','gapSvgUnits':TAGLINE_GAP,'gapRelativeToLetterHeight':TAGLINE_GAP/WORD_HEIGHT,'widthRelativeToWordmark':.86,'layout':'Tagline integrated in the SVG, left aligned below the wordmark'},'tagRotationDegrees':14,'microMark':'Larger heart; punched hole omitted'},indent=2)+'\n')
-save('tokens.css', ':root {\n'+''.join(f'  --little-hint-{re.sub(r"([A-Z])",r"-\1",k).lower()}: {v};\n' for k,v in COLORS.items())+'}\n')
+token_colors = {re.sub(r'([A-Z])', r'-\1', k).lower(): v for k,v in COLORS.items()}
+save('tokens.css', ':root {\n'+''.join(f'  --little-hint-{k}: {v};\n' for k,v in token_colors.items())+'}\n')
 print('SVG masters written:',len(list(ROOT.rglob('*.svg'))))

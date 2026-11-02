@@ -90,14 +90,15 @@ Update manifest id, start_url, scope, and HTML paths when hosted in a subpath.
 These assets do not install or configure the app itself.
 
 REBUILDING
-Install source/requirements.txt with Python and source/package.json with npm.
+Install source/requirements.txt with Python 3.11 or newer and
+source/package.json with npm.
 Run source/build_vectors.py, followed by source/build_exports.cjs.
 Optional browser checks: source/verify_preview.cjs.
 Set LITTLE_HINT_BROWSER to a Chromium executable if needed.
 source/render_brand_preview.cjs renders the additional brand board; its
 executable path can be adjusted for the local browser installation.
 
-Python dependencies: fonttools 4.67.0, uharfbuzz 0.56.4.
+Python dependencies: fonttools 4.68.0, uharfbuzz 0.56.4.
 Node dependencies: sharp 0.35.5, playwright 1.62.1.
 Wordmark axes: weight 650, optical size 60, softness 65, wonk 1.
 Tagline axes: weight 480, optical size 60, softness 65, wonk 1, with simplified
