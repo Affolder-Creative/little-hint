@@ -524,8 +524,9 @@ export async function importProduct(
         /* The configured provider may still supply usable metadata. */
       }
       // Shopify may supply a name after HTML parsing. Otherwise discard the
-      // shop's generic description/image before considering a paid result.
-      if (!result.title) result = {};
+      // shop's generic description/image, retaining variant warnings so a paid
+      // result cannot substitute a different option.
+      if (!result.title) result = { warnings: result.warnings };
       if (
         provider === "brightdata" &&
         jobId &&

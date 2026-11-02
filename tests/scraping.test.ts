@@ -254,6 +254,35 @@ describe("full import fallback flow", () => {
     expect(spend).not.toHaveBeenCalled();
   });
 
+  it.each(["missing variant", "endpoint failure"])(
+    "keeps Shopify variant warnings after rejecting a shop-only title: %s",
+    async (failure) => {
+      const url = "https://shop.test/products/mug?variant=999";
+      mocks.direct.mockResolvedValueOnce(
+        new Response(
+          '<title>Shop</title><script>Shopify.shop = "shop.test"</script>',
+        ),
+      );
+      if (failure === "endpoint failure")
+        mocks.direct.mockRejectedValueOnce(new Error("Shop unavailable"));
+      else
+        mocks.direct.mockResolvedValueOnce(
+          Response.json({
+            title: "Coffee mug",
+            variants: [{ id: 123, title: "Blue", price: 2500 }],
+          }),
+        );
+      const fetcher = vi.fn(async () => new Response(productHtml));
+      vi.stubGlobal("fetch", fetcher);
+      await expect(importProduct(url, "owner")).rejects.toThrow(
+        "You can still add the gift manually.",
+      );
+      expect(mocks.direct).toHaveBeenCalledTimes(2);
+      expect(fetcher).not.toHaveBeenCalled();
+      expect(spend).not.toHaveBeenCalled();
+    },
+  );
+
   describe.each(["scrapingfish", "brightdata"])(
     "%s shop-only results",
     (provider) => {
