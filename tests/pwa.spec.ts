@@ -87,7 +87,11 @@ test("static-only offline caching, private draft review, and sign-out cleanup", 
     .click();
   await expect(page.getByRole("dialog")).toBeVisible();
   await page.getByRole("button", { name: "Close dialog" }).click();
-  await page.getByRole("button", { name: "Sign out", exact: true }).click();
+  // The sign-in form can appear before sign-out's document navigation finishes.
+  await Promise.all([
+    page.waitForURL("/", { waitUntil: "domcontentloaded" }),
+    page.getByRole("button", { name: "Sign out", exact: true }).click(),
+  ]);
   await expect(page.getByLabel("Email address", { exact: true })).toBeVisible();
   expect(
     await page.evaluate(() =>
