@@ -127,7 +127,7 @@ services:
     security_opt: [no-new-privileges:true]
     cap_drop: [ALL]
   tls:
-    image: alpine/openssl:3.5.4
+    image: alpine/openssl:3.5.8
     profiles: [tools]
     entrypoint: [sh, /scripts/tls.sh]
     volumes:
