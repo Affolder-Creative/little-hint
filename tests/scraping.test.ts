@@ -13,7 +13,11 @@ vi.mock("../src/server/db", () => ({
 vi.mock("node:dns/promises", () => ({
   lookup: vi.fn(async () => [{ address: "93.184.216.34", family: 4 }]),
 }));
-import { config, spend } from "../src/server/settings";
+import {
+  automaticallyImportProductPhotos,
+  config,
+  spend,
+} from "../src/server/settings";
 import { importProduct, paidProductPreview } from "../src/server/imports";
 import { scrapingRequest } from "../src/server/scraping";
 import {
@@ -28,6 +32,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.direct.mockReset();
   mocks.state = emptyState();
+  vi.mocked(automaticallyImportProductPhotos).mockResolvedValue(false);
   vi.mocked(config).mockResolvedValue(
     keys as Awaited<ReturnType<typeof config>>,
   );
@@ -182,7 +187,7 @@ describe("single paid preview attempt", () => {
     expect(fetcher).not.toHaveBeenCalled();
     expect(spend).not.toHaveBeenCalled();
   });
-  it.each(["http", "network", "timeout", "oversize", "captcha"])(
+  it.each(["http", "network", "timeout", "oversize", "captcha", "shop title"])(
     "preserves direct metadata after %s failure, without another provider",
     async (failure) => {
       const fetcher = vi.fn(async () => {
@@ -193,6 +198,8 @@ describe("single paid preview attempt", () => {
         if (failure === "http")
           return new Response("private-key", { status: 429 });
         if (failure === "oversize") return new Response("x".repeat(2_000_001));
+        if (failure === "shop title")
+          return new Response("<title>Example</title>");
         return new Response("<title>Access denied</title>");
       });
       vi.stubGlobal("fetch", fetcher);
@@ -218,6 +225,155 @@ describe("single paid preview attempt", () => {
 describe("full import fallback flow", () => {
   const productHtml =
     '<script type="application/ld+json">{"@type":"Product","name":"Coffee mug","description":"A ceramic mug","image":"/mug.png","offers":{"price":"25","priceCurrency":"USD"}}</script>';
+
+  it("lets Shopify supply a product name after shop-only HTML", async () => {
+    const url = "https://shop.test/products/mug?variant=123";
+    mocks.direct
+      .mockResolvedValueOnce(
+        new Response(
+          '<title>Shop</title><script>Shopify.shop = "shop.test"</script><meta property="product:price:currency" content="USD">',
+        ),
+      )
+      .mockResolvedValueOnce(
+        Response.json({
+          title: "Coffee mug",
+          variants: [{ id: 123, title: "Blue", price: 2500 }],
+        }),
+      );
+    const fetcher = vi.fn();
+    vi.stubGlobal("fetch", fetcher);
+    expect(await importProduct(url, "owner")).toMatchObject({
+      title: "Coffee mug · Blue",
+      priceCents: 2500,
+    });
+    expect(mocks.direct.mock.calls.map(([target]) => target)).toEqual([
+      url,
+      "https://shop.test/products/mug.js",
+    ]);
+    expect(fetcher).not.toHaveBeenCalled();
+    expect(spend).not.toHaveBeenCalled();
+  });
+
+  it.each(["missing variant", "endpoint failure"])(
+    "keeps Shopify variant warnings after rejecting a shop-only title: %s",
+    async (failure) => {
+      const url = "https://shop.test/products/mug?variant=999";
+      mocks.direct.mockResolvedValueOnce(
+        new Response(
+          '<title>Shop</title><script>Shopify.shop = "shop.test"</script>',
+        ),
+      );
+      if (failure === "endpoint failure")
+        mocks.direct.mockRejectedValueOnce(new Error("Shop unavailable"));
+      else
+        mocks.direct.mockResolvedValueOnce(
+          Response.json({
+            title: "Coffee mug",
+            variants: [{ id: 123, title: "Blue", price: 2500 }],
+          }),
+        );
+      const fetcher = vi.fn(async () => new Response(productHtml));
+      vi.stubGlobal("fetch", fetcher);
+      await expect(importProduct(url, "owner")).rejects.toThrow(
+        "You can still add the gift manually.",
+      );
+      expect(mocks.direct).toHaveBeenCalledTimes(2);
+      expect(fetcher).not.toHaveBeenCalled();
+      expect(spend).not.toHaveBeenCalled();
+    },
+  );
+
+  describe.each(["scrapingfish", "brightdata"])(
+    "%s shop-only results",
+    (provider) => {
+      const discogs = "https://www.discogs.com/shop/item/4212139164";
+      const shopHtml =
+        '<title>Discogs</title><meta property="og:image" content="/logo.png">';
+      const response = (html: string) =>
+        provider === "brightdata"
+          ? Response.json({ status_code: 200, body: html })
+          : new Response(html);
+
+      beforeEach(() => {
+        vi.mocked(config).mockResolvedValue({
+          ...keys,
+          SCRAPING_PROVIDER: provider,
+          BRIGHTDATA_UNLOCKER_ZONE: "shops",
+        } as Awaited<ReturnType<typeof config>>);
+        mocks.direct.mockImplementation(async () => new Response(shopHtml));
+      });
+
+      it("uses one paid attempt after a shop-only direct result with photos off", async () => {
+        const fetcher = vi.fn(async () => response(productHtml));
+        vi.stubGlobal("fetch", fetcher);
+        expect(await importProduct(discogs, "owner")).toMatchObject({
+          title: "Coffee mug",
+          priceCents: 2500,
+        });
+        expect(mocks.direct).toHaveBeenCalledTimes(1);
+        expect(fetcher).toHaveBeenCalledTimes(1);
+        expect(spend).toHaveBeenCalledExactlyOnceWith(provider);
+      });
+
+      it("does not keep the shop logo or description when only a provider title is usable", async () => {
+        vi.mocked(automaticallyImportProductPhotos).mockResolvedValue(true);
+        mocks.direct.mockResolvedValueOnce(
+          new Response(
+            `${shopHtml}<meta name="description" content="Discover music on Discogs">`,
+          ),
+        );
+        vi.stubGlobal(
+          "fetch",
+          vi.fn(async () => response("<title>A real album</title>")),
+        );
+        const result = await importProduct(discogs, "owner");
+        expect(result).toMatchObject({
+          title: "A real album",
+          description: "",
+        });
+        expect(result).not.toHaveProperty("image");
+        expect(mocks.direct).toHaveBeenCalledTimes(1);
+        expect(spend).toHaveBeenCalledExactlyOnceWith(provider);
+      });
+
+      it.each([false, true])(
+        "fails if the provider also returns only the shop, photos=%s",
+        async (photos) => {
+          vi.mocked(automaticallyImportProductPhotos).mockResolvedValue(photos);
+          vi.mocked(config).mockResolvedValue({
+            ...keys,
+            SCRAPING_PROVIDER: provider,
+            BRIGHTDATA_UNLOCKER_ZONE: "shops",
+            AI_ENABLED: "true",
+            OPENAI_API_KEY: "test-ai-key",
+          } as Awaited<ReturnType<typeof config>>);
+          const fetcher = vi.fn(async () => response(shopHtml));
+          vi.stubGlobal("fetch", fetcher);
+          await expect(importProduct(discogs, "owner")).rejects.toThrow(
+            "You can still add the gift manually.",
+          );
+          expect(mocks.direct).toHaveBeenCalledTimes(1);
+          expect(fetcher).toHaveBeenCalledTimes(1);
+          expect(spend).toHaveBeenCalledExactlyOnceWith(provider);
+        },
+      );
+
+      it("retains usable direct details when the provider returns only the shop", async () => {
+        vi.stubGlobal(
+          "fetch",
+          vi.fn(async () => response(shopHtml)),
+        );
+        const partial = {
+          title: "Jon Bellion - The Human Condition",
+          priceCents: 3499,
+        };
+        expect(
+          await paidProductPreview(discogs, partial, await config(), true),
+        ).toEqual(partial);
+        expect(spend).toHaveBeenCalledExactlyOnceWith(provider);
+      });
+    },
+  );
 
   it("keeps successful direct imports free even with Fish configured", async () => {
     mocks.direct.mockResolvedValue(new Response(productHtml));

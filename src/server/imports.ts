@@ -225,9 +225,22 @@ export function parseProduct(html: string, url: string): ProductPreview {
       product.offers = { price: priceText.slice(1), priceCurrency: "USD" };
   }
   const offer = [product.offers].flat().find(Boolean) ?? {};
+  const normalizeTitle = (value: string) =>
+    value.trim().replace(/\s+/g, " ").toLowerCase();
+  const host = new URL(url).hostname.replace(/^www\./, "");
+  const shopTitles = new Set(
+    [meta("og:site_name"), host, host.split(".")[0]]
+      .map(normalizeTitle)
+      .filter(Boolean),
+  );
+  // Explicit product names may match the brand; generic page titles need more
+  // identity than the shop name alone. Try each fallback before giving up.
   const sourceTitle = (
-    String(product.name ?? meta("og:title") ?? "").trim() ||
-    $("title").text().trim()
+    String(product.name ?? "").trim() ||
+    [meta("og:title"), $("title").text()]
+      .map((value) => value.trim())
+      .find((value) => value && !shopTitles.has(normalizeTitle(value))) ||
+    ""
   ).slice(0, 2000);
   const title = sourceTitle.slice(0, 160);
   if (
@@ -449,7 +462,7 @@ export async function importProduct(
     ? cfg[scrapingProviders.find((p) => p.id === provider)!.key]
     : "";
   const key = normalized
-    ? importCacheKey("metadata-v5", [
+    ? importCacheKey("metadata-v6", [
         normalized,
         provider,
         providerKey,
@@ -510,6 +523,10 @@ export async function importProduct(
           throw error;
         /* The configured provider may still supply usable metadata. */
       }
+      // Shopify may supply a name after HTML parsing. Otherwise discard the
+      // shop's generic description/image, retaining variant warnings so a paid
+      // result cannot substitute a different option.
+      if (!result.title) result = { warnings: result.warnings };
       if (
         provider === "brightdata" &&
         jobId &&
@@ -616,8 +633,12 @@ export async function paidProductPreview(
   }
   try {
     await validateUrl(url);
-    if (provider === "brightdata")
-      return parseProduct(await unlockPage(url, cfg), url);
+    if (provider === "brightdata") {
+      const imported = parseProduct(await unlockPage(url, cfg), url);
+      if (!imported.title)
+        throw new Error("No product name found on this page.");
+      return imported;
+    }
     await spend(provider);
     const key = cfg[scrapingProviders.find((p) => p.id === provider)!.key];
     const request = scrapingRequest(provider, key, url);
@@ -637,6 +658,7 @@ export async function paidProductPreview(
     const imported = request.amazon
       ? parseAmazonResponse(JSON.parse(body.toString("utf8")), url)
       : parseProduct(body.toString("utf8"), resolved);
+    if (!imported.title) throw new Error("No product name found on this page.");
     return {
       ...result,
       ...Object.fromEntries(
@@ -689,13 +711,15 @@ export function applyShopifyVariant(
     typeof variant.title === "string" && variant.title !== "Default Title"
       ? variant.title
       : "";
+  const sourceTitle =
+    `${product.title ?? result.sourceTitle ?? result.title ?? ""}${label ? ` · ${label}` : ""}`.slice(
+      0,
+      2000,
+    );
   return {
     ...result,
-    title:
-      `${product.title ?? result.title}${label ? ` · ${label}` : ""}`.slice(
-        0,
-        160,
-      ),
+    title: sourceTitle.slice(0, 160),
+    sourceTitle,
     priceCents:
       currency === "USD" &&
       Number.isSafeInteger(variant.price) &&

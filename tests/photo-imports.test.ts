@@ -322,6 +322,52 @@ describe("AI product copy", () => {
 });
 
 describe("shared product metadata cache", () => {
+  it("bypasses old shop-only results without caching, enriching, or downloading rejected metadata", async () => {
+    const url = "https://www.discogs.com/shop/item/4212139164";
+    mocks.enabled = true;
+    mocks.cfg = { AI_ENABLED: "true", OPENAI_API_KEY: "synthetic-key" };
+    const oldKey = importCacheKey("metadata-v5", [
+      url,
+      undefined,
+      "",
+      undefined,
+      true,
+    ]);
+    mocks.cache.set(oldKey, {
+      data: {
+        title: "Discogs",
+        sourceTitle: "Discogs",
+        source: "www.discogs.com",
+        importedAt: new Date().toISOString(),
+        shareable: true,
+        remoteImage: "https://www.discogs.com/logo.png",
+      },
+      checked: new Date(),
+      expires: new Date(Date.now() + 60_000),
+    });
+    mocks.request.mockImplementation(
+      async () =>
+        new Response(
+          '<title>Discogs</title><meta property="og:image" content="/logo.png">',
+        ),
+    );
+    const external = vi.fn();
+    vi.stubGlobal("fetch", external);
+    for (const owner of ["alice", "bob"]) {
+      await expect(importProduct(url, owner)).rejects.toThrow(
+        "You can still add the gift manually.",
+      );
+    }
+    expect(mocks.request.mock.calls.map(([target]) => target)).toEqual([
+      url,
+      url,
+    ]);
+    expect([...mocks.cache.keys()]).toEqual([oldKey]);
+    expect(external).not.toHaveBeenCalled();
+    expect(spend).not.toHaveBeenCalled();
+    expect(mocks.state.media).toHaveLength(0);
+    expect(await readdir(dir)).toEqual([]);
+  });
   it("reuses metadata across accounts without sharing media ownership", async () => {
     mocks.enabled = true;
     const first = await importProduct("https://example.com/product", "alice");

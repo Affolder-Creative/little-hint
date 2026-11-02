@@ -57,6 +57,64 @@ describe("product imports", () => {
     expect(p.title).toBe("A wool blanket");
     expect(p.priceCents).toBeNull();
   });
+  it.each([
+    "<title>Discogs</title>",
+    '<meta property="og:title" content="  dIsCoGs  ">',
+    '<title>Discogs</title><meta property="og:image" content="/logo.png"><meta name="description" content="Discover music on Discogs">',
+    "<title>DISCOGS.COM</title>",
+  ])("rejects shop-only Discogs metadata: %s", (html) => {
+    expect(
+      parseProduct(html, "https://www.discogs.com/shop/item/4212139164"),
+    ).toMatchObject({ title: "", sourceTitle: "" });
+  });
+  it.each([
+    ["<title>Example</title>", "https://example.com/item"],
+    ["<title>example.com</title>", "https://www.example.com/item"],
+    [
+      '<meta property="og:site_name" content="The Record Shop"><meta property="og:title" content=" THE  RECORD\n SHOP ">',
+      "https://example.com/item",
+    ],
+  ])("rejects exact shop identities on other sites", (html, url) => {
+    expect(parseProduct(html, url)).toMatchObject({
+      title: "",
+      sourceTitle: "",
+    });
+  });
+  it("tries the HTML title when Open Graph only names the shop", () => {
+    expect(
+      parseProduct(
+        '<meta property="og:title" content="Discogs"><title>Jon Bellion - The Human Condition | Discogs</title>',
+        "https://www.discogs.com/shop/item/4212139164",
+      ),
+    ).toMatchObject({
+      title: "Jon Bellion - The Human Condition | Discogs",
+      sourceTitle: "Jon Bellion - The Human Condition | Discogs",
+      description: "",
+      priceCents: null,
+    });
+  });
+  it("keeps a specific Open Graph title ahead of a shop-only HTML title", () => {
+    expect(
+      parseProduct(
+        '<meta property="og:title" content="The Discogs guide"><title>Discogs</title>',
+        "https://discogs.com/item",
+      ).title,
+    ).toBe("The Discogs guide");
+  });
+  it("retains explicit product names that match the shop identity", () => {
+    expect(
+      parseProduct(
+        '<script type="application/ld+json">{"@type":"Product","name":"Acme"}</script><meta property="og:site_name" content="Acme">',
+        "https://acme.com/item",
+      ).title,
+    ).toBe("Acme");
+    expect(
+      parseProduct(
+        '<span id="productTitle">Acme</span><meta property="og:site_name" content="Acme">',
+        "https://amazon.com/dp/B012345678",
+      ).title,
+    ).toBe("Acme");
+  });
   it("does not silently convert other currencies", () => {
     const p = parseProduct(
       '<script type="application/ld+json">{"@type":"Product","name":"Journal","offers":{"price":20,"priceCurrency":"EUR"}}</script>',
