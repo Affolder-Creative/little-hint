@@ -1,4 +1,11 @@
 import type {
+  SpendingSettings,
+  SpendingConnection,
+  SpendingOccasion,
+  SpendingRecord,
+  SpendingBudget,
+} from "./spending";
+import type {
   GiftPreferences,
   GiftPreferenceView,
   GiftDiscoveryJob,
@@ -147,6 +154,8 @@ export interface Reservation extends Base {
   purchasedAt?: string;
 }
 export interface Contribution extends Base {
+  sentAt?: string;
+  receivedAt?: string;
   reservationId: string;
   userId: string;
   amountCents: number;
@@ -403,6 +412,11 @@ export interface SmsGrant extends Base {
   expiresAt: string;
 }
 export interface Records {
+  spendingSettings: SpendingSettings;
+  spendingConnections: SpendingConnection;
+  spendingOccasions: SpendingOccasion;
+  spendingRecords: SpendingRecord;
+  spendingBudgets: SpendingBudget;
   smsAttempts: SmsAttempt;
   smsChallenges: SmsChallenge;
   smsConsents: SmsConsent;
@@ -439,6 +453,11 @@ export interface Records {
 export type Kind = keyof Records;
 export type State = { [K in Kind]: Records[K][] };
 export const kinds: Kind[] = [
+  "spendingSettings",
+  "spendingConnections",
+  "spendingOccasions",
+  "spendingRecords",
+  "spendingBudgets",
   "smsAttempts",
   "smsChallenges",
   "smsConsents",
@@ -514,6 +533,8 @@ export interface GiftView extends Omit<Item, "creatorId"> {
   }>;
 }
 export interface World {
+  spendingEnabled?: boolean;
+  spendingInvitation?: boolean;
   productLookupEnabled?: boolean;
   imageDelivery?: { cacheEnabled: boolean; prefetchEnabled: boolean };
   telegram?: { available: boolean };

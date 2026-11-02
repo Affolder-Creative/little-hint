@@ -1,0 +1,134 @@
+.spending-page,
+.spending-settings {
+  max-width: 980px;
+}
+.spending-toolbar,
+.spending-quick,
+.spending-row-actions {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.spending-quick {
+  padding: 20px 0;
+  margin-bottom: 20px;
+  border-block: 1px solid var(--border);
+}
+.spending-quick a,
+.spending-privacy {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.spending-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
+  margin: 24px 0 8px;
+}
+.spending-numbers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 40px;
+  padding: 24px 0;
+  border-bottom: 1px solid var(--border);
+}
+.spending-numbers div {
+  display: grid;
+  gap: 8px;
+}
+.spending-numbers strong {
+  font-size: 36px;
+  font-weight: 550;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+.spending-budget {
+  padding: 24px 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 24px;
+}
+.spending-meter {
+  height: 12px;
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  background: var(--soft);
+  margin-top: 16px;
+}
+.spending-meter span {
+  background: var(--accent);
+  flex-shrink: 0;
+}
+.spending-meter span + span {
+  opacity: 0.45;
+}
+.spending-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  padding: 24px 0;
+  border-bottom: 1px solid var(--border);
+}
+.spending-row h3 {
+  margin: 0 0 4px;
+}
+.spending-row p {
+  margin: 4px 0;
+}
+.spending-row-actions,
+.spending-row details {
+  grid-column: 1/-1;
+}
+.spending-amount {
+  font-variant-numeric: tabular-nums;
+}
+.spending-privacy {
+  font-size: 13px;
+  color: var(--muted);
+}
+.spending-choice {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  min-height: 44px;
+}
+.spending-choice input {
+  width: auto;
+}
+.spending-settings h2,
+.spending-settings h3 {
+  margin-top: 24px;
+}
+.spending-page .text-button {
+  min-height: 44px;
+}
+.spending-page fieldset {
+  border: 1px solid var(--border);
+}
+@media (max-width: 650px) {
+  .spending-filters {
+    grid-template-columns: 1fr 1fr;
+  }
+  .spending-numbers {
+    gap: 24px;
+  }
+  .spending-numbers strong {
+    font-size: 30px;
+  }
+
+  .spending-row-actions {
+    gap: 8px;
+  }
+}
+@media (max-width: 360px) {
+  .spending-filters {
+    grid-template-columns: 1fr;
+  }
+}
+
+.spending-change {
+  display: block;
+  margin-top: 4px;
+}

@@ -1,3 +1,9 @@
+import {
+  spendingView,
+  syncSpending,
+  syncContributions,
+  spendingHistory,
+} from "./spending";
 import { productLookupEnabled } from "../shared/product-lookup";
 import { importView } from "../shared/imports";
 import { telegramInfo } from "./channel-availability";
@@ -369,7 +375,30 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
       return { ok: true };
     },
   );
+  app.get("/api/v1/spending", async (req) => {
+    const view = spendingView(await readState(), await actor(req));
+    return {
+      ...view,
+      records: view.records.filter((r) => r.kind === "plan" && !r.sourceId),
+    };
+  });
+  app.get("/api/v1/spending/history", async (req) =>
+    spendingHistory(await readState(), await actor(req), req.query),
+  );
   const routes: Record<string, string> = {
+    ...Object.fromEntries(
+      [
+        "settings",
+        "connect",
+        "connection",
+        "occasion",
+        "budget",
+        "purchase",
+        "record",
+        "share",
+        "refund",
+      ].map((a) => [`spending/${a}`, `spending.${a}`]),
+    ),
     "gift-preferences": "gift-preferences.update",
     households: "households.create",
     "households/update": "households.update",
@@ -461,6 +490,8 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
             actorId: a.id,
             status: "sent",
           });
+        syncSpending(s, a);
+        syncContributions(s);
         return result;
       });
     });

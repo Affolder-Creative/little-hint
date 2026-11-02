@@ -1,4 +1,9 @@
 import {
+  spendingCommand,
+  syncSpending,
+  registerSpendingReservation,
+} from "./spending";
+import {
   productLookupEnabled,
   lookupDisabledMessage,
 } from "../shared/product-lookup";
@@ -543,6 +548,12 @@ export function world(s: State, a: Actor): World {
   const people = s.people.filter((p) => personVisible(s, a, p));
   const ps = ownIds(s, a);
   return {
+    spendingInvitation: s.spendingConnections.some(
+      (c) => c.status === "pending" && c.users[1] === a.id,
+    ),
+    spendingEnabled: s.spendingSettings.some(
+      (p) => p.userId === a.id && p.enabled,
+    ),
     giftPreferences: preferenceViews(s, a),
     organization: s.organization.filter((o) => o.userId === a.id),
     me: {
@@ -802,6 +813,7 @@ export function command(
   action: string,
   raw: unknown,
 ): unknown {
+  if (action.startsWith("spending.")) return spendingCommand(s, a, action, raw);
   if (managementActions.includes(action))
     return managementCommand(s, a, action, raw);
   const b = raw as Record<string, unknown>;
@@ -1485,6 +1497,7 @@ export function command(
         titleSnapshot: i.title,
       };
       s.reservations.push(r);
+      registerSpendingReservation(s, a, r.id);
       if (!r.exchangeId) notifyGift(s, a, i, "reservation");
       return { id: r.id };
     }
@@ -1665,6 +1678,8 @@ export function command(
           "This contribution can no longer be changed that way. Refresh to see its current status.",
         );
       c.status = p.status;
+      if (p.status === "sent") c.sentAt = new Date().toISOString();
+      if (p.status === "received") c.receivedAt = new Date().toISOString();
       touch(c);
       notify(s, "contribution", [r.buyerId, c.userId], {
         itemId: r.itemId,

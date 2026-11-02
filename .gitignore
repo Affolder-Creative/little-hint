@@ -46,3 +46,6 @@ backups/
 
 /release-assets/
 __pycache__/
+
+# Local Impeccable verification captures
+.impeccable/review/

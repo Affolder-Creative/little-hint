@@ -5,6 +5,7 @@ export const settingsSections = [
   { id: "profile", label: "Profile & appearance" },
   { id: "invitations", label: "Invitations" },
   { id: "groups", label: "Family groups" },
+  { id: "spending", label: "Spending" },
   { id: "notifications", label: "Notifications" },
   { id: "device", label: "Device & drafts" },
   { id: "security", label: "Sign-in & security" },

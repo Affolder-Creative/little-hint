@@ -1,3 +1,4 @@
+import { SpendingSettingsPanel } from "./Spending";
 import type { AdminJobs } from "../shared/admin-jobs";
 import { AdminJobFailures } from "./AdminJobFailures";
 import { AdminPreferences } from "./AdminPreferences";
@@ -115,6 +116,7 @@ export default function SettingsPage({
         />
         {/* Keep panels mounted so switching sections preserves unsaved form values. */}
         <div className="settings-content">
+          {section === "spending" && <SpendingSettingsPanel />}
           {pendingGroupRequests > 0 && section !== "groups" && (
             <p className="notice">
               <Link to="?section=groups">
