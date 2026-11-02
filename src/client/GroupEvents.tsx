@@ -1,5 +1,4 @@
-import { RevealPolicy } from "./ListFeatures";
-import { Info } from "lucide-react";
+import { PrivacyDetails } from "./PrivacyDetails";
 import { useNavigationState } from "./NavigationScroll";
 import {
   GuidelineField,
@@ -400,8 +399,10 @@ export function GroupEventsSection({ archived }: { archived: boolean }) {
               <span className="list-symbol">
                 <CalendarDays size={24} />
               </span>
-              <div>
-                <h3>{event.name}</h3>
+              <div className="event-entry-copy">
+                <h3>
+                  <Link to={`/events/${event.id}`}>{event.name}</Link>
+                </h3>
                 <p>
                   Shared with:{" "}
                   {world.groups.find((g) => g.id === event.groupId)?.name ??
@@ -413,64 +414,68 @@ export function GroupEventsSection({ archived }: { archived: boolean }) {
                 </p>
               </div>
               <Privacy mode={event.mode} />
-              <div className="event-management-actions">
-                {" "}
-                <Link className="text-button" to={`/events/${event.id}`}>
-                  {event.canManage ? "Manage event" : "View event"}
-                  <ArrowRight size={16} />
-                </Link>{" "}
-                {event.canManage && (
-                  <ActionMenu name={event.name} label="Event actions">
-                    <button
-                      className="text-button"
-                      onClick={() =>
-                        open("Edit group event", <EventForm event={event} />)
-                      }
-                    >
-                      Edit event
-                    </button>
-                    <button
-                      className="text-button"
-                      onClick={() =>
-                        open(
-                          event.archived
-                            ? "Restore group event"
-                            : "Archive group event",
-                          <EventArchiveForm event={event} />,
-                        )
-                      }
-                    >
-                      {event.archived ? "Restore event" : "Archive event"}
-                    </button>
-                    <TrashButton kind="group-events" entry={event} />
-                  </ActionMenu>
-                )}
-              </div>
             </div>
-            <div className="event-entry-links">
-              {mine.map((list) => {
-                const own = list.ownerIds.some((id) =>
-                  world.people.some(
-                    (p) => p.id === id && p.userId === world.me.id,
-                  ),
-                );
-                const label = own
-                  ? "Your wish list"
-                  : `${list.ownerIds.map((id) => world.people.find((p) => p.id === id)?.name ?? "Managed profile").join(" & ")}’s wish list`;
-                return (
-                  <Link
-                    key={list.id}
-                    className="event-wishlist-link"
-                    to={`/lists/${list.id}`}
-                  >
-                    <span>
-                      {label}
-                      {list.archived && <small>Archived wish list</small>}
-                    </span>
-                    <ArrowRight size={16} />
+            <div className="event-entry-actions">
+              <div className="event-entry-links">
+                {mine.map((list) => {
+                  const own = list.ownerIds.some((id) =>
+                    world.people.some(
+                      (p) => p.id === id && p.userId === world.me.id,
+                    ),
+                  );
+                  const label = own
+                    ? "Your wish list"
+                    : `${list.ownerIds.map((id) => world.people.find((p) => p.id === id)?.name ?? "Managed profile").join(" & ")}’s wish list`;
+                  return (
+                    <Link
+                      key={list.id}
+                      className="event-wishlist-link"
+                      to={`/lists/${list.id}`}
+                    >
+                      <span>
+                        {label}
+                        {list.archived && <small>Archived wish list</small>}
+                      </span>
+                      <ArrowRight size={16} />
+                    </Link>
+                  );
+                })}
+              </div>
+              {event.canManage ? (
+                <ActionMenu name={event.name} label="Event actions">
+                  <Link className="text-button" to={`/events/${event.id}`}>
+                    Manage event
+                    <ArrowRight size={16} aria-hidden="true" />
                   </Link>
-                );
-              })}
+                  <button
+                    className="text-button"
+                    onClick={() =>
+                      open("Edit group event", <EventForm event={event} />)
+                    }
+                  >
+                    Edit event
+                  </button>
+                  <button
+                    className="text-button"
+                    onClick={() =>
+                      open(
+                        event.archived
+                          ? "Restore group event"
+                          : "Archive group event",
+                        <EventArchiveForm event={event} />,
+                      )
+                    }
+                  >
+                    {event.archived ? "Restore event" : "Archive event"}
+                  </button>
+                  <TrashButton kind="group-events" entry={event} />
+                </ActionMenu>
+              ) : (
+                <Link className="text-button" to={`/events/${event.id}`}>
+                  View event
+                  <ArrowRight size={16} aria-hidden="true" />
+                </Link>
+              )}
             </div>
           </article>
         );
@@ -559,6 +564,7 @@ export function EventPage() {
         My lists
       </Link>
       <Header
+        className="event-heading"
         title={event.name}
         description={
           event.description || `Individual wish lists for ${group.name}.`
@@ -591,30 +597,37 @@ export function EventPage() {
           </ActionMenu>
         )}
       </Header>
-      <details
-        className="list-privacy"
-        open={event.revealAfter ? true : undefined}
-      >
-        <summary>
-          <Privacy mode={event.mode} />
-          <Info size={16} aria-hidden="true" />
-          <span className="sr-only">Privacy details</span>
-        </summary>
-        <RevealPolicy list={event} />
-      </details>
-      <p className="muted">
-        Shared with everyone in {group.name}. Each person manages their own
-        wish-list items.
-      </p>
-      <GuidelineLabel amount={event.spendingGuidelineCents} />
+      <div className="event-overview">
+        <PrivacyDetails key={event.id} list={event} />
+        <dl className="event-facts">
+          <div>
+            <dt>Shared with</dt>
+            <dd>
+              Everyone in {group.name}
+              <span>Each person manages their own wish-list items.</span>
+            </dd>
+          </div>
+          {!event.archived && event.archiveAfter && (
+            <div>
+              <dt>Lists archive</dt>
+              <dd>
+                After{" "}
+                <time dateTime={event.archiveAfter}>
+                  {new Intl.DateTimeFormat("en-US", {
+                    dateStyle: "long",
+                    timeZone: "UTC",
+                  }).format(new Date(`${event.archiveAfter}T00:00:00Z`))}
+                </time>
+                <span>{event.timeZone}</span>
+              </dd>
+            </div>
+          )}
+        </dl>
+        <GuidelineLabel amount={event.spendingGuidelineCents} />
+      </div>
       {event.archived && (
         <p className="notice">
           This event is archived. Items and purchase history are kept.
-        </p>
-      )}
-      {!event.archived && event.archiveAfter && (
-        <p className="muted">
-          Lists archive after {event.archiveAfter} in {event.timeZone}.
         </p>
       )}
       <section aria-labelledby="event-participants-heading">

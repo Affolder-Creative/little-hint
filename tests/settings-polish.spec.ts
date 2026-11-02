@@ -569,9 +569,13 @@ for (const width of [393, 1440]) {
     await expect(
       page.getByRole("button", { name: "Try again", exact: true }),
     ).toHaveCount(0);
-    const privacy = page.locator(".list-privacy > summary");
+    const privacy = page.getByRole("button", { name: /Privacy details/ });
+    const privacyPanel = page.getByRole("dialog", { name: "Gift privacy" });
+    await expect(privacyPanel).not.toBeVisible();
     await privacy.click();
-    await expect(privacy.locator(".privacy-disclosure-label svg")).toHaveCSS(
+    await expect(privacyPanel).toBeVisible();
+    await expect(privacy).toHaveAttribute("aria-expanded", "true");
+    await expect(privacy.locator(".lucide-info")).toHaveCSS(
       "transform",
       "none",
     );
@@ -585,6 +589,11 @@ for (const width of [393, 1440]) {
         fullPage: true,
       });
     }
+    await privacyPanel
+      .getByRole("button", { name: "Close privacy details" })
+      .click();
+    await expect(privacyPanel).not.toBeVisible();
+    await expect(privacy).toBeFocused();
     await page
       .locator("main")
       .getByRole("button", { name: "Add item", exact: true })
