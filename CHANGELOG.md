@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.13.2](https://github.com/Affolder-Creative/little-hint/compare/v0.13.1...v0.13.2) (2026-11-02)
+
+
+### Fixes
+
+* polish event wish lists and privacy popovers ([#135](https://github.com/Affolder-Creative/little-hint/issues/135)) ([775be87](https://github.com/Affolder-Creative/little-hint/commit/775be8756563e47e4dc17d4cab81c1faffc9e3f6))
+
+
+### Dependencies
+
+* bump fonttools from 4.67.0 to 4.68.0 in /brand/little-hint-final/source ([#131](https://github.com/Affolder-Creative/little-hint/issues/131)) ([134119b](https://github.com/Affolder-Creative/little-hint/commit/134119b5f9c9f88cb8393cd78a753da69ea0f1e7))
+* bump uharfbuzz from 0.56.4 to 0.57.0 in /brand/little-hint-final/source ([#132](https://github.com/Affolder-Creative/little-hint/issues/132)) ([8b36965](https://github.com/Affolder-Creative/little-hint/commit/8b36965197fa9c85eaea3cb0ad4c09755eda0192))
+
+
+### Build and packaging
+
+* bump alpine/openssl from 3.5.4 to 3.5.8 ([#128](https://github.com/Affolder-Creative/little-hint/issues/128)) ([1f18aad](https://github.com/Affolder-Creative/little-hint/commit/1f18aadf4579c81c19acbc7e929059a4dcea5ac9))
+* bump caddy from 2.8-alpine to 2.10-alpine ([#130](https://github.com/Affolder-Creative/little-hint/issues/130)) ([9a81d98](https://github.com/Affolder-Creative/little-hint/commit/9a81d982f47e70983889c6f87e26bdf9732df971))
+* update Node to 24.22.2 and align runtime notices ([#129](https://github.com/Affolder-Creative/little-hint/issues/129)) ([e219dab](https://github.com/Affolder-Creative/little-hint/commit/e219dab80dc131ec65c8aa38ed4220f0f2b473b5))
+
+
+### Automation
+
+* bump docker/login-action from 4.6.0 to 4.7.0 in the actions group ([#133](https://github.com/Affolder-Creative/little-hint/issues/133)) ([57abebe](https://github.com/Affolder-Creative/little-hint/commit/57abebeb7d3cbd0de53e8b6a39f60912a98fc86f))
+
 ## [0.13.1](https://github.com/Affolder-Creative/little-hint/compare/v0.13.0...v0.13.1) (2026-11-01)
 
 
