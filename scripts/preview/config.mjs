@@ -6,17 +6,18 @@ export function parseArgs(args) {
     !["start", "status", "logs", "stop", "reset"].includes(command) ||
     flags.some(
       (f) =>
-        !(command === "start" && f === "--share") &&
+        !(command === "start" && ["--share", "--watch"].includes(f)) &&
         !(command === "reset" && f === "--yes"),
     ) ||
     new Set(flags).size !== flags.length
   )
     throw new Error(
-      "Usage: preview [start [--share] | status | logs | stop | reset [--yes]]",
+      "Usage: preview [start [--share] [--watch] | status | logs | stop | reset [--yes]]",
     );
   return {
     command,
     share: flags.includes("--share"),
+    watch: flags.includes("--watch"),
     yes: flags.includes("--yes"),
   };
 }
@@ -132,7 +133,7 @@ export function tunnelURL(log) {
   )?.[0];
 }
 
-export function gatewayConfiguration(origin) {
+export function gatewayConfiguration(origin, watch = false) {
   const host = origin ? new URL(origin).hostname : null;
   return `{
   auto_https off
@@ -147,8 +148,16 @@ export function gatewayConfiguration(origin) {
     header Cache-Control "no-store"
     reverse_proxy mailpit:8025
   }
-  handle {
+  ${
+    watch
+      ? `handle /api/* {
     reverse_proxy app:3000
+  }`
+      : ""
+  }
+  handle {
+    ${watch ? 'header Cache-Control "no-store"' : ""}
+    reverse_proxy ${watch ? "frontend:5173" : "app:3000"}
   }
   }
   handle_errors {

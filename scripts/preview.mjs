@@ -80,6 +80,7 @@ export async function main(args = process.argv.slice(2)) {
   const project = checkoutIdentity(root);
   const env = dockerEnvironment();
   let state;
+  let watch = options.watch;
   let child;
   let interrupted = false;
   const redact = (text) =>
@@ -178,6 +179,7 @@ export async function main(args = process.argv.slice(2)) {
         project,
         "-f",
         resolve(root, "compose.preview.yaml"),
+        ...(watch ? ["-f", resolve(root, "compose.preview-watch.yaml")] : []),
         "--profile",
         "share",
         "--profile",
@@ -255,7 +257,7 @@ export async function main(args = process.argv.slice(2)) {
   const writeGateway = (origin) =>
     atomicWrite(
       resolve(directory, "gateway/Caddyfile"),
-      gatewayConfiguration(origin),
+      gatewayConfiguration(origin, watch),
       0o644,
     );
   const healthyRoute = async (origin, route, expected) => {
@@ -286,7 +288,7 @@ export async function main(args = process.argv.slice(2)) {
       );
     }
     console.log(
-      `Version: ${metadata?.version || "unknown"} · Revision: ${metadata?.revision || "unknown"} · State: ${metadata?.status || "stopped"}`,
+      `Runtime: ${metadata?.watch ? "watch (live source)" : "fixed build"} · Version: ${metadata?.version || "unknown"} · Revision: ${metadata?.revision || "unknown"} · State: ${metadata?.status || "stopped"}`,
     );
     console.log(
       "npm run preview:stop | preview:reset | preview:status | preview:logs",
@@ -351,6 +353,7 @@ export async function main(args = process.argv.slice(2)) {
           "No preview configuration. Run npm run preview first, or restore .local/preview/state.json.",
         );
       validateState(state, root);
+      watch = !!(await json(resolve(directory, "session.json")))?.watch;
       try {
         await compose(["logs", "--follow", "--tail", "100"], {
           timeout: Infinity,
@@ -467,15 +470,34 @@ export async function main(args = process.argv.slice(2)) {
       if (error.code !== "ENOENT") throw error;
       await writeRuntime("http://localhost:1");
     }
+    const previous = await json(resolve(directory, "session.json"));
+    if (watch)
+      await atomicWrite(
+        resolve(directory, "frontend.env"),
+        envFile({ APP_URL: "http://localhost:1" }),
+      );
     const before = await containers();
     const beforeNetworks = await networks();
     let touched = false;
     try {
       console.log(`Building current checkout for ${project}...`);
-      await compose(["build", "app"], { timeout: 20 * 60_000, live: true });
+      await compose(["build", "app", ...(watch ? ["frontend"] : [])], {
+        timeout: 20 * 60_000,
+        live: true,
+      });
       touched = true;
       // Fresh sharing session every start; never reconnect an old hostname.
-      await compose(["rm", "--stop", "--force", "tunnel", "app", "worker"]);
+      watch = options.watch || !!previous?.watch;
+      await compose([
+        "rm",
+        "--stop",
+        "--force",
+        "tunnel",
+        "app",
+        "worker",
+        ...(watch ? ["frontend"] : []),
+      ]);
+      watch = options.watch;
       await writeGateway(null);
       const tls = await compose([
         "run",
@@ -525,6 +547,11 @@ export async function main(args = process.argv.slice(2)) {
         );
       }
       await writeRuntime(origin);
+      if (watch)
+        await atomicWrite(
+          resolve(directory, "frontend.env"),
+          envFile({ APP_URL: origin }),
+        );
       await writeGateway(origin);
       await compose([
         "exec",
@@ -546,8 +573,9 @@ export async function main(args = process.argv.slice(2)) {
           "-e",
           "ALLOW_SYNTHETIC_DATA=1",
           "app",
-          "node",
-          "dist/server/cli.js",
+          ...(watch
+            ? ["node", "--import", "tsx", "src/server/cli.ts"]
+            : ["node", "dist/server/cli.js"]),
           "ensure-preview",
         ],
         { live: true },
@@ -562,6 +590,7 @@ export async function main(args = process.argv.slice(2)) {
           "180",
           "app",
           "worker",
+          ...(watch ? ["frontend"] : []),
         ],
         { timeout: 240_000 },
       );
@@ -571,11 +600,16 @@ export async function main(args = process.argv.slice(2)) {
       await waitFor("the inbox through the gateway", () =>
         healthyRoute(origin, "/__preview/inbox/", "Mailpit"),
       );
+      if (watch)
+        await waitFor("the live frontend", () =>
+          healthyRoute(origin, "/", "/@vite/client"),
+        );
       const metadata = {
         project,
         origin,
         port,
         mode: options.share ? "shared" : "local",
+        watch,
         version,
         revision,
         status: "healthy",

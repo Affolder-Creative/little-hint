@@ -100,9 +100,18 @@ for (const [name, engine, profile, email] of [
     });
     // Visit inbox after the app's service worker has taken control. It must not
     // return the app shell, intercept its API, or cache captured mail.
-    await page.evaluate(async () => {
-      if ("serviceWorker" in navigator) await navigator.serviceWorker.ready;
-    });
+    if (process.argv.includes("--watch")) {
+      assert.equal(
+        await page.evaluate(() =>
+          navigator.serviceWorker.getRegistrations().then((r) => r.length),
+        ),
+        0,
+      );
+    } else {
+      await page.evaluate(async () => {
+        if ("serviceWorker" in navigator) await navigator.serviceWorker.ready;
+      });
+    }
     await page.goto(origin + "/__preview/inbox/");
     await page
       .getByText("Mailpit", { exact: true })

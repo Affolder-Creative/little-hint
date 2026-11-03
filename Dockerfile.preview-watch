@@ -1,0 +1,16 @@
+FROM node:24-alpine@sha256:8a32c8cf649a49915a66e81e7a609223c708d0adabf288ee3f4077d765542f85 AS dependencies
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
+COPY tsconfig.json ./
+RUN mkdir -p /data/uploads && chown node:node /data/uploads
+USER node
+
+FROM dependencies AS backend
+# Source is mounted separately, never the checkout root or its .env files.
+CMD ["node", "--import", "tsx", "src/server/index.ts"]
+
+FROM dependencies AS frontend
+COPY vite.config.ts index.html ./
+COPY scripts/preview/vite.config.ts ./scripts/preview/vite.config.ts
+CMD ["node", "node_modules/vite/bin/vite.js", "--config", "scripts/preview/vite.config.ts", "--configLoader", "runner"]
