@@ -713,7 +713,7 @@ function checkRevision(r: Base, v: number) {
   if (r.revision !== v)
     fail(409, "This changed since you opened it. Refresh and try again.");
 }
-export function activateAccount(s: State, a: Actor) {
+export function activateAccount(s: State, a: Actor, spendingDefault = false) {
   let p = s.people.find((p) => p.userId === a.id);
   const grants = s.invitations.filter(
     (i) =>
@@ -732,6 +732,14 @@ export function activateAccount(s: State, a: Actor) {
     };
     s.people.push(p);
     s.giftPreferences.push(newPreference(p.id));
+    if (spendingDefault && !s.spendingSettings.some((v) => v.userId === a.id))
+      s.spendingSettings.push({
+        ...stamp(),
+        userId: a.id,
+        enabled: true,
+        summaries: true,
+        enabledSource: "default",
+      });
     if (grant.bootstrap) {
       grant.acceptedBy = a.id;
       touch(grant);

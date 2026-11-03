@@ -202,6 +202,7 @@ it("locks environment overrides and validates limits, mode and staging isolation
     "set on the server",
   );
   expect((await settingsSummary()).map((s) => s.key)).toEqual([
+    "SPENDING_DEFAULT_ENABLED",
     "AUTO_IMPORT_PRODUCT_PHOTOS",
     "FAMILY_GROUP_CREATION",
     "PRODUCT_IMAGE_CACHE_ENABLED",
@@ -281,7 +282,7 @@ it("exposes only preferences and safe service status to administrators", async (
   expect(services.statusCode).toBe(200);
   expect(services.body).not.toContain("synthetic-key");
   expect(services.json()).toHaveLength(7);
-  expect((await app.inject("/api/v1/admin/settings")).json()).toHaveLength(4);
+  expect((await app.inject("/api/v1/admin/settings")).json()).toHaveLength(5);
   for (const key of [
     "OPENAI_API_KEY",
     "GIFT_DISCOVERY_MODE",
@@ -355,4 +356,22 @@ it("allows group policy in staging without enabling integrations and rejects inv
   );
   vi.stubEnv("FAMILY_GROUP_CREATION", "invalid");
   await expect(makeApp()).rejects.toThrow("FAMILY_GROUP_CREATION");
+});
+
+it("limits the new-account spending default to app admins", async () => {
+  const save = () =>
+    app.inject({
+      method: "POST",
+      url: "/api/v1/admin/settings",
+      headers,
+      payload: { key: "SPENDING_DEFAULT_ENABLED", value: "true" },
+    });
+  expect((await save()).statusCode).toBe(403);
+  mocks.state.people.find((p) => p.userId === mocks.actor!.id)!.admin = true;
+  vi.stubEnv("SPENDING_ENABLED", "false");
+  expect((await save()).statusCode).toBe(200);
+  expect((await app.inject("/api/v1/admin/settings")).json()).toContainEqual(
+    expect.objectContaining({ key: "SPENDING_DEFAULT_ENABLED", value: "true" }),
+  );
+  expect(mocks.state.spendingSettings).toEqual([]);
 });

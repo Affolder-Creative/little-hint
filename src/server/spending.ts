@@ -321,6 +321,7 @@ export function spendingCommand(
       setting = { ...stamp(), userId: a.id, ...p };
       s.spendingSettings.push(setting);
     } else Object.assign(setting, p, { revision: setting.revision + 1 });
+    delete setting.enabledSource;
     if (!p.enabled) {
       const c = connection(s, a);
       if (c) {

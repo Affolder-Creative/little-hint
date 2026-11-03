@@ -122,4 +122,11 @@ Listed prices estimate plans; recorded payments, contributions, reimbursements a
 
 Wishlist selection in Add purchase links the spending record and purchased status in one transaction. Manual names remain supported. Search uses authorized gifts and outstanding reservations; choosing a suggestion alone saves nothing. Linked recipients and source event stay attached to the gift. Amounts remain unknown until entered or an estimate is explicitly accepted.
 
-The deployment-only SPENDING_ENABLED switch defaults to available; false hides and disables the new spending feature without deleting preferences or records. Normal buying, listed prices, contributions, and existing event spending guidelines remain available. Personal tracking remains opt-in.
+The deployment-only SPENDING_ENABLED switch defaults to available; false hides and disables the new spending feature without deleting preferences or records. Normal buying, listed prices, contributions, and existing event spending guidelines remain available. Personal tracking starts off unless enabled by the saved new-account default. Each person retains their own off switch.
+
+
+App administrators can enable private spending tracking by default at first verified
+account activation. This saved preference starts off and does not change existing
+accounts. Each person retains their off switch, and partner consent and sharing
+rules remain unchanged. Newly enabled people see an explanation in Spending
+settings and their spending view. No external notification is sent.

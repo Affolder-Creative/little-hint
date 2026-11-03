@@ -2,6 +2,7 @@ import type { Base } from "./model";
 export interface SpendingSettings extends Base {
   userId: string;
   enabled: boolean;
+  enabledSource?: "default";
   summaries: boolean;
 }
 export interface SpendingConnection extends Base {

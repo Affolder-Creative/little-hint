@@ -352,6 +352,12 @@ Product photo loading preserves the image area and contains the product. Visible
 
 ### Administration
 
+The new-account spending default reuses the existing checkbox and independent
+save/discard form. Its explanation states when the default applies and preserves
+personal choice. Personal spending views show a quiet explanation with a settings
+link when tracking was enabled at signup. Use existing spacing, typography, and
+theme colors.
+
 Administration contains App settings, This month's usage, Service status, and Background jobs. Family-group creation, automatic product photos, device photo caching, and photo prefetching are editable, with optional locking ENV overrides. All service credentials, providers, models, limits, and AI availability are deployment-only. Service status reports configuration presence, not verified connectivity. When AI_ENABLED is false, omit AI service rows, AI usage groups, and AI-specific explanatory copy even when history exists. Retain other disabled services’ current-month usage with Currently off; omit sections with only prior-month or skipped SMS history. Preserve notification retries, failed shop lookups, and the note that backup status is unavailable.
 
 Related administration controls share warm beige panels (`#faeee5`) slightly darker than the page in light mode, retaining the paper background in dark mode. Panels have panel-radius corners and no shadow. Panels use 20px padding, reduced to 16px at 650px and below, and 24px separation. Their headings use the panel-title size; internal headings use 17px. Keep non-AI service diagnostics visible when AI is disabled; omit the monthly usage panel when no service qualifies. Service status uses flat divided rows with readable capability names and configuration status. Disabled fields retain full opacity, muted text, the page background, and a decorative border.

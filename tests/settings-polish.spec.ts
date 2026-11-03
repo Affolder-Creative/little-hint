@@ -29,6 +29,7 @@ async function setup(
     f.state.people.push(person);
   }
   const settings = [
+    { key: "SPENDING_DEFAULT_ENABLED", value: "false", source: "settings" },
     ...["PRODUCT_IMAGE_CACHE_ENABLED", "PRODUCT_IMAGE_PREFETCH_ENABLED"].map(
       (key) => ({
         key,
@@ -637,3 +638,46 @@ for (const width of [393, 1280]) {
     ).toHaveCount(0);
   });
 }
+
+for (const width of [393, 1280])
+  test(`new-account spending default saves independently at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 1000 });
+    const f = await setup(page);
+    const original = structuredClone(f.modelState.spendingSettings);
+    await page.goto("/settings?section=admin");
+    const spending = page.getByRole("region", {
+      name: "Spending",
+      exact: true,
+    });
+    const checkbox = spending.getByLabel(
+      "Enable spending tracking for new accounts",
+    );
+    await expect(checkbox).not.toBeChecked();
+    await checkbox.check();
+    await spending.getByRole("button", { name: "Discard changes" }).click();
+    await expect(checkbox).not.toBeChecked();
+    await checkbox.check();
+    await page.route(
+      "**/api/v1/admin/settings",
+      (route) => route.fulfill({ status: 500, json: { error: "Try again" } }),
+      { times: 1 },
+    );
+    await spending
+      .getByRole("button", { name: "Save spending default" })
+      .click();
+    await expect(spending).toContainText("Try again");
+    await expect(checkbox).toBeChecked();
+    await spending
+      .getByRole("button", { name: "Save spending default" })
+      .click();
+    await expect(spending.getByRole("status")).toHaveText("Spending saved.");
+    expect(f.modelState.spendingSettings).toEqual(original);
+    await page.reload();
+    await expect(checkbox).toBeChecked();
+    await page.screenshot({
+      path: `/tmp/spending-default-${width}.png`,
+      fullPage: true,
+    });
+  });

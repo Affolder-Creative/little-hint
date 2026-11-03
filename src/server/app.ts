@@ -65,6 +65,7 @@ import {
 import {
   config,
   settingsSummary,
+  applicationSettingKeys,
   saveSettings,
   effectiveConfig,
   canCreateGroups,
@@ -590,7 +591,12 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
       fail(403, "Administrator access required.");
     const update = z.object({ key: z.string(), value: z.string().max(10000) });
     const b = z
-      .union([update, z.object({ updates: z.array(update).min(1).max(4) })])
+      .union([
+        update,
+        z.object({
+          updates: z.array(update).min(1).max(applicationSettingKeys.length),
+        }),
+      ])
       .parse(req.body);
     await saveSettings("updates" in b ? b.updates : [b]);
     return { ok: true };

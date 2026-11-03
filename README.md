@@ -203,4 +203,17 @@ For paid shop lookups, see [Shop lookup configuration](docs/shop-lookups.md), in
 
 ### Spending availability
 
-`SPENDING_ENABLED` is deployment-only. Leave it unset or blank to make optional spending tracking available; each person still opts in under Settings → Spending. Only `false` disables it, ignoring surrounding whitespace and letter case. Restart the app after changing this environment variable. Disabled deployments hide the new spending and budget UI and reject its endpoints. Existing preferences and records remain stored. Ordinary reservations, purchase status, contributions, listed prices, and older event/exchange spending guidelines still work. When re-enabled, missed purchases reconcile privately without inventing paid amounts or dates.
+`SPENDING_ENABLED` is deployment-only. Leave it unset or blank to make optional spending tracking available; tracking starts off unless an app administrator enables the new-account default. Each person can change their choice under Settings → Spending. Only `false` disables it, ignoring surrounding whitespace and letter case. Restart the app after changing this environment variable. Disabled deployments hide the new spending and budget UI and reject its endpoints. Existing preferences and records remain stored. Ordinary reservations, purchase status, contributions, listed prices, and older event/exchange spending guidelines still work. When re-enabled, missed purchases reconcile privately without inventing paid amounts or dates.
+
+
+### New-account spending default
+
+Settings → Administration → App settings lets app administrators enable private
+spending tracking for new accounts. This preference starts off and applies once,
+at first verified sign-in. It does not change existing accounts or later sign-ins.
+Each person can turn tracking off under Settings → Spending. Sharing still
+requires separate partner consent.
+
+When `SPENDING_ENABLED=false`, the new-account preference is still saved and
+applied at account activation, but tracking stays unavailable until the deployment
+switch is restored. No database migration or backfill is required.
