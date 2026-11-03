@@ -72,6 +72,73 @@ describe.skipIf(!url)("PostgreSQL transaction integrity", () => {
   afterAll(async () => {
     await storage?.pool.end();
   });
+  it("reads only the account's buying records and records transaction timings", async () => {
+    const { databaseMetrics } = await import("../src/server/metrics");
+    const before = databaseMetrics.transactions.snapshot().count;
+    let buyerReservation: string, outsiderReservation: string;
+    await storage.transact((s) => {
+      const base = {
+        ...stamp(),
+        itemId,
+        buyerId: b.id,
+        quantity: 0,
+        purchased: 0,
+        former: false,
+        titleSnapshot: "History",
+      };
+      buyerReservation = base.id;
+      const other = { ...base, ...stamp(), buyerId: c.id };
+      outsiderReservation = other.id;
+      s.reservations.push(base, other);
+      s.contributions.push({
+        ...stamp(),
+        reservationId: base.id,
+        userId: c.id,
+        amountCents: 100,
+        status: "sent",
+      });
+      s.contributions.push({
+        ...stamp(),
+        reservationId: other.id,
+        userId: a.id,
+        amountCents: 100,
+        status: "sent",
+      });
+    });
+    try {
+      const buyer = await storage.readBuyingState(b.id);
+      expect(buyer.reservations.map((r) => r.id)).toEqual([buyerReservation!]);
+      expect(buyer.contributions).toHaveLength(1);
+      const contributor = await storage.readBuyingState(a.id);
+      expect(contributor.reservations.map((r) => r.id)).toEqual([
+        outsiderReservation!,
+      ]);
+      expect(contributor.contributions).toHaveLength(1);
+      expect((await storage.readBuyingState("unrelated")).reservations).toEqual(
+        [],
+      );
+      expect(buyer.items).toEqual([]);
+      expect(databaseMetrics.transactions.snapshot().count).toBe(before + 1);
+      const waits = databaseMetrics.lockWait.snapshot().count;
+      await expect(
+        storage.transact(() => {
+          throw new Error("rollback probe");
+        }),
+      ).rejects.toThrow("rollback probe");
+      expect(databaseMetrics.transactions.snapshot().count).toBe(before + 2);
+      expect(databaseMetrics.lockWait.snapshot().count).toBe(waits + 1);
+    } finally {
+      await storage.transact((s) => {
+        s.reservations = s.reservations.filter(
+          (r) => ![buyerReservation, outsiderReservation].includes(r.id),
+        );
+        s.contributions = s.contributions.filter(
+          (c) =>
+            ![buyerReservation, outsiderReservation].includes(c.reservationId),
+        );
+      });
+    }
+  });
   it("refuses future record types without deleting or modifying any records", async () => {
     const id = crypto.randomUUID();
     await storage.pool.query(

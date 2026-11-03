@@ -1,3 +1,12 @@
+import {
+  requestMetrics,
+  databaseMetrics,
+  queueMetrics,
+  workerMetrics,
+} from "./metrics";
+import { cachedProbe, uploadStorage } from "./storage-metrics";
+import { readBuyingState } from "./db";
+import { cancelledBuying, contributionHistory } from "./buying-history";
 import { trustedProxies } from "./proxy";
 import { spendingAvailable } from "./deployment";
 import {
@@ -108,6 +117,26 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
     logController: new LogController({ disableRequestLogging: true }),
     bodyLimit: 6_000_000,
     trustProxy: trustedProxies(process.env.TRUSTED_PROXIES),
+  });
+  const timings = requestMetrics();
+  app.addHook("onResponse", async (req, reply) => {
+    timings.observe(
+      req.method,
+      req.routeOptions.url,
+      reply.statusCode,
+      reply.elapsedTime,
+    );
+  });
+  const storage = cachedProbe(async () => {
+    const [database, uploads] = await Promise.all([
+      pool.query("SELECT pg_database_size(current_database())::text AS bytes"),
+      uploadStorage(mediaDir()),
+    ]);
+    return {
+      sampledAt: new Date().toISOString(),
+      databaseBytes: Number(database.rows[0].bytes),
+      uploads,
+    };
   });
   const auth = makeAuth();
   const cloudflareAnalytics = cloudflareWebAnalyticsEnabled();
@@ -256,7 +285,7 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
     const state = await readState();
     const cfg = await config();
     return {
-      ...world(state, a),
+      ...world(state, a, req.headers["x-little-hint-world"] === "compact"),
       productLookupEnabled: productLookupEnabled(cfg),
       sms: smsInfo(cfg),
       telegram: telegramInfo(cfg),
@@ -266,6 +295,14 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
       notificationAsOf,
       environment: deploymentEnvironment(),
     };
+  });
+  app.get("/api/v1/buying/cancelled", async (req) => {
+    const a = await actor(req);
+    return cancelledBuying(await readBuyingState(a.id), a, req.query);
+  });
+  app.get("/api/v1/buying/contributions", async (req) => {
+    const a = await actor(req);
+    return contributionHistory(await readBuyingState(a.id), a, req.query);
   });
   app.get<{ Params: { id: string } }>("/api/v1/imports/:id", async (req) => {
     const a = await actor(req);
@@ -628,6 +665,22 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
     if (!isAdmin(state, a)) fail(403, "Administrator access required.");
     await refreshSmsQuota();
     return adminUsage(await readState(), await config());
+  });
+  app.get("/api/v1/admin/metrics", async (req) => {
+    const a = await actor(req);
+    const state = await readState();
+    if (!isAdmin(state, a)) fail(403, "Administrator access required.");
+    return {
+      requests: timings.snapshot(),
+      database: {
+        startedAt: databaseMetrics.startedAt,
+        transactions: databaseMetrics.transactions.snapshot(),
+        lockWait: databaseMetrics.lockWait.snapshot(),
+      },
+      worker: workerMetrics(state),
+      queues: queueMetrics(state),
+      storage: await storage(),
+    };
   });
   app.get("/api/v1/admin/jobs", async (req) => {
     const a = await actor(req),

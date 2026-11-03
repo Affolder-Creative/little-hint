@@ -1,0 +1,94 @@
+import type { State, Actor, Person, Group, Item, List } from "../shared/model";
+import { canManageGroupEvents } from "../shared/group-events";
+import { itemTrashed } from "../shared/organization";
+import { listIsArchived } from "../shared/list-dates";
+import { fail, touch } from "./domain-common";
+import { emitActivity } from "./activity";
+export const controllers = (p: Person) =>
+  [p.userId, ...p.guardians].filter((v): v is string => !!v);
+export const controls = (s: State, a: Actor, id: string) =>
+  !!s.people.find((p) => p.id === id && controllers(p).includes(a.id));
+export const ownIds = (s: State, a: Actor) =>
+  s.people.filter((p) => controllers(p).includes(a.id)).map((p) => p.id);
+export const member = (g: Group, a: Actor) => g.memberIds.includes(a.id);
+export const groupAccess = (s: State, a: Actor, groupId: string) =>
+  !!s.groups.find((g) => g.id === groupId && member(g, a));
+export const managesGroupExchanges = (s: State, a: Actor, groupId: string) =>
+  s.groups.some((g) => g.id === groupId && canManageGroupEvents(g, a.id));
+export const isAdmin = (s: State, a: Actor) =>
+  s.people.some((p) => p.userId === a.id && p.admin);
+export const ownedGroup = (s: State, a: Actor, id: string) =>
+  s.groups.find((g) => g.id === id && g.ownerId === a.id) ??
+  fail(404, "Family group not found.");
+export const personVisible = (s: State, a: Actor, p: Person) =>
+  controllers(p).includes(a.id) ||
+  s.groups.some(
+    (g) => member(g, a) && controllers(p).some((u) => g.memberIds.includes(u)),
+  );
+export const checkRecipients = (s: State, a: Actor, rs: string[]) => {
+  if (
+    !rs.length ||
+    rs.some(
+      (id) => !s.people.some((p) => p.id === id && personVisible(s, a, p)),
+    )
+  )
+    fail(400, "Choose an available recipient.");
+};
+export const checkGroups = (s: State, a: Actor, gs: string[]) => {
+  if (gs.some((g) => !groupAccess(s, a, g)))
+    fail(404, "Family group not found.");
+};
+export const recipient = (s: State, a: Actor, i: Item) =>
+  i.recipientIds.some((p) => controls(s, a, p));
+export const listVisible = (s: State, a: Actor, l: List) =>
+  !l.deletedAt &&
+  (l.ownerIds.some((p) => controls(s, a, p)) ||
+    l.groupIds.some((g) => groupAccess(s, a, g)));
+export function itemVisible(s: State, a: Actor, i: Item): boolean {
+  if (itemTrashed(s, i)) return false;
+  if (i.listId) {
+    const l = s.lists.find((l) => l.id === i.listId);
+    return !!l && listVisible(s, a, l);
+  }
+  if (i.creatorId === a.id) return true;
+  if (i.visibility === "private") return false;
+  if (recipient(s, a, i)) return i.visibility === "visible";
+  return i.groupIds.some((g) => groupAccess(s, a, g));
+}
+export const canEdit = (s: State, a: Actor, i: Item) =>
+  i.listId
+    ? !!s.lists.find(
+        (l) => l.id === i.listId && l.ownerIds.some((p) => controls(s, a, p)),
+      )
+    : i.creatorId === a.id;
+export const getItem = (s: State, a: Actor, id: string) =>
+  s.items.find((i) => i.id === id && itemVisible(s, a, i)) ??
+  fail(404, "Item not found.");
+export const archived = (s: State, i: Item) =>
+  i.archived || !!s.lists.find((l) => l.id === i.listId && listIsArchived(l));
+export const name = (s: State, userId: string) =>
+  s.people.find((p) => p.userId === userId)?.name ?? "Former member";
+export const mode = (s: State, i: Item) =>
+  s.lists.find((l) => l.id === i.listId)?.mode ?? "surprise";
+export function reconcileAccess(s: State) {
+  for (const r of s.reservations) {
+    const i = s.items.find((i) => i.id === r.itemId);
+    if (
+      r.quantity &&
+      !r.former &&
+      i &&
+      !itemTrashed(s, i) &&
+      !itemVisible(s, { id: r.buyerId, email: "", name: "" }, i)
+    ) {
+      r.quantity = r.purchased;
+      r.former = true;
+      touch(r);
+      emitActivity(s, "access", [r.buyerId], { action: "access-lost" });
+      for (const c of s.contributions.filter((c) => c.reservationId === r.id)) {
+        if (c.status === "pledged") c.status = "cancelled";
+        emitActivity(s, "access", [c.userId], { action: "access-lost" });
+        touch(c);
+      }
+    }
+  }
+}

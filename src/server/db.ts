@@ -1,3 +1,4 @@
+import { databaseMetrics } from "./metrics";
 import "dotenv/config";
 import { Pool } from "pg";
 import { drizzle } from "drizzle-orm/node-postgres";
@@ -64,42 +65,49 @@ export async function readState(): Promise<State> {
 export async function transact<T>(
   fn: (s: State) => T | Promise<T>,
 ): Promise<T> {
-  return db.transaction(async (tx) => {
-    await tx.execute(sql`select pg_advisory_xact_lock(742903118)`);
-    const versions = await tx.execute(
-      sql`SELECT max(version) AS version FROM schema_migration`,
-    );
-    if (Number(versions.rows[0]?.version ?? 0) > supportedSchemaVersion)
-      throw new Error(
-        "Database schema is newer than this application. Upgrade app and worker together.",
+  const started = performance.now();
+  try {
+    return await db.transaction(async (tx) => {
+      const waiting = performance.now();
+      await tx.execute(sql`select pg_advisory_xact_lock(742903118)`);
+      databaseMetrics.lockWait.observe(performance.now() - waiting);
+      const versions = await tx.execute(
+        sql`SELECT max(version) AS version FROM schema_migration`,
       );
-    const rows = await tx.select().from(schema.records);
-    assertRecordCompatibility(rows);
-    const state = emptyState();
-    const before = new Map(rows.map((r) => [r.id, JSON.stringify(r.data)]));
-    for (const row of rows) {
-      if (kinds.includes(row.kind as Kind))
-        (state[row.kind as Kind] as unknown[]).push(row.data);
-    }
-    const result = await fn(state);
-    const after = new Set<string>();
-    for (const kind of kinds)
-      for (const record of state[kind]) {
-        after.add(record.id);
-        if (before.get(record.id) !== JSON.stringify(record))
-          await tx
-            .insert(schema.records)
-            .values({ id: record.id, kind, data: record })
-            .onConflictDoUpdate({
-              target: schema.records.id,
-              set: { data: record, kind },
-            });
+      if (Number(versions.rows[0]?.version ?? 0) > supportedSchemaVersion)
+        throw new Error(
+          "Database schema is newer than this application. Upgrade app and worker together.",
+        );
+      const rows = await tx.select().from(schema.records);
+      assertRecordCompatibility(rows);
+      const state = emptyState();
+      const before = new Map(rows.map((r) => [r.id, JSON.stringify(r.data)]));
+      for (const row of rows) {
+        if (kinds.includes(row.kind as Kind))
+          (state[row.kind as Kind] as unknown[]).push(row.data);
       }
-    for (const id of before.keys())
-      if (!after.has(id))
-        await tx.delete(schema.records).where(eq(schema.records.id, id));
-    return result;
-  });
+      const result = await fn(state);
+      const after = new Set<string>();
+      for (const kind of kinds)
+        for (const record of state[kind]) {
+          after.add(record.id);
+          if (before.get(record.id) !== JSON.stringify(record))
+            await tx
+              .insert(schema.records)
+              .values({ id: record.id, kind, data: record })
+              .onConflictDoUpdate({
+                target: schema.records.id,
+                set: { data: record, kind },
+              });
+        }
+      for (const id of before.keys())
+        if (!after.has(id))
+          await tx.delete(schema.records).where(eq(schema.records.id, id));
+      return result;
+    });
+  } finally {
+    databaseMetrics.transactions.observe(performance.now() - started);
+  }
 }
 export async function migrate(databasePool = pool) {
   const client = await databasePool.connect();
@@ -155,4 +163,32 @@ INSERT INTO schema_migration(version) VALUES (2);`);
   } finally {
     client.release();
   }
+}
+
+/** History needs only the actor's reservations/contributions and display names. */
+export async function readBuyingState(userId: string): Promise<State> {
+  const { rows } = await pool.query(
+    `
+    WITH relevant_reservations AS (
+      SELECT r.data, r.id FROM app_record r WHERE r.kind = 'reservations' AND (
+        r.data->>'buyerId' = $1 OR EXISTS (
+          SELECT 1 FROM app_record c WHERE c.kind = 'contributions'
+          AND c.data->>'userId' = $1 AND c.data->>'reservationId' = r.id
+        )
+      )
+    )
+    SELECT 'reservations' AS kind, data FROM relevant_reservations
+    UNION ALL
+    SELECT 'contributions', c.data FROM app_record c WHERE c.kind = 'contributions'
+      AND (c.data->>'userId' = $1 OR c.data->>'reservationId' IN (
+        SELECT id FROM relevant_reservations WHERE data->>'buyerId' = $1
+      ))
+    UNION ALL
+    SELECT 'people', data FROM app_record WHERE kind = 'people'
+  `,
+    [userId],
+  );
+  const state = emptyState();
+  for (const row of rows) (state[row.kind as Kind] as unknown[]).push(row.data);
+  return state;
 }

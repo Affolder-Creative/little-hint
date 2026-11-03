@@ -1,3 +1,5 @@
+import { emptyState } from "../src/shared/model";
+import { recordWorkerMetrics, workerMetricKeys } from "../src/server/metrics";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { Pool } from "pg";
 import { seedStaging } from "../src/server/staging-seed";
@@ -29,6 +31,48 @@ describe.skipIf(!url)("staging seeding transactions", () => {
   });
   afterAll(async () => {
     await pool?.end();
+  });
+  it("seeds after worker metrics are recorded and preserves every measurement", async () => {
+    const state = emptyState();
+    recordWorkerMetrics(state);
+    expect(state.usage.map((row) => row.key).sort()).toEqual(
+      [...workerMetricKeys].sort(),
+    );
+    for (const row of state.usage)
+      await pool.query(
+        "INSERT INTO app_record (id,kind,data) VALUES ($1,'usage',$2)",
+        [row.id, JSON.stringify(row)],
+      );
+    expect(await seedStaging(pool, env)).toHaveLength(5);
+    const stored = await pool.query(
+      "SELECT data FROM app_record WHERE id = ANY($1::text[])",
+      [state.usage.map((row) => row.id)],
+    );
+    expect(
+      stored.rows
+        .map((row) => row.data)
+        .sort((a, b) => a.id.localeCompare(b.id)),
+    ).toEqual([...state.usage].sort((a, b) => a.id.localeCompare(b.id)));
+    await expect(seedStaging(pool, env)).rejects.toThrow("empty database");
+  });
+  it("does not treat arbitrary records with a metric-like key as an empty database", async () => {
+    const row = {
+      id: "unexpected-metric",
+      key: "worker-metrics.private-data",
+      count: 1,
+    };
+    await pool.query(
+      "INSERT INTO app_record (id,kind,data) VALUES ($1,'usage',$2)",
+      [row.id, JSON.stringify(row)],
+    );
+    await expect(seedStaging(pool, env)).rejects.toThrow("empty database");
+    expect(
+      (await pool.query('SELECT count(*) FROM "user"')).rows[0].count,
+    ).toBe("0");
+    expect(
+      (await pool.query("SELECT data FROM app_record WHERE id=$1", [row.id]))
+        .rows[0].data,
+    ).toEqual(row);
   });
   it("allows and preserves the running worker's operational heartbeat", async () => {
     await pool.query(

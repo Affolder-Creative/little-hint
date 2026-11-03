@@ -1,3 +1,6 @@
+import { readState, readBuyingState } from "../src/server/db";
+import { emptyState } from "../src/shared/model";
+import { stamp } from "../src/server/domain";
 import { z } from "zod";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { FastifyServerOptions } from "fastify";
@@ -10,6 +13,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("../src/server/db", () => ({
   pool: { query: mocks.query },
   readState: vi.fn(),
+  readBuyingState: vi.fn(),
   transact: vi.fn(),
 }));
 vi.mock("../src/server/auth", () => ({
@@ -285,4 +289,47 @@ it("returns readable validation errors in the existing HTTP error shape", async 
     error:
       "Item name: use at least 1 character. Quantity: enter a number no greater than 999.",
   });
+});
+
+it("restricts operational metrics to administrators and omits account and URL details", async () => {
+  app = await makeApp();
+  const state = emptyState();
+  vi.mocked(readState).mockResolvedValue(state);
+  expect((await app.inject("/api/v1/admin/metrics")).statusCode).toBe(401);
+  mocks.user = "ordinary-user";
+  expect((await app.inject("/api/v1/admin/metrics")).statusCode).toBe(403);
+  state.people.push({
+    ...stamp(),
+    name: "Admin",
+    userId: mocks.user,
+    guardians: [],
+    admin: true,
+  });
+  mocks.query.mockResolvedValue({ rows: [{ bytes: "12345" }] });
+  await app.inject("/api/v1/imports/private-id?secret=private-value");
+  const response = await app.inject("/api/v1/admin/metrics");
+  expect(response.statusCode).toBe(200);
+  expect(response.headers["cache-control"]).toBe("no-store");
+  expect(response.json().storage.databaseBytes).toBe(12345);
+  expect(response.body).not.toMatch(/ordinary-user|private-id|private-value/);
+  expect(
+    response
+      .json()
+      .requests.routes.some(
+        (r: { route: string }) => r.route === "GET /api/v1/imports/:id",
+      ),
+  ).toBe(true);
+});
+it("authenticates history, passes the current actor to narrow reads, and rejects bad cursors", async () => {
+  app = await makeApp();
+  expect((await app.inject("/api/v1/buying/cancelled")).statusCode).toBe(401);
+  mocks.user = "history-buyer";
+  vi.mocked(readBuyingState).mockResolvedValue(emptyState());
+  const response = await app.inject("/api/v1/buying/cancelled?limit=10");
+  expect(response.statusCode).toBe(200);
+  expect(response.json()).toEqual({ rows: [], nextCursor: null });
+  expect(vi.mocked(readBuyingState)).toHaveBeenLastCalledWith("history-buyer");
+  expect(
+    (await app.inject("/api/v1/buying/contributions?cursor=bad")).statusCode,
+  ).toBe(400);
 });
