@@ -433,3 +433,87 @@
     align-items: flex-start;
   }
 }
+
+/* Keep related purchase actions together at every width. */
+.spending-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.spending-row-actions > * {
+  flex-shrink: 1;
+}
+.spending-row-actions .entry-actions-label {
+  white-space: normal;
+}
+.spending-page .entry-actions-content .text-button:is(button, a) {
+  text-decoration: none;
+}
+.spending-filter-toggle button[aria-expanded="true"] {
+  background: var(--soft);
+  border-color: var(--accent);
+}
+.spending-filter-toggle button[aria-expanded="true"] > svg:last-child {
+  transform: rotate(180deg);
+}
+.spending-row-description > p {
+  line-height: 1.45;
+}
+.spending-row-status {
+  display: inline-block;
+  padding: 2px 6px;
+  background: var(--soft);
+  border-radius: 4px;
+}
+.spending-dialog-form > .form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+.spending-dialog-form > .form-actions > .button[type="submit"] {
+  width: auto;
+}
+@media (max-width: 650px) {
+  .spending-dialog-form > .form-actions > .button[type="submit"] {
+    flex: 1;
+    min-width: 0;
+  }
+  .spending-row-controls {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .spending-row-actions {
+    width: 100%;
+  }
+  .spending-row-actions > .button {
+    padding-inline: 12px;
+  }
+  .spending-row-actions .entry-actions > summary {
+    padding-inline: 10px;
+  }
+  .spending-row-actions .entry-actions-label {
+    font-size: 0;
+  }
+  .spending-row-actions .entry-actions-label::after {
+    content: "More";
+    font-size: 14px;
+  }
+  .spending-unknown {
+    max-width: none;
+  }
+}
+dialog.dialog[data-compact="true"]:has(.spending-dialog-form) {
+  --dialog-gap: 8px;
+  height: calc(var(--dialog-viewport-height, 100dvh) - 16px);
+}
+dialog[data-compact="true"]:has(.spending-dialog-form) > .dialog-heading {
+  padding-block: 8px;
+}
+dialog[data-compact="true"] .spending-dialog-form > .form-actions {
+  padding-block: 8px;
+}
+dialog[data-compact="true"] .spending-dialog-form > .form-content {
+  padding-block: 12px;
+}

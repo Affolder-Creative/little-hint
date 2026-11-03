@@ -8,13 +8,14 @@ import {
   Plus,
   Settings,
   SlidersHorizontal,
+  ChevronDown,
 } from "lucide-react";
 import { api, dollars } from "./api";
 import { useApp } from "./context";
 import { Form, Field, Header, useModalDismiss } from "./components";
 import { Action } from "./Action";
 import { ActionMenu } from "./Management";
-import { PurchaseForm } from "./SpendingPurchase";
+import { PurchaseForm, PurchaseListField } from "./SpendingPurchase";
 export { PurchaseForm } from "./SpendingPurchase";
 import {
   allocatedCents,
@@ -285,16 +286,24 @@ function SpendingDialogForm(
   props: Omit<ComponentProps<typeof Form>, "cancel" | "dialogLayout">,
 ) {
   const dismiss = useModalDismiss();
-  return <Form {...props} dialogLayout cancel={() => dismiss?.()} />;
+  return (
+    <Form
+      {...props}
+      className={`spending-dialog-form ${props.className ?? ""}`}
+      dialogLayout
+      cancel={() => dismiss?.()}
+    />
+  );
 }
 function RecordForm({
   record: r,
   onSuccess,
 }: {
-  record: SpendingRecord;
+  record: SpendingRecord & { canAssignList?: boolean };
   onSuccess?: () => void;
 }) {
   const { mutate, close } = useApp();
+  const [listId, setListId] = useState(r.listId ?? "");
   return (
     <SpendingDialogForm
       submit="Save changes"
@@ -302,6 +311,10 @@ function RecordForm({
         await mutate("spending/record", {
           id: r.id,
           revision: r.revision,
+          listId:
+            r.canAssignList && listId !== (r.listId ?? "")
+              ? listId || null
+              : undefined,
           amountCents: amount(f),
           date: String(f.get("date") ?? "") || null,
           planningYear: Number(f.get("year") ?? r.planningYear),
@@ -340,6 +353,13 @@ function RecordForm({
         <Field label="Purchase date">
           <input name="date" type="date" defaultValue={r.date ?? ""} />
         </Field>
+      )}
+      {r.canAssignList && (
+        <PurchaseListField
+          recipientIds={r.recipientIds}
+          value={listId}
+          onChange={setListId}
+        />
       )}
       {r.recipientIds.length > 1 && (
         <fieldset className="spending-splits">
@@ -624,26 +644,36 @@ function SpendingRow({
                 <p key={i}>
                   {h.description} · {new Date(h.at).toLocaleDateString()}
                   {h.changes &&
-                    Object.entries(h.changes).map(([key, change]) => (
-                      <span className="spending-change" key={key}>
-                        {(
-                          {
-                            amountCents: "Amount paid",
-                            date: "Purchase date",
-                            planningYear: "Planning year",
-                            splits: "Recipient shares",
-                          } as Record<string, string>
-                        )[key] ?? key}
-                        :{" "}
-                        {key === "amountCents"
-                          ? dollars(change.before as number | null)
-                          : String(change.before ?? "Not recorded")}{" "}
-                        →{" "}
-                        {key === "amountCents"
-                          ? dollars(change.after as number | null)
-                          : String(change.after ?? "Not recorded")}
-                      </span>
-                    ))}
+                    Object.entries(h.changes)
+                      .filter(
+                        ([key]) =>
+                          !["listId", "eventId", "listOwnerNames"].includes(
+                            key,
+                          ),
+                      )
+                      .map(([key, change]) => (
+                        <span className="spending-change" key={key}>
+                          {(
+                            {
+                              amountCents: "Amount paid",
+                              date: "Purchase date",
+                              planningYear: "Planning year",
+                              splits: "Recipient shares",
+                              listId: "Wish list",
+                              listName: "Wish list",
+                              eventName: "Group event",
+                            } as Record<string, string>
+                          )[key] ?? key}
+                          :{" "}
+                          {key === "amountCents"
+                            ? dollars(change.before as number | null)
+                            : String(change.before ?? "Not recorded")}{" "}
+                          →{" "}
+                          {key === "amountCents"
+                            ? dollars(change.after as number | null)
+                            : String(change.after ?? "Not recorded")}
+                        </span>
+                      ))}
                 </p>
               ))}
             </div>,
@@ -851,7 +881,12 @@ export function SpendingPage() {
         "Selected person")
       : "Everyone",
     filter.list &&
-      (lists.find((l) => l.id === filter.list)?.name ?? "Selected wish list"),
+      (() => {
+        const l = lists.find((l) => l.id === filter.list);
+        return l
+          ? `${l.name} • ${("ownerIds" in l ? l.ownerIds.map((id) => world.people.find((p) => p.id === id)?.name ?? "Recipient") : (l.ownerNames ?? [])).join(" & ")}`
+          : "Selected wish list";
+      })(),
     filter.event &&
       (events.find((e) => e.id === filter.event)?.name ?? "Selected event"),
     filter.occasion &&
@@ -1056,7 +1091,7 @@ export function SpendingPage() {
               onClick={() => setMoreFilters((v) => !v)}
             >
               <SlidersHorizontal size={17} />
-              More filters{filter.list ? " (1)" : ""}
+              More filters <ChevronDown size={16} aria-hidden="true" />
             </button>
           </div>
         </div>
@@ -1074,14 +1109,25 @@ export function SpendingPage() {
               <option value="">All wish lists</option>
               {lists.map((l) => (
                 <option value={l.id} key={l.id}>
-                  {l.name}
+                  {l.name} •{" "}
+                  {("ownerIds" in l
+                    ? l.ownerIds.map(
+                        (id) =>
+                          world.people.find((p) => p.id === id)?.name ??
+                          "Recipient",
+                      )
+                    : (l.ownerNames ?? [])
+                  ).join(" & ")}
                 </option>
               ))}
             </select>
           </Field>
         </div>
         <div className="spending-filter-help">
-          <p>Filters update totals, budget, and gift history.</p>
+          <p>
+            Filters update totals, budget, and gift history. Wish lists include
+            linked or assigned gifts.
+          </p>
           {Object.values(filter).some(Boolean) && (
             <button
               className="text-button"

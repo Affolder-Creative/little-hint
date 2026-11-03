@@ -143,3 +143,47 @@
 dialog.dialog:has(.spending-purchase) {
   overflow: clip;
 }
+
+.purchase-chip {
+  background: var(--paper);
+  border: 1px solid var(--border);
+  padding: 0 0 0 10px;
+  gap: 2px;
+}
+.purchase-chip button {
+  appearance: none;
+  background: transparent;
+  color: var(--muted);
+  border: 0;
+  border-radius: 6px;
+  padding: 0;
+  cursor: pointer;
+}
+.purchase-chip button:hover {
+  background: var(--soft);
+  color: var(--text);
+}
+.purchase-options {
+  position: fixed;
+  inset-inline: auto;
+  margin: 0;
+  z-index: 10;
+}
+.purchase-option > span > svg {
+  flex-shrink: 0;
+  color: var(--accent);
+}
+.purchase-option small {
+  padding-left: 26px;
+}
+.purchase-option-manual {
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+  margin-top: 4px;
+}
+.purchase-chip:has(button) {
+  min-height: 44px;
+}
+.purchase-chip:not(:has(button)) {
+  padding: 6px 10px;
+}

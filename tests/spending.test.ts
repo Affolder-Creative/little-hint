@@ -1110,3 +1110,173 @@ describe("unique gift counts", () => {
     expect(spendingHistory(f.s, f.actors[1], {}).giftCount).toBe(1);
   });
 });
+
+describe("purchase account IDs and wish-list assignment", () => {
+  it("accepts sign-in account IDs for own purchases and partner connections", () => {
+    const f = fixture();
+    for (const [i, actor] of f.actors.entries()) {
+      const old = actor.id;
+      actor.id = `authAccount${i}ABCDEFGHIJKLMNOPQRSTUVWXYZ`;
+      f.s.people[i].userId = actor.id;
+      f.s.groups[0].memberIds[i] = actor.id;
+      f.s.spendingSettings.find((s) => s.userId === old)!.userId = actor.id;
+    }
+    f.run(0, "purchase", {
+      title: "Private gift",
+      recipientIds: [f.s.people[2].id],
+      amountCents: 2695,
+      date: "2026-11-02",
+      payerId: f.actors[0].id,
+    });
+    expect(f.s.spendingRecords[0].amountCents).toBe(2695);
+    expect(() =>
+      f.run(0, "purchase", {
+        title: "Gift",
+        recipientIds: [f.s.people[2].id],
+        amountCents: 10,
+        date: "2026-11-02",
+        payerId: f.actors[1].id,
+      }),
+    ).toThrow("payer");
+    expect(f.connect().users).toContain(f.actors[1].id);
+  });
+  it("assigns private purchases and refunds without sharing, and clears their context together", () => {
+    const f = fixture();
+    const gift = reserved(f);
+    const eventId = stamp().id;
+    f.s.groupEvents.push({
+      ...stamp(),
+      id: eventId,
+      name: "Christmas",
+      groupId: f.s.groups[0].id,
+      participantIds: [f.s.people[2].id],
+      mode: "surprise",
+      archived: false,
+      description: "",
+      timeZone: "UTC",
+      revealExchangeGivers: false,
+    });
+    const list = f.s.lists.find((l) => l.id === gift.gift.listId)!;
+    list.groupEventId = eventId;
+    f.add();
+    const purchase = f.s.spendingRecords.find((r) => r.kind === "purchase")!;
+    f.run(0, "refund", {
+      id: purchase.id,
+      revision: purchase.revision,
+      amountCents: 500,
+      date: "2026-11-02",
+    });
+    const update = (listId: string | null) =>
+      f.run(0, "record", {
+        id: purchase.id,
+        revision: purchase.revision,
+        amountCents: purchase.amountCents,
+        date: purchase.date,
+        planningYear: purchase.planningYear,
+        splits: purchase.splits,
+        listId,
+      });
+    update(list.id);
+    expect(purchase).toMatchObject({
+      listId: list.id,
+      eventId,
+      sharing: "private",
+    });
+    expect(
+      spendingHistory(f.s, f.actors[0], { list: list.id }).summary.spent,
+    ).toBe(4000);
+    expect(
+      spendingHistory(f.s, f.actors[0], { event: eventId }).summary.spent,
+    ).toBe(4000);
+    expect(f.s.spendingRecords.find((r) => r.kind === "refund")!.listId).toBe(
+      list.id,
+    );
+    expect(spendingView(f.s, f.actors[1]).records).toHaveLength(0);
+    update(null);
+    expect(purchase.listId).toBeUndefined();
+    expect(purchase.eventId).toBeUndefined();
+    expect(
+      f.s.spendingRecords.find((r) => r.kind === "refund")!.listId,
+    ).toBeUndefined();
+    expect(
+      spendingHistory(f.s, f.actors[0], { list: list.id }).summary.spent,
+    ).toBe(0);
+  });
+  it("links private ideas, inherits plan assignments, and rejects unrelated or hidden lists", () => {
+    const f = fixture(),
+      gift = reserved(f);
+    const idea = command(f.s, f.actors[0], "items.create", {
+      title: "Private idea",
+      recipientIds: [f.s.people[2].id],
+      visibility: "private",
+      priceCents: 2000,
+      quantity: 2,
+    }) as { id: string };
+    const item = f.s.items.find((i) => i.id === idea.id)!;
+    f.run(0, "purchase", {
+      itemId: item.id,
+      itemRevision: item.revision,
+      title: item.title,
+      recipientIds: item.recipientIds,
+      amountCents: 1900,
+      date: "2026-11-02",
+      listId: gift.gift.listId,
+    });
+    const purchase = f.s.spendingRecords.find((r) => r.kind === "purchase")!;
+    expect(purchase).toMatchObject({
+      protected: true,
+      sharing: "private",
+      listId: gift.gift.listId,
+    });
+    const reservation = command(f.s, f.actors[0], "reservations.create", {
+      itemId: item.id,
+      quantity: 1,
+    }) as { id: string };
+    const plan = f.s.spendingRecords.find(
+      (r) => r.reservationId === reservation.id && r.kind === "plan",
+    )!;
+    f.run(0, "record", {
+      id: plan.id,
+      revision: plan.revision,
+      amountCents: plan.amountCents,
+      date: null,
+      planningYear: plan.planningYear,
+      splits: plan.splits,
+      listId: gift.gift.listId,
+    });
+    f.run(0, "purchase", {
+      reservationId: reservation.id,
+      planRevision: plan.revision,
+      title: plan.title,
+      recipientIds: plan.recipientIds,
+      amountCents: 1800,
+      date: "2026-11-02",
+    });
+    expect(
+      spendingHistory(f.s, f.actors[0], { list: gift.gift.listId }).summary
+        .spent,
+    ).toBe(3700);
+    const payload = {
+      title: "Wrong recipient",
+      recipientIds: [f.s.people[1].id],
+      amountCents: 100,
+      date: "2026-11-02",
+      listId: gift.gift.listId,
+    };
+    expect(() => f.run(0, "purchase", payload)).toThrow("recipients");
+    expect(() =>
+      f.run(0, "purchase", { ...payload, listId: stamp().id }),
+    ).toThrow("available");
+    expect(() =>
+      f.run(0, "record", {
+        id: gift.plan().id,
+        revision: gift.plan().revision,
+        amountCents: 100,
+        date: null,
+        planningYear: 2026,
+        splits: [1],
+        listId: null,
+      }),
+    ).toThrow("linked gift");
+  });
+});

@@ -4195,3 +4195,44 @@ a.button:is(:hover, :focus, :active),
     gap: 8px;
   }
 }
+
+/* Browsing metadata stays together; full titles remain on gift details. */
+.gift-card .gift-meta {
+  flex-direction: row;
+  justify-content: flex-start;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+.gift-badges {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.gift-badges .private-idea-badge {
+  font-size: 11px;
+  padding: 4px 6px;
+  gap: 4px;
+}
+.gift-badges .private-idea-badge svg {
+  width: 13px;
+  height: 13px;
+}
+.entry-actions-content :is(button, a):is(:hover, :focus, :active) {
+  text-decoration: none;
+}
+@media (max-width: 650px) {
+  .gift-card .gift-title {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    overflow: hidden;
+  }
+  .gift-card .gift-meta > span:first-child {
+    flex-basis: 100%;
+  }
+  .gift-card .gift-meta {
+    gap: 6px;
+  }
+}

@@ -31,10 +31,22 @@ const fields: Record<string, string> = {
   spendingGuidelineCents: "Spending guideline",
 };
 
-export function validationMessage(error: ZodError): string {
+export function validationMessage(error: ZodError, spending = false): string {
   const messages = error.issues.map((issue) => {
     const key = String(issue.path[0] ?? "");
-    const field = fields[key];
+    const field =
+      (spending
+        ? ({
+            amountCents: "Amount",
+            payerId: "Who paid",
+            recipientIds: "Recipients",
+            date: "Purchase date",
+            listId: "Wish list",
+            eventId: "Group event",
+            occasionId: "Personal occasion",
+            splits: "Recipient shares",
+          } as Record<string, string>)
+        : {})[key] ?? fields[key];
     if (!field)
       return "Some details are missing or invalid. Check the form and try again.";
     if (issue.path.length > 1)

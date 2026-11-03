@@ -480,6 +480,63 @@ try {
   );
   if (overflow) throw new Error("Spending overflows at 320px");
   await page.keyboard.press("Tab");
+  // Assignment and layout regression checks use only this isolated fixture.
+  await page.evaluate(() => (document.documentElement.style.fontSize = ""));
+  for (const width of [320, 390, 768, 1280]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto(server.resolvedUrls!.local[0] + "buying/spending");
+    await page
+      .getByRole("button", { name: "Add purchase", exact: true })
+      .click();
+    const save = page.getByRole("button", {
+      name: "Save purchase",
+      exact: true,
+    });
+    const cancel = page.getByRole("button", { name: "Cancel", exact: true });
+    expect(
+      Math.abs((await save.boundingBox())!.y - (await cancel.boundingBox())!.y),
+    ).toBeLessThan(2);
+    await page
+      .getByRole("combobox", { name: "Gift name" })
+      .fill("Example manual gift");
+    await expect(
+      page.getByRole("option", { name: /as a manual purchase/ }),
+    ).toBeVisible();
+    await page.screenshot({ path: out + `/gift-search-${width}.png` });
+    if (width === 390) {
+      await page.setViewportSize({ width, height: 400 });
+      await expect(page.locator("dialog")).toHaveAttribute(
+        "data-compact",
+        "true",
+      );
+      expect(
+        (await page.locator(".form-content").boundingBox())!.height,
+      ).toBeGreaterThan(180);
+      await page.screenshot({ path: out + "/purchase-keyboard-height.png" });
+    }
+  }
+  await page.goto(server.resolvedUrls!.local[0] + "buying/spending");
+  const assignmentRow = page.locator(".spending-row").filter({
+    has: page.getByRole("heading", { name: "Watercolor set", exact: true }),
+  });
+  await assignmentRow
+    .getByRole("button", { name: "Edit purchase", exact: true })
+    .click();
+  await page
+    .getByLabel("Wish list, optional", { exact: true })
+    .selectOption(list.id);
+  await page.getByRole("button", { name: "Save changes", exact: true }).click();
+  await expect(page.getByRole("dialog")).toBeHidden();
+  expect(
+    s.spendingRecords.find((r) => r.title === "Watercolor set")!.listId,
+  ).toBe(list.id);
+  await assignmentRow.locator("summary").click();
+  for (const button of await assignmentRow
+    .locator(".entry-actions-content button")
+    .all())
+    expect(
+      await button.evaluate((el) => getComputedStyle(el).textDecorationLine),
+    ).toBe("none");
   process.env.SPENDING_ENABLED = "false";
   await page.goto(server.resolvedUrls!.local[0] + "buying/spending");
   await expect(page).toHaveURL(/\/buying$/);
