@@ -111,3 +111,15 @@ Product lookups support Bright Data retailer scrapers for Amazon, Walmart, Targe
 `SCRAPING_PROVIDER=none` means manual product entry, including no direct extraction or product-detail AI. Existing drafts and uploaded photos remain usable. `auto` retains direct extraction and configured paid services. Gift discovery is independently configured.
 
 Private-note authors may edit active notes and delete visible notes, including archived notes. App administrators may delete already-visible notes but cannot edit others’ notes or bypass surprise/exchange privacy. Edits notify newly added mentions only. Gift-idea import drafts remain private until explicitly saved, retain recipient and audience choices, and recover on the recipient’s Gift ideas tab or in Your drafts.
+
+## Spending and shared planning
+
+Spending tracking is optional and disabled by default. Buying includes private actual-cost history, outstanding estimates, manual purchases, refunds, personal occasions, and optional budgets by person, list, event, occasion, and period. Missing amounts remain unknown. Joint gifts use editable recipient shares with exact cent allocation. Purchase records retain authorized source snapshots when lists or items disappear. Existing purchase statuses import without invented prices or purchase dates.
+
+Each account can connect with one consenting spending partner, independently of households. Each person selects recipients or occasions for automatic sharing of new entries. Existing history requires explicit sharing. Gifts for either partner and secret exchanges remain private. Private ideas are excluded from automatic sharing. Both partners can edit shared budgets; editing shared purchases requires both to accept joint editing. Payer and editor stay distinct, and changes have an audit history. Disconnection or pausing removes shared access without deleting personal records. Source wishlist access remains separately authorized.
+
+Listed prices estimate plans; recorded payments, contributions, reimbursements and refunds determine personal spending. Combined totals do not double-count internal partner transfers, including across calendar-year boundaries. These records do not transfer money or contact shops. USD only.
+
+Wishlist selection in Add purchase links the spending record and purchased status in one transaction. Manual names remain supported. Search uses authorized gifts and outstanding reservations; choosing a suggestion alone saves nothing. Linked recipients and source event stay attached to the gift. Amounts remain unknown until entered or an estimate is explicitly accepted.
+
+The deployment-only SPENDING_ENABLED switch defaults to available; false hides and disables the new spending feature without deleting preferences or records. Normal buying, listed prices, contributions, and existing event spending guidelines remain available. Personal tracking remains opt-in.

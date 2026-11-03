@@ -147,3 +147,8 @@ export function imageDeliveryOverride(
     throw new Error(`${name} must be true, false, or empty.`);
   return value === "true";
 }
+
+/** Deployment availability is independent of each account’s opt-in. */
+export function spendingAvailable(env = process.env): boolean {
+  return env.SPENDING_ENABLED?.trim().toLowerCase() !== "false";
+}

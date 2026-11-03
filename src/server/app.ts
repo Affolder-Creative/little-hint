@@ -1,3 +1,11 @@
+import { spendingAvailable } from "./deployment";
+import {
+  spendingView,
+  syncSpending,
+  syncContributions,
+  spendingHistory,
+  reconcileSpending,
+} from "./spending";
 import { productLookupEnabled } from "../shared/product-lookup";
 import { importView } from "../shared/imports";
 import { telegramInfo } from "./channel-availability";
@@ -369,7 +377,42 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
       return { ok: true };
     },
   );
+  async function spendingState(a: Actor) {
+    if (!spendingAvailable()) fail(404, "Spending is unavailable.");
+    const state = await readState();
+    if (!reconcileSpending(state, a)) return state;
+    return transact((current) => {
+      if (!spendingAvailable()) fail(404, "Spending is unavailable.");
+      reconcileSpending(current, a);
+      return current;
+    });
+  }
+  app.get("/api/v1/spending", async (req) => {
+    const a = await actor(req);
+    const view = spendingView(await spendingState(a), a);
+    return {
+      ...view,
+      records: view.records.filter((r) => r.kind === "plan" && !r.sourceId),
+    };
+  });
+  app.get("/api/v1/spending/history", async (req) => {
+    const a = await actor(req);
+    return spendingHistory(await spendingState(a), a, req.query);
+  });
   const routes: Record<string, string> = {
+    ...Object.fromEntries(
+      [
+        "settings",
+        "connect",
+        "connection",
+        "occasion",
+        "budget",
+        "purchase",
+        "record",
+        "share",
+        "refund",
+      ].map((a) => [`spending/${a}`, `spending.${a}`]),
+    ),
     "gift-preferences": "gift-preferences.update",
     households: "households.create",
     "households/update": "households.update",
@@ -423,6 +466,8 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
   for (const [url, action] of Object.entries(routes))
     app.post(`/api/v1/${url}`, async (req) => {
       const a = await actor(req);
+      if (action.startsWith("spending.") && !spendingAvailable())
+        fail(404, "Spending is unavailable.");
       const invited =
         action === "groups.invite" &&
         typeof (req.body as any)?.email === "string"
@@ -461,6 +506,19 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
             actorId: a.id,
             status: "sent",
           });
+        syncSpending(s, a);
+        const contributionSource =
+          action === "contributions.create"
+            ? (result as { id?: string }).id
+            : action === "contributions.update"
+              ? (req.body as { id?: string }).id
+              : undefined;
+        syncContributions(
+          s,
+          contributionSource && !(result as { replayed?: boolean }).replayed
+            ? [contributionSource]
+            : [],
+        );
         return result;
       });
     });

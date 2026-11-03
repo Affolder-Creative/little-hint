@@ -1,3 +1,4 @@
+import { SpendingPage, SpendingSummary, PurchaseForm } from "./Spending";
 import { PrivateNote } from "./PrivateNotes";
 import { Pencil, Archive, ArchiveRestore, CalendarDays } from "lucide-react";
 import { ImportDrafts } from "./ImportDrafts";
@@ -73,6 +74,7 @@ import {
   useLocation,
   useParams,
   useNavigate,
+  Navigate,
   useSearchParams,
 } from "react-router-dom";
 import {
@@ -239,6 +241,7 @@ export function App() {
       localStorage.setItem("little-hint:engaged", "yes");
     await Promise.all([
       client.invalidateQueries({ queryKey: ["world"] }),
+      client.invalidateQueries({ queryKey: ["spending"] }),
       client.invalidateQueries({ queryKey: ["notifications"] }),
       client.invalidateQueries({ queryKey: ["trash"] }),
       client.invalidateQueries({ queryKey: ["gift-summary"] }),
@@ -419,6 +422,15 @@ export function App() {
               </div>
             )}
             <main id="main" tabIndex={-1}>
+              {world.spendingAvailable !== false &&
+                world.spendingInvitation && (
+                  <p className="notice">
+                    <Link to="/settings?section=spending">
+                      You have a spending partner invitation. Review it in
+                      Settings.
+                    </Link>
+                  </p>
+                )}
               <GiftPreferenceOnboarding key={world.me.id}>
                 <Routes>
                   <Route path="/" element={<Home />} />
@@ -449,6 +461,16 @@ export function App() {
                   <Route path="/events/:id" element={<EventPage />} />
                   <Route path="/gift/:id" element={<GiftDetail />} />
                   <Route path="/buying" element={<Buying />} />
+                  <Route
+                    path="/buying/spending"
+                    element={
+                      world.spendingAvailable === false ? (
+                        <Navigate to="/buying" replace />
+                      ) : (
+                        <SpendingPage />
+                      )
+                    }
+                  />
                   <Route path="/exchanges" element={<Exchanges />} />
                   <Route
                     path="/settings"
@@ -1100,6 +1122,7 @@ function PersonPage() {
           </button>
         )}
       </Header>
+      <SpendingSummary person={person.id} />
       <PreferenceSummary personId={person.id} />
       <div
         className="tabs"
@@ -1422,6 +1445,7 @@ function Lists() {
             <FollowButton target="list" targetId={list.id} />
           ) : null}
         </Header>
+        <SpendingSummary list={list.id} />
         {list.archived && (
           <p className="notice">
             This list is archived. Existing purchase history is preserved.
@@ -1863,6 +1887,7 @@ function Buying() {
         title="Your gift plans"
         description="Keep track of gifts you’re buying and helping pay for."
       />
+      <SpendingSummary />
       {reservations.length > 0 && (
         <div
           className="tabs buying-views"
@@ -1898,52 +1923,63 @@ function Buying() {
               <button
                 className="button secondary small"
                 onClick={() =>
-                  open(
-                    "Update purchase",
-                    <Form
-                      submit="Save purchase status"
-                      onSubmit={async (f) => {
-                        await mutate("reservations/update", {
-                          id: r.id,
-                          revision: r.revision,
-                          quantity: r.quantity,
-                          purchased: Number(value(f, "purchased")),
-                        });
-                        close();
-                        toast("Purchase status updated.");
-                        if (
-                          !matchesView({
-                            quantity: r.quantity,
-                            purchased: Number(value(f, "purchased")),
-                          })
-                        )
-                          focusView();
-                      }}
-                    >
-                      <p>
-                        <strong>{r.titleSnapshot}</strong>
-                        {r.item
-                          ? ` · For ${r.item.recipientNames.join(" & ")}`
-                          : ""}
-                      </p>
-                      <Field label="Quantity purchased">
-                        <input
-                          name="purchased"
-                          type="number"
-                          min="0"
-                          max={r.quantity}
-                          defaultValue={r.purchased}
-                          required
-                        />
-                      </Field>
-                      <p>
-                        {isPrivateIdea(r.item)
-                          ? privateIdeaDescription
-                          : "Mark what you have bought so others know it is covered."}{" "}
-                        If your plans change, choose Cancel reservation.
-                      </p>
-                    </Form>,
-                  )
+                  world.spendingEnabled && r.purchased < r.quantity
+                    ? open(
+                        "Mark as purchased",
+                        <PurchaseForm
+                          reservation={r}
+                          onSuccess={() => {
+                            toast("Purchase saved.");
+                            focusView();
+                          }}
+                        />,
+                      )
+                    : open(
+                        "Update purchase",
+                        <Form
+                          submit="Save purchase status"
+                          onSubmit={async (f) => {
+                            await mutate("reservations/update", {
+                              id: r.id,
+                              revision: r.revision,
+                              quantity: r.quantity,
+                              purchased: Number(value(f, "purchased")),
+                            });
+                            close();
+                            toast("Purchase status updated.");
+                            if (
+                              !matchesView({
+                                quantity: r.quantity,
+                                purchased: Number(value(f, "purchased")),
+                              })
+                            )
+                              focusView();
+                          }}
+                        >
+                          <p>
+                            <strong>{r.titleSnapshot}</strong>
+                            {r.item
+                              ? ` · For ${r.item.recipientNames.join(" & ")}`
+                              : ""}
+                          </p>
+                          <Field label="Quantity purchased">
+                            <input
+                              name="purchased"
+                              type="number"
+                              min="0"
+                              max={r.quantity}
+                              defaultValue={r.purchased}
+                              required
+                            />
+                          </Field>
+                          <p>
+                            {isPrivateIdea(r.item)
+                              ? privateIdeaDescription
+                              : "Mark what you have bought so others know it is covered."}{" "}
+                            If your plans change, choose Cancel reservation.
+                          </p>
+                        </Form>,
+                      )
                 }
               >
                 Update purchase
@@ -2001,6 +2037,19 @@ function Buying() {
                     <Action
                       secondary
                       onClick={async () => {
+                        if (world.spendingEnabled) {
+                          open(
+                            "Mark as purchased",
+                            <PurchaseForm
+                              reservation={r}
+                              onSuccess={() => {
+                                toast("Purchase saved.");
+                                focusView();
+                              }}
+                            />,
+                          );
+                          return;
+                        }
                         await mutate("reservations/update", {
                           id: r.id,
                           revision: r.revision,

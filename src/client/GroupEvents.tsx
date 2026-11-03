@@ -1,3 +1,4 @@
+import { SpendingSummary } from "./Spending";
 import { PrivacyDetails } from "./PrivacyDetails";
 import { useNavigationState } from "./NavigationScroll";
 import {
@@ -597,6 +598,7 @@ export function EventPage() {
           </ActionMenu>
         )}
       </Header>
+      <SpendingSummary event={event.id} />
       <div className="event-overview">
         <PrivacyDetails key={event.id} list={event} />
         <dl className="event-facts">

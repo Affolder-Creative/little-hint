@@ -278,6 +278,12 @@ Paragraph spacing follows content roles across app pages and dialogs. Dense titl
 
 Gift details group the recipient, title, status, price, and quantity with the prose step. Phones place the photo 16px above the details, and the back link leaves 8px below its touch target. Reservation, Gift plans, and Private notes use matching section headings, reduced to the section-phone role on phones. Reservation explanations and private-note guidance use the supporting role, capped at 65ch. Keep their heading-to-copy and paragraph gaps compact; do not compound the privacy-note margin with the section heading margin.
 
+### Spending views
+
+Buying contains the optional spending view. Personal and partner views use the established tabs. Person and occasion selectors lead; less frequent wishlist and period filters sit in More filters. Spent and Still planning use tabular figures, with estimates and missing amounts labeled in text. Budgets appear only after creation and distinguish the balance after purchases from the balance after planned gifts. The progress meter uses the existing accent and soft colors, with text carrying every amount.
+
+Purchase history uses open rows and quiet dividers. Amounts align to the end beside the gift details on desktop and phones. Sharing labels sit beside gift details and in purchase forms before saving. Joint-edit history expands inside the row. Spending settings reuse existing fields, checkboxes, sections, and buttons. No new palette, font, shadow, or navigation destination is introduced.
+
 ## Elevation & Depth
 
 Ordinary content is flat. Paper tones and thin borders distinguish controls, navigation, and groups of information. Dialogs and transient toasts use soft shadows; the dialog also dims the page with a translucent backdrop. Exact shadow and backdrop values live in the sidecar.
@@ -468,3 +474,9 @@ Button-style controls never underline on hover, focus, or activation; ordinary t
 - Don't add shadows to ordinary gift cards or list rows.
 - Don't use invented product photography or present demonstration fixtures as real gifts.
 - Don't rely on color alone to explain availability or list privacy.
+
+### Spending controls and purchase entry
+
+Spending pages separate header actions, personal/shared view selection, and the filter scope. Person, occasion, and period remain visible; less common filters expand. Filters retain focus and scroll while results refresh. Recorded amounts and outstanding estimates have separate completeness explanations. Unknown-only totals never look like a confirmed zero.
+
+Purchase entry uses an anchored gift combobox with an explicit manual option, bounded recipient search, and the existing fixed dialog action footer. A linked gift inherits recipients and event context. Listed prices are suggestions accepted explicitly. Optional occasion details preserve both personal occasions and group events. History rows keep their amount and primary action together; secondary operations use a labeled disclosure. Quick totals remain compact, with a clear View spending button. Settings action groups use 12–16px gaps and comfortable desktop field widths.

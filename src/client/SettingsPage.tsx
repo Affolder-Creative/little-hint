@@ -1,3 +1,4 @@
+import { SpendingSettingsPanel } from "./Spending";
 import type { AdminJobs } from "../shared/admin-jobs";
 import { AdminJobFailures } from "./AdminJobFailures";
 import { AdminPreferences } from "./AdminPreferences";
@@ -55,7 +56,10 @@ export default function SettingsPage({
   const [params, setParams] = useSearchParams();
   const requestedSection = params.get("section");
   const section = settingsSections.some(
-    (s) => s.id === requestedSection && (s.id !== "admin" || world.me.admin),
+    (s) =>
+      s.id === requestedSection &&
+      (s.id !== "admin" || world.me.admin) &&
+      (s.id !== "spending" || world.spendingAvailable !== false),
   )
     ? requestedSection!
     : "profile";
@@ -112,9 +116,11 @@ export default function SettingsPage({
           section={section}
           admin={world.me.admin}
           pendingRequests={pendingGroupRequests}
+          spendingAvailable={world.spendingAvailable !== false}
         />
         {/* Keep panels mounted so switching sections preserves unsaved form values. */}
         <div className="settings-content">
+          {section === "spending" && <SpendingSettingsPanel />}
           {pendingGroupRequests > 0 && section !== "groups" && (
             <p className="notice">
               <Link to="?section=groups">
