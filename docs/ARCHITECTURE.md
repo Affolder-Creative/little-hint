@@ -4,7 +4,7 @@
 
 One TypeScript codebase produces a static React/Vite application and Fastify/worker/CLI entrypoints. Fastify serves the frontend and `/api/v1` on the same origin; Better Auth uses `/api/auth`. React Router handles deep links; TanStack Query keeps authorized state in memory. All writes require an exact configured Origin and authenticated session, except signed provider webhooks.
 
-The browser receives `/api/v1/world`, an authorization-filtered snapshot for this small private installation. It never receives the complete database state. Mutations use resource endpoints listed in `src/server/app.ts`, UUID idempotency keys, and record revisions where edits can conflict. The app re-fetches after ordinary writes. Import creation instead seeds an account-scoped query for `/api/v1/imports/:id`; only that job polls every two seconds while active. The world stays on its normal twenty-second interval, and retains `imports` for older clients. Uploaded and imported images remain authenticated API resources.
+The browser receives `/api/v1/world`, an authorization-filtered snapshot for this small private installation. It never receives the complete database state. Mutations use resource endpoints listed in `src/server/app.ts`, UUID idempotency keys, and record revisions where edits can conflict. The app re-fetches after ordinary writes. Import creation instead seeds an account-scoped query for `/api/v1/imports/:id`; only that job polls every two seconds while active. The world stays on its normal twenty-second interval. Current clients request the compact projection with `X-Little-Hint-World: compact`: only resumable imports and active reservations remain, gift details are joined from authorized items, and buying history is loaded through account-filtered cursor pages. Older clients without the header retain the complete legacy projection. See `docs/PERFORMANCE.md` for the contract and measurements. Uploaded and imported images remain authenticated API resources.
 
 ## Gift discovery
 
@@ -145,3 +145,18 @@ The client retains operation keys in memory until a successful response, includi
 App and worker startup reject unknown record kinds or newer SQL schema versions. Domain transactions check compatibility before invoking commands or writing records. Migration and domain writes share the domain lock. Future incompatible JSON record-format changes must increment `schema_migration` and the supported schema version even when no SQL table changes are needed. These guards protect this release and future releases that retain them; older binaries without the guard still require stopping both processes before upgrades or restores.
 
 Hourly media cleanup removes unreferenced uploads older than seven days, as well as explicitly deleted media. Saved and archived items, import results, active draft photos and discovery candidates remain protected. Both original files and card renditions are removed.
+
+## Domain and page modules
+
+`domain.ts` remains the public command dispatcher and authorized world projection.
+List, reservation/contribution, and exchange commands live in `list-commands.ts`,
+`buying-commands.ts`, and `exchange-commands.ts`. They share authorization helpers
+from `domain-access.ts` and validation/revision primitives from `domain-common.ts`.
+Existing domain exports remain available to callers. Permission checks are not
+reimplemented in individual handlers or client components.
+
+The client shell delegates list pages, buying, exchanges, and the shared gift
+browser to `Lists.tsx`, `Buying.tsx`, `Exchanges.tsx`, and `Browser.tsx`.
+Account-scoped history queries cancel on account transitions and invalidate after
+mutations alongside world/spending queries. Operational metrics are administrator
+only and contain aggregate values, never gift or account details.

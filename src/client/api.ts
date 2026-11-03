@@ -44,7 +44,9 @@ export async function api<T = any>(
       method: body === undefined ? "GET" : "POST",
       headers:
         body === undefined
-          ? {}
+          ? path === "world"
+            ? { "X-Little-Hint-World": "compact" }
+            : {}
           : {
               "Content-Type": "application/json",
               "Idempotency-Key": key!,

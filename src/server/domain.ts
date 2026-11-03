@@ -1,9 +1,55 @@
-import { spendingAvailable } from "./deployment";
+import { exchangeActions, exchangeCommand } from "./exchange-commands";
+import { buyingActions, buyingCommand } from "./buying-commands";
+import { listActions, listCommand } from "./list-commands";
+export { DomainError, fail, stamp, normalizedEmail } from "./domain-common";
+export {
+  controllers,
+  controls,
+  isAdmin,
+  personVisible,
+  recipient,
+  listVisible,
+  itemVisible,
+} from "./domain-access";
 import {
-  spendingCommand,
-  syncSpending,
-  registerSpendingReservation,
-} from "./spending";
+  DomainError,
+  fail,
+  stamp,
+  touch,
+  normalizedEmail,
+  text,
+  id,
+  ids,
+  revision,
+  listDates,
+  spendingGuideline,
+  checkSharedListPolicy,
+  checkRevision,
+} from "./domain-common";
+import {
+  controllers,
+  controls,
+  ownIds,
+  member,
+  groupAccess,
+  managesGroupExchanges,
+  isAdmin,
+  ownedGroup,
+  personVisible,
+  checkRecipients,
+  checkGroups,
+  recipient,
+  listVisible,
+  itemVisible,
+  canEdit,
+  getItem,
+  archived,
+  name,
+  mode,
+  reconcileAccess,
+} from "./domain-access";
+import { spendingAvailable } from "./deployment";
+import { spendingCommand } from "./spending";
 import {
   productLookupEnabled,
   lookupDisabledMessage,
@@ -33,24 +79,17 @@ import {
   noteVisible,
   topicIds,
 } from "./activity";
-import { randomUUID, createHash } from "node:crypto";
+import { createHash } from "node:crypto";
 import { z } from "zod";
-import {
-  dateHasElapsed,
-  listIsArchived,
-  validCalendarDate,
-  validTimeZone,
-} from "../shared/list-dates";
+import { dateHasElapsed, listIsArchived } from "../shared/list-dates";
 import type {
   Actor,
-  Base,
   State,
   Person,
   Group,
   GroupEvent,
   List,
   Item,
-  Reservation,
   GiftView,
   Preferences,
   World,
@@ -63,66 +102,7 @@ import {
   isAccountInvitation,
   invitationIsPending,
 } from "../shared/invitations";
-import { matchExchange as solveExchange } from "./exchange";
-function matchExchange(...args: Parameters<typeof solveExchange>) {
-  try {
-    return solveExchange(...args);
-  } catch {
-    fail(
-      400,
-      "We cannot draw names with these rules. Add people, have each person give to fewer people, or allow more people to draw each other.",
-    );
-  }
-}
-export class DomainError extends Error {
-  constructor(
-    public status: number,
-    message: string,
-  ) {
-    super(message);
-  }
-}
-export function fail(status: number, message: string): never {
-  throw new DomainError(status, message);
-}
-export const stamp = (): Base => ({
-  id: randomUUID(),
-  revision: 1,
-  createdAt: new Date().toISOString(),
-});
-const touch = (r: Base) => {
-  r.revision++;
-};
-export const normalizedEmail = (s: string) => s.trim().toLowerCase();
-const text = z.string().trim().min(1).max(160);
-const id = z.string().uuid();
-const ids = z
-  .array(id)
-  .max(100)
-  .refine(
-    (v) => new Set(v).size === v.length,
-    "Duplicate selections are not allowed.",
-  );
-const revision = z.number().int().positive();
-const listDates = {
-  archiveAfter: z
-    .string()
-    .refine(validCalendarDate, "Choose a valid archive date.")
-    .nullable()
-    .optional(),
-  revealAfter: z
-    .string()
-    .refine(validCalendarDate, "Choose a valid reveal date.")
-    .nullable()
-    .optional(),
-  timeZone: z
-    .string()
-    .max(100)
-    .refine(validTimeZone, "Choose a valid timezone.")
-    .optional(),
-  revealExchangeGivers: z.boolean().optional(),
-};
-const spendingGuideline = z.number().int().positive().max(100000000).nullable();
+
 const eventInput = z.object({
   spendingGuidelineCents: spendingGuideline.optional(),
   ...listDates,
@@ -131,40 +111,6 @@ const eventInput = z.object({
   participantIds: ids,
   mode: z.enum(["surprise", "transparent"]),
 });
-
-type ListPolicy = Pick<
-  List,
-  "mode" | "timeZone" | "revealAfter" | "revealExchangeGivers"
->;
-function checkSharedListPolicy(
-  current: ListPolicy & { modeLocked: boolean },
-  next: ListPolicy,
-) {
-  if (current.modeLocked) {
-    if (next.mode !== current.mode)
-      fail(409, "This privacy choice cannot change after sharing.");
-    if ((next.timeZone ?? "UTC") !== (current.timeZone ?? "UTC"))
-      fail(409, "The time zone cannot change after sharing.");
-    if (!!next.revealExchangeGivers !== !!current.revealExchangeGivers)
-      fail(
-        409,
-        "Whether secret exchange gifts appear in the summary cannot change after sharing.",
-      );
-    if (
-      (next.revealAfter ?? null) !== (current.revealAfter ?? null) &&
-      (!current.revealAfter ||
-        !next.revealAfter ||
-        next.revealAfter < current.revealAfter ||
-        dateHasElapsed(current.revealAfter, current.timeZone))
-    )
-      fail(
-        409,
-        "After sharing, an upcoming reveal date can only move later. Lists shared without a date keep gift details hidden.",
-      );
-  }
-  if (next.revealExchangeGivers && !next.revealAfter)
-    fail(400, "Choose a reveal date to reveal exchange givers.");
-}
 
 function managedEventGroup(s: State, a: Actor, groupId: string): Group {
   return (
@@ -266,72 +212,6 @@ function reconcileHouseholds(s: State) {
   s.people.filter((p) => affected.has(p.id)).forEach(touch);
 }
 
-export const controllers = (p: Person) =>
-  [p.userId, ...p.guardians].filter((v): v is string => !!v);
-export const controls = (s: State, a: Actor, id: string) =>
-  !!s.people.find((p) => p.id === id && controllers(p).includes(a.id));
-const ownIds = (s: State, a: Actor) =>
-  s.people.filter((p) => controllers(p).includes(a.id)).map((p) => p.id);
-const member = (g: Group, a: Actor) => g.memberIds.includes(a.id);
-const groupAccess = (s: State, a: Actor, groupId: string) =>
-  !!s.groups.find((g) => g.id === groupId && member(g, a));
-const managesGroupExchanges = (s: State, a: Actor, groupId: string) =>
-  s.groups.some((g) => g.id === groupId && canManageGroupEvents(g, a.id));
-export const isAdmin = (s: State, a: Actor) =>
-  s.people.some((p) => p.userId === a.id && p.admin);
-const ownedGroup = (s: State, a: Actor, id: string) =>
-  s.groups.find((g) => g.id === id && g.ownerId === a.id) ??
-  fail(404, "Family group not found.");
-export const personVisible = (s: State, a: Actor, p: Person) =>
-  controllers(p).includes(a.id) ||
-  s.groups.some(
-    (g) => member(g, a) && controllers(p).some((u) => g.memberIds.includes(u)),
-  );
-const checkRecipients = (s: State, a: Actor, rs: string[]) => {
-  if (
-    !rs.length ||
-    rs.some(
-      (id) => !s.people.some((p) => p.id === id && personVisible(s, a, p)),
-    )
-  )
-    fail(400, "Choose an available recipient.");
-};
-const checkGroups = (s: State, a: Actor, gs: string[]) => {
-  if (gs.some((g) => !groupAccess(s, a, g)))
-    fail(404, "Family group not found.");
-};
-export const recipient = (s: State, a: Actor, i: Item) =>
-  i.recipientIds.some((p) => controls(s, a, p));
-export const listVisible = (s: State, a: Actor, l: List) =>
-  !l.deletedAt &&
-  (l.ownerIds.some((p) => controls(s, a, p)) ||
-    l.groupIds.some((g) => groupAccess(s, a, g)));
-export function itemVisible(s: State, a: Actor, i: Item): boolean {
-  if (itemTrashed(s, i)) return false;
-  if (i.listId) {
-    const l = s.lists.find((l) => l.id === i.listId);
-    return !!l && listVisible(s, a, l);
-  }
-  if (i.creatorId === a.id) return true;
-  if (i.visibility === "private") return false;
-  if (recipient(s, a, i)) return i.visibility === "visible";
-  return i.groupIds.some((g) => groupAccess(s, a, g));
-}
-const canEdit = (s: State, a: Actor, i: Item) =>
-  i.listId
-    ? !!s.lists.find(
-        (l) => l.id === i.listId && l.ownerIds.some((p) => controls(s, a, p)),
-      )
-    : i.creatorId === a.id;
-const getItem = (s: State, a: Actor, id: string) =>
-  s.items.find((i) => i.id === id && itemVisible(s, a, i)) ??
-  fail(404, "Item not found.");
-const archived = (s: State, i: Item) =>
-  i.archived || !!s.lists.find((l) => l.id === i.listId && listIsArchived(l));
-const name = (s: State, userId: string) =>
-  s.people.find((p) => p.userId === userId)?.name ?? "Former member";
-const mode = (s: State, i: Item) =>
-  s.lists.find((l) => l.id === i.listId)?.mode ?? "surprise";
 export function archiveDueLists(s: State) {
   for (const event of s.groupEvents) {
     if (!event.archived && listIsArchived(event)) {
@@ -545,10 +425,11 @@ function notifyGift(s: State, a: Actor, i: Item, event: Notice["event"]) {
   emitGiftActivity(s, a, i, event);
 }
 
-export function world(s: State, a: Actor): World {
+export function world(s: State, a: Actor, compact = false): World {
   const people = s.people.filter((p) => personVisible(s, a, p));
   const ps = ownIds(s, a);
   return {
+    compact,
     spendingAvailable: spendingAvailable(),
     spendingInvitation:
       spendingAvailable() &&
@@ -619,34 +500,41 @@ export function world(s: State, a: Actor): World {
     items: s.items
       .filter((i) => itemVisible(s, a, i))
       .map((i) => giftView(s, a, i)),
-    contributionHistory: s.contributions.flatMap((contribution) => {
-      const r = s.reservations.find((r) => r.id === contribution.reservationId);
-      if (!r || (contribution.userId !== a.id && r.buyerId !== a.id)) return [];
-      return [
-        {
-          contribution: { ...contribution },
-          title: r.titleSnapshot,
-          purchaser: r.buyerId === a.id,
-          contributorName:
-            s.people.find((p) => p.userId === contribution.userId)?.name ??
-            "Former member",
-          purchaserName:
-            s.people.find((p) => p.userId === r.buyerId)?.name ??
-            "Former member",
-        },
-      ];
-    }),
+    contributionHistory: compact
+      ? []
+      : s.contributions.flatMap((contribution) => {
+          const r = s.reservations.find(
+            (r) => r.id === contribution.reservationId,
+          );
+          if (!r || (contribution.userId !== a.id && r.buyerId !== a.id))
+            return [];
+          return [
+            {
+              contribution: { ...contribution },
+              title: r.titleSnapshot,
+              purchaser: r.buyerId === a.id,
+              contributorName:
+                s.people.find((p) => p.userId === contribution.userId)?.name ??
+                "Former member",
+              purchaserName:
+                s.people.find((p) => p.userId === r.buyerId)?.name ??
+                "Former member",
+            },
+          ];
+        }),
     buying: s.reservations
-      .filter((r) => r.buyerId === a.id)
+      .filter((r) => r.buyerId === a.id && (!compact || r.quantity > 0))
       .map((r) => ({
         ...r,
-        item: s.items.some((i) => i.id === r.itemId && itemVisible(s, a, i))
-          ? giftView(
-              s,
-              a,
-              s.items.find((i) => i.id === r.itemId)!,
-            )
-          : undefined,
+        item:
+          !compact &&
+          s.items.some((i) => i.id === r.itemId && itemVisible(s, a, i))
+            ? giftView(
+                s,
+                a,
+                s.items.find((i) => i.id === r.itemId)!,
+              )
+            : undefined,
       })),
     exchanges: s.exchanges
       .filter((e) => !e.deletedAt && groupAccess(s, a, e.groupId))
@@ -687,7 +575,15 @@ export function world(s: State, a: Actor): World {
         itemId: i.id,
         watching: watchesItem(s, a.id, i.id),
       })),
-    imports: s.imports.filter((j) => j.userId === a.id).map(importView),
+    imports: s.imports
+      .filter(
+        (j) =>
+          j.userId === a.id &&
+          (!compact ||
+            j.draft?.state === "active" ||
+            (!j.draft && ["pending", "running"].includes(j.status))),
+      )
+      .map(importView),
     links: s.links
       .filter(
         (l) =>
@@ -708,10 +604,6 @@ export function world(s: State, a: Actor): World {
         )?.name,
       })),
   };
-}
-function checkRevision(r: Base, v: number) {
-  if (r.revision !== v)
-    fail(409, "This changed since you opened it. Refresh and try again.");
 }
 export function activateAccount(s: State, a: Actor, spendingDefault = false) {
   let p = s.people.find((p) => p.userId === a.id);
@@ -759,28 +651,6 @@ export function signupAllowed(s: State, email: string) {
       invitationIsPending(i),
   );
 }
-function reconcileAccess(s: State) {
-  for (const r of s.reservations) {
-    const i = s.items.find((i) => i.id === r.itemId);
-    if (
-      r.quantity &&
-      !r.former &&
-      i &&
-      !itemTrashed(s, i) &&
-      !itemVisible(s, { id: r.buyerId, email: "", name: "" }, i)
-    ) {
-      r.quantity = r.purchased;
-      r.former = true;
-      touch(r);
-      notify(s, "access", [r.buyerId], { action: "access-lost" });
-      for (const c of s.contributions.filter((c) => c.reservationId === r.id)) {
-        if (c.status === "pledged") c.status = "cancelled";
-        notify(s, "access", [c.userId], { action: "access-lost" });
-        touch(c);
-      }
-    }
-  }
-}
 function checkImage(s: State, a: Actor, url: string) {
   if (!url) return;
   const id = url.split("/").pop();
@@ -825,6 +695,10 @@ export function command(
   action: string,
   raw: unknown,
 ): unknown {
+  if (listActions.includes(action)) return listCommand(s, a, action, raw);
+  if (buyingActions.includes(action)) return buyingCommand(s, a, action, raw);
+  if (exchangeActions.includes(action))
+    return exchangeCommand(s, a, action, raw);
   if (action.startsWith("spending.")) return spendingCommand(s, a, action, raw);
   if (managementActions.includes(action))
     return managementCommand(s, a, action, raw);
@@ -1187,107 +1061,6 @@ export function command(
       });
       return { ok: true };
     }
-    case "lists.create": {
-      const p = z
-        .object({
-          ...listDates,
-          name: text,
-          ownerIds: ids.min(1),
-          groupIds: ids,
-          mode: z.enum(["surprise", "transparent"]),
-          description: z.string().max(2000).default(""),
-        })
-        .parse(b);
-      checkRecipients(s, a, p.ownerIds);
-      checkGroups(s, a, p.groupIds);
-      const mine = p.ownerIds.filter((id) => controls(s, a, id));
-      if (!mine.length) fail(403, "Create a list for a profile you manage.");
-      const pending = p.ownerIds.filter((id) => !mine.includes(id));
-      if (p.revealExchangeGivers && !p.revealAfter)
-        fail(400, "Choose a reveal date to reveal exchange givers.");
-      if (pending.length && p.groupIds.length)
-        fail(
-          400,
-          "Create the list without sharing it with a family group. Everyone on the list must accept shared ownership first.",
-        );
-      const l: List = {
-        ...stamp(),
-        ...p,
-        ownerIds: mine,
-        pendingOwnerIds: pending,
-        modeLocked: p.groupIds.length > 0,
-        archived: false,
-        timeZone: p.timeZone ?? "UTC",
-        revealExchangeGivers: p.revealExchangeGivers ?? false,
-      };
-      s.lists.push(l);
-      emitActivity(
-        s,
-        "invitation",
-        pending.flatMap((id) =>
-          controllers(s.people.find((p) => p.id === id)!),
-        ),
-        { listId: l.id, action: "ownership-request", actorId: a.id },
-      );
-      return l;
-    }
-    case "lists.accept": {
-      const p = z.object({ id }).parse(b);
-      const l =
-        s.lists.find(
-          (l) =>
-            l.id === p.id &&
-            !l.deletedAt &&
-            l.pendingOwnerIds.some((id) => controls(s, a, id)),
-        ) ?? fail(404, "List invitation not found.");
-      const mine = l.pendingOwnerIds.filter((id) => controls(s, a, id));
-      l.ownerIds.push(...mine);
-      l.pendingOwnerIds = l.pendingOwnerIds.filter((id) => !mine.includes(id));
-      for (const i of s.items.filter((i) => i.listId === l.id)) {
-        i.recipientIds = [...l.ownerIds];
-        touch(i);
-      }
-      touch(l);
-      return { ok: true };
-    }
-    case "lists.update": {
-      const p = z
-        .object({
-          ...listDates,
-          id,
-          revision,
-          name: text,
-          groupIds: ids,
-          mode: z.enum(["surprise", "transparent"]),
-          archived: z.boolean(),
-          description: z.string().max(2000),
-        })
-        .parse(b);
-      const l =
-        s.lists.find(
-          (l) =>
-            l.id === p.id &&
-            !l.deletedAt &&
-            l.ownerIds.some((id) => controls(s, a, id)),
-        ) ?? fail(404, "List not found.");
-      if (l.groupEventId)
-        fail(403, "This list is managed through its group event.");
-      checkRevision(l, p.revision);
-      checkGroups(s, a, p.groupIds);
-      checkSharedListPolicy(l, { ...l, ...p });
-      if (l.pendingOwnerIds.length && p.groupIds.length)
-        fail(
-          409,
-          "Wait for everyone to accept shared ownership before sharing this list with a family group.",
-        );
-      if (listIsArchived(l) && !p.archived) p.archiveAfter = null;
-      Object.assign(l, p, {
-        modeLocked: l.modeLocked || p.groupIds.length > 0,
-      });
-      touch(l);
-      reconcileAccess(s);
-      return l;
-    }
     case "items.create": {
       const p = itemInput
         .extend({
@@ -1463,265 +1236,6 @@ export function command(
       );
       return giftView(s, a, i);
     }
-    case "reservations.create": {
-      const p = z
-        .object({
-          itemId: id,
-          quantity: z.number().int().min(1).max(999),
-          exchangeId: id.optional(),
-          exchangeRecipientId: id.optional(),
-          giverId: id.optional(),
-        })
-        .parse(b);
-      const i = getItem(s, a, p.itemId);
-      if (recipient(s, a, i))
-        fail(403, "You cannot reserve a gift for yourself.");
-      if (archived(s, i)) fail(409, "This gift is archived.");
-      if (p.exchangeId) {
-        const e =
-          s.exchanges.find(
-            (e) =>
-              e.id === p.exchangeId &&
-              !e.deletedAt &&
-              !e.archived &&
-              e.status === "drawn" &&
-              groupAccess(s, a, e.groupId),
-          ) ?? fail(404, "Exchange not found.");
-        if (
-          !p.giverId ||
-          !controls(s, a, p.giverId) ||
-          !e.assignments.some(
-            ([g, r]) => g === p.giverId && i.recipientIds.includes(r),
-          ) ||
-          mode(s, i) !== "surprise"
-        )
-          fail(403, "Choose a gift for one of your assigned recipients.");
-        const recipients = e.assignments
-          .filter(
-            ([giver, receiver]) =>
-              giver === p.giverId && i.recipientIds.includes(receiver),
-          )
-          .map(([, receiver]) => receiver);
-        if (!p.exchangeRecipientId && recipients.length === 1)
-          p.exchangeRecipientId = recipients[0];
-        if (
-          !p.exchangeRecipientId ||
-          !recipients.includes(p.exchangeRecipientId)
-        )
-          fail(400, "Choose who this exchange gift is for in Buying for.");
-      } else if (p.exchangeRecipientId || p.giverId) {
-        fail(400, "Choose an exchange for this giver and recipient.");
-      }
-      const used = s.reservations
-        .filter((r) => r.itemId === i.id)
-        .reduce((n, r) => n + r.quantity, 0);
-      if (used + p.quantity > i.quantity)
-        fail(
-          409,
-          "Someone has already reserved that quantity. Refresh to see what remains.",
-        );
-      const r: Reservation = {
-        ...stamp(),
-        ...p,
-        buyerId: a.id,
-        purchased: 0,
-        former: false,
-        titleSnapshot: i.title,
-      };
-      s.reservations.push(r);
-      registerSpendingReservation(s, a, r.id);
-      if (!r.exchangeId) notifyGift(s, a, i, "reservation");
-      return { id: r.id };
-    }
-    case "reservations.update": {
-      const p = z
-        .object({
-          id,
-          revision,
-          quantity: z.number().int().min(0).max(999),
-          purchased: z.number().int().min(0).max(999),
-          poolTargetCents: z
-            .number()
-            .int()
-            .positive()
-            .max(100000000)
-            .optional(),
-        })
-        .parse(b);
-      const r =
-        s.reservations.find((r) => r.id === p.id && r.buyerId === a.id) ??
-        fail(404, "Reservation not found.");
-      checkRevision(r, p.revision);
-      if (p.quantity > r.quantity || p.purchased > p.quantity)
-        fail(
-          400,
-          "Make a new reservation to buy more. The quantity purchased cannot be higher than the quantity reserved.",
-        );
-      const i = s.items.find((i) => i.id === r.itemId);
-      if (
-        p.purchased > r.purchased &&
-        (!i || !itemVisible(s, a, i) || recipient(s, a, i))
-      )
-        fail(403, "This gift is no longer available for new purchases.");
-      if (
-        p.poolTargetCents &&
-        p.poolTargetCents !== r.poolTargetCents &&
-        (r.exchangeId || !i || !itemVisible(s, a, i) || archived(s, i))
-      )
-        fail(400, "Contributions are not available for this reservation.");
-      const pledged = s.contributions
-        .filter((c) => c.reservationId === r.id && c.status !== "cancelled")
-        .reduce((n, c) => n + c.amountCents, 0);
-      if (p.poolTargetCents && p.poolTargetCents < pledged)
-        fail(
-          409,
-          "The contribution goal must cover the contributions already promised.",
-        );
-      const wasFunded = !!r.poolTargetCents && pledged >= r.poolTargetCents;
-      const increased = p.purchased > r.purchased;
-      if (increased) r.purchasedAt = new Date().toISOString();
-      Object.assign(r, p);
-      touch(r);
-      if (
-        !wasFunded &&
-        r.poolTargetCents &&
-        pledged >= r.poolTargetCents &&
-        r.quantity > 0
-      )
-        emitActivity(
-          s,
-          "contribution",
-          [
-            r.buyerId,
-            ...s.contributions
-              .filter(
-                (c) => c.reservationId === r.id && c.status !== "cancelled",
-              )
-              .map((c) => c.userId),
-          ],
-          { itemId: r.itemId, reservationId: r.id, action: "funded" },
-        );
-      if (!r.quantity && r.poolTargetCents)
-        emitActivity(
-          s,
-          "contribution",
-          [
-            r.buyerId,
-            ...s.contributions
-              .filter(
-                (c) => c.reservationId === r.id && c.status !== "cancelled",
-              )
-              .map((c) => c.userId),
-          ],
-          {
-            itemId: r.itemId,
-            reservationId: r.id,
-            actorId: a.id,
-            action: "pool-cancelled",
-          },
-        );
-      if (!r.quantity)
-        for (const c of s.contributions.filter(
-          (c) => c.reservationId === r.id && c.status === "pledged",
-        )) {
-          c.status = "cancelled";
-          touch(c);
-        }
-      if (!r.exchangeId && i && !itemTrashed(s, i))
-        emitGiftActivity(s, a, i, increased ? "purchase" : "reservation", {
-          reservationId: r.id,
-          action: !r.quantity ? "released" : undefined,
-        });
-      return r;
-    }
-    case "contributions.create": {
-      const p = z
-        .object({
-          reservationId: id,
-          amountCents: z.number().int().positive().max(100000000),
-        })
-        .parse(b);
-      const r =
-        s.reservations.find(
-          (r) =>
-            r.id === p.reservationId &&
-            r.quantity > 0 &&
-            !r.exchangeId &&
-            r.poolTargetCents,
-        ) ?? fail(404, "Shared gift not found.");
-      const i = getItem(s, a, r.itemId);
-      if (recipient(s, a, i) || archived(s, i) || r.buyerId === a.id)
-        fail(403, "You cannot contribute to this gift.");
-      const total = s.contributions
-        .filter((c) => c.reservationId === r.id && c.status !== "cancelled")
-        .reduce((n, c) => n + c.amountCents, 0);
-      if (total + p.amountCents > r.poolTargetCents!)
-        fail(
-          409,
-          "That amount is more than this gift still needs. Enter a smaller amount.",
-        );
-      const c = { ...stamp(), ...p, userId: a.id, status: "pledged" as const };
-      s.contributions.push(c);
-      notify(s, "contribution", [r.buyerId], {
-        itemId: i.id,
-        reservationId: r.id,
-        contributionId: c.id,
-        action: "pledged",
-        actorId: a.id,
-      });
-      if (total + p.amountCents === r.poolTargetCents)
-        notify(
-          s,
-          "contribution",
-          [
-            r.buyerId,
-            ...s.contributions
-              .filter(
-                (c) => c.reservationId === r.id && c.status !== "cancelled",
-              )
-              .map((c) => c.userId),
-          ],
-          { itemId: i.id, reservationId: r.id, action: "funded" },
-        );
-      return c;
-    }
-    case "contributions.update": {
-      const p = z
-        .object({
-          id,
-          revision,
-          status: z.enum(["sent", "received", "cancelled"]),
-        })
-        .parse(b);
-      const c =
-        s.contributions.find((c) => c.id === p.id) ??
-        fail(404, "Contribution not found.");
-      const r = s.reservations.find((r) => r.id === c.reservationId)!;
-      if (p.status === "received" ? r.buyerId !== a.id : c.userId !== a.id)
-        fail(404, "Contribution not found.");
-      checkRevision(c, p.revision);
-      if (
-        (p.status === "received" && c.status !== "sent") ||
-        (p.status === "sent" && c.status !== "pledged") ||
-        (p.status === "cancelled" && c.status !== "pledged")
-      )
-        fail(
-          409,
-          "This contribution can no longer be changed that way. Refresh to see its current status.",
-        );
-      c.status = p.status;
-      if (p.status === "sent") c.sentAt = new Date().toISOString();
-      if (p.status === "received") c.receivedAt = new Date().toISOString();
-      touch(c);
-      notify(s, "contribution", [r.buyerId, c.userId], {
-        itemId: r.itemId,
-        reservationId: r.id,
-        contributionId: c.id,
-        action: p.status,
-        actorId: a.id,
-      });
-      return c;
-    }
     case "comments.update":
     case "comments.delete": {
       const p = z
@@ -1834,219 +1348,6 @@ export function command(
         ),
         refs,
       );
-      return { ok: true };
-    }
-    case "exchanges.create":
-    case "exchanges.update": {
-      const updating = action === "exchanges.update";
-      const edit = updating ? z.object({ id, revision }).parse(b) : undefined;
-      const existing = edit
-        ? s.exchanges.find(
-            (e) =>
-              e.id === edit.id &&
-              !e.deletedAt &&
-              !e.archived &&
-              managesGroupExchanges(s, a, e.groupId),
-          )
-        : undefined;
-      if (edit) {
-        if (!existing) fail(404, "Exchange not found.");
-        checkRevision(existing!, edit.revision);
-        if (existing!.status !== "draft")
-          fail(
-            409,
-            "You can only edit an exchange before names are drawn and before it is cancelled.",
-          );
-      }
-      const p = z
-        .object({
-          spendingGuidelineCents: spendingGuideline.optional(),
-          name: text,
-          groupId: id,
-          participantIds: ids.min(2),
-          count: z.union([z.literal(1), z.literal(2), z.literal(3)]),
-          excludeHousehold: z.boolean(),
-          exclusions: z
-            .array(z.tuple([id, id]))
-            .max(10000)
-            .default([]),
-          previousId: id.optional(),
-        })
-        .parse(b);
-      if (!managesGroupExchanges(s, a, p.groupId))
-        fail(
-          404,
-          "Exchange management is not available for this family group.",
-        );
-      if (existing && p.groupId !== existing.groupId)
-        fail(400, "An exchange cannot move to another family group.");
-      if (
-        p.exclusions.some(
-          ([from, to]) =>
-            from === to ||
-            !p.participantIds.includes(from) ||
-            !p.participantIds.includes(to),
-        )
-      )
-        fail(
-          400,
-          "Choose two different people taking part in this exchange: a giver and someone they should not draw.",
-        );
-      if (existing && p.previousId === existing.id)
-        fail(400, "Choose a different previous exchange.");
-      const g = s.groups.find((g) => g.id === p.groupId)!;
-      if (
-        p.participantIds.some(
-          (id) =>
-            !s.people.some(
-              (q) =>
-                q.id === id &&
-                controllers(q).some((u) => g.memberIds.includes(u)),
-            ),
-        )
-      )
-        fail(400, "Every participant must belong to the family group.");
-      if (
-        p.previousId &&
-        !s.exchanges.some(
-          (e) =>
-            e.id === p.previousId && !e.deletedAt && e.groupId === p.groupId,
-        )
-      )
-        fail(404, "Previous exchange not found.");
-      const e: Exchange = {
-        ...(existing ?? stamp()),
-        ...p,
-        organizerId: existing?.organizerId ?? a.id,
-        status: "draft",
-        assignments: [],
-      };
-      matchExchange(e, s.people, s);
-      if (existing) {
-        Object.assign(existing, e);
-        touch(existing);
-      } else s.exchanges.push(e);
-      return { id: e.id };
-    }
-    case "exchanges.guideline": {
-      const p = z
-        .object({ id, revision, spendingGuidelineCents: spendingGuideline })
-        .strict()
-        .parse(b);
-      const e =
-        s.exchanges.find(
-          (e) =>
-            e.id === p.id &&
-            !e.deletedAt &&
-            managesGroupExchanges(s, a, e.groupId),
-        ) ?? fail(404, "Exchange not found.");
-      checkRevision(e, p.revision);
-      if (e.archived || e.status === "cancelled")
-        fail(409, "Restore an active exchange before changing its guideline.");
-      if ((e.spendingGuidelineCents ?? null) === p.spendingGuidelineCents)
-        return { ok: true };
-      e.spendingGuidelineCents = p.spendingGuidelineCents;
-      touch(e);
-      if (e.status === "drawn")
-        notify(
-          s,
-          "exchange",
-          e.participantIds.flatMap((id) =>
-            s.people.filter((p) => p.id === id).flatMap(controllers),
-          ),
-          {
-            exchangeId: e.id,
-            actorId: a.id,
-            action: "spending-guideline-updated",
-          },
-        );
-      return { ok: true };
-    }
-    case "exchanges.draw": {
-      const p = z.object({ id, revision }).parse(b);
-      const e =
-        s.exchanges.find(
-          (e) =>
-            e.id === p.id &&
-            !e.deletedAt &&
-            managesGroupExchanges(s, a, e.groupId),
-        ) ?? fail(404, "Exchange not found.");
-      checkRevision(e, p.revision);
-      if (e.archived || e.status !== "draft")
-        fail(409, "This exchange has already been drawn or cancelled.");
-      const g = s.groups.find((g) => g.id === e.groupId)!;
-      if (
-        e.participantIds.some(
-          (id) =>
-            !s.people.some(
-              (p) =>
-                p.id === id &&
-                controllers(p).some((u) => g.memberIds.includes(u)),
-            ),
-        )
-      )
-        fail(
-          409,
-          "A participant has left the family group. Create a new exchange.",
-        );
-      if (
-        e.participantIds.some(
-          (p) =>
-            !s.lists.some(
-              (l) =>
-                !l.deletedAt &&
-                !listIsArchived(l) &&
-                l.mode === "surprise" &&
-                l.ownerIds.includes(p) &&
-                l.groupIds.includes(e.groupId),
-            ),
-        )
-      )
-        fail(
-          400,
-          "Each person needs a wish list set to Keep it a surprise and shared with this family group.",
-        );
-      e.assignments = matchExchange(
-        e,
-        s.people,
-        s,
-        s.exchanges.find((p) => p.id === e.previousId)?.assignments,
-      );
-      e.status = "drawn";
-      e.drawnAt = new Date().toISOString();
-      touch(e);
-      notify(
-        s,
-        "exchange",
-        e.participantIds.flatMap((id) =>
-          controllers(s.people.find((p) => p.id === id)!),
-        ),
-        { exchangeId: e.id },
-      );
-      return { ok: true };
-    }
-    case "exchanges.cancel": {
-      const p = z.object({ id, revision }).parse(b);
-      const e =
-        s.exchanges.find(
-          (e) =>
-            e.id === p.id &&
-            !e.deletedAt &&
-            managesGroupExchanges(s, a, e.groupId),
-        ) ?? fail(404, "Exchange not found.");
-      checkRevision(e, p.revision);
-      const wasDrawn = e.status === "drawn";
-      e.status = "cancelled";
-      touch(e);
-      if (wasDrawn)
-        notify(
-          s,
-          "exchange",
-          e.participantIds.flatMap((id) =>
-            controllers(s.people.find((p) => p.id === id)!),
-          ),
-          { exchangeId: e.id, action: "cancelled", actorId: a.id },
-        );
       return { ok: true };
     }
     case "preferences.update": {

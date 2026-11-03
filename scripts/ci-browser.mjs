@@ -127,7 +127,7 @@ try {
     "playwright",
     "test",
     `tests/${suite}.spec.ts`,
-    ...(suite === "e2e" ? ["tests/reliability.spec.ts"] : []),
+    ...(suite === "e2e" ? ["tests/reliability.spec.ts", "tests/efficiency.spec.ts"] : []),
     ...(suite === "pwa"
       ? ["tests/update-notice.spec.ts", "tests/update-lifecycle.spec.ts"]
       : []),

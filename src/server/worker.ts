@@ -1,3 +1,4 @@
+import { recordWorkerMetrics } from "./metrics";
 import { ImportPending, BrightDataFailure } from "./brightdata";
 import { pollSmsStatus, alertLowSmsCredit } from "./sms";
 import {
@@ -185,6 +186,13 @@ async function dispatch() {
         s.usage.push(row);
       }
       row.count = Date.now();
+      if (
+        Date.now() -
+          (s.usage.find((u) => u.key === "worker-metrics.sampledAt")?.count ??
+            0) >=
+        60000
+      )
+        recordWorkerMetrics(s);
     });
     const s = await readState();
     for (const j of s.giftDiscoveryJobs.filter(
