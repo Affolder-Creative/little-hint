@@ -360,7 +360,7 @@ describe("event lists and permissions", () => {
     idempotent(f.state, f.actors[0], key, "group-events.create", payload);
     expect(
       idempotent(f.state, f.actors[0], key, "group-events.create", payload),
-    ).toEqual({ ok: true, replayed: true });
+    ).toMatchObject({ ok: true, replayed: true });
     expect(f.state.lists).toHaveLength(1);
     const event = f.state.groupEvents[0];
     const revision = event.revision;

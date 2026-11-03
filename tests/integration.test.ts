@@ -72,6 +72,54 @@ describe.skipIf(!url)("PostgreSQL transaction integrity", () => {
   afterAll(async () => {
     await storage?.pool.end();
   });
+  it("refuses future record types without deleting or modifying any records", async () => {
+    const id = crypto.randomUUID();
+    await storage.pool.query(
+      "INSERT INTO app_record(id,kind,data) VALUES ($1,'future-kind',$2)",
+      [id, { id }],
+    );
+    try {
+      let called = false;
+      await expect(
+        storage.transact(() => {
+          called = true;
+        }),
+      ).rejects.toThrow("unsupported record types");
+      expect(called).toBe(false);
+      await expect(storage.readState()).rejects.toThrow(
+        "unsupported record types",
+      );
+      expect(
+        (
+          await storage.pool.query("SELECT id FROM app_record WHERE id=$1", [
+            id,
+          ])
+        ).rowCount,
+      ).toBe(1);
+    } finally {
+      await storage.pool.query("DELETE FROM app_record WHERE id=$1", [id]);
+    }
+  });
+  it("refuses a future SQL schema without changing it", async () => {
+    await storage.pool.query(
+      "INSERT INTO schema_migration(version) VALUES (999)",
+    );
+    try {
+      await expect(storage.migrate()).rejects.toThrow(
+        "newer than this application",
+      );
+      await expect(storage.assertDatabaseCompatibility()).rejects.toThrow(
+        "newer than this application",
+      );
+      await expect(storage.transact(() => {})).rejects.toThrow(
+        "newer than this application",
+      );
+    } finally {
+      await storage.pool.query(
+        "DELETE FROM schema_migration WHERE version=999",
+      );
+    }
+  });
   it("allows exactly one simultaneous reservation for the final unit", async () => {
     const results = await Promise.allSettled([
       storage.transact((s) =>
@@ -262,7 +310,9 @@ describe.skipIf(!url)("PostgreSQL transaction integrity", () => {
         ),
       ),
     );
-    expect(results).toContainEqual({ ok: true, replayed: true });
+    expect(results).toContainEqual(
+      expect.objectContaining({ ok: true, replayed: true }),
+    );
     expect(
       (await storage.readState()).reservations.filter(
         (r) => r.itemId === gift.id,

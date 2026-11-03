@@ -2349,7 +2349,26 @@ export function idempotent(
         409,
         "We could not confirm this action. Refresh to check your changes before trying again.",
       );
-    return { ok: true, replayed: true };
+    // Return only the operation identifier, never a historical private DTO.
+    const result = prior.result as { id?: unknown; duplicate?: unknown } | null;
+    if (action.startsWith("imports.")) {
+      const job =
+        s.imports.find((j) => j.id === result?.id && j.userId === a.id) ??
+        fail(404, "Import not found.");
+      // Forms need the current status and draft revision to resume polling/saving.
+      // Reauthorize the live record instead of replaying its historical snapshot.
+      return { ...importView(job), replayed: true };
+    }
+    if (result?.duplicate) {
+      const current = command(s, a, action, body);
+      prior.result = current;
+      return current;
+    }
+    return {
+      ok: true,
+      replayed: true,
+      ...(typeof result?.id === "string" ? { id: result.id } : {}),
+    };
   }
   const result = command(s, a, action, body);
   s.replays.push({ ...stamp(), userId: a.id, key, fingerprint, result });

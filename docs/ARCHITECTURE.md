@@ -114,7 +114,7 @@ Installation uses capability detection with native prompts only after a tap, bro
 
 ## Operational limits
 
-This is application-level privacy, not encryption against the server operator. Deployment requires protected PostgreSQL/upload volumes, TLS, guarded environment secrets, initialized encrypted off-host backup storage, and restricted admin access. Fastify does not trust arbitrary forwarded IP headers; configure a restricted trusted-proxy range only if adding per-client proxy rate limiting later. At present ingress users share the proxy's API rate bucket. Review capacity if many family members use it simultaneously.
+This is application-level privacy, not encryption against the server operator. Deployment requires protected PostgreSQL/upload volumes, TLS, guarded environment secrets, initialized encrypted off-host backup storage, and restricted admin access. Fastify ignores forwarded IP headers unless `TRUSTED_PROXIES` names explicit proxy IP addresses or CIDRs. Authenticated API limits use account IDs; unauthenticated limits use the validated client IP. Static resources and health probes do not consume API allowances. Keep stricter authentication and route-specific limits enabled.
 
 The application worker heartbeat is visible in admin diagnostics. Backup health and last-success state belong to the existing backup sidecar and Coolify. A scheduler configuration is not proof that an off-host backup can be restored. Execute and record restore drills and the physical-device checklist before production release.
 
@@ -135,3 +135,13 @@ Set `AI_ENABLED=true` to enable AI with the configured API key. Missing, blank, 
 Gift discovery still requires an enabled audience mode; product enrichment still respects shop-lookup settings and spending limits. Disabled AI bypasses cached enrichment too. Ordinary shop lookups, photos, manual entry, preferences, saved gifts, and stored usage history remain available or preserved. Unsaved discovery batches follow existing cancellation and cleanup rules. Re-enabling restores historical reporting, not cancelled batches.
 
 Recreate both app and worker after changing the flag. Clients update on normal refresh; previously dispatched requests may still be billed. Staging uses only `STAGING_AI_ENABLED`; preview always disables AI.
+
+## V1 reliability safeguards
+
+Account transitions cancel and remove private queries before exposing the new world, dismiss open forms, and invalidate in-flight old-account API responses. Notification queries also include the account ID.
+
+The client retains operation keys in memory until a successful response, including across network failures, server errors and rate-limited retries. A confirmed success starts a new operation on the next submission. Reloading the page discards these in-memory keys. Server replays return only the original operation ID, never a stored private response body. Import replays reauthorize the current account-owned job and return its sanitized current status and draft revision so forms can resume polling and saving.
+
+App and worker startup reject unknown record kinds or newer SQL schema versions. Domain transactions check compatibility before invoking commands or writing records. Migration and domain writes share the domain lock. Future incompatible JSON record-format changes must increment `schema_migration` and the supported schema version even when no SQL table changes are needed. These guards protect this release and future releases that retain them; older binaries without the guard still require stopping both processes before upgrades or restores.
+
+Hourly media cleanup removes unreferenced uploads older than seven days, as well as explicitly deleted media. Saved and archived items, import results, active draft photos and discovery candidates remain protected. Both original files and card renditions are removed.

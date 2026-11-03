@@ -103,7 +103,7 @@ describe("standalone invitations", () => {
         "invitations.create",
         input,
       ),
-    ).toEqual({ ok: true, replayed: true });
+    ).toMatchObject({ ok: true, replayed: true });
     expect(() => invite(sender, "FRIEND@example.test")).toThrow(
       "already have a pending invitation",
     );

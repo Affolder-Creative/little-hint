@@ -99,7 +99,13 @@ import {
   LoaderCircle,
 } from "lucide-react";
 import type { World, GiftView, Reservation } from "../shared/model";
-import { api, ApiError, clearPersonalData, dollars } from "./api";
+import {
+  api,
+  ApiError,
+  clearPersonalData,
+  dollars,
+  setApiAccount,
+} from "./api";
 import { AppContext, useApp } from "./context";
 import {
   Logo,
@@ -161,13 +167,28 @@ export function App() {
       null,
     ),
     [message, setMessage] = useState("");
+  const authenticatedAccount = useRef<string | null | undefined>(undefined);
+  const isolateAccount = async (id: string | null) => {
+    if (authenticatedAccount.current === id) return;
+    authenticatedAccount.current = id;
+    setApiAccount(id);
+    await client.cancelQueries({ predicate: (q) => q.queryKey[0] !== "world" });
+    client.removeQueries({ predicate: (q) => q.queryKey[0] !== "world" });
+    setModal(null);
+    setMessage("");
+  };
   const query = useQuery({
     queryKey: ["world"],
     queryFn: async ({ signal }): Promise<World | null> => {
       try {
-        return await api<World>("world", undefined, { signal });
+        const next = await api<World>("world", undefined, { signal });
+        if (!signal.aborted) await isolateAccount(next.me.id);
+        return next;
       } catch (error) {
-        if (error instanceof ApiError && error.status === 401) return null;
+        if (error instanceof ApiError && error.status === 401) {
+          if (!signal.aborted) await isolateAccount(null);
+          return null;
+        }
         throw error;
       }
     },
