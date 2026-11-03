@@ -140,7 +140,7 @@ Recreate both app and worker after changing the flag. Clients update on normal r
 
 Account transitions cancel and remove private queries before exposing the new world, dismiss open forms, and invalidate in-flight old-account API responses. Notification queries also include the account ID.
 
-The client retains operation keys in memory until a successful response, including across network failures, server errors and rate-limited retries. A confirmed success starts a new operation on the next submission. Reloading the page discards these in-memory keys. Server replays return only the original operation ID, never a stored private response body.
+The client retains operation keys in memory until a successful response, including across network failures, server errors and rate-limited retries. A confirmed success starts a new operation on the next submission. Reloading the page discards these in-memory keys. Server replays return only the original operation ID, never a stored private response body. Import replays reauthorize the current account-owned job and return its sanitized current status and draft revision so forms can resume polling and saving.
 
 App and worker startup reject unknown record kinds or newer SQL schema versions. Domain transactions check compatibility before invoking commands or writing records. Migration and domain writes share the domain lock. Future incompatible JSON record-format changes must increment `schema_migration` and the supported schema version even when no SQL table changes are needed. These guards protect this release and future releases that retain them; older binaries without the guard still require stopping both processes before upgrades or restores.
 

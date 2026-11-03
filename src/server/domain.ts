@@ -2351,6 +2351,14 @@ export function idempotent(
       );
     // Return only the operation identifier, never a historical private DTO.
     const result = prior.result as { id?: unknown; duplicate?: unknown } | null;
+    if (action.startsWith("imports.")) {
+      const job =
+        s.imports.find((j) => j.id === result?.id && j.userId === a.id) ??
+        fail(404, "Import not found.");
+      // Forms need the current status and draft revision to resume polling/saving.
+      // Reauthorize the live record instead of replaying its historical snapshot.
+      return { ...importView(job), replayed: true };
+    }
     if (result?.duplicate) {
       const current = command(s, a, action, body);
       prior.result = current;
