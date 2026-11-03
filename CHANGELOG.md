@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.14.0](https://github.com/Affolder-Creative/little-hint/compare/v0.13.2...v0.14.0) (2026-11-03)
+
+
+### Features
+
+* add a spending default for new accounts ([#142](https://github.com/Affolder-Creative/little-hint/issues/142)) ([69df7e1](https://github.com/Affolder-Creative/little-hint/commit/69df7e1084a781011d79120c2f4e032c28740568))
+* add optional AI product recovery ([#143](https://github.com/Affolder-Creative/little-hint/issues/143)) ([ceebfe2](https://github.com/Affolder-Creative/little-hint/commit/ceebfe2572395edd1e7160f0936b09adb407bd71))
+* add spending history, budgets, and partner sharing ([#140](https://github.com/Affolder-Creative/little-hint/issues/140)) ([9ea1351](https://github.com/Affolder-Creative/little-hint/commit/9ea13511ef059ff19eaf136c16b903ba902045df))
+
+
+### Fixes
+
+* polish spending layouts and gift counts ([#141](https://github.com/Affolder-Creative/little-hint/issues/141)) ([be766c5](https://github.com/Affolder-Creative/little-hint/commit/be766c5220647c025c774d1596f6effa00dbbf90))
+* reject shop-only product imports ([#138](https://github.com/Affolder-Creative/little-hint/issues/138)) ([8655c27](https://github.com/Affolder-Creative/little-hint/commit/8655c27293e1e7d232f6b10d1e6b5a1f0d865790))
+
+
+### Dependencies
+
+* bump @types/node from 26.6.5 to 26.6.6 in the development group ([#137](https://github.com/Affolder-Creative/little-hint/issues/137)) ([b64318e](https://github.com/Affolder-Creative/little-hint/commit/b64318e2a76cf7cb8ec5cc885002e04cd41c0642))
+* bump the runtime group with 7 updates ([#136](https://github.com/Affolder-Creative/little-hint/issues/136)) ([7037a53](https://github.com/Affolder-Creative/little-hint/commit/7037a5356f81e48da97e040e70258c5f29e8676a))
+
 ## [0.13.2](https://github.com/Affolder-Creative/little-hint/compare/v0.13.1...v0.13.2) (2026-11-02)
 
 
