@@ -352,14 +352,11 @@ Product photo loading preserves the image area and contains the product. Visible
 
 ### Administration
 
-Spending controls reuse the existing checkbox and independent save/discard form.
-The one-time bulk action follows with a labeled account-scope selector, aggregate
-eligibility counts, and a Review accounts button. Its confirmation names the
-scope and explains private account-wide tracking and preserved opt-outs. Loading,
-failure, unavailable, and zero-eligible states use inline text. Results appear as
-an announced status. Personal spending views show a quiet explanation with a
-settings link when tracking was enabled automatically. Use existing spacing,
-typography, theme colors, and dialog focus behavior.
+The new-account spending default reuses the existing checkbox and independent
+save/discard form. Its explanation states when the default applies and preserves
+personal choice. Personal spending views show a quiet explanation with a settings
+link when tracking was enabled at signup. Use existing spacing, typography, and
+theme colors.
 
 Administration contains App settings, This month's usage, Service status, and Background jobs. Family-group creation, automatic product photos, device photo caching, and photo prefetching are editable, with optional locking ENV overrides. All service credentials, providers, models, limits, and AI availability are deployment-only. Service status reports configuration presence, not verified connectivity. When AI_ENABLED is false, omit AI service rows, AI usage groups, and AI-specific explanatory copy even when history exists. Retain other disabled services’ current-month usage with Currently off; omit sections with only prior-month or skipped SMS history. Preserve notification retries, failed shop lookups, and the note that backup status is unavailable.
 

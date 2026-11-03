@@ -5,7 +5,6 @@ import { preferences, world, stamp } from "../src/server/domain";
 import { smsInfo } from "../src/server/sms-provider";
 import { telegramInfo } from "../src/server/channel-availability";
 import { adminUsage } from "../src/server/usage";
-import { adminSpending } from "../src/server/admin-spending";
 import { serviceStatuses } from "../src/server/service-status";
 
 async function setup(
@@ -80,8 +79,6 @@ async function setup(
       return r.fulfill({ json: { publicKey: null, devices: [] } });
     if (path === "admin/usage")
       return r.fulfill({ json: adminUsage(f.state, cfg) });
-    if (path === "admin/spending")
-      return r.fulfill({ json: adminSpending(f.state, actor) });
     if (path === "admin/services")
       return r.fulfill({ json: serviceStatuses(cfg, false) });
     if (path === "notifications")

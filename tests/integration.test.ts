@@ -72,37 +72,6 @@ describe.skipIf(!url)("PostgreSQL transaction integrity", () => {
   afterAll(async () => {
     await storage?.pool.end();
   });
-  it("serializes spending enablement with personal opt-outs and rolls back failures", async () => {
-    const { enableSpending } = await import("../src/server/admin-spending");
-    await storage.transact((s) => {
-      s.people.find((p) => p.userId === a.id)!.admin = true;
-    });
-    await Promise.all([
-      storage.transact((s) =>
-        enableSpending(s, a, { scope: "all" }, "spending_integration_01"),
-      ),
-      storage.transact((s) =>
-        command(s, b, "spending.settings", {
-          enabled: false,
-          summaries: false,
-        }),
-      ),
-    ]);
-    expect(
-      (await storage.readState()).spendingSettings.find(
-        (p) => p.userId === b.id,
-      )?.enabled,
-    ).toBe(false);
-    const before = (await storage.readState()).spendingSettings;
-    await expect(
-      storage.transact((s) => {
-        enableSpending(s, a, { scope: "all" }, "spending_integration_02");
-        throw new Error("rollback spending");
-      }),
-    ).rejects.toThrow("rollback spending");
-    expect((await storage.readState()).spendingSettings).toEqual(before);
-  });
-
   it("allows exactly one simultaneous reservation for the final unit", async () => {
     const results = await Promise.allSettled([
       storage.transact((s) =>

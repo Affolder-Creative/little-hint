@@ -71,15 +71,12 @@ function MoneyField({
     </Field>
   );
 }
-function SpendingEnabledNotice({ source }: { source?: "default" | "admin" }) {
+function SpendingEnabledNotice({ source }: { source?: "default" }) {
   if (!source) return null;
   return (
     <p className="muted">
-      {source === "admin"
-        ? "An app administrator enabled your private spending tracking."
-        : "Private spending tracking was enabled when you joined."}{" "}
-      You can turn it off in{" "}
-      <Link to="/settings?section=spending">Spending settings</Link>. Sharing
+      Private spending tracking was enabled when you joined. You can turn it off
+      in <Link to="/settings?section=spending">Spending settings</Link>. Sharing
       remains your choice.
     </p>
   );

@@ -1,4 +1,3 @@
-import { adminSpending, enableSpending } from "./admin-spending";
 import { spendingAvailable } from "./deployment";
 import {
   spendingView,
@@ -580,20 +579,6 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
         );
     },
   );
-  app.get("/api/v1/admin/spending", async (req) =>
-    adminSpending(await readState(), await actor(req)),
-  );
-  app.post("/api/v1/admin/spending/enable", async (req) => {
-    const a = await actor(req);
-    return transact((s) =>
-      enableSpending(
-        s,
-        a,
-        req.body,
-        String(req.headers["idempotency-key"] ?? ""),
-      ),
-    );
-  });
   app.get("/api/v1/admin/settings", async (req) => {
     const a = await actor(req);
     if (!isAdmin(await readState(), a))

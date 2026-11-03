@@ -1,4 +1,3 @@
-import { AdminSpending } from "./AdminSpending";
 import { useApp } from "./context";
 import { useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -143,7 +142,6 @@ export function AdminPreferences({ settings }: { settings: Setting[] }) {
           </>
         )}
       </PreferenceGroup>
-      <AdminSpending />
       {!!group.length && (
         <PreferenceGroup
           settings={group}

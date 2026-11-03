@@ -203,24 +203,17 @@ For paid shop lookups, see [Shop lookup configuration](docs/shop-lookups.md), in
 
 ### Spending availability
 
-`SPENDING_ENABLED` is deployment-only. Leave it unset or blank to make optional spending tracking available; tracking starts off unless an app administrator enables the new-account default or runs bulk enablement. Each person can change their choice under Settings → Spending. Only `false` disables it, ignoring surrounding whitespace and letter case. Restart the app after changing this environment variable. Disabled deployments hide the new spending and budget UI and reject its endpoints. Existing preferences and records remain stored. Ordinary reservations, purchase status, contributions, listed prices, and older event/exchange spending guidelines still work. When re-enabled, missed purchases reconcile privately without inventing paid amounts or dates.
+`SPENDING_ENABLED` is deployment-only. Leave it unset or blank to make optional spending tracking available; tracking starts off unless an app administrator enables the new-account default. Each person can change their choice under Settings → Spending. Only `false` disables it, ignoring surrounding whitespace and letter case. Restart the app after changing this environment variable. Disabled deployments hide the new spending and budget UI and reject its endpoints. Existing preferences and records remain stored. Ordinary reservations, purchase status, contributions, listed prices, and older event/exchange spending guidelines still work. When re-enabled, missed purchases reconcile privately without inventing paid amounts or dates.
 
 
-### Admin spending controls
+### New-account spending default
 
-Settings → Administration → App settings includes a default-off preference for
-spending tracking on new accounts. It applies at first verified sign-in, including
-accounts activated while the deployment spending switch is off. Later sign-ins
-and changes to the default do not change existing accounts.
+Settings → Administration → App settings lets app administrators enable private
+spending tracking for new accounts. This preference starts off and applies once,
+at first verified sign-in. It does not change existing accounts or later sign-ins.
+Each person can turn tracking off under Settings → Spending. Sharing still
+requires separate partner consent.
 
-App administrators can review and enable private tracking for all activated
-accounts or current members of any family group. Managed profiles without an
-account and pending invitations are excluded. Existing enabled preferences and
-saved opt-outs are preserved. Selecting a group affects each member's whole
-account, not just gifts in that group, and does not enroll future members.
-
-Records remain private; partner consent and sharing rules are unchanged. People
-can turn tracking off afterward. Old purchase statuses reconcile when spending
-is next opened, without invented amounts or dates. The deployment-only
-`SPENDING_ENABLED=false` blocks bulk enablement and all spending functionality,
-while retaining the saved new-account default and personal preferences.
+When `SPENDING_ENABLED=false`, the new-account preference is still saved and
+applied at account activation, but tracking stays unavailable until the deployment
+switch is restored. No database migration or backfill is required.

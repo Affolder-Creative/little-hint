@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-03T04:41:54.476810+00:00",
+  "generatedAt": "2026-11-03T05:03:10.660347+00:00",
   "title": "Design System: Little Hint",
   "extensions": {
     "colorMeta": {
@@ -1157,13 +1157,6 @@
       "description": "Recipient title and page actions share the desktop top row. The event name uses 18px medium text and its saved description uses 16px regular text. Privacy opens a popover without moving the management link or items.",
       "html": "<header class=\"ds-recipient-heading\"><div class=\"ds-title-row\"><h1>Your wish list</h1><button>Add item</button></div><h2>Family celebration</h2><p>Share a few things you would love.</p><div class=\"ds-metadata-row\"><button class=\"ds-privacy-trigger\" aria-label=\"Keep it a surprise Privacy details\">Keep it a surprise <svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"M12 16v-4M12 8h.01\"/></svg></button><a href=\"#event\">Manage event →</a></div><p class=\"ds-context\">You manage the items. Event leaders manage the settings.</p></header>",
       "css": ".ds-recipient-heading{font:14px/1.6 system-ui;color:var(--text,#2b201d)}.ds-recipient-heading h1{font-size:34px;line-height:1.15;margin:0 0 12px}.ds-recipient-heading h2{font-size:18px;font-weight:500;line-height:1.4;letter-spacing:normal;margin:0 0 12px}.ds-recipient-heading p{font-size:16px;color:var(--muted,#746057);max-width:65ch}.ds-recipient-heading .ds-context{font-size:13px}.ds-privacy-trigger{font:inherit;min-height:44px;background:transparent;color:var(--muted,#746057);border:0;padding:4px 0;text-align:left;cursor:pointer}.ds-privacy-trigger:focus-visible{outline:3px solid var(--accent,#aa4d37);outline-offset:3px}.ds-title-row,.ds-metadata-row{display:flex;justify-content:space-between;gap:16px;align-items:center;flex-wrap:wrap}.ds-title-row button{min-height:44px;border:0;border-radius:8px;padding:10px 16px;background:var(--accent,#aa4d37);color:var(--on-accent,#fff8f0);font:inherit}.ds-metadata-row a{color:var(--accent,#aa4d37)}"
-    },
-    {
-      "name": "Spending enrollment",
-      "kind": "custom",
-      "description": "An independent new-account default and a one-time bulk action. Review names the account scope and preserves personal opt-outs.",
-      "html": "<section class=\"ds-spending\"><h4>Enable for existing accounts</h4><p>Saved opt-outs are preserved. Records stay private.</p><label>Accounts to enable<select><option>Choose accounts</option><option>All accounts</option></select></label><button>Review accounts</button></section>",
-      "css": ".ds-spending { display: grid; gap: 16px; color: var(--text); } .ds-spending h4, .ds-spending p { margin: 0; } .ds-spending label { display: grid; gap: 8px; } .ds-spending select { min-height: 44px; padding: 11px 12px; border: 1px solid var(--control-border); border-radius: 8px; color: var(--text); background: var(--paper); } .ds-spending button { justify-self: start; min-height: 44px; padding: 12px 18px; border: 1px solid var(--border); border-radius: 8px; background: var(--paper); color: var(--text); font-weight: 600; } .ds-spending button:hover { opacity: .9; } .ds-spending button:focus-visible, .ds-spending select:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }"
     }
   ],
   "narrative": {

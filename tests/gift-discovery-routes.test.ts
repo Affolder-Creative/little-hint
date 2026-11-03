@@ -357,3 +357,21 @@ it("allows group policy in staging without enabling integrations and rejects inv
   vi.stubEnv("FAMILY_GROUP_CREATION", "invalid");
   await expect(makeApp()).rejects.toThrow("FAMILY_GROUP_CREATION");
 });
+
+it("limits the new-account spending default to app admins", async () => {
+  const save = () =>
+    app.inject({
+      method: "POST",
+      url: "/api/v1/admin/settings",
+      headers,
+      payload: { key: "SPENDING_DEFAULT_ENABLED", value: "true" },
+    });
+  expect((await save()).statusCode).toBe(403);
+  mocks.state.people.find((p) => p.userId === mocks.actor!.id)!.admin = true;
+  vi.stubEnv("SPENDING_ENABLED", "false");
+  expect((await save()).statusCode).toBe(200);
+  expect((await app.inject("/api/v1/admin/settings")).json()).toContainEqual(
+    expect.objectContaining({ key: "SPENDING_DEFAULT_ENABLED", value: "true" }),
+  );
+  expect(mocks.state.spendingSettings).toEqual([]);
+});
