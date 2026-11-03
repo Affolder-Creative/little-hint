@@ -1,7 +1,8 @@
 import "dotenv/config";
 import { makeApp } from "./app";
-import { pool } from "./db";
+import { pool, assertDatabaseCompatibility } from "./db";
 const app = await makeApp();
+await assertDatabaseCompatibility();
 await app.listen({ port: Number(process.env.PORT ?? 3000), host: "0.0.0.0" });
 for (const signal of ["SIGINT", "SIGTERM"])
   process.on(signal, async () => {

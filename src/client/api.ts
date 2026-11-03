@@ -14,12 +14,28 @@ export class ApiError extends Error {
   }
 }
 let pendingWrites = 0;
+let accountId: string | null = null;
+let generation = 0;
+const uncertain = new Map<string, string>();
+export function setApiAccount(id: string | null) {
+  if (id === accountId) return;
+  accountId = id;
+  generation++;
+  uncertain.clear();
+}
 export const hasPendingWrites = () => pendingWrites > 0;
 export async function api<T = any>(
   path: string,
   body?: unknown,
   options?: { signal?: AbortSignal; idempotencyKey?: string },
 ): Promise<T> {
+  const epoch = generation;
+  const operation =
+    body === undefined ? undefined : JSON.stringify([path, body]);
+  const key =
+    options?.idempotencyKey ??
+    (operation ? (uncertain.get(operation) ?? crypto.randomUUID()) : undefined);
+  if (operation && key) uncertain.set(operation, key);
   if (body !== undefined) pendingWrites++;
   try {
     const response = await fetch(`/api/v1/${path}`, {
@@ -31,11 +47,16 @@ export async function api<T = any>(
           ? {}
           : {
               "Content-Type": "application/json",
-              "Idempotency-Key": options?.idempotencyKey ?? crypto.randomUUID(),
+              "Idempotency-Key": key!,
             },
       body: body === undefined ? undefined : JSON.stringify(body),
     });
     const data = await response.json();
+    if (epoch !== generation && path !== "world")
+      throw new Error("Your account changed. Reopen this page to continue.");
+    // A retry can be rate-limited after the original request already committed.
+    // Only a confirmed success resolves an uncertain operation.
+    if (operation && response.ok) uncertain.delete(operation);
     if (!response.ok)
       throw new ApiError(
         response.status,

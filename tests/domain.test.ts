@@ -237,7 +237,7 @@ describe("buying coordination", () => {
         "reservations.create",
         body,
       ),
-    ).toEqual({ ok: true, replayed: true });
+    ).toEqual({ ok: true, replayed: true, id: f.s.reservations[0].id });
     expect(f.s.reservations).toHaveLength(1);
     expect(() =>
       idempotent(

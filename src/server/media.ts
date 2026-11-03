@@ -97,7 +97,9 @@ export async function saveImage(buffer: Buffer, userId: string) {
 // A tombstone is retained until both files have been removed successfully.
 export async function removeDeletedMedia() {
   await transact(async (s) => {
-    for (const media of s.media.filter((m) => m.deletedAt)) {
+    for (const media of s.media.filter(
+      (m) => m.deletedAt || Date.parse(m.createdAt) < Date.now() - 7 * 86400000,
+    )) {
       const url = `/api/v1/media/${media.id}`;
       if (
         s.items.some((i) => i.image === url) ||
@@ -111,6 +113,7 @@ export async function removeDeletedMedia() {
         )
       )
         continue;
+      media.deletedAt ??= new Date().toISOString();
       await rm(path.join(mediaDir(), media.file), { force: true });
       await rm(path.join(mediaDir(), `${media.file}.card-v1.webp`), {
         force: true,

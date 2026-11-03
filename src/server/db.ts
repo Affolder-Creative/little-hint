@@ -11,6 +11,7 @@ import {
   type Setting,
   type ImportJob,
 } from "../shared/model";
+const supportedSchemaVersion = 2;
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   max: 10,
@@ -32,8 +33,25 @@ export async function readImport(
   );
   return rows[0]?.data as ImportJob | undefined;
 }
+export function assertRecordCompatibility(rows: { kind: string }[]) {
+  if (rows.some((row) => !kinds.includes(row.kind as Kind)))
+    throw new Error(
+      "Database contains unsupported record types. Upgrade app and worker together before continuing.",
+    );
+}
+export async function assertDatabaseCompatibility() {
+  const version = await pool.query(
+    "SELECT max(version) AS version FROM schema_migration",
+  );
+  if (Number(version.rows[0]?.version ?? 0) > supportedSchemaVersion)
+    throw new Error(
+      "Database schema is newer than this application. Upgrade app and worker together.",
+    );
+  await readState();
+}
 export async function readState(): Promise<State> {
   const rows = await db.select().from(schema.records);
+  assertRecordCompatibility(rows);
   const state = emptyState();
   for (const row of rows) {
     if (kinds.includes(row.kind as Kind))
@@ -48,7 +66,15 @@ export async function transact<T>(
 ): Promise<T> {
   return db.transaction(async (tx) => {
     await tx.execute(sql`select pg_advisory_xact_lock(742903118)`);
+    const versions = await tx.execute(
+      sql`SELECT max(version) AS version FROM schema_migration`,
+    );
+    if (Number(versions.rows[0]?.version ?? 0) > supportedSchemaVersion)
+      throw new Error(
+        "Database schema is newer than this application. Upgrade app and worker together.",
+      );
     const rows = await tx.select().from(schema.records);
+    assertRecordCompatibility(rows);
     const state = emptyState();
     const before = new Map(rows.map((r) => [r.id, JSON.stringify(r.data)]));
     for (const row of rows) {
@@ -80,10 +106,18 @@ export async function migrate(databasePool = pool) {
   try {
     await client.query("BEGIN");
     await client.query("SELECT pg_advisory_xact_lock(742903119)");
+    await client.query("SELECT pg_advisory_xact_lock(742903118)");
     await client.query(
       `CREATE TABLE IF NOT EXISTS schema_migration (version integer primary key, applied_at timestamptz not null default now());`,
     );
 
+    const version = await client.query(
+      "SELECT max(version) AS version FROM schema_migration",
+    );
+    if (Number(version.rows[0]?.version ?? 0) > supportedSchemaVersion)
+      throw new Error(
+        "Database schema is newer than this application. Upgrade app and worker together.",
+      );
     const done = await client.query(
       "SELECT 1 FROM schema_migration WHERE version=1",
     );

@@ -2,7 +2,11 @@ import { z } from "zod";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { FastifyServerOptions } from "fastify";
 
-const mocks = vi.hoisted(() => ({ query: vi.fn(), logs: [] as string[] }));
+const mocks = vi.hoisted(() => ({
+  query: vi.fn(),
+  logs: [] as string[],
+  user: null as string | null,
+}));
 vi.mock("../src/server/db", () => ({
   pool: { query: mocks.query },
   readState: vi.fn(),
@@ -10,7 +14,21 @@ vi.mock("../src/server/db", () => ({
 }));
 vi.mock("../src/server/auth", () => ({
   appUrl: "https://littlehint.example.test",
-  makeAuth: () => ({ api: { getSession: async () => null } }),
+  makeAuth: () => ({
+    api: {
+      getSession: async () =>
+        mocks.user
+          ? {
+              user: {
+                id: mocks.user,
+                emailVerified: true,
+                email: `${mocks.user}@example.test`,
+                name: mocks.user,
+              },
+            }
+          : null,
+    },
+  }),
 }));
 vi.mock("fastify", async (importOriginal) => {
   const actual = await importOriginal<typeof import("fastify")>();
@@ -31,9 +49,11 @@ import { makeApp } from "../src/server/app";
 let app: Awaited<ReturnType<typeof makeApp>> | undefined;
 beforeEach(() => {
   mocks.logs.length = 0;
+  mocks.user = null;
   mocks.query.mockReset().mockResolvedValue({ rows: [] });
   vi.stubEnv("LOG_LEVEL", "info");
   vi.stubEnv("APP_ENV", "test");
+  vi.stubEnv("TRUSTED_PROXIES", undefined);
   vi.stubEnv("CLOUDFLARE_WEB_ANALYTICS", undefined);
 });
 
@@ -49,19 +69,66 @@ describe("request limits", () => {
     vi.stubEnv("NODE_ENV", "test");
     app = await makeApp();
     for (let i = 0; i < 150; i++)
-      expect((await app.inject("/api/health")).statusCode).toBe(200);
-    const limited = await app.inject("/api/health");
+      expect((await app.inject("/api/v1/world")).statusCode).toBe(401);
+    const limited = await app.inject("/api/v1/world");
     expect(limited.statusCode).toBe(429);
     expect(Number(limited.headers["retry-after"])).toBeGreaterThan(0);
     expect(limited.json()).toEqual({
       error: "Too many requests. Wait a moment and try again.",
     });
     expect(
-      (await app.inject({ url: "/api/health", remoteAddress: "127.0.0.2" }))
+      (await app.inject({ url: "/api/v1/world", remoteAddress: "127.0.0.2" }))
         .statusCode,
-    ).toBe(200);
+    ).toBe(401);
   });
 
+  it("separates trusted forwarded clients and exempts static assets and health", async () => {
+    vi.stubEnv("TRUSTED_PROXIES", "127.0.0.1");
+    app = await makeApp();
+    const request = (ip: string) =>
+      app!.inject({ url: "/api/v1/world", headers: { "x-forwarded-for": ip } });
+    for (let i = 0; i < 150; i++) await request("198.51.100.1");
+    expect((await request("198.51.100.1")).statusCode).toBe(429);
+    expect((await request("198.51.100.2")).statusCode).toBe(401);
+    expect((await app.inject("/api/health")).statusCode).toBe(200);
+    expect(
+      (
+        await app.inject({
+          url: "/",
+          headers: { "x-forwarded-for": "198.51.100.1" },
+        })
+      ).statusCode,
+    ).not.toBe(429);
+  });
+  it("ignores spoofed forwarding headers from untrusted peers", async () => {
+    app = await makeApp();
+    for (let i = 0; i < 150; i++)
+      await app.inject({
+        url: "/api/v1/world",
+        headers: { "x-forwarded-for": `198.51.100.${i}` },
+      });
+    expect(
+      (
+        await app.inject({
+          url: "/api/v1/world",
+          headers: { "x-forwarded-for": "203.0.113.2" },
+        })
+      ).statusCode,
+    ).toBe(429);
+  });
+  it("gives authenticated accounts separate allowances behind the same proxy", async () => {
+    app = await makeApp();
+    mocks.user = "alice";
+    for (let i = 0; i < 150; i++)
+      await app.inject("/api/v1/imports/not-a-uuid");
+    expect((await app.inject("/api/v1/imports/not-a-uuid")).statusCode).toBe(
+      429,
+    );
+    mocks.user = "bob";
+    expect((await app.inject("/api/v1/imports/not-a-uuid")).statusCode).toBe(
+      400,
+    );
+  });
   it("allows browser bursts but preserves route-specific limits", async () => {
     vi.stubEnv("NODE_ENV", "test");
     vi.stubEnv(
@@ -70,7 +137,7 @@ describe("request limits", () => {
     );
     app = await makeApp({ browserTest: true });
     for (let i = 0; i < 200; i++)
-      expect((await app.inject("/api/health")).statusCode).toBe(200);
+      expect((await app.inject("/api/v1/world")).statusCode).toBe(401);
     for (const [route, max] of [
       ["start", 5],
       ["verify", 10],

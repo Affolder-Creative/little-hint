@@ -47,7 +47,7 @@ export async function expectDialogFieldsToFit(page: Page) {
   expect(layout.fields.filter((field) => !field.fits)).toEqual([]);
 }
 
-async function submitAuth(page: Page, button: string, path: string) {
+export async function submitAuth(page: Page, button: string, path: string) {
   for (let attempt = 0; attempt < 2; attempt++) {
     const [response] = await Promise.all([
       page.waitForResponse((r) => new URL(r.url()).pathname === path),
