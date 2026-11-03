@@ -13,6 +13,7 @@ export function useDialogViewport(ref: RefObject<HTMLDialogElement | null>) {
     const measure = () => {
       // Let users magnify the existing layout rather than reflowing under a pinch.
       if (viewport && viewport.scale !== 1) return;
+      dialog.dataset.compact = String((viewport?.height ?? innerHeight) <= 500);
       dialog.style.setProperty(
         "--dialog-viewport-height",
         `${viewport?.height ?? innerHeight}px`,

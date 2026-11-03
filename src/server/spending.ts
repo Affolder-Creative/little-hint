@@ -13,9 +13,11 @@ import {
   stamp,
   personVisible,
   itemVisible,
+  listVisible,
   recipient,
 } from "./domain";
 const id = z.string().uuid();
+const accountId = z.string().min(1).max(128);
 const cents = z.number().int().min(0).max(100000000);
 const date = z
   .string()
@@ -127,6 +129,9 @@ function snapshot(s: State, a: Actor, reservationId: string): SpendingRecord {
     ),
     listId: l?.id,
     listName: l?.name,
+    listOwnerNames: l?.ownerIds.map(
+      (id) => s.people.find((p) => p.id === id)?.name ?? "Recipient",
+    ),
     eventName: s.groupEvents.find((e) => e.id === l?.groupEventId)?.name,
     eventId: l?.groupEventId,
     reservationId: r.id,
@@ -141,6 +146,40 @@ function snapshot(s: State, a: Actor, reservationId: string): SpendingRecord {
     sharing: "private",
     protected: !!r.exchangeId || (!i?.listId && i?.visibility === "private"),
     history: [],
+  };
+}
+function canAssignList(s: State, r: SpendingRecord) {
+  if (r.kind === "refund" || r.sourceId) return false;
+  if (!r.reservationId) return true;
+  const reservation = s.reservations.find((v) => v.id === r.reservationId);
+  const item = s.items.find((v) => v.id === reservation?.itemId);
+  return !!item && !item.listId;
+}
+function listContext(
+  s: State,
+  a: Actor,
+  listId: string | null,
+  recipients: string[],
+) {
+  const list = listId
+    ? s.lists.find((l) => l.id === listId && listVisible(s, a, l))
+    : undefined;
+  if (
+    listId &&
+    (!list ||
+      !recipients.length ||
+      !recipients.every((id) => list.ownerIds.includes(id)))
+  )
+    fail(400, "Choose an available wish list for these recipients.");
+  const event = s.groupEvents.find((e) => e.id === list?.groupEventId);
+  return {
+    listId: list?.id,
+    listName: list?.name,
+    listOwnerNames: list?.ownerIds.map(
+      (id) => s.people.find((p) => p.id === id)?.name ?? "Recipient",
+    ),
+    eventId: event?.id,
+    eventName: event?.name,
   };
 }
 // Called only inside the domain transaction. Importing legacy status never invents cost or dates.
@@ -276,6 +315,7 @@ export function spendingView(s: State, a: Actor): SpendingView {
         : undefined,
     canEdit:
       !s.contributions.some((c) => c.id === r.sourceId) && editable(s, a, r),
+    canAssignList: canAssignList(s, r),
     payerName: name(s, r.ownerId),
     history: r.history.map((h) => ({
       ...h,
@@ -337,7 +377,7 @@ export function spendingCommand(
   if (!spendingSettings(s, a).enabled)
     fail(403, "Turn on spending tracking first.");
   if (action === "spending.connect") {
-    const p = z.object({ userId: id }).parse(b);
+    const p = z.object({ userId: accountId }).parse(b);
     const person = s.people.find(
       (p2) => p2.userId === p.userId && personVisible(s, a, p2),
     );
@@ -508,6 +548,7 @@ export function spendingCommand(
         reservationId: id.optional(),
         itemId: id.optional(),
         itemRevision: z.number().int().optional(),
+        listId: id.nullable().optional(),
         title: z.string().trim().min(1).max(200),
         recipientIds: z.array(id).min(1).max(20),
         amountCents: cents.nullable(),
@@ -515,7 +556,7 @@ export function spendingCommand(
         quantity: z.number().int().min(1).max(999).default(1),
         occasionId: id.optional(),
         eventId: id.optional(),
-        payerId: id.optional(),
+        payerId: accountId.optional(),
         keepPrivate: z.boolean().default(false),
         planRevision: z.number().int().optional(),
       })
@@ -525,7 +566,7 @@ export function spendingCommand(
       ? s.items.find((i) => i.id === p.itemId && itemVisible(s, a, i))
       : undefined;
     if (p.itemId) {
-      if (!sourceItem?.listId || recipient(s, a, sourceItem))
+      if (!sourceItem || recipient(s, a, sourceItem))
         fail(404, "This gift is not available for purchase.");
       revision(sourceItem, { revision: p.itemRevision });
       if (
@@ -593,6 +634,20 @@ export function spendingCommand(
       )
     )
       fail(403, "You cannot record a purchase for that payer.");
+    const sourceReservationItem = s.items.find(
+      (i) => i.id === reservation?.itemId,
+    );
+    const assignment =
+      p.listId !== undefined
+        ? listContext(
+            s,
+            a,
+            p.listId,
+            base?.recipientIds ?? sourceItem?.recipientIds ?? p.recipientIds,
+          )
+        : undefined;
+    if (assignment && (sourceItem?.listId || sourceReservationItem?.listId))
+      fail(400, "This purchase uses the wish list of its linked gift.");
     if (sourceItem) {
       const created = command(s, a, "reservations.create", {
         itemId: sourceItem.id,
@@ -642,6 +697,7 @@ export function spendingCommand(
       reservationId: p.reservationId,
       listId: base?.listId,
       listName: base?.listName,
+      listOwnerNames: base?.listOwnerNames,
       eventName:
         base?.eventName ?? s.groupEvents.find((e) => e.id === p.eventId)?.name,
       eventId: base?.eventId ?? p.eventId,
@@ -655,6 +711,7 @@ export function spendingCommand(
       r.sharing = base.ownerId === payer ? base.sharing : "explicit";
       r.rule = base.ownerId === payer ? base.rule : undefined;
     } else if (!base && !p.keepPrivate) autoShare(s, a, r);
+    if (assignment) Object.assign(r, assignment);
     s.spendingRecords.push(r);
     if (reservation) syncSpending(s, { ...a, id: reservation.buyerId });
     return { id: r.id };
@@ -670,6 +727,7 @@ export function spendingCommand(
         amountCents: cents.nullable(),
         date: date.nullable(),
         planningYear: year,
+        listId: id.nullable().optional(),
         splits: z.array(z.number().min(0).max(1000000)).min(1),
       })
       .parse(b);
@@ -678,26 +736,42 @@ export function spendingCommand(
       !p.splits.some((v) => v > 0)
     )
       fail(400, "Enter a split for every recipient.");
+    const { listId, ...values } = p;
+    if (listId !== undefined && !canAssignList(s, r))
+      fail(400, "This record uses the wish list of its linked gift.");
+    const assignment =
+      listId !== undefined
+        ? listContext(s, a, listId, r.recipientIds)
+        : undefined;
+    const updates = { ...values, ...assignment };
     const before = r.amountCents;
     const changes = Object.fromEntries(
-      Object.keys(p)
+      Object.keys(updates)
         .filter(
           (key) =>
-            JSON.stringify((r as any)[key]) !== JSON.stringify((p as any)[key]),
+            JSON.stringify((r as any)[key]) !==
+            JSON.stringify((updates as any)[key]),
         )
         .map((key) => [
           key,
-          { before: (r as any)[key], after: (p as any)[key] },
+          { before: (r as any)[key], after: (updates as any)[key] },
         ]),
     );
     if (r.kind === "plan" && !r.sourceId)
       r.unitEstimateCents =
         p.amountCents === null ? null : p.amountCents / Math.max(1, r.quantity);
-    Object.assign(r, p);
+    Object.assign(r, updates);
+    if (assignment)
+      for (const child of s.spendingRecords.filter(
+        (v) => v.kind === "refund" && v.sourceId === r.id,
+      )) {
+        Object.assign(child, assignment);
+        touch(child, a, "Updated wish-list assignment with purchase");
+      }
     touch(
       r,
       a,
-      `Changed amount from ${before === null ? "unknown" : (before / 100).toFixed(2)} to ${p.amountCents === null ? "unknown" : (p.amountCents / 100).toFixed(2)}`,
+      `Updated purchase details; amount from ${before === null ? "unknown" : (before / 100).toFixed(2)} to ${p.amountCents === null ? "unknown" : (p.amountCents / 100).toFixed(2)}`,
     );
     r.history[r.history.length - 1].changes = changes;
     return { ok: true };
@@ -837,7 +911,11 @@ export function spendingHistory(s: State, a: Actor, raw: unknown) {
           .filter((r) => r.listId)
           .map((r) => [
             r.listId!,
-            { id: r.listId!, name: r.listName ?? "Previous wish list" },
+            {
+              id: r.listId!,
+              name: r.listName ?? "Previous wish list",
+              ownerNames: r.listOwnerNames ?? r.recipientNames,
+            },
           ]),
       ).values(),
     ],

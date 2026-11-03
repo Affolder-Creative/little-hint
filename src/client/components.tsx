@@ -613,7 +613,7 @@ export function GiftCard({
           <ArrowUpRight size={15} />
         </div>
         <Heading className="gift-title">{gift.title}</Heading>
-        <PrivateIdeaBadge gift={gift} />
+
         {gift.listId && gift.priority && (
           <span className={`item-priority priority-${gift.priority}`}>
             {priorityLabels[gift.priority]}
@@ -624,18 +624,16 @@ export function GiftCard({
         )}
         <div className="gift-meta">
           <span>{dollars(gift.priceCents)}</span>
-          {gift.isRecipient ? (
-            <span className="status quiet">On your list</span>
-          ) : gift.available === 0 ? (
-            <span className="status">Taken care of</span>
-          ) : (
-            <span className="status available">Available</span>
-          )}
-        </div>
-        <div className="tags">
-          {gift.tags.slice(0, 2).map((t) => (
-            <span key={t}>{t}</span>
-          ))}
+          <span className="gift-badges">
+            <PrivateIdeaBadge gift={gift} />
+            {gift.isRecipient ? (
+              <span className="status quiet">On your list</span>
+            ) : gift.available === 0 ? (
+              <span className="status">Taken care of</span>
+            ) : (
+              <span className="status available">Available</span>
+            )}
+          </span>
         </div>
       </div>
     </Link>

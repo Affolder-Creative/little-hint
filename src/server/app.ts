@@ -214,7 +214,10 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
       return reply.code(error.status).send({ error: error.message });
     if (error instanceof ZodError)
       return reply.code(400).send({
-        error: validationMessage(error),
+        error: validationMessage(
+          error,
+          req.url.startsWith("/api/v1/spending/"),
+        ),
       });
     if ((error as { statusCode?: number }).statusCode === 429)
       return reply
