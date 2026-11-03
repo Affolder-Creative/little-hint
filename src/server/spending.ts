@@ -802,6 +802,15 @@ export function spendingHistory(s: State, a: Actor, raw: unknown) {
   return {
     records: rows.slice((q.page - 1) * 30, q.page * 30),
     total: rows.length,
+    // Count only matching authorized activity. A refund carries its purchase
+    // identity even when that purchase falls outside the selected period.
+    giftCount: new Set(
+      rows.map((r) =>
+        r.reservationId
+          ? `reservation:${r.reservationId}`
+          : `purchase:${r.kind === "refund" && r.sourceId ? r.sourceId : r.id}`,
+      ),
+    ).size,
     summary: spendingTotals(rows, q.person, isShared, ledger),
     years: [
       ...new Set([

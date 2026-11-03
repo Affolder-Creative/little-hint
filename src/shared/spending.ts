@@ -178,6 +178,7 @@ export function spendingTotals(
 export interface SpendingHistoryView {
   records: SpendingView["records"];
   total: number;
+  giftCount: number;
   summary: ReturnType<typeof spendingTotals>;
   years: number[];
   recipients: Array<{ id: string; name: string }>;
