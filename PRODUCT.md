@@ -130,3 +130,5 @@ account activation. This saved preference starts off and does not change existin
 accounts. Each person retains their off switch, and partner consent and sharing
 rules remain unchanged. Newly enabled people see an explanation in Spending
 settings and their spending view. No external notification is sent.
+
+Private gift ideas and manual spending records may be explicitly assigned to an accessible wish list for their recipients. Assignment updates spending totals, budget scope, and the list’s group-event context without adding the gift to the list or changing sharing. Plans pass their assignment to later purchases; purchase reassignment also updates related refunds. Source wish-list gifts retain their source context.

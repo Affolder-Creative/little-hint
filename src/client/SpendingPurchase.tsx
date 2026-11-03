@@ -1,10 +1,11 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useId, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
-import { LockKeyhole, Users, X, Check } from "lucide-react";
+import { LockKeyhole, Users, X, Check, Gift, Plus } from "lucide-react";
 import { api, dollars } from "./api";
 import { useApp } from "./context";
-import { Form, Field, useModalDismiss } from "./components";
+import { Form, Field, Avatar, useModalDismiss } from "./components";
 import type { GiftView, World } from "../shared/model";
 import type { SpendingView } from "../shared/spending";
 import "./spending-purchase.css";
@@ -43,12 +44,55 @@ function PurchaseSearch({
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
   const input = useRef<HTMLInputElement>(null);
+  const [anchor, setAnchor] = useState<HTMLElement | null>(null);
+  const [bounds, setBounds] = useState({
+    left: 0,
+    top: 0,
+    width: 0,
+    maxHeight: 240,
+  });
+  useLayoutEffect(() => {
+    if (!open || !input.current) return;
+    const element = input.current;
+    setAnchor(element.closest("dialog"));
+    const measure = () => {
+      const b = element.getBoundingClientRect();
+      const viewport = window.visualViewport;
+      const top = viewport?.offsetTop ?? 0;
+      const bottom = top + (viewport?.height ?? innerHeight);
+      const below = bottom - b.bottom - 12;
+      const above = b.top - top - 12;
+      const flip = below < 160 && above > below;
+      const height = Math.max(44, Math.min(240, flip ? above : below));
+      setBounds({
+        left: b.left,
+        width: b.width,
+        top: flip ? b.top - height - 4 : b.bottom + 4,
+        maxHeight: height,
+      });
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element.closest("dialog") ?? element);
+    window.visualViewport?.addEventListener("scroll", measure);
+    window.addEventListener("scroll", measure, true);
+    window.addEventListener("resize", measure);
+    window.visualViewport?.addEventListener("resize", measure);
+    return () => {
+      observer.disconnect();
+      window.visualViewport?.removeEventListener("scroll", measure);
+      window.removeEventListener("scroll", measure, true);
+      window.removeEventListener("resize", measure);
+      window.visualViewport?.removeEventListener("resize", measure);
+    };
+  }, [open]);
   const index = Math.min(active, Math.max(choices.length - 1, 0));
   useEffect(() => {
     if (open)
-      document
-        .getElementById(`${id}-option-${index}`)
-        ?.scrollIntoView({ block: "nearest" });
+      document.getElementById(`${id}-option-${index}`)?.scrollIntoView({
+        block: "nearest",
+        container: "nearest",
+      } as ScrollIntoViewOptions);
   }, [open, index, id]);
   const choose = (choice: Choice) => {
     onChoose(choice.id);
@@ -113,53 +157,62 @@ function PurchaseSearch({
             }
           }}
         />
-        {open && (
-          <div
-            className="purchase-options"
-            id={`${id}-options`}
-            role="listbox"
-            aria-label={label}
-            aria-multiselectable={multiple || undefined}
-          >
-            {choices.map((choice, i) => (
-              <button
-                type="button"
-                tabIndex={-1}
-                data-form-change
-                key={choice.id}
-                id={`${id}-option-${i}`}
-                role="option"
-                aria-selected={
-                  multiple ? selected.includes(choice.id) : index === i
-                }
-                className={
-                  index === i ? "purchase-option active" : "purchase-option"
-                }
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => choose(choice)}
-              >
-                <span>
-                  {multiple && (
-                    <span aria-hidden="true" className="purchase-check">
-                      {selected.includes(choice.id) ? (
-                        <Check size={14} />
-                      ) : null}
-                    </span>
-                  )}
-                  {choice.label}
-                </span>
-                {choice.detail && <small>{choice.detail}</small>}
-              </button>
-            ))}
-            {!choices.length && (
-              <p className="purchase-hint">
-                {multiple
-                  ? "No matching people."
-                  : "No matching items. Enter any gift name."}
-              </p>
-            )}
-          </div>
-        )}
+        {open &&
+          anchor &&
+          createPortal(
+            <div
+              style={bounds}
+              className="purchase-options"
+              id={`${id}-options`}
+              role="listbox"
+              aria-label={label}
+              aria-multiselectable={multiple || undefined}
+            >
+              {choices.map((choice, i) => (
+                <button
+                  type="button"
+                  tabIndex={-1}
+                  data-form-change
+                  key={choice.id}
+                  id={`${id}-option-${i}`}
+                  role="option"
+                  aria-selected={
+                    multiple ? selected.includes(choice.id) : index === i
+                  }
+                  className={`purchase-option ${index === i ? "active" : ""} ${choice.id === "manual" ? "purchase-option-manual" : ""}`}
+                  onPointerDown={(e) => e.preventDefault()}
+                  onClick={() => choose(choice)}
+                >
+                  <span>
+                    {multiple && (
+                      <span aria-hidden="true" className="purchase-check">
+                        {selected.includes(choice.id) ? (
+                          <Check size={14} />
+                        ) : null}
+                      </span>
+                    )}
+                    {multiple ? (
+                      <Avatar small name={choice.label} />
+                    ) : choice.id === "manual" ? (
+                      <Plus size={18} aria-hidden="true" />
+                    ) : (
+                      <Gift size={18} aria-hidden="true" />
+                    )}
+                    {choice.label}
+                  </span>
+                  {choice.detail && <small>{choice.detail}</small>}
+                </button>
+              ))}
+              {!choices.length && (
+                <p className="purchase-hint">
+                  {multiple
+                    ? "No matching people."
+                    : "No matching items. Enter any gift name."}
+                </p>
+              )}
+            </div>,
+            anchor,
+          )}
       </div>
       {hint && (
         <p id={`${id}-hint`} className="purchase-hint">
@@ -220,6 +273,7 @@ export function PurchaseForm({
   const [keepPrivate, setKeepPrivate] = useState(false);
   const [payer, setPayer] = useState(world.me.id);
   const [event, setEvent] = useState(initialEvent ?? params.get("event") ?? "");
+  const [assignedList, setAssignedList] = useState<string | undefined>();
   const [occasion, setOccasion] = useState<string | undefined>(
     initialOccasion ?? params.get("occasion") ?? undefined,
   );
@@ -262,6 +316,8 @@ export function PurchaseForm({
     );
   const linked = !!reservation || !!item;
   const recipientIds = plan?.recipientIds ?? item?.recipientIds ?? recipients;
+  const assignmentId = assignedList ?? plan?.listId ?? "";
+  const assignmentList = world.lists.find((l) => l.id === assignmentId);
   const sourceList = world.lists.find((l) => l.id === item?.listId);
   const eventId =
     plan?.eventId ?? sourceList?.groupEventId ?? (linked ? undefined : event);
@@ -273,6 +329,7 @@ export function PurchaseForm({
   const c = data.connection;
   const protectedGift =
     !!plan?.protected ||
+    (!item?.listId && item?.visibility === "private") ||
     recipientIds.some((id) =>
       world.people.some(
         (p) => p.id === id && !!p.userId && c?.users.includes(p.userId),
@@ -294,13 +351,13 @@ export function PurchaseForm({
         ].some((rule) => c.rules[world.me.id]?.includes(rule)));
   const matches = world.items.filter(
     (gift) =>
-      gift.listId &&
       !gift.isRecipient &&
       !gift.archived &&
       !gift.deletedAt &&
-      world.lists.some(
-        (l) => l.id === gift.listId && !l.archived && !l.deletedAt,
-      ) &&
+      (!gift.listId ||
+        world.lists.some(
+          (l) => l.id === gift.listId && !l.archived && !l.deletedAt,
+        )) &&
       `${gift.title} ${gift.recipientNames.join(" ")} ${world.lists.find((l) => l.id === gift.listId)?.name ?? ""}`
         .toLowerCase()
         .includes(title.toLowerCase()),
@@ -322,7 +379,7 @@ export function PurchaseForm({
   const giftChoices: Choice[] = candidates.map(({ gift, reservation: r }) => ({
     id: r ? `reservation:${r.id}` : `item:${gift.id}`,
     label: gift.title,
-    detail: `${gift.recipientNames.join(" & ")} · ${world.lists.find((l) => l.id === gift.listId)?.name ?? "Wish list"}${r ? ` · Your reservation (${r.quantity - r.purchased} left)${r.exchangeId ? " · Exchange" : ""}` : ""}`,
+    detail: `${gift.recipientNames.join(" & ")} · ${world.lists.find((l) => l.id === gift.listId)?.name ?? "Private gift idea"}${r ? ` · Your reservation (${r.quantity - r.purchased} left)${r.exchangeId ? " · Exchange" : ""}` : ""}`,
   }));
   if (title.trim())
     giftChoices.push({
@@ -346,11 +403,12 @@ export function PurchaseForm({
     setSelectedReservation(undefined);
     setQuantity(1);
     setPayer(world.me.id);
+    setAssignedList(undefined);
   };
   return (
     <Form
       dialogLayout
-      className="spending-purchase"
+      className="spending-purchase spending-dialog-form"
       secondaryActions={() => (
         <p className="spending-privacy">
           {prospectiveShared ? <Users size={16} /> : <LockKeyhole size={16} />}
@@ -376,7 +434,11 @@ export function PurchaseForm({
           quantity,
           occasionId: occasionId || undefined,
           eventId: eventId || undefined,
-          payerId: payer,
+          payerId: payer === world.me.id ? undefined : payer,
+          listId:
+            !sourceList && assignedList !== undefined
+              ? assignedList || null
+              : undefined,
           planRevision: plan?.revision,
         });
         close();
@@ -388,7 +450,9 @@ export function PurchaseForm({
           <span className="purchase-label">Gift</span>
           <strong>{reservation?.titleSnapshot ?? item?.title}</strong>
           <p className="purchase-hint">
-            {sourceList?.name ?? plan?.listName ?? "Your reservation"}
+            {sourceList?.name ??
+              plan?.listName ??
+              (item && !item.listId ? "Private gift idea" : "Your reservation")}
           </p>
           {!suppliedReservation && (
             <button
@@ -412,7 +476,7 @@ export function PurchaseForm({
           choices={giftChoices}
           required
           placeholder="Search wish lists or enter a gift name"
-          hint="Choose a wish-list item, or enter any gift name."
+          hint="Choose a wish-list item or private idea, or enter any gift name."
           onChoose={(id) => {
             setSelectionDirty(true);
             if (id === "manual") {
@@ -424,6 +488,7 @@ export function PurchaseForm({
                 id === (r ? `reservation:${r.id}` : `item:${gift.id}`),
             );
             if (choice) {
+              setAssignedList(undefined);
               setSelectedItem(choice.gift);
               setSelectedReservation(choice.reservation);
               setTitle(choice.gift.title);
@@ -553,6 +618,13 @@ export function PurchaseForm({
         <summary>
           Occasion details, optional{occasionId || eventId ? " · Selected" : ""}
         </summary>
+        {!sourceList && (
+          <PurchaseListField
+            recipientIds={recipientIds}
+            value={assignmentId}
+            onChange={setAssignedList}
+          />
+        )}
         <Field
           label="Personal occasion"
           hint="Organize your gift history, such as a birthday."
@@ -570,11 +642,13 @@ export function PurchaseForm({
             ))}
           </select>
         </Field>
-        {linked ? (
-          eventId && (
+        {linked || assignmentList?.groupEventId ? (
+          (eventId || assignmentList?.groupEventId) && (
             <p className="purchase-hint">
               Group event:{" "}
-              {world.groupEvents.find((e) => e.id === eventId)?.name ??
+              {world.groupEvents.find(
+                (e) => e.id === (assignmentList?.groupEventId ?? eventId),
+              )?.name ??
                 plan?.eventName ??
                 "Linked event"}
               . From the selected gift.
@@ -644,5 +718,48 @@ export function PurchaseForm({
         </p>
       )}
     </Form>
+  );
+}
+
+export function PurchaseListField({
+  recipientIds,
+  value,
+  onChange,
+}: {
+  recipientIds: string[];
+  value: string;
+  onChange: (id: string) => void;
+}) {
+  const { world } = useApp();
+  const choices = world.lists.filter(
+    (l) =>
+      !l.deletedAt &&
+      recipientIds.length > 0 &&
+      recipientIds.every((id) => l.ownerIds.includes(id)),
+  );
+  return (
+    <Field
+      label="Wish list, optional"
+      hint="Assign spending to a list without adding or sharing the gift. Event lists also supply the group event."
+    >
+      <select value={value} onChange={(e) => onChange(e.target.value)}>
+        <option value="">No wish list</option>
+        {value && !choices.some((l) => l.id === value) && (
+          <option value={value}>Previously assigned wish list</option>
+        )}
+        {choices.map((l) => (
+          <option key={l.id} value={l.id}>
+            {l.name} •{" "}
+            {l.ownerIds
+              .map(
+                (id) =>
+                  world.people.find((p) => p.id === id)?.name ?? "Recipient",
+              )
+              .join(" & ")}
+            {l.archived ? " · Archived" : ""}
+          </option>
+        ))}
+      </select>
+    </Field>
   );
 }

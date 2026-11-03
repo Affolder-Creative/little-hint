@@ -24,6 +24,7 @@ export interface SpendingRecord extends Base {
   recipientNames: string[];
   listId?: string;
   listName?: string;
+  listOwnerNames?: string[];
   eventName?: string;
   eventId?: string;
   occasionId?: string;
@@ -60,7 +61,13 @@ export interface SpendingView {
   settings: SpendingSettings;
   connection?: SpendingConnection;
   partnerName?: string;
-  records: Array<SpendingRecord & { canEdit: boolean; payerName: string }>;
+  records: Array<
+    SpendingRecord & {
+      canEdit: boolean;
+      canAssignList?: boolean;
+      payerName: string;
+    }
+  >;
   occasions: SpendingOccasion[];
   budgets: SpendingBudget[];
 }
@@ -183,6 +190,6 @@ export interface SpendingHistoryView {
   summary: ReturnType<typeof spendingTotals>;
   years: number[];
   recipients: Array<{ id: string; name: string }>;
-  lists: Array<{ id: string; name: string }>;
+  lists: Array<{ id: string; name: string; ownerNames?: string[] }>;
   events: Array<{ id: string; name: string }>;
 }
