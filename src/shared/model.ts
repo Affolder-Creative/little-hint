@@ -118,7 +118,14 @@ export interface GiftSummary {
     }>;
   }>;
 }
+export interface ProductSource {
+  url: string;
+  fields: Array<"title" | "description" | "image">;
+  method: "extraction" | "web";
+  checkedAt: string;
+}
 export interface Item extends Base {
+  productSources?: ProductSource[];
   purchaseOffers?: GiftOffer[];
   recommendationEvidence?: GiftEvidence[];
   deletedAt?: string;
@@ -316,6 +323,22 @@ export interface ImportDraft {
   touched: string[];
 }
 export interface ImportJob extends Base {
+  recoveryCheckpoint?: {
+    deadline?: number;
+    url: string;
+    result: Partial<Item> & { remoteImage?: string; sourceTitle?: string };
+    evidence: { text: string; images: string[] };
+    manufacturer?: { domain: string; identifiers: string[] };
+  };
+  recoveryState?: Partial<
+    Record<
+      "extraction" | "web",
+      {
+        status: "dispatched" | "complete";
+        result?: Partial<Item> & { remoteImage?: string };
+      }
+    >
+  >;
   draft?: ImportDraft;
   providerState?: {
     snapshotId?: string;

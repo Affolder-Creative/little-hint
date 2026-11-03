@@ -44,8 +44,9 @@ await boss.createQueue("product-import", {
   policy: "exclusive",
   retryLimit: 2,
   retryDelay: 20,
-  expireInSeconds: 180,
+  expireInSeconds: 300,
 });
+await boss.updateQueue("product-import", { expireInSeconds: 300 });
 await boss.createQueue("notification", {
   policy: "exclusive",
   retryLimit: 5,
@@ -106,6 +107,7 @@ await boss.work<{ id: string }>(
         );
         await transact((s) => {
           const row = s.imports.find((i) => i.id === j.id)!;
+          if (row.draft && row.draft.state !== "active") return;
           row.status = "complete";
           row.result = result;
           if (

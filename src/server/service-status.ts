@@ -69,6 +69,17 @@ export function serviceStatuses(
     ...(cfg.AI_ENABLED === "true"
       ? ([
           {
+            id: "product-recovery",
+            label: "AI product recovery",
+            status:
+              cfg.AI_PRODUCT_RECOVERY_ENABLED !== "true" ||
+              !productLookupEnabled(cfg) ||
+              Number(cfg.PAID_DAILY_LIMIT) <= 0 ||
+              Number(cfg.AI_PRODUCT_RECOVERY_DAILY_LIMIT || 10) <= 0
+                ? "Off"
+                : configured(cfg.OPENAI_API_KEY),
+          },
+          {
             id: "product-ai",
             label: "AI product details",
             status:
