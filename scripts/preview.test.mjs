@@ -34,12 +34,16 @@ test("arguments reject unknown/destructive combinations", () => {
   assert.deepEqual(parseArgs(["start", "--share"]), {
     command: "start",
     share: true,
+    watch: false,
     yes: false,
   });
   assert.equal(parseArgs(["reset", "--yes"]).yes, true);
+  assert.equal(parseArgs(["start", "--watch", "--share"]).watch, true);
   for (const args of [
     ["--share"],
     ["stop", "--yes"],
+    ["stop", "--watch"],
+    ["start", "--watch", "--watch"],
     ["start", "--reset"],
     ["reset", "--share"],
     ["start", "--share", "--share"],
@@ -181,7 +185,13 @@ async function fixture(t, scenario = {}) {
     "DATABASE_URL=production-secret\nOPENAI_API_KEY=production-secret",
   );
   const server = createServer((req, res) => {
-    res.end(req.url === "/api/health" ? '{"app":"little-hint"}' : "Mailpit");
+    res.end(
+      req.url === "/api/health"
+        ? '{"app":"little-hint"}'
+        : req.url === "/"
+          ? "/@vite/client"
+          : "Mailpit",
+    );
   });
   server.listen(0, "127.0.0.1");
   await once(server, "listening");
@@ -210,7 +220,7 @@ if(a[0]==='rm'){s.ids=s.ids.filter(id=>!a.includes(id));save();}
 if(a[0]==='compose'){
  const c=a.slice(a.indexOf('tools')+1);
  if(c[0]==='build'&&s.fail==='build'){out('build failed');process.exit(1);}
- if(c[0]==='up'){for(const name of ['db','mailpit','gateway','app','worker','tunnel'].filter(n=>c.includes(n)))if(!s.ids.includes(name))s.ids.push(name);s.networks??=['new-network'];save();if(s.fail==='port'){out('port is already allocated');process.exit(1);}}
+ if(c[0]==='up'){for(const name of ['db','mailpit','gateway','app','worker','tunnel','frontend'].filter(n=>c.includes(n)))if(!s.ids.includes(name))s.ids.push(name);s.networks??=['new-network'];save();if(s.fail==='port'){out('port is already allocated');process.exit(1);}}
  if(c[0]==='port')out('127.0.0.1:'+s.port);
  if(c[0]==='ps'&&s.fail==='tunnel')out('{"State":"exited"}');
  if(c[0]==='run'&&c.includes('ensure-preview')){if(s.fail==='migrate'){out('migration failed '+JSON.parse(fs.readFileSync('.local/preview/state.json','utf8')).databasePassword);process.exit(1);}s.seeded??=1;save();}
@@ -379,4 +389,41 @@ test("a reserved volume owned by another project is never attached or reset", as
       (c) => c.args.includes("build") || c.args.includes("rm"),
     ),
   );
+});
+
+test("watch mode starts frontend and source processes, and logs retain the override", async (t) => {
+  const f = await fixture(t);
+  await f.run(["start", "--watch"]);
+  const metadata = JSON.parse(
+    await readFile(join(f.root, ".local/preview/session.json"), "utf8"),
+  );
+  assert.equal(metadata.watch, true);
+  const config = await readFile(
+    join(f.root, ".local/preview/gateway/Caddyfile"),
+    "utf8",
+  );
+  assert.match(config, /reverse_proxy frontend:5173/);
+  assert.match(config, /handle \/api\/\*/);
+  assert.equal(
+    await readFile(join(f.root, ".local/preview/frontend.env"), "utf8"),
+    `APP_URL='${metadata.origin}'\n`,
+  );
+  await f.run(["logs"]);
+  const calls = (await readFile(join(f.root, "calls.jsonl"), "utf8"))
+    .trim()
+    .split("\n")
+    .map(JSON.parse);
+  assert.ok(calls.some((c) => c.args.includes("src/server/cli.ts")));
+  assert.ok(
+    calls
+      .filter((c) => c.args.includes("logs"))
+      .every((c) =>
+        c.args.some((a) => a.endsWith("compose.preview-watch.yaml")),
+      ),
+  );
+  await f.run(["start"]);
+  const after = JSON.parse(
+    await readFile(join(f.root, ".local/preview/session.json"), "utf8"),
+  );
+  assert.equal(after.watch, false);
 });

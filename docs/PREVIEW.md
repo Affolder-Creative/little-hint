@@ -14,11 +14,47 @@ or configure a `.env` file.
 
 This builds the current checkout, including uncommitted changes, with the production
 Dockerfile. The app and worker run with `NODE_ENV=production` and `APP_ENV=preview`.
-There is no hot reload. Run the command again to rebuild using Docker's build cache.
+Without `--watch`, there is no hot reload. Run the command again to rebuild using Docker's build cache; stopping first is unnecessary.
 Build output stays inside containers; your normal `dist/` and dependencies are untouched.
 Startup exits successfully only after the app, worker, database, inbox, and gateway
 are healthy and the app and inbox respond through the chosen origin. Containers
 continue running when you close the terminal.
+
+## Develop with live updates
+
+```sh
+npm run preview -- --watch
+npm run preview -- --share --watch
+```
+
+Watch mode runs Vite for the frontend and TypeScript watchers for the API and
+worker. Saving client code, CSS, shared modules, or public assets updates the page.
+Server and worker edits restart those processes; subsequent requests use the new
+code. Some frontend edits reload the page and may discard unsaved form input.
+Syntax errors appear in the Vite overlay or container logs; fixing them resumes
+updates. Polling detects source changes across macOS Docker mounts.
+
+The shared URL, cookies, database, uploads, and inbox survive source edits. The
+launcher exits after startup and watchers continue inside Docker. Use the same
+status, logs, and stop commands for either mode. Status labels watch mode as live
+source; its version/revision describe startup, not every subsequent edit.
+
+Dependencies, root HTML, tooling configuration, and database-schema changes require
+rerunning the command. Each new shared invocation still creates a fresh URL.
+Watch mode does not register the production service worker and clears existing
+Little Hint static caches on that origin. Use the default fixed-build preview for
+PWA, offline, and production-build checks.
+
+The frontend receives only client/shared source and public assets, never runtime
+secrets or the checkout's `.env`. Source mounts are read-only; dependencies and
+build caches remain inside containers. The API and worker retain production Node
+behavior and all synthetic-preview restrictions. Edit the checkout that launched
+the preview; other worktrees have independent previews.
+
+Run `npm run test:preview-watch` for disposable Docker/browser acceptance, or add
+`-- --share` to exercise HTTPS hot reload. These checks require installed npm
+dependencies and Google Chrome. They edit only a temporary checkout and remove its
+containers and data afterward.
 
 ## Commands
 

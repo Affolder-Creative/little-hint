@@ -134,6 +134,7 @@ repository root. No local application dependencies or `.env` setup are needed.
 ```sh
 npm run preview                # Local app and test inbox
 npm run preview -- --share     # Fresh public HTTPS link for iPhone/device testing
+npm run preview -- --share --watch # Live source updates on the same shared link
 npm run preview:status         # URLs, accounts, and service health
 npm run preview:stop           # Stop; keep data
 ```
@@ -217,7 +218,6 @@ For paid shop lookups, see [Shop lookup configuration](docs/shop-lookups.md), in
 ### Spending availability
 
 `SPENDING_ENABLED` is deployment-only. Leave it unset or blank to make optional spending tracking available; tracking starts off unless an app administrator enables the new-account default. Each person can change their choice under Settings → Spending. Only `false` disables it, ignoring surrounding whitespace and letter case. Restart the app after changing this environment variable. Disabled deployments hide the new spending and budget UI and reject its endpoints. Existing preferences and records remain stored. Ordinary reservations, purchase status, contributions, listed prices, and older event/exchange spending guidelines still work. When re-enabled, missed purchases reconcile privately without inventing paid amounts or dates.
-
 
 ### New-account spending default
 
