@@ -1,3 +1,4 @@
+import { workerMetricKeys } from "./metrics";
 import type { Pool } from "pg";
 import { kinds } from "../shared/model";
 import { addHouseholdScenario } from "./household-fixtures";
@@ -38,17 +39,20 @@ export async function seedSynthetic(
         return [];
       }
     }
-    // A running worker writes heartbeat and SMS provider/quota metadata before
+    // A running worker writes heartbeat, metrics, and SMS provider/quota metadata before
     // any users exist. Preserve those operational records when seeding.
-    const existing = await client.query(`SELECT EXISTS (
+    const existing = await client.query(
+      `SELECT EXISTS (
       SELECT 1 FROM "user" UNION ALL SELECT 1 FROM app_record
       WHERE NOT (
-        (kind = 'usage' AND COALESCE(data->>'key', '') = 'worker-heartbeat')
+        (kind = 'usage' AND COALESCE(data->>'key', '') = ANY($1::text[]))
         OR kind = 'smsQuotas'
       )
       UNION ALL SELECT 1 FROM session UNION ALL SELECT 1 FROM account
       UNION ALL SELECT 1 FROM verification UNION ALL SELECT 1 FROM passkey
-    ) AS occupied`);
+    ) AS occupied`,
+      [["worker-heartbeat", ...workerMetricKeys]],
+    );
     if (existing.rows[0].occupied)
       throw new Error(
         "Synthetic seeding requires an empty database; reset it explicitly first.",

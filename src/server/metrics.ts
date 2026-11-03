@@ -100,6 +100,15 @@ export function queueMetrics(s: State, now = Date.now()) {
     ),
   };
 }
+// Keep seeding's operational-record allowance tied to exactly the metrics we write.
+export const workerMetricKeys = [
+  "startedAt",
+  "sampledAt",
+  ...["transactions", "lockWait"].flatMap((name) => [
+    ...["count", "sumMs", "maxMs"].map((field) => `${name}.${field}`),
+    ...latencyBoundsMs.map((bound) => `${name}.le${bound}`),
+  ]),
+].map((name) => `worker-metrics.${name}`);
 // Reuse bounded numeric usage records to expose worker timings without a new record format.
 export function recordWorkerMetrics(s: State, now = Date.now()) {
   const values: Record<string, number> = {

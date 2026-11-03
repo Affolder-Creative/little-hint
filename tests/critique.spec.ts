@@ -1,4 +1,8 @@
 import {
+  cancelledBuying,
+  contributionHistory,
+} from "../src/server/buying-history";
+import {
   test,
   expect,
   chromium,
@@ -184,11 +188,25 @@ async function preview(
     "exchanges/draw": "exchanges.draw",
   };
   await page.route("**/api/**", async (route) => {
-    const path = new URL(route.request().url()).pathname;
+    const url = new URL(route.request().url());
+    const path = url.pathname;
+    const query = Object.fromEntries(url.searchParams);
+    if (path === "/api/v1/buying/cancelled")
+      return route.fulfill({
+        json: cancelledBuying(fixture.state, actor, query),
+      });
+    if (path === "/api/v1/buying/contributions")
+      return route.fulfill({
+        json: contributionHistory(fixture.state, actor, query),
+      });
     if (path === "/api/v1/world")
       return route.fulfill({
         json: {
-          ...world(fixture.state, actor),
+          ...world(
+            fixture.state,
+            actor,
+            route.request().headers()["x-little-hint-world"] === "compact",
+          ),
           environment: "development",
           telegram: { available: true },
           sms: smsInfo(
