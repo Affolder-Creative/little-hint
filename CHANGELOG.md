@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.14.1](https://github.com/Affolder-Creative/little-hint/compare/v0.14.0...v0.14.1) (2026-11-03)
+
+
+### Fixes
+
+* harden account isolation, retries, and release safety ([#144](https://github.com/Affolder-Creative/little-hint/issues/144)) ([fd4a8d1](https://github.com/Affolder-Creative/little-hint/commit/fd4a8d103a3bbb6ae50127da8fdde11fad4f4eec))
+* reduce refresh overhead and add performance metrics ([#147](https://github.com/Affolder-Creative/little-hint/issues/147)) ([4759264](https://github.com/Affolder-Creative/little-hint/commit/4759264c9a2af360f17dd49852170f5372442b39))
+* repair purchase saving and polish spending workflows ([#146](https://github.com/Affolder-Creative/little-hint/issues/146)) ([d4e9d37](https://github.com/Affolder-Creative/little-hint/commit/d4e9d37f9b3a2ee632a7f42b371127e73b1236e9))
+
 ## [0.14.0](https://github.com/Affolder-Creative/little-hint/compare/v0.13.2...v0.14.0) (2026-11-03)
 
 
