@@ -359,11 +359,30 @@ export function GiftForm({
   const [groupIds, setGroupIds] = useState(
     importDraft?.draft?.groupIds ?? gift?.groupIds ?? [],
   );
+  const friendEntries = (world.friendEntries ?? []).filter(
+    (entry) =>
+      (!gift || !!gift.friendEntryId) &&
+      entry.personId === (gift?.recipientIds[0] ?? recipientId) &&
+      !entry.archived,
+  );
+  const preferredFriend =
+    friendEntries.find((entry) => entry.creatorId === world.me.id) ??
+    (friendEntries.length === 1 ? friendEntries[0] : undefined);
+  const [chosenFriend, setChosenFriend] = useState(
+    importDraft?.draft?.friendEntryId ?? gift?.friendEntryId ?? "",
+  );
+  const friendEntryId = chosenFriend || preferredFriend?.id;
+  const friendEntry = (world.friendEntries ?? []).find(
+    (entry) => entry.id === friendEntryId,
+  );
+  const ideaGroups = world.groups.filter(
+    (group) => !friendEntry || friendEntry.groupIds.includes(group.id),
+  );
   const snapshot = JSON.stringify({
     fields: { ...data, priority },
     touched: [...touched.current],
     ...(idea
-      ? { kind: "idea", recipientId, visibility, groupIds }
+      ? { kind: "idea", recipientId, visibility, groupIds, friendEntryId }
       : { listId: destination }),
   });
   const currentSnapshot = useRef(snapshot);
@@ -580,6 +599,7 @@ export function GiftForm({
                 allowDuplicate,
               }),
           visibility,
+          ...(idea && friendEntryId ? { friendEntryId } : {}),
           groupIds: sharingIdea ? audienceGroups.map((group) => group.id) : [],
           importId:
             savedDraft.current?.id ??
@@ -634,7 +654,12 @@ export function GiftForm({
         <Field label="Who is this idea for?">
           <select
             value={recipientId}
-            onChange={(e) => setRecipientId(e.target.value)}
+            onChange={(e) => {
+              setRecipientId(e.target.value);
+              setChosenFriend("");
+              setGroupIds([]);
+              setVisibility("private");
+            }}
             required
           >
             <option value="">Choose a person</option>
@@ -654,6 +679,35 @@ export function GiftForm({
       )}
       {idea && (
         <>
+          {!gift &&
+            !importDraft &&
+            friendEntries.length > 1 &&
+            !preferredFriend && (
+              <Field label="Planning entry">
+                <select
+                  required
+                  value={chosenFriend}
+                  onChange={(event) => {
+                    setChosenFriend(event.target.value);
+                    setGroupIds([]);
+                    setVisibility("private");
+                  }}
+                >
+                  <option value="">Choose where to plan this gift</option>
+                  {friendEntries.map((entry) => (
+                    <option key={entry.id} value={entry.id}>
+                      {entry.name} ·{" "}
+                      {entry.groupIds
+                        .map(
+                          (id) => world.groups.find((g) => g.id === id)?.name,
+                        )
+                        .filter(Boolean)
+                        .join(", ") || "Private"}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            )}
           {recipientOptions && !gift && recipients.length > 1 && (
             <Field label="Who is this idea for?">
               <select
@@ -661,6 +715,9 @@ export function GiftForm({
                 value={recipientId}
                 onChange={(event) => {
                   setRecipientId(event.target.value);
+                  setChosenFriend("");
+                  setGroupIds([]);
+                  setVisibility("private");
                   setDuplicate(null);
                   setAllowDuplicate(false);
                 }}
@@ -692,9 +749,11 @@ export function GiftForm({
                 <option value="hidden">
                   Selected family groups, but not the recipient
                 </option>
-                <option value="visible">
-                  Selected family groups and the recipient
-                </option>
+                {!friendEntries.length && !friendEntry && (
+                  <option value="visible">
+                    Selected family groups and the recipient
+                  </option>
+                )}
               </select>
             </Field>
             <fieldset
@@ -703,7 +762,7 @@ export function GiftForm({
               disabled={!sharingIdea}
             >
               <legend>Share with these family groups</legend>
-              {world.groups.map((g) => (
+              {ideaGroups.map((g) => (
                 <label className="check" key={g.id}>
                   <input
                     name="groupIds"
@@ -726,9 +785,11 @@ export function GiftForm({
               {!sharingIdea
                 ? privateIdeaDescription
                 : !audienceGroups.length
-                  ? world.groups.length
+                  ? ideaGroups.length
                     ? "Choose at least one family group to share this idea."
-                    : "Join a family group to share this idea, or choose Only me."
+                    : friendEntries.length || friendEntry
+                      ? "Share this friend with a group first, or choose Only me."
+                      : "Join a family group to share this idea, or choose Only me."
                   : visibility === "hidden"
                     ? `Visible to you and members of ${audienceGroups.map((g) => familyGroupLabel(g, world)).join(", ")}. Hidden from the recipient and anyone managing their profile.`
                     : `Visible to you, members of ${audienceGroups.map((g) => familyGroupLabel(g, world)).join(", ")}, the recipient and anyone managing their profile.`}

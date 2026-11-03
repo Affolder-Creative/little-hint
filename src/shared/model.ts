@@ -48,6 +48,15 @@ export interface Person extends Base {
   guardians: string[];
   admin?: boolean;
 }
+export interface FriendEntry extends Base {
+  creatorId: string;
+  name: string;
+  personId: string;
+  originalPersonId: string;
+  groupIds: string[];
+  archived: boolean;
+  connectedAt?: string;
+}
 export interface Group extends Base {
   name: string;
   ownerId: string;
@@ -63,6 +72,8 @@ export interface HouseholdMembership extends Base {
   personId: string;
 }
 export interface Invitation extends Base {
+  friendEntryId?: string;
+  declined?: boolean;
   invitedById?: string;
   email: string;
   groupId?: string;
@@ -125,6 +136,7 @@ export interface ProductSource {
   checkedAt: string;
 }
 export interface Item extends Base {
+  friendEntryId?: string;
   productSources?: ProductSource[];
   purchaseOffers?: GiftOffer[];
   recommendationEvidence?: GiftEvidence[];
@@ -312,6 +324,7 @@ export interface Preferences extends Base {
   smsConsentedDailyLimit?: number;
 }
 export interface ImportDraft {
+  friendEntryId?: string;
   kind?: "item" | "idea";
   recipientId?: string;
   visibility?: Visibility;
@@ -435,6 +448,7 @@ export interface SmsGrant extends Base {
   expiresAt: string;
 }
 export interface Records {
+  friendEntries: FriendEntry;
   spendingSettings: SpendingSettings;
   spendingConnections: SpendingConnection;
   spendingOccasions: SpendingOccasion;
@@ -476,6 +490,7 @@ export interface Records {
 export type Kind = keyof Records;
 export type State = { [K in Kind]: Records[K][] };
 export const kinds: Kind[] = [
+  "friendEntries",
   "spendingSettings",
   "spendingConnections",
   "spendingOccasions",
@@ -556,6 +571,8 @@ export interface GiftView extends Omit<Item, "creatorId"> {
   }>;
 }
 export interface World {
+  friendEntries?: Array<FriendEntry & { canManage: boolean }>;
+  personRedirects?: Record<string, string>;
   compact?: boolean;
   spendingAvailable?: boolean;
   spendingEnabled?: boolean;
@@ -582,7 +599,13 @@ export interface World {
   households: Household[];
   householdMemberships: HouseholdMembership[];
   groupEvents: Array<GroupEvent & { canManage: boolean }>;
-  invitations: Array<Invitation & { groupName?: string; inviterName?: string }>;
+  invitations: Array<
+    Invitation & {
+      groupName?: string;
+      inviterName?: string;
+      friendName?: string;
+    }
+  >;
   lists: Array<
     List & {
       canEdit: boolean;

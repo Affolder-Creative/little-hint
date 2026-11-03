@@ -70,6 +70,7 @@ export interface GiftCandidate {
   evidence: GiftEvidence[];
 }
 export interface DiscoveryInput {
+  friendEntryId?: string;
   personId: string;
   categoryIds: string[];
   interests: string;

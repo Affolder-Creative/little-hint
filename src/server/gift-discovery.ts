@@ -1,3 +1,5 @@
+import { friendContext } from "./friends";
+import { personVisible } from "./domain-access";
 import { createHash, randomUUID } from "node:crypto";
 import { z } from "zod";
 import type { Actor, State, Item } from "../shared/model";
@@ -45,6 +47,7 @@ const notes = {
 export const discoveryInputSchema = z
   .object({
     personId: uuid,
+    friendEntryId: uuid.optional(),
     ...notes,
     maxPriceCents: z.number().int().positive().max(100000000).nullable(),
   })
@@ -85,18 +88,7 @@ export const hashDiscovery = (value: unknown) =>
 
 function visiblePerson(s: State, a: Actor, personId: string) {
   const p = s.people.find((p) => p.id === personId);
-  if (
-    !p ||
-    !(
-      controls(s, a, p.id) ||
-      s.groups.some(
-        (g) =>
-          g.memberIds.includes(a.id) &&
-          controllers(p).some((c) => g.memberIds.includes(c)),
-      )
-    )
-  )
-    fail(404, "Person not available.");
+  if (!p || !personVisible(s, a, p)) fail(404, "Person not available.");
   return p;
 }
 export function preferenceViews(s: State, a: Actor): GiftPreferenceView[] {
@@ -322,6 +314,13 @@ export function createDiscovery(
     .parse(raw);
   const input = discoveryInputSchema.parse(body);
   authorize(s, a, cfg, input.personId);
+  if (!controls(s, a, input.personId))
+    input.friendEntryId = friendContext(
+      s,
+      a,
+      input.personId,
+      input.friendEntryId,
+    )?.id;
   if (!controls(s, a, input.personId) && input.maxPriceCents === null)
     fail(400, "Enter a maximum price for each gift.");
   const fingerprint = hashDiscovery(input);
@@ -428,6 +427,7 @@ function itemPayload(
     tags: candidate.categoryIds,
     listId: own ? selection.listId : undefined,
     recipientIds: own ? [] : [j.input.personId],
+    friendEntryId: own ? undefined : j.input.friendEntryId,
     visibility: own ? "private" : selection.visibility,
     groupIds: own ? [] : selection.groupIds,
     allowDuplicate: selection.allowDuplicate,

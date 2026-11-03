@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-03T16:09:08.863000+00:00",
+  "generatedAt": "2026-11-03T22:41:05.582909+00:00",
   "title": "Design System: Little Hint",
   "extensions": {
     "colorMeta": {
@@ -1051,7 +1051,7 @@
       "refersTo": "button-text",
       "description": "A quieter action.",
       "html": "<button class=\"ds-text-button\">View people</button>",
-      "css": ".ds-text-button{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;display:inline-flex;align-items:center;gap:7px;background:transparent;border:0;padding:8px 0;min-height:44px;min-width:44px;max-width:100%;overflow-wrap:anywhere;font-size:13px;font-weight:550;color:var(--accent, #aa4d37);cursor:pointer}.ds-text-button:hover{text-decoration:underline}.ds-text-button:focus-visible{outline:3px solid var(--accent, #aa4d37);outline-offset:3px;}"
+      "css": ".ds-text-button{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;display:inline-flex;align-items:center;gap:7px;background:transparent;border:0;padding:8px 0;min-height:44px;min-width:44px;max-width:100%;overflow-wrap:anywhere;font-size:13px;font-weight:550;color:var(--accent, #aa4d37);cursor:pointer}.ds-text-button:is(:hover,:focus,:active){text-decoration:none}.ds-text-button:focus-visible{outline:3px solid var(--accent, #aa4d37);outline-offset:3px;}"
     },
     {
       "name": "Icon button",

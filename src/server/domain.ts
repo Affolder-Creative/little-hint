@@ -1,3 +1,10 @@
+import {
+  friendCommand,
+  friendVisible,
+  friendContext,
+  checkFriendAudience,
+  acceptFriend,
+} from "./friends";
 import { exchangeActions, exchangeCommand } from "./exchange-commands";
 import { buyingActions, buyingCommand } from "./buying-commands";
 import { listActions, listCommand } from "./list-commands";
@@ -373,7 +380,11 @@ export function noticeAllowed(s: State, n: Notice): boolean {
     return (
       !!inv &&
       invitationIsPending(inv) &&
-      (isAccountInvitation(inv) || !!s.groups.find((g) => g.id === inv.groupId))
+      (isAccountInvitation(inv) ||
+        !!s.friendEntries.find(
+          (f) => f.id === inv.friendEntryId && !f.archived && !f.connectedAt,
+        ) ||
+        !!s.groups.find((g) => g.id === inv.groupId))
     );
   }
   const p = s.people.find((p) => p.userId === n.userId);
@@ -430,6 +441,28 @@ export function world(s: State, a: Actor, compact = false): World {
   const ps = ownIds(s, a);
   return {
     compact,
+    friendEntries: s.friendEntries
+      .filter((f) => friendVisible(s, a, f) && !controls(s, a, f.personId))
+      .map((f) => ({
+        ...f,
+        groupIds:
+          f.creatorId === a.id
+            ? f.groupIds
+            : f.groupIds.filter((g) => groupAccess(s, a, g)),
+        canManage: f.creatorId === a.id,
+      })),
+    personRedirects: Object.fromEntries(
+      s.friendEntries
+        .filter(
+          (f) =>
+            f.connectedAt &&
+            (friendVisible(s, a, f) ||
+              s.items.some(
+                (i) => i.friendEntryId === f.id && i.creatorId === a.id,
+              )),
+        )
+        .map((f) => [f.originalPersonId, f.personId]),
+    ),
     spendingAvailable: spendingAvailable(),
     spendingInvitation:
       spendingAvailable() &&
@@ -469,11 +502,13 @@ export function world(s: State, a: Actor, compact = false): World {
         (i) =>
           invitationIsPending(i) &&
           (normalizedEmail(i.email) === normalizedEmail(a.email) ||
-            (isAccountInvitation(i) && i.invitedById === a.id) ||
+            ((isAccountInvitation(i) || !!i.friendEntryId) &&
+              i.invitedById === a.id) ||
             !!s.groups.find((g) => g.id === i.groupId && g.ownerId === a.id)),
       )
       .map((i) => ({
         ...i,
+        friendName: s.friendEntries.find((f) => f.id === i.friendEntryId)?.name,
         groupName: s.groups.find((g) => g.id === i.groupId)?.name,
         inviterName: s.people.find((p) => p.userId === i.invitedById)?.name,
       })),
@@ -695,6 +730,7 @@ export function command(
   action: string,
   raw: unknown,
 ): unknown {
+  if (action.startsWith("friends.")) return friendCommand(s, a, action, raw);
   if (listActions.includes(action)) return listCommand(s, a, action, raw);
   if (buyingActions.includes(action)) return buyingCommand(s, a, action, raw);
   if (exchangeActions.includes(action))
@@ -912,6 +948,20 @@ export function command(
       });
       return inv;
     }
+    case "invitations.decline": {
+      const { id: requestId } = z.object({ id }).parse(b);
+      const inv =
+        s.invitations.find(
+          (i) =>
+            i.id === requestId &&
+            i.friendEntryId &&
+            i.email === normalizedEmail(a.email) &&
+            invitationIsPending(i),
+        ) ?? fail(404, "Invitation not found.");
+      inv.declined = true;
+      touch(inv);
+      return { ok: true };
+    }
     case "invitations.accept": {
       const p = z.object({ id }).parse(b);
       const inv =
@@ -920,9 +970,11 @@ export function command(
             i.id === p.id &&
             i.email === normalizedEmail(a.email) &&
             !i.revoked &&
+            !i.declined &&
             !i.acceptedBy &&
             Date.parse(i.expiresAt) > Date.now(),
         ) ?? fail(404, "Invitation not found.");
+      if (inv.friendEntryId) return acceptFriend(s, a, inv);
       const g =
         s.groups.find((g) => g.id === inv.groupId) ??
         fail(404, "Family group not found.");
@@ -937,7 +989,7 @@ export function command(
       const inv =
         s.invitations.find((i) => i.id === p.id) ??
         fail(404, "Invitation not found.");
-      if (isAccountInvitation(inv)) {
+      if (isAccountInvitation(inv) || inv.friendEntryId) {
         if (inv.invitedById !== a.id) fail(404, "Invitation not found.");
         if (!invitationIsPending(inv))
           fail(409, "This invitation is no longer pending.");
@@ -1065,6 +1117,7 @@ export function command(
       const p = itemInput
         .extend({
           listId: id.optional(),
+          friendEntryId: id.optional(),
           recipientIds: ids.default([]),
           groupIds: ids.default([]),
           visibility: z
@@ -1080,6 +1133,8 @@ export function command(
         fail(400, "Only wish-list items have a recipient priority.");
       let recipients = p.recipientIds;
       if (p.listId) {
+        if (p.friendEntryId)
+          fail(400, "Friend ideas stay separate from wish lists.");
         const l =
           s.lists.find(
             (l) =>
@@ -1091,6 +1146,14 @@ export function command(
         recipients = l.ownerIds;
       } else {
         checkRecipients(s, a, recipients);
+        if (
+          recipients.length !== 1 &&
+          recipients.some((r) => s.friendEntries.some((f) => f.personId === r))
+        )
+          fail(400, "Choose one friend for this idea.");
+        const context = friendContext(s, a, recipients[0], p.friendEntryId);
+        p.friendEntryId = context?.id;
+        checkFriendAudience(s, a, context, p.visibility, p.groupIds);
         if (recipients.some((id) => controls(s, a, id)))
           fail(400, "Add items for yourself to a wish list.");
         checkGroups(s, a, p.groupIds);
@@ -1185,6 +1248,15 @@ export function command(
       checkRevision(i, p.revision);
       checkImage(s, a, p.image);
       if (!i.listId) {
+        checkFriendAudience(
+          s,
+          a,
+          i.friendEntryId
+            ? friendContext(s, a, i.recipientIds[0], i.friendEntryId, true)
+            : undefined,
+          p.visibility,
+          p.groupIds,
+        );
         checkGroups(s, a, p.groupIds);
         if (p.visibility !== "private" && !p.groupIds.length)
           fail(400, "Select a family group to share this idea.");
@@ -1478,6 +1550,7 @@ export function command(
           touched: z.array(z.string().max(40)).max(20).optional(),
           listId: id.optional(),
           kind: z.enum(["item", "idea"]).optional(),
+          friendEntryId: id.optional(),
           recipientId: id.optional(),
           visibility: z.enum(["private", "hidden", "visible"]).optional(),
           groupIds: ids.optional(),
@@ -1538,7 +1611,24 @@ export function command(
         checkRecipients(s, a, [recipientId]);
         if (controls(s, a, recipientId)) fail(400, "Choose another recipient.");
         checkGroups(s, a, p.groupIds ?? j.draft!.groupIds ?? []);
+        const context = friendContext(
+          s,
+          a,
+          recipientId,
+          p.friendEntryId ??
+            (recipientId === j.draft!.recipientId
+              ? j.draft!.friendEntryId
+              : undefined),
+        );
+        checkFriendAudience(
+          s,
+          a,
+          context,
+          p.visibility ?? j.draft!.visibility ?? "private",
+          p.groupIds ?? j.draft!.groupIds ?? [],
+        );
         Object.assign(j.draft!, {
+          friendEntryId: context?.id,
           recipientId,
           visibility: p.visibility ?? j.draft!.visibility,
           groupIds: p.groupIds ?? j.draft!.groupIds,
@@ -1561,6 +1651,7 @@ export function command(
             .object({
               listId: id.optional(),
               kind: z.enum(["item", "idea"]).optional(),
+              friendEntryId: id.optional(),
               recipientId: id.optional(),
               visibility: z.enum(["private", "hidden", "visible"]).optional(),
               groupIds: ids.optional(),
@@ -1590,6 +1681,20 @@ export function command(
       if (p.draft?.kind === "idea") {
         if (!p.draft.recipientId) fail(400, "Choose a recipient.");
         checkRecipients(s, a, [p.draft.recipientId]);
+        const context = friendContext(
+          s,
+          a,
+          p.draft.recipientId,
+          p.draft.friendEntryId,
+        );
+        p.draft.friendEntryId = context?.id;
+        checkFriendAudience(
+          s,
+          a,
+          context,
+          p.draft.visibility ?? "private",
+          p.draft.groupIds ?? [],
+        );
         if (controls(s, a, p.draft.recipientId))
           fail(400, "Choose another recipient.");
         checkGroups(s, a, p.draft.groupIds ?? []);
@@ -1652,6 +1757,13 @@ export function idempotent(
       );
     // Return only the operation identifier, never a historical private DTO.
     const result = prior.result as { id?: unknown; duplicate?: unknown } | null;
+    if (action === "friends.create") {
+      const entry =
+        s.friendEntries.find(
+          (f) => f.id === result?.id && f.creatorId === a.id,
+        ) ?? fail(404, "Friend entry not found.");
+      return { ...entry, replayed: true };
+    }
     if (action.startsWith("imports.")) {
       const job =
         s.imports.find((j) => j.id === result?.id && j.userId === a.id) ??

@@ -482,6 +482,11 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
     "invitations/accept": "invitations.accept",
     "invitations/revoke": "invitations.revoke",
     "links/accept": "links.accept",
+    friends: "friends.create",
+    "friends/update": "friends.update",
+    "friends/archive": "friends.archive",
+    "friends/invite": "friends.invite",
+    "invitations/decline": "invitations.decline",
     people: "people.create",
     "people/update": "people.update",
     "people/link": "people.link",
@@ -522,7 +527,7 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
       if (action.startsWith("spending.") && !spendingAvailable())
         fail(404, "Spending is unavailable.");
       const invited =
-        action === "groups.invite" &&
+        ["groups.invite", "friends.invite"].includes(action) &&
         typeof (req.body as any)?.email === "string"
           ? (
               await pool.query(

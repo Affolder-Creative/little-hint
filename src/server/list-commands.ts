@@ -48,6 +48,12 @@ export function listCommand(
         })
         .parse(b);
       checkRecipients(s, a, p.ownerIds);
+      if (
+        p.ownerIds.some((id) =>
+          s.friendEntries.some((f) => f.personId === id && !f.connectedAt),
+        )
+      )
+        fail(400, "Friends must connect an account before owning a wish list.");
       checkGroups(s, a, p.groupIds);
       const mine = p.ownerIds.filter((id) => controls(s, a, id));
       if (!mine.length) fail(403, "Create a list for a profile you manage.");

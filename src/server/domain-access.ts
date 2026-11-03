@@ -21,6 +21,30 @@ export const ownedGroup = (s: State, a: Actor, id: string) =>
   s.groups.find((g) => g.id === id && g.ownerId === a.id) ??
   fail(404, "Family group not found.");
 export const personVisible = (s: State, a: Actor, p: Person) =>
+  s.imports.some(
+    (j) =>
+      j.userId === a.id &&
+      !!j.draft?.friendEntryId &&
+      j.draft?.recipientId === p.id,
+  ) ||
+  s.spendingRecords.some(
+    (r) =>
+      r.ownerId === a.id &&
+      r.recipientIds.includes(p.id) &&
+      s.friendEntries.some((f) => f.personId === p.id),
+  ) ||
+  s.friendEntries.some(
+    (f) =>
+      f.personId === p.id &&
+      (f.creatorId === a.id ||
+        (!f.archived && f.groupIds.some((g) => groupAccess(s, a, g)))),
+  ) ||
+  s.items.some(
+    (i) =>
+      !!i.friendEntryId &&
+      i.recipientIds.includes(p.id) &&
+      i.creatorId === a.id,
+  ) ||
   controllers(p).includes(a.id) ||
   s.groups.some(
     (g) => member(g, a) && controllers(p).some((u) => g.memberIds.includes(u)),
@@ -53,7 +77,15 @@ export function itemVisible(s: State, a: Actor, i: Item): boolean {
   if (i.creatorId === a.id) return true;
   if (i.visibility === "private") return false;
   if (recipient(s, a, i)) return i.visibility === "visible";
-  return i.groupIds.some((g) => groupAccess(s, a, g));
+  return i.groupIds.some(
+    (g) =>
+      groupAccess(s, a, g) &&
+      (!i.friendEntryId ||
+        s.friendEntries.some(
+          (f) =>
+            f.id === i.friendEntryId && !f.archived && f.groupIds.includes(g),
+        )),
+  );
 }
 export const canEdit = (s: State, a: Actor, i: Item) =>
   i.listId

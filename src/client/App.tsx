@@ -1,3 +1,5 @@
+import { AddFriend, FriendManagement } from "./Friends";
+import "./friends.css";
 import { hydrateWorld } from "../shared/world";
 import { Browser } from "./Browser";
 import { Lists } from "./Lists";
@@ -627,7 +629,9 @@ function OfflineDrafts({ dark }: { dark: boolean }) {
 function Home() {
   const { world, open } = useApp();
   const incoming = world.invitations.some(
-    (i) => !!i.groupId && i.email === world.me.email.toLowerCase(),
+    (i) =>
+      (!!i.groupId || !!i.friendEntryId) &&
+      i.email === world.me.email.toLowerCase(),
   );
   const others = world.items.filter((i) => !i.archived && !i.isRecipient);
   const items = others.length ? others : world.items.filter((i) => !i.archived);
@@ -720,6 +724,12 @@ function People() {
         description="Take a hint from their wish lists, or save an idea for them."
       >
         <button
+          className="button"
+          onClick={() => open("Add a friend", <AddFriend />)}
+        >
+          <Plus size={17} /> Add a friend
+        </button>
+        <button
           className="button secondary"
           onClick={() => open("A profile you manage", <PersonForm />)}
         >
@@ -739,7 +749,11 @@ function People() {
       </p>
       <div className="people-list">
         {world.people.map((p) => (
-          <Link className="person-row" key={p.id} to={`/people/${p.id}`}>
+          <Link
+            className="person-row"
+            key={p.id}
+            to={`/people/${p.id}${world.friendEntries?.some((f) => f.personId === p.id) ? "?tab=ideas" : ""}`}
+          >
             <Avatar name={p.name} />
             <div>
               <h2>{p.name}</h2>
@@ -748,7 +762,11 @@ function People() {
                   ? "Your wish lists"
                   : p.guardians.includes(world.me.id)
                     ? "Managed by you"
-                    : "Wishes & gift ideas"}
+                    : world.friendEntries?.some(
+                          (f) => f.personId === p.id && !f.connectedAt,
+                        )
+                      ? "Gift ideas · Not connected"
+                      : "Wishes & gift ideas"}
               </p>
             </div>
             <ArrowRight size={19} />
@@ -787,6 +805,9 @@ function PersonPage() {
     });
   };
   const person = world.people.find((p) => p.id === id);
+  const redirect = id && world.personRedirects?.[id];
+  if (redirect)
+    return <Navigate replace to={`/people/${redirect}?tab=ideas`} />;
   if (!person)
     return (
       <Empty
@@ -803,6 +824,12 @@ function PersonPage() {
     );
   const own =
     person.userId === world.me.id || person.guardians.includes(world.me.id);
+  const friendEntries = (world.friendEntries ?? []).filter(
+    (f) => f.personId === person.id,
+  );
+  const unconnectedFriend = friendEntries.some((f) => !f.connectedAt);
+  const archivedFriend =
+    friendEntries.length > 0 && friendEntries.every((f) => f.archived);
   const lists = world.lists.filter(
     (list) =>
       !list.archived &&
@@ -825,11 +852,13 @@ function PersonPage() {
             ? person.userId === world.me.id
               ? "Help your people choose something you would love."
               : `Manage wish lists for ${person.name}.`
-            : `A few hints about what ${person.name} would love.`
+            : unconnectedFriend
+              ? `Plan gifts for ${person.name} before they join.`
+              : `A few hints about what ${person.name} would love.`
         }
       >
         <DiscoveryLink personId={person.id} />
-        <FollowButton target="person" targetId={person.id} />
+        {person.userId && <FollowButton target="person" targetId={person.id} />}
         {own ? (
           <>
             <button
@@ -842,7 +871,7 @@ function PersonPage() {
             </button>
             <GiftPreferencesShortcut personId={person.id} name={person.name} />
           </>
-        ) : (
+        ) : !archivedFriend ? (
           <button
             className="button"
             onClick={() =>
@@ -855,8 +884,9 @@ function PersonPage() {
             <Plus size={17} />
             Add gift idea
           </button>
-        )}
+        ) : null}
       </Header>
+      <FriendManagement personId={person.id} />
       <SpendingSummary person={person.id} />
       <PreferenceSummary personId={person.id} />
       <div
@@ -955,17 +985,21 @@ function PersonPage() {
           }
           emptyText={
             tab === "ideas"
-              ? "Save an idea here and choose who can see it."
+              ? archivedFriend
+                ? "Saved ideas stay here. Restore this friend entry to add more or share again."
+                : "Save an idea here and choose who can see it."
               : lists.length
                 ? own
                   ? "Open a wish list above to add an item or read its notes."
                   : "Open a wish list above to read its notes."
                 : own
                   ? "Add an item to a wish list to get started."
-                  : "Ask them to share a wish list with your family group."
+                  : unconnectedFriend
+                    ? "This friend hasn't connected an account yet. Save gift ideas on the Gift ideas tab, or invite them to connect."
+                    : "Ask them to share a wish list with your family group."
           }
           emptyAction={
-            tab === "ideas" && !own ? (
+            tab === "ideas" && !own && !archivedFriend ? (
               <button
                 className="button"
                 onClick={() =>

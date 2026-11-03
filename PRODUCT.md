@@ -132,3 +132,27 @@ rules remain unchanged. Newly enabled people see an explanation in Spending
 settings and their spending view. No external notification is sent.
 
 Private gift ideas and manual spending records may be explicitly assigned to an accessible wish list for their recipients. Assignment updates spending totals, budget scope, and the list’s group-event context without adding the gift to the list or changing sharing. Plans pass their assignment to later purchases; purchase reassignment also updates related refunds. Source wish-list gifts retain their source context.
+
+
+## Friends before signup
+
+Your people offers Add a friend separately from Managed profile. A friend needs
+only a name and starts private. The creator manages its name, selected family
+groups, connection invitation, and archive state. Collaborators own their own
+ideas and use normal purchase, contribution, and discussion permissions. Sharing
+a friend never publishes existing private ideas. Ideas saved through a friend
+entry offer Only me or selected groups, hidden from the recipient.
+
+Connecting requires a seven-day email invitation and explicit acceptance after
+verified sign-in. The invitation permits signup but sign-in alone does not connect.
+Existing accounts use the same flow. Connection preserves gift authorship and
+sharing, grants no wish-list or preference access, and joins no groups. Separate
+entries accepted by the same account appear as one person while retaining their
+original sharing boundaries. Names alone never merge people.
+
+Removing a group from a friend entry revokes access granted through that entry.
+Authors retain their ideas and buyers retain authorized history. Restoring group
+access does not republish ideas. Archiving cancels pending invitations and stops
+group sharing without deleting gifts or history; restoration starts private.
+Unconnected friends cannot own lists or enter households, events, or exchanges.
+The feature is built in, without an environment or personal enable switch.

@@ -896,12 +896,19 @@ export function SpendingPage() {
   ]
     .filter(Boolean)
     .join(" · ");
-  const budget = data.budgets.find(
+  const matchingBudgets = data.budgets.filter(
     (b) =>
       b.scope === scope &&
       b.year === (filter.year ?? null) &&
       (shared ? b.connectionId === data.connection?.id : !b.connectionId),
   );
+  const budget =
+    matchingBudgets.find((b) => b.id === params.get("budget")) ??
+    matchingBudgets[0];
+  const budgetLabel = (b: typeof budget, index: number) =>
+    b.originalScope
+      ? `Saved before connection${b.friendEntryId ? ` · ${world.friendEntries?.find((f) => f.id === b.friendEntryId)?.name ?? "Friend"}` : ""} · Budget ${index + 1}`
+      : `Account budget · Budget ${index + 1}`;
   const budgetForm = () =>
     open(
       "Set a budget",
@@ -910,6 +917,7 @@ export function SpendingPage() {
         onSubmit={async (f) => {
           await mutate("spending/budget", {
             scope,
+            id: budget?.id,
             year: filter.year ?? null,
             amountCents: amount(f),
             shared: !!shared,
@@ -1207,6 +1215,27 @@ export function SpendingPage() {
             </div>
             <section className="spending-budget">
               <h2>Budget{budget ? " " + dollars(budget.amountCents) : ""}</h2>
+              {matchingBudgets.length > 1 && (
+                <>
+                  <Field label="Budget to view">
+                    <select
+                      value={budget.id}
+                      onChange={(event) => set("budget", event.target.value)}
+                    >
+                      {matchingBudgets.map((b, index) => (
+                        <option key={b.id} value={b.id}>
+                          {budgetLabel(b, index)} · {dollars(b.amountCents)}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                  <p className="muted">
+                    These budgets were kept separately when accounts connected.
+                    Compare each with the combined spending below; the limits
+                    have not been added together.
+                  </p>
+                </>
+              )}
               <button className="button secondary" onClick={budgetForm}>
                 {budget ? "Edit budget" : "Set a budget"}
               </button>

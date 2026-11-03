@@ -502,3 +502,32 @@ it("keeps idea drafts private and validates their destination and publication re
   });
   expect(job.draft!.state).toBe("published");
 });
+
+it("shows an authenticated friend connection request only while it remains actionable", () => {
+  const f = fixture();
+  const entry = command(f.s, f.actors[0], "friends.create", {
+    name: "Taylor",
+  }) as { id: string };
+  const invitation = command(f.s, f.actors[0], "friends.invite", {
+    id: entry.id,
+    email: f.actors[1].email,
+  }) as { id: string };
+  const notice = {
+    ...stamp(),
+    userId: f.actors[1].id,
+    event: "invitation" as const,
+    invitationId: invitation.id,
+    inbox: true,
+    status: "sent" as const,
+    attempts: 0,
+    delivered: [],
+  };
+  f.s.notices.push(notice);
+  expect(activityAllowed(f.s, notice)).toBe(true);
+  const stored = f.s.invitations.find((row) => row.id === invitation.id)!;
+  stored.declined = true;
+  expect(activityAllowed(f.s, notice)).toBe(false);
+  delete stored.declined;
+  f.s.friendEntries.find((row) => row.id === entry.id)!.archived = true;
+  expect(activityAllowed(f.s, notice)).toBe(false);
+});
