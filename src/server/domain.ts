@@ -1354,6 +1354,14 @@ export function command(
           ? {
               importedAt: imported.result?.importedAt,
               source: imported.result?.source,
+              productSources: imported.result?.productSources
+                ?.map((source) => ({
+                  ...source,
+                  fields: source.fields.filter(
+                    (field) => fields[field] === imported.result?.[field],
+                  ),
+                }))
+                .filter((source) => source.fields.length),
             }
           : {}),
       };
@@ -1422,6 +1430,7 @@ export function command(
       if (imported) {
         i.importedAt = imported.result?.importedAt;
         i.source = imported.result?.source;
+        i.productSources = imported.result?.productSources;
       } else if (i.url !== p.url) {
         delete i.importedAt;
         delete i.source;
@@ -1430,6 +1439,17 @@ export function command(
         delete i.purchaseOffers;
         delete i.recommendationEvidence;
       }
+      if (i.url !== p.url && !imported) delete i.productSources;
+      i.productSources = i.productSources
+        ?.map((source) => ({
+          ...source,
+          fields: source.fields.filter(
+            (field) =>
+              fields[field] === undefined ||
+              fields[field] === (imported?.result ?? i)[field],
+          ),
+        }))
+        .filter((source) => source.fields.length);
       Object.assign(i, fields);
       touch(i);
       reconcileAccess(s);
@@ -2191,6 +2211,8 @@ export function command(
         j.status = "pending";
         delete j.error;
         delete j.diagnostic;
+        delete j.recoveryState;
+        delete j.recoveryCheckpoint;
         touch(j);
         return importView(j);
       }

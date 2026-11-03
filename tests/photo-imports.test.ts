@@ -525,3 +525,61 @@ it("does not cache a failed preview or overwrite successful data with a failed r
   ).toBe(first.importedAt);
   expect(mocks.request).toHaveBeenCalledTimes(3);
 });
+
+it("recovers a name from page evidence after the ordinary parser fails", async () => {
+  vi.mocked(spend).mockResolvedValue(new Date().toISOString());
+  mocks.cfg = {
+    AI_ENABLED: "true",
+    AI_PRODUCT_RECOVERY_ENABLED: "true",
+    OPENAI_API_KEY: "test",
+    PAID_DAILY_LIMIT: "50",
+    AI_PRODUCT_RECOVERY_DAILY_LIMIT: "10",
+  };
+  mocks.request.mockImplementation(
+    async () =>
+      new Response(
+        "<title>example.com</title><main>Ceramic mug. Blue glaze.</main>",
+      ),
+  );
+  const api = vi.fn(async (_url: string, init: RequestInit) => {
+    const input = JSON.parse(String(init.body));
+    const recovery = input.text.format.name === "product_recovery";
+    return Response.json({
+      status: "completed",
+      usage: { input_tokens: 20, output_tokens: 20 },
+      output: [
+        {
+          content: [
+            {
+              type: "output_text",
+              text: JSON.stringify(
+                recovery
+                  ? {
+                      title: "Ceramic mug",
+                      description: "Blue glaze.",
+                      image: "",
+                      source: "https://example.com/mug",
+                      evidence: "Ceramic mug. Blue glaze.",
+                    }
+                  : {
+                      title: "Ceramic mug",
+                      description: "Blue glaze.",
+                      tags: ["Kitchen", "Home", "Coffee"],
+                    },
+              ),
+            },
+          ],
+        },
+      ],
+    });
+  });
+  vi.stubGlobal("fetch", api);
+  const result = await importProduct("https://example.com/mug", "owner");
+  expect(result.title).toBe("Ceramic mug");
+  expect(result.productSources?.[0]).toMatchObject({
+    method: "extraction",
+    fields: ["title", "description"],
+  });
+  await importProduct("https://example.com/mug", "another-owner");
+  expect(api).toHaveBeenCalledTimes(2);
+});

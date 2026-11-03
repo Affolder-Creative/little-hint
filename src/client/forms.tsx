@@ -1,3 +1,4 @@
+import { ProductSources } from "./ProductSources";
 import { DiscoveryLink } from "./GiftPreferences";
 import { GuidelineField, guidelineValue } from "./SpendingGuidance";
 import { PrioritySelect } from "./Management";
@@ -861,6 +862,16 @@ export function GiftForm({
             )}
           </>
         )}
+        <ProductSources
+          sources={(job?.result?.productSources ?? gift?.productSources)
+            ?.map((source) => ({
+              ...source,
+              fields: source.fields.filter(
+                (field) => data[field] === (job?.result ?? gift)?.[field],
+              ),
+            }))
+            .filter((source) => source.fields.length)}
+        />
         {job?.result?.warnings?.map((warning) => (
           <p className="notice" key={warning}>
             {warning}

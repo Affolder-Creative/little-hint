@@ -1,3 +1,4 @@
+import { ProductSources } from "./ProductSources";
 import { SpendingPage, SpendingSummary, PurchaseForm } from "./Spending";
 import { PrivateNote } from "./PrivateNotes";
 import { Pencil, Archive, ArchiveRestore, CalendarDays } from "lucide-react";
@@ -1634,6 +1635,7 @@ function GiftDetail() {
           )}
           <p className="muted">
             Quantity wanted: {gift.quantity}
+            <ProductSources sources={gift.productSources} />
             {gift.importedAt && (
               <>
                 {" "}

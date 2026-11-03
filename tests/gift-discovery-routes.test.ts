@@ -281,7 +281,7 @@ it("exposes only preferences and safe service status to administrators", async (
   const services = await app.inject("/api/v1/admin/services");
   expect(services.statusCode).toBe(200);
   expect(services.body).not.toContain("synthetic-key");
-  expect(services.json()).toHaveLength(7);
+  expect(services.json()).toHaveLength(8);
   expect((await app.inject("/api/v1/admin/settings")).json()).toHaveLength(5);
   for (const key of [
     "OPENAI_API_KEY",

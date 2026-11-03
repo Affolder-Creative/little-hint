@@ -37,7 +37,12 @@ it("reports capability requirements without exposing values", () => {
     },
     true,
   );
-  expect(enabled.every((r) => r.status === "Configured")).toBe(true);
+  expect(
+    enabled
+      .filter((r) => r.id !== "product-recovery")
+      .every((r) => r.status === "Configured"),
+  ).toBe(true);
+  expect(enabled.find((r) => r.id === "product-recovery")?.status).toBe("Off");
   expect(JSON.stringify(enabled)).not.toMatch(/private-|secret/);
 });
 it.each([

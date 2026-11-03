@@ -30,6 +30,9 @@ export const settingKeys = [
   "TWILIO_AUTH_TOKEN",
   "TWILIO_FROM",
   "TWILIO_VERIFY_SERVICE_SID",
+  "AI_PRODUCT_RECOVERY_ENABLED",
+  "AI_PRODUCT_RECOVERY_MODEL",
+  "AI_PRODUCT_RECOVERY_DAILY_LIMIT",
   "AI_ENABLED",
   "OPENAI_API_KEY",
   "OPENAI_MODEL",
@@ -48,6 +51,9 @@ const defaults: Partial<Record<SettingKey, string>> = {
   GIFT_DISCOVERY_USER_WEEKLY_LIMIT: "3",
   GIFT_DISCOVERY_MONTHLY_LIMIT: "100",
   GIFT_DISCOVERY_MODEL: "gpt-6-luna",
+  AI_PRODUCT_RECOVERY_ENABLED: "false",
+  AI_PRODUCT_RECOVERY_MODEL: "gpt-6-luna",
+  AI_PRODUCT_RECOVERY_DAILY_LIMIT: "10",
   AI_ENABLED: "false",
   SMS_ENABLED: "false",
   TELEGRAM_ENABLED: "false",
@@ -101,6 +107,9 @@ export function stagingSettings(): Record<SettingKey, string> {
   ) {
     result.OPENAI_API_KEY = process.env.STAGING_OPENAI_API_KEY;
     for (const k of [
+      "AI_PRODUCT_RECOVERY_ENABLED",
+      "AI_PRODUCT_RECOVERY_MODEL",
+      "AI_PRODUCT_RECOVERY_DAILY_LIMIT",
       "OPENAI_MODEL",
       "GIFT_DISCOVERY_MODE",
       "GIFT_DISCOVERY_MODEL",
@@ -141,6 +150,7 @@ export function stagingSettings(): Record<SettingKey, string> {
     result,
     deploymentEnvironment() === "staging" ? "STAGING_" : "",
   );
+  validateRecoveryConfig(result);
   validateSmsConfig(result);
   return result;
 }
@@ -151,6 +161,7 @@ export function effectiveConfig(): Record<SettingKey, string> {
   ) as Record<SettingKey, string>;
   discoveryConfiguration(result);
   validateChannelFlags(result);
+  validateRecoveryConfig(result);
   validateSmsConfig(result);
   if (!scrapingSelections.includes(result.SCRAPING_PROVIDER))
     throw new Error("Invalid SCRAPING_PROVIDER.");
@@ -224,4 +235,21 @@ function validateSmsConfig(cfg: Record<string, string>) {
 function validateChannelFlags(cfg: Record<string, string>, prefix = "") {
   for (const key of ["AI_ENABLED", "SMS_ENABLED", "TELEGRAM_ENABLED"])
     cfg[key] = String(channelFlag(cfg[key], `${prefix}${key}`));
+}
+
+function validateRecoveryConfig(cfg: Record<string, string>) {
+  if (
+    ![undefined, "", "false", "true"].includes(cfg.AI_PRODUCT_RECOVERY_ENABLED)
+  )
+    throw new Error("Invalid AI_PRODUCT_RECOVERY_ENABLED.");
+  if (
+    cfg.AI_PRODUCT_RECOVERY_DAILY_LIMIT &&
+    !/^\d{1,6}$/.test(cfg.AI_PRODUCT_RECOVERY_DAILY_LIMIT)
+  )
+    throw new Error("Invalid AI_PRODUCT_RECOVERY_DAILY_LIMIT.");
+  if (
+    cfg.AI_PRODUCT_RECOVERY_MODEL &&
+    !/^[a-zA-Z0-9._-]{1,100}$/.test(cfg.AI_PRODUCT_RECOVERY_MODEL)
+  )
+    throw new Error("Invalid AI_PRODUCT_RECOVERY_MODEL.");
 }

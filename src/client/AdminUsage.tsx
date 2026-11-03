@@ -272,6 +272,14 @@ export function AdminUsage() {
             {!u.productDetails.requests && (
               <p className="muted">No product-detail AI requests this month.</p>
             )}
+            {!!u.productDetails.recovery?.requests && (
+              <p className="muted">
+                {number(u.productDetails.recovery.requests)} recovery requests
+                included; {number(u.productDetails.recovery.titles)} names and{" "}
+                {number(u.productDetails.recovery.photos)} photos recovered;{" "}
+                {number(u.productDetails.recovery.searches)} web searches.
+              </p>
+            )}
             <AiDetails usage={u.productDetails} />
           </section>
         )}

@@ -26,7 +26,14 @@ export interface AdminUsage {
     monthlyLimit: number;
     searchCalls: number;
   };
-  productDetails: AiUsage;
+  productDetails: AiUsage & {
+    recovery?: {
+      requests: number;
+      searches: number;
+      titles: number;
+      photos: number;
+    };
+  };
   scraping: {
     enabled: boolean;
     requests: number;

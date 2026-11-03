@@ -149,3 +149,17 @@ Set `AI_ENABLED=true` to enable AI with the configured API key. Missing, blank, 
 Gift discovery still requires an enabled audience mode; product enrichment still respects shop-lookup settings and spending limits. Disabled AI bypasses cached enrichment too. Ordinary shop lookups, photos, manual entry, preferences, saved gifts, and stored usage history remain available or preserved. Unsaved discovery batches follow existing cancellation and cleanup rules. Re-enabling restores historical reporting, not cancelled batches.
 
 Recreate both app and worker after changing the flag. Clients update on normal refresh; previously dispatched requests may still be billed. Staging uses only `STAGING_AI_ENABLED`; preview always disables AI.
+
+## Optional AI product recovery
+
+Set `AI_PRODUCT_RECOVERY_ENABLED=true` on both app and worker to opt in. The default is false. Recovery also requires `AI_ENABLED=true`, an OpenAI key, enabled product lookups, and positive allowances. `AI_PRODUCT_RECOVERY_MODEL` defaults to `gpt-6-luna`; `AI_PRODUCT_RECOVERY_DAILY_LIMIT` defaults to 10 dispatched requests per UTC day. Each request also counts against the existing OpenAI `PAID_DAILY_LIMIT`. Staging accepts only the corresponding `STAGING_` settings; previews cannot enable recovery.
+
+After normal lookup methods finish, recovery attempts to fill a missing product name or a missing photo when automatic photos are enabled. Missing prices or descriptions alone do not trigger requests. It first reads retrieved page evidence, then uses live web search if needed. The whole recovery phase has a 60-second deadline, with at most one extraction request and one search request containing at most two tool calls. Existing retailer prices and user edits remain authoritative.
+
+Web results must cite the exact submitted product URL. Manufacturer pages are eligible only when retailer structured data supplies the manufacturer domain, brand and model or product identifier, and the returned evidence matches those identifiers. Manufacturer fallback is disabled for explicit variant, size, color or SKU query selections. Unknown manufacturers and ambiguous variants remain manual. Photos require independent page evidence plus a successful image download and decode; a text-only web result may therefore recover a name without a photo.
+
+Sources appear in draft review and saved gift details. Editing a recovered field removes that field's attribution. Changing the shopping link removes prior attribution. Successful recovered metadata uses the existing six-hour cache with recovery configuration in its cache key; switching recovery off bypasses those results. Existing saved gifts retain their sources.
+
+Recovery dispatches are persisted before requests. Automatic worker redelivery does not repeat uncertain paid requests. Explicit retry or refresh permits a fresh attempt. Bright Data collections that are pending or have uncertain submission outcomes keep their existing resume behavior. Recovery does not replace that state with a new paid scrape.
+
+Keep production disabled until staging evaluation. Use at least 20 actual failed or incomplete imports, compare recovery off/on, and record exact product/variant correctness, name/photo recovery, latency and provider usage per recovered import. Reject activation if any accepted product or variant is wrong, successful imports regress, or the sample shows no useful recovery benefit. Fixture tests establish behavior, not real retailer coverage. Turning the recovery flag off is the rollback; no database migration is required.

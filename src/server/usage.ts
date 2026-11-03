@@ -125,6 +125,19 @@ export function adminUsage(
       !!cfg.OPENAI_API_KEY &&
       Number(cfg.PAID_DAILY_LIMIT) > 0,
   );
+  const recoveryMetric = (metric: string) =>
+    s.usage
+      .filter((u) => u.key === `recovery:metrics:${month}:${metric}`)
+      .reduce((n, u) => n + u.count, 0);
+  const recovery = {
+    requests: daily("product-recovery"),
+    searches: recoveryMetric("searches"),
+    titles: recoveryMetric("title"),
+    photos: recoveryMetric("image"),
+  };
+  // Recovery tokens are included above; search fees are reported separately.
+  if (recovery.searches && productDetails.estimatedUsd !== null)
+    productDetails.estimatedUsd += recovery.searches * 0.01;
   const selected = selectedScrapingProvider(cfg);
   const providers = scrapingProviders.map((p) => ({
     id: p.id,
@@ -154,7 +167,7 @@ export function adminUsage(
         scraping,
       ].some((g) => g.enabled || g.requests > 0),
     suggestions,
-    productDetails,
+    productDetails: { ...productDetails, recovery },
     scraping,
   };
 }

@@ -1,3 +1,4 @@
+import { recoverProduct, recoveryEnabled } from "./product-recovery";
 import {
   productLookupEnabled,
   lookupDisabledMessage,
@@ -91,9 +92,12 @@ export async function safeFetch(
   value: string,
   maxBytes = 2_000_000,
   onUrl?: (url: string) => void | Promise<void>,
+  deadline?: number,
 ) {
   let url = value;
-  const signal = AbortSignal.timeout(15000);
+  const signal = AbortSignal.timeout(
+    Math.max(1, Math.min(15000, (deadline ?? Infinity) - Date.now())),
+  );
   let cacheable = true;
   for (let n = 0; n < 6; n++) {
     await validateUrl(url);
@@ -421,6 +425,16 @@ const productMetadata = z.object({
   source: z.string().max(253),
   importedAt: z.iso.datetime(),
   remoteImage: z.url().max(2048).optional(),
+  productSources: z
+    .array(
+      z.object({
+        url: z.url(),
+        fields: z.array(z.enum(["title", "description", "image"])),
+        method: z.enum(["extraction", "web"]),
+        checkedAt: z.iso.datetime(),
+      }),
+    )
+    .optional(),
   shareable: z.boolean(),
   warnings: z.array(z.string()).optional(),
 });
@@ -440,6 +454,28 @@ export async function importProduct(
   // Snapshot policy when this attempt starts, including on cache hits.
   const importPhotos = await automaticallyImportProductPhotos();
   await validateUrl(url);
+  let recoveryDeadline: number | undefined;
+  let evidenceHtml = "";
+  const checkpoint =
+    jobId && recoveryEnabled(cfg)
+      ? await transact(
+          (s) => s.imports.find((j) => j.id === jobId)?.recoveryCheckpoint,
+        )
+      : undefined;
+  const recover = async (current: ProductPreview, target = url) => {
+    if (!recoveryEnabled(cfg) || current.warnings?.length) return current;
+    recoveryDeadline ??= checkpoint?.deadline ?? Date.now() + 60000;
+    return recoverProduct({
+      url: target,
+      html: evidenceHtml,
+      current,
+      photos: importPhotos,
+      jobId,
+      deadline: recoveryDeadline,
+      forceRefresh,
+      checkpoint,
+    });
+  };
   const normalized = productCacheUrl(url);
   const provider = selectedScrapingProvider(cfg);
   let lookupUrl = url;
@@ -462,7 +498,9 @@ export async function importProduct(
     ? cfg[scrapingProviders.find((p) => p.id === provider)!.key]
     : "";
   const key = normalized
-    ? importCacheKey("metadata-v6", [
+    ? importCacheKey("metadata-v7", [
+        recoveryEnabled(cfg),
+        cfg.AI_PRODUCT_RECOVERY_MODEL,
         normalized,
         provider,
         providerKey,
@@ -478,7 +516,14 @@ export async function importProduct(
       let shareable = !!normalized;
       let targetUrl = lookupUrl;
       try {
-        if (provider === "brightdata" && jobId && retailerDataset(lookupUrl)) {
+        if (checkpoint) {
+          result = checkpoint.result;
+          targetUrl = checkpoint.url;
+        } else if (
+          provider === "brightdata" &&
+          jobId &&
+          retailerDataset(lookupUrl)
+        ) {
           result = await brightRetailer(
             lookupUrl,
             cfg.BRIGHTDATA_API_KEY,
@@ -491,6 +536,7 @@ export async function importProduct(
           });
           shareable &&= page.cacheable;
           const html = page.buffer.toString("utf8");
+          evidenceHtml = html;
           result = parseProduct(html, page.url);
           if (/cdn.shopify.com|Shopify\.shop|myshopify.com/.test(html)) {
             const productPath = new URL(page.url).pathname.match(
@@ -518,7 +564,10 @@ export async function importProduct(
         if (
           error instanceof UnsafeProductUrl ||
           error instanceof ImportPending ||
-          (provider === "brightdata" && retailerDataset(lookupUrl))
+          (provider === "brightdata" &&
+            retailerDataset(lookupUrl) &&
+            (!recoveryEnabled(cfg) ||
+              /uncertain|still running/i.test(String(error))))
         )
           throw error;
         /* The configured provider may still supply usable metadata. */
@@ -528,13 +577,29 @@ export async function importProduct(
       // result cannot substitute a different option.
       if (!result.title) result = { warnings: result.warnings };
       if (
+        !checkpoint &&
         provider === "brightdata" &&
         jobId &&
         targetUrl !== lookupUrl &&
         retailerDataset(targetUrl)
       )
-        result = await brightRetailer(targetUrl, cfg.BRIGHTDATA_API_KEY, jobId);
+        try {
+          result = await brightRetailer(
+            targetUrl,
+            cfg.BRIGHTDATA_API_KEY,
+            jobId,
+          );
+        } catch (error) {
+          if (
+            error instanceof UnsafeProductUrl ||
+            error instanceof ImportPending ||
+            !recoveryEnabled(cfg) ||
+            /uncertain|still running/i.test(String(error))
+          )
+            throw error;
+        }
       else if (
+        !checkpoint &&
         !result.warnings?.length &&
         !(provider === "brightdata" && retailerDataset(lookupUrl))
       )
@@ -552,7 +617,12 @@ export async function importProduct(
                 console.info("Product lookup", { jobId, provider, reason });
               }
             : undefined,
+          (html) => {
+            evidenceHtml = html;
+          },
         );
+      if (!result.title || (importPhotos && !result.remoteImage))
+        result = await recover(result, targetUrl);
       if (!result.title)
         throw new Error(
           "This shop blocked the preview. You can still add the gift manually.",
@@ -578,7 +648,23 @@ export async function importProduct(
         throw new Error("Unsupported image");
       result.image = await saveImage(image.buffer, userId);
     } catch {
-      /* A photo failure must not discard usable product details. */
+      const recovered = await recover({ ...details, sourceTitle });
+      if (recovered.remoteImage) {
+        try {
+          const photo = await safeFetch(
+            recovered.remoteImage,
+            5_000_000,
+            undefined,
+            recoveryDeadline,
+          );
+          if (/^image\/(png|jpeg|webp|gif)/i.test(photo.contentType)) {
+            result.image = await saveImage(photo.buffer, userId);
+            result.productSources = recovered.productSources;
+          }
+        } catch {
+          /* Preserve text if the recovered image cannot be saved. */
+        }
+      }
     }
   }
   if (cfg.AI_ENABLED === "true" && cfg.OPENAI_API_KEY) {
@@ -611,6 +697,13 @@ export async function importProduct(
       /* Keep retailer data when enrichment is unavailable. */
     }
   }
+  if (!result.image)
+    result.productSources = result.productSources
+      ?.map((source) => ({
+        ...source,
+        fields: source.fields.filter((field) => field !== "image"),
+      }))
+      .filter((source) => source.fields.length);
   return result;
 }
 
@@ -621,6 +714,7 @@ export async function paidProductPreview(
   cfg: Record<string, string>,
   importPhotos = false,
   report?: (reason: string) => Promise<void>,
+  evidence?: (html: string) => void,
 ): Promise<ProductPreview> {
   const provider = selectedScrapingProvider(cfg);
   if ((result.title && (!importPhotos || result.remoteImage)) || !provider) {
@@ -634,7 +728,9 @@ export async function paidProductPreview(
   try {
     await validateUrl(url);
     if (provider === "brightdata") {
-      const imported = parseProduct(await unlockPage(url, cfg), url);
+      const html = await unlockPage(url, cfg);
+      evidence?.(html);
+      const imported = parseProduct(html, url);
       if (!imported.title)
         throw new Error("No product name found on this page.");
       return imported;
@@ -655,6 +751,7 @@ export async function paidProductPreview(
     const body = await boundedBody(response);
     const resolved = response.headers.get("resolved-url") ?? url;
     await validateUrl(resolved);
+    if (!request.amazon) evidence?.(body.toString("utf8"));
     const imported = request.amazon
       ? parseAmazonResponse(JSON.parse(body.toString("utf8")), url)
       : parseProduct(body.toString("utf8"), resolved);
