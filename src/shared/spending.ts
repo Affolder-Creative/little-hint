@@ -51,6 +51,8 @@ export interface SpendingRecord extends Base {
   }>;
 }
 export interface SpendingBudget extends Base {
+  originalScope?: string;
+  friendEntryId?: string;
   ownerId: string;
   connectionId?: string;
   scope: string;

@@ -138,6 +138,7 @@ export async function deliverNotice(id: string) {
     return;
   }
   const accountInvitation = inv && isAccountInvitation(inv);
+  const friendInvitation = !!inv?.friendEntryId;
   const actionPath = inv
     ? accountInvitation
       ? "/"
@@ -178,16 +179,20 @@ export async function deliverNotice(id: string) {
       try {
         if (channel === "email")
           await sendEmail(user.email, {
-            kind: accountInvitation
-              ? "account-invitation"
-              : inv
-                ? "invitation"
-                : "update",
-            text: accountInvitation
-              ? "You're invited to Little Hint. Sign in with this email address to start your own wish list. This invitation does not add you to a family group or share anyone's lists. You can choose who to share with later. Your invitation expires in seven days."
-              : inv
-                ? "You're invited to Little Hint. Sign in with this email address to accept, then start sharing wish lists with your people."
-                : "A little update is waiting for you. Sign in to Little Hint to see it.",
+            kind: friendInvitation
+              ? "friend-invitation"
+              : accountInvitation
+                ? "account-invitation"
+                : inv
+                  ? "invitation"
+                  : "update",
+            text: friendInvitation
+              ? "You have a request to connect on Little Hint. Sign in with this email address, then review and accept or decline the request. Signing in does not accept it. Connecting does not share wish lists or add you to a family group. This invitation expires in seven days."
+              : accountInvitation
+                ? "You're invited to Little Hint. Sign in with this email address to start your own wish list. This invitation does not add you to a family group or share anyone's lists. You can choose who to share with later. Your invitation expires in seven days."
+                : inv
+                  ? "You're invited to Little Hint. Sign in with this email address to accept, then start sharing wish lists with your people."
+                  : "A little update is waiting for you. Sign in to Little Hint to see it.",
             actionPath,
           });
         if (channel === "telegram" && current.chatId)

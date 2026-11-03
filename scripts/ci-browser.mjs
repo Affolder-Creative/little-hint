@@ -127,7 +127,9 @@ try {
     "playwright",
     "test",
     `tests/${suite}.spec.ts`,
-    ...(suite === "e2e" ? ["tests/reliability.spec.ts", "tests/efficiency.spec.ts"] : []),
+    ...(suite === "e2e"
+      ? ["tests/reliability.spec.ts", "tests/efficiency.spec.ts"]
+      : []),
     ...(suite === "pwa"
       ? ["tests/update-notice.spec.ts", "tests/update-lifecycle.spec.ts"]
       : []),
@@ -136,6 +138,7 @@ try {
       : []),
     ...(suite === "sign-in" ? ["tests/sms.spec.ts"] : []),
     ...(suite === "polish" ? ["tests/settings-polish.spec.ts"] : []),
+    ...(suite === "gift-discovery" ? ["tests/friends.spec.ts"] : []),
   ]).done;
 } finally {
   await stop();

@@ -44,7 +44,12 @@ describe("transactional email templates", () => {
       "012345",
     );
   });
-  it.each(["invitation", "account-invitation", "update"] as const)(
+  it.each([
+    "invitation",
+    "account-invitation",
+    "friend-invitation",
+    "update",
+  ] as const)(
     "escapes %s text and keeps the action on the configured origin",
     (kind) => {
       const mail = renderEmail(
@@ -66,7 +71,11 @@ describe("transactional email templates", () => {
         "https://hint.example.test/invite/example?x=1&y=2",
       );
       expect(mail.html).toContain(
-        kind === "invitation" ? "View invitation" : "Open Little Hint",
+        kind === "friend-invitation"
+          ? "Review connection"
+          : kind === "invitation"
+            ? "View invitation"
+            : "Open Little Hint",
       );
     },
   );
@@ -85,6 +94,23 @@ describe("transactional email templates", () => {
     expect(mail.html).not.toContain("Your people are waiting");
     expect(mail.html).not.toContain("View invitation");
     expect(mail.text).toContain("https://hint.example.test/");
+  });
+  it("asks friends to review their connection without promising shared lists", () => {
+    const mail = renderEmail(
+      {
+        kind: "friend-invitation",
+        text: "Review and accept or decline the request.",
+        actionPath: "/invite/friend-request",
+      },
+      "https://hint.example.test",
+    );
+    expect(mail.subject).toBe("You're invited to Little Hint");
+    expect(mail.html).toContain("Review connection");
+    expect(mail.html).toContain(
+      "Your wish lists stay private until you share them.",
+    );
+    expect(mail.html).not.toContain("Your people are waiting");
+    expect(mail.text).toContain("/invite/friend-request");
   });
   it("rejects external and unsafe action URLs", () => {
     for (const actionPath of [

@@ -210,3 +210,68 @@ it("does not link or poll Telegram while disabled", async () => {
   expect(mock.fetch).not.toHaveBeenCalled();
   expect(mock.state!.links).toHaveLength(0);
 });
+
+function friendInvitationFixture() {
+  const f = fixture();
+  const person = { ...stamp(), name: "Taylor", guardians: [] };
+  f.s.people.push(person);
+  const entry = {
+    ...stamp(),
+    creatorId: f.actors[0].id,
+    name: person.name,
+    personId: person.id,
+    originalPersonId: person.id,
+    groupIds: [],
+    archived: false,
+  };
+  f.s.friendEntries.push(entry);
+  const invitation = {
+    ...stamp(),
+    invitedById: f.actors[0].id,
+    friendEntryId: entry.id,
+    email: "taylor@example.test",
+    expiresAt: new Date(Date.now() + 86400000).toISOString(),
+  };
+  f.s.invitations.push(invitation);
+  const notice = {
+    ...stamp(),
+    userId: `invitation:${invitation.id}`,
+    event: "invitation" as const,
+    invitationId: invitation.id,
+    status: "pending" as const,
+    attempts: 0,
+    delivered: [],
+  };
+  f.s.notices.push(notice);
+  return { ...f, entry, invitation, friendNotice: notice };
+}
+
+it("delivers a friend connection request without revealing gift or planning details", async () => {
+  const f = friendInvitationFixture();
+  await deliverNotice(f.friendNotice.id);
+  expect(mock.sendMail).toHaveBeenCalledOnce();
+  const mail = mock.sendMail.mock.calls[0][0];
+  expect(mail.to).toBe("taylor@example.test");
+  expect(mail.html).toContain("Review connection");
+  expect(mail.text).toContain("Signing in does not accept it");
+  expect(mail.text).toContain(
+    "does not share wish lists or add you to a family group",
+  );
+  expect(mail.text).toContain(`/invite/${f.invitation.id}`);
+  expect(mail.text).not.toContain("Private gift description");
+  expect(mail.html).not.toContain("Family");
+  expect(mock.fetch).not.toHaveBeenCalled();
+});
+
+it.each(["revoked", "declined", "expired", "archived"] as const)(
+  "suppresses a %s friend invitation before delivery",
+  async (state) => {
+    const f = friendInvitationFixture();
+    if (state === "expired") f.invitation.expiresAt = "2000-01-01";
+    else if (state === "archived") f.entry.archived = true;
+    else Object.assign(f.invitation, { [state]: true });
+    await deliverNotice(f.friendNotice.id);
+    expect(mock.sendMail).not.toHaveBeenCalled();
+    expect(f.friendNotice.status).toBe("sent");
+  },
+);

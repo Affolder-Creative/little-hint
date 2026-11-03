@@ -9,6 +9,19 @@
 
 A self-hosted, invite-only gift coordination PWA for families and friends. React/Vite frontend, Fastify API, PostgreSQL/Drizzle, Better Auth, and a pg-boss worker. Includes leader-managed group events with individual wish lists, wishes, private ideas, quantities, contributions, secret gift exchanges, URL imports, and optional SMTP/Telegram/US SMS integrations.
 
+Use **Your people → Add a friend** to save gift ideas before someone joins. A name
+is enough; no email or account is needed. Friends and their ideas start private.
+Share a friend entry with selected family groups to coordinate gifts, choosing
+which individual ideas to share. The entry's creator manages its sharing and
+connection invitations; each giver keeps control of their own ideas.
+
+An invitation to connect admits a new account, but signing in does not accept the
+connection. The recipient reviews and accepts or declines it. Accepted entries
+resolve to their account without exposing surprise ideas, transferring gifts,
+sharing wish lists, or joining groups. Send family-group invitations separately
+in Settings. Managed profiles remain the option for maintaining someone else's
+wish lists. Friend planning is built in and needs no feature flag.
+
 Family-group owners and designated event leaders create and manage all gift
 exchanges in their group, including existing exchanges created by other members.
 The creator remains recorded, but management follows current group roles.

@@ -1,7 +1,8 @@
 export type EmailMessage =
   | { kind: "sign-in"; code: string; purpose?: "sms-settings" }
   | {
-      kind: "invitation" | "account-invitation" | "update";
+      kind:
+        "invitation" | "account-invitation" | "friend-invitation" | "update";
       text: string;
       actionPath: string;
       wishlistPreview?: string;
@@ -40,29 +41,32 @@ export function renderEmail(message: EmailMessage, appUrl: string) {
     : "sign in to Little Hint";
   const invitation = message.kind === "invitation";
   const accountInvitation = message.kind === "account-invitation";
+  const friendInvitation = message.kind === "friend-invitation";
   const wishlistPreview =
     !isCode && message.kind === "update" ? message.wishlistPreview : undefined;
   const subject =
     wishlistPreview ??
     (isCode
       ? `Your Little Hint ${codeName} code`
-      : invitation || accountInvitation
+      : invitation || accountInvitation || friendInvitation
         ? "You're invited to Little Hint"
         : "A little update from Little Hint");
   const heading = isCode
     ? `Your ${codeName} code`
-    : invitation || accountInvitation
+    : invitation || accountInvitation || friendInvitation
       ? "You're invited"
       : "A little update for you";
   const preview =
     wishlistPreview ??
     (isCode
       ? `Use this code to ${codeAction}. It is valid for ${minutes} minutes.`
-      : accountInvitation
-        ? "Start your own wish list. You can choose who to share it with later."
-        : invitation
-          ? "Your people are waiting. Open your Little Hint invitation."
-          : "Open Little Hint to see what's new.");
+      : friendInvitation
+        ? "Review a request to connect. Your wish lists stay private until you share them."
+        : accountInvitation
+          ? "Start your own wish list. You can choose who to share it with later."
+          : invitation
+            ? "Your people are waiting. Open your Little Hint invitation."
+            : "Open Little Hint to see what's new.");
   const text = isCode
     ? `Your Little Hint ${codeName} code is ${message.code}. It expires in ${minutes} minutes. If you did not request it, ignore this email.`
     : `${message.text} ${url.href}`;
@@ -75,7 +79,7 @@ export function renderEmail(message: EmailMessage, appUrl: string) {
       <p style="margin:0;color:#746057;font-size:14px">If you didn't request this code, you can ignore this email.</p>`
     : `<p style="margin:0 0 24px;white-space:pre-line">${escapeHtml(message.text)}</p>
       <table role="presentation" cellspacing="0" cellpadding="0"><tr><td bgcolor="#aa4d37" style="border-radius:8px;text-align:center">
-        <a href="${escapeHtml(url.href)}" style="display:inline-block;padding:14px 22px;border:1px solid #aa4d37;border-radius:8px;font-weight:600;font-size:16px;line-height:1.4;color:#fff8f0;text-decoration:none">${invitation ? "View invitation" : "Open Little Hint"}</a>
+        <a href="${escapeHtml(url.href)}" style="display:inline-block;padding:14px 22px;border:1px solid #aa4d37;border-radius:8px;font-weight:600;font-size:16px;line-height:1.4;color:#fff8f0;text-decoration:none">${friendInvitation ? "Review connection" : invitation ? "View invitation" : "Open Little Hint"}</a>
       </td></tr></table>`;
   const html = `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(subject)}</title></head>

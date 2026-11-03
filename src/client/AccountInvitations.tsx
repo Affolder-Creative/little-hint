@@ -1,3 +1,4 @@
+import { Invitations } from "./Invitations";
 import { InviteDialog, InvitationShare } from "./InvitationShare";
 import { Mail } from "lucide-react";
 import { isAccountInvitation } from "../shared/invitations";
@@ -17,6 +18,9 @@ export function AccountInvitations() {
     <>
       <h2 id="settings-invitations-title">Invitations</h2>
       <p>{explanation}</p>
+      {world.invitations.some(
+        (i) => i.friendEntryId && i.email === world.me.email.toLowerCase(),
+      ) && <Invitations />}
       <button
         className="button secondary"
         onClick={() =>

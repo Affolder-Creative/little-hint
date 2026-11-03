@@ -300,7 +300,7 @@ Borders are generally a single pixel in the theme border color. The gift-image c
 
 ### Buttons
 
-Primary buttons use the accent pair, medium-bold 14px text, and 12px by 18px padding. Secondary buttons use paper, text, and a border. Both have 44px minimum hit dimensions and allow long labels to wrap within the available width. Text actions, back links, exchange assignment links, and update actions also retain at least 44px hit dimensions. Primary and secondary buttons dim slightly on hover. Text buttons use accent text and underline on hover; install-panel text actions use the main text color. Icon buttons use a soft fill on hover.
+Primary buttons use the accent pair, medium-bold 14px text, and 12px by 18px padding. Secondary buttons use paper, text, and a border. Both have 44px minimum hit dimensions and allow long labels to wrap within the available width. Text actions, back links, exchange assignment links, and update actions also retain at least 44px hit dimensions. Primary and secondary buttons dim slightly on hover. Text buttons use accent text without an underline on hover; install-panel text actions use the main text color. Icon buttons use a soft fill on hover.
 
 Keyboard focus is a 3px accent outline with a 3px offset. Disabled buttons reduce opacity and use the unavailable cursor. Small button variants keep the 44px minimum height. Compact mobile header and update controls retain the same 44px minimum hit dimensions.
 
@@ -349,6 +349,24 @@ and purchase guidance explains that the idea and its buying activity stay
 visible only to its creator. Wish-list item visibility does not use this badge. Group the audience selector and its explanation using compact spacing, with medium spacing before product entry. An unavailable discovery action occupies no layout space. Saved-idea links use accent text, a persistent underline, an arrow, and a 44px touch target.
 
 Product photo loading preserves the image area and contains the product. Visible thumbnails load promptly; detail photos retain the thumbnail until the larger image decodes.
+
+### Friend planning
+
+Your people keeps Add a friend separate from Managed profile. The name-only
+creation dialog uses the existing labeled field and fixed action pattern. Friend
+pages lead with Add gift idea and show compact planning status, followed by
+wrapping management actions for the entry's creator. Shared entries use the same
+open rows and quiet dividers as the rest of the app. Multiple connected planning
+entries remain visibly distinct in their management section.
+
+Manage friend combines the name and group checkboxes in one form. Changing the
+audience opens a focused review that names the selected groups, states that
+private ideas stay private, and explains what removing a group revokes. A group
+empty state links to family-group settings while keeping private planning usable.
+Connection invitations explain verified sign-in and explicit acceptance. Pending
+requests show the email, expiry, share-link control, and cancellation action.
+Archive and restore use the existing confirmation dialog; restoration copy says
+that the entry starts private.
 
 ### Administration
 

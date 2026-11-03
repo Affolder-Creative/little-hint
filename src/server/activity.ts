@@ -1,3 +1,4 @@
+import { invitationIsPending } from "../shared/invitations";
 import { effectiveConfig } from "./runtime-config";
 import { unavailableChannels } from "./channel-availability";
 import { z } from "zod";
@@ -291,10 +292,15 @@ export function activityAllowed(s: State, n: Notice): boolean {
     // Account binding is established when the invitation is created, not inferred from a client ID.
     return (
       !!inv &&
-      !inv.revoked &&
-      !inv.acceptedBy &&
-      Date.parse(inv.expiresAt) > Date.now() &&
-      !!s.groups.find((g) => g.id === inv.groupId)
+      invitationIsPending(inv) &&
+      (inv.friendEntryId
+        ? s.friendEntries.some(
+            (entry) =>
+              entry.id === inv.friendEntryId &&
+              !entry.archived &&
+              !entry.connectedAt,
+          )
+        : !!s.groups.find((g) => g.id === inv.groupId))
     );
   }
   if (n.linkId) {

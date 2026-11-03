@@ -479,6 +479,7 @@ export function spendingCommand(
   if (action === "spending.budget") {
     const p = z
       .object({
+        id: id.optional(),
         scope: z.string().max(250),
         year: year.nullable(),
         amountCents: cents,
@@ -521,12 +522,14 @@ export function spendingCommand(
       fail(400, "Choose an available budget scope.");
     const budget = s.spendingBudgets.find(
       (v) =>
+        (!p.id || v.id === p.id) &&
         v.scope === p.scope &&
         v.year === p.year &&
         (p.shared
           ? v.connectionId === c!.id
           : !v.connectionId && v.ownerId === a.id),
     );
+    if (p.id && !budget) fail(404, "Budget not found.");
     if (budget) {
       revision(budget, b);
       budget.amountCents = p.amountCents;

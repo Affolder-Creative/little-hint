@@ -82,6 +82,16 @@ function DiscoveryFlow({
   const [defaultList, setDefaultList] = useState(
     lists.find((l) => l.id === params.get("list"))?.id ?? lists[0]?.id ?? "",
   );
+  const friendEntries = (world.friendEntries ?? []).filter(
+    (f) => f.personId === personId && !f.archived,
+  );
+  const preferredFriend =
+    friendEntries.find((f) => f.creatorId === world.me.id) ??
+    (friendEntries.length === 1 ? friendEntries[0] : undefined);
+  const [friendEntryId, setFriendEntryId] = useState(
+    context.recent?.input.friendEntryId ?? preferredFriend?.id ?? "",
+  );
+  const friendEntry = friendEntries.find((f) => f.id === friendEntryId);
   const recent = context.recent;
   const prefs = context.preferences;
   const [input, setInput] = useState<DiscoveryInput>(
@@ -129,6 +139,8 @@ function DiscoveryFlow({
     refetchIntervalInBackground: false,
   });
   const job = jobQuery.data;
+  const sharingFriend =
+    friendEntries.find((f) => f.id === job?.input.friendEntryId) ?? friendEntry;
   const working =
     !!job && ["pending", "running", "reviewing"].includes(job.status);
   useEffect(() => {
@@ -161,6 +173,7 @@ function DiscoveryFlow({
       throw new Error("Enter a positive maximum price.");
     const result = await send("gift-discovery", {
       ...input,
+      ...(friendEntryId ? { friendEntryId } : {}),
       maxPriceCents: maximum,
       fresh: !!jobId,
     });
@@ -256,6 +269,28 @@ function DiscoveryFlow({
               disabled={working || noAllowance}
               onSubmit={search}
             >
+              {friendEntries.length > 1 && !preferredFriend && (
+                <Field label="Planning entry">
+                  <select
+                    required
+                    value={friendEntryId}
+                    onChange={(e) => setFriendEntryId(e.target.value)}
+                  >
+                    <option value="">Choose where to plan this gift</option>
+                    {friendEntries.map((f) => (
+                      <option key={f.id} value={f.id}>
+                        {f.name} ·{" "}
+                        {f.groupIds
+                          .map(
+                            (id) => world.groups.find((g) => g.id === id)?.name,
+                          )
+                          .filter(Boolean)
+                          .join(", ")}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+              )}
               <InterestFields
                 value={input}
                 onChange={(v) => setInput({ ...input, ...v })}
@@ -532,34 +567,45 @@ function DiscoveryFlow({
                                     <option value="hidden">
                                       Selected groups, hidden from recipient
                                     </option>
-                                    <option value="visible">
-                                      Selected groups and recipient
-                                    </option>
+                                    {!sharingFriend && (
+                                      <option value="visible">
+                                        Selected groups and recipient
+                                      </option>
+                                    )}
                                   </select>
                                 </Field>
                                 {selection.visibility !== "private" && (
                                   <fieldset className="gift-interests">
                                     <legend>Share with family groups</legend>
-                                    {world.groups.map((g) => (
-                                      <label className="check" key={g.id}>
-                                        <input
-                                          type="checkbox"
-                                          checked={selection.groupIds.includes(
-                                            g.id,
-                                          )}
-                                          onChange={(e) =>
-                                            change(candidate.id, {
-                                              groupIds: e.target.checked
-                                                ? [...selection.groupIds, g.id]
-                                                : selection.groupIds.filter(
-                                                    (id) => id !== g.id,
-                                                  ),
-                                            })
-                                          }
-                                        />
-                                        {g.name}
-                                      </label>
-                                    ))}
+                                    {world.groups
+                                      .filter(
+                                        (g) =>
+                                          !sharingFriend ||
+                                          sharingFriend.groupIds.includes(g.id),
+                                      )
+                                      .map((g) => (
+                                        <label className="check" key={g.id}>
+                                          <input
+                                            type="checkbox"
+                                            checked={selection.groupIds.includes(
+                                              g.id,
+                                            )}
+                                            onChange={(e) =>
+                                              change(candidate.id, {
+                                                groupIds: e.target.checked
+                                                  ? [
+                                                      ...selection.groupIds,
+                                                      g.id,
+                                                    ]
+                                                  : selection.groupIds.filter(
+                                                      (id) => id !== g.id,
+                                                    ),
+                                              })
+                                            }
+                                          />
+                                          {g.name}
+                                        </label>
+                                      ))}
                                   </fieldset>
                                 )}
                               </>
