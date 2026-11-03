@@ -1,4 +1,13 @@
 import { useState } from "react";
+import {
+  Archive,
+  Check,
+  LockKeyhole,
+  Mail,
+  Settings2,
+  Users,
+} from "lucide-react";
+import { ActionMenu } from "./Management";
 import { Link, useNavigate } from "react-router-dom";
 import type { FriendEntry } from "../shared/model";
 import { useApp } from "./context";
@@ -169,6 +178,44 @@ function FriendInvitation({ entry }: { entry: FriendEntry }) {
   );
 }
 
+function FriendArchiveButton({ entry }: { entry: FriendEntry }) {
+  const { open, mutate, toast } = useApp();
+  return (
+    <button
+      className={
+        entry.archived ? "button secondary small" : "text-button danger"
+      }
+      onClick={() =>
+        open(
+          entry.archived ? "Restore this friend?" : "Archive this friend?",
+          <Confirm
+            label={entry.archived ? "Restore friend" : "Archive friend"}
+            onConfirm={async () => {
+              await mutate("friends/archive", {
+                id: entry.id,
+                revision: entry.revision,
+                archived: !entry.archived,
+              });
+              toast(
+                entry.archived
+                  ? "Friend restored privately."
+                  : "Friend archived. Your ideas are saved.",
+              );
+            }}
+          >
+            {entry.archived
+              ? "Restore this entry privately. Previously shared ideas will not be shared again automatically."
+              : "Stop sharing this entry and its ideas with groups and cancel pending connection invitations. Authors keep their own ideas and buyers keep purchase history."}
+          </Confirm>,
+        )
+      }
+    >
+      <Archive size={16} aria-hidden="true" />
+      {entry.archived ? "Restore friend" : "Archive friend"}
+    </button>
+  );
+}
+
 export function FriendManagement({ personId }: { personId: string }) {
   const { world, open, mutate, toast } = useApp();
   const entries = (world.friendEntries ?? []).filter(
@@ -178,33 +225,47 @@ export function FriendManagement({ personId }: { personId: string }) {
   return (
     <section aria-label="Friend planning" className="friend-management">
       {entries.map((entry) => (
-        <div key={entry.id} className="text-stack">
-          <p className="muted">
-            {entry.archived
-              ? "Archived planning entry"
-              : entry.connectedAt
-                ? "Connected to their account"
-                : entry.groupIds.length
-                  ? `Shared for gift planning with ${entry.groupIds
-                      .map((id) => world.groups.find((g) => g.id === id)?.name)
-                      .filter(Boolean)
-                      .join(", ")}`
-                  : "Private friend entry"}
-            {entries.length > 1 ? ` · ${entry.name}` : ""}
-          </p>
+        <div key={entry.id} className="friend-planning-entry">
+          <div className="friend-status">
+            <p className="friend-status-title">
+              {entry.archived ? (
+                <Archive size={17} aria-hidden="true" />
+              ) : entry.connectedAt ? (
+                <Check size={17} aria-hidden="true" />
+              ) : entry.groupIds.length ? (
+                <Users size={17} aria-hidden="true" />
+              ) : (
+                <LockKeyhole size={17} aria-hidden="true" />
+              )}
+              <span>
+                {entry.archived
+                  ? "Archived planning entry"
+                  : entry.connectedAt
+                    ? "Connected to their account"
+                    : entry.groupIds.length
+                      ? `Shared for gift planning with ${entry.groupIds
+                          .map(
+                            (id) => world.groups.find((g) => g.id === id)?.name,
+                          )
+                          .filter(Boolean)
+                          .join(", ")}`
+                      : "Private friend entry"}
+                {entries.length > 1 ? ` · ${entry.name}` : ""}
+              </span>
+            </p>
+            <p className="friend-status-description">
+              {entry.archived
+                ? "Your saved ideas and purchase history are kept."
+                : entry.connectedAt
+                  ? "Your gift ideas stay hidden from them."
+                  : entry.groupIds.length
+                    ? "Each person chooses which gift ideas to share."
+                    : "Only you can see this friend. You can share ideas with a group later."}
+            </p>
+          </div>
           {entry.canManage && (
             <>
               <div className="friend-actions">
-                {!entry.archived && (
-                  <button
-                    className="button secondary small"
-                    onClick={() =>
-                      open("Manage friend", <FriendEditor entry={entry} />)
-                    }
-                  >
-                    Manage friend
-                  </button>
-                )}
                 {!entry.archived && !entry.connectedAt && (
                   <button
                     className="button secondary small"
@@ -215,42 +276,26 @@ export function FriendManagement({ personId }: { personId: string }) {
                       )
                     }
                   >
-                    Invite to connect
+                    <Mail size={16} aria-hidden="true" /> Invite to connect
                   </button>
                 )}
-                <button
-                  className="text-button"
-                  onClick={() =>
-                    open(
-                      entry.archived
-                        ? "Restore this friend?"
-                        : "Archive this friend?",
-                      <Confirm
-                        label={
-                          entry.archived ? "Restore friend" : "Archive friend"
+                {entry.archived ? (
+                  <FriendArchiveButton entry={entry} />
+                ) : (
+                  <ActionMenu name={entry.name} label="Friend actions">
+                    {!entry.archived && (
+                      <button
+                        className="text-button"
+                        onClick={() =>
+                          open("Manage friend", <FriendEditor entry={entry} />)
                         }
-                        onConfirm={async () => {
-                          await mutate("friends/archive", {
-                            id: entry.id,
-                            revision: entry.revision,
-                            archived: !entry.archived,
-                          });
-                          toast(
-                            entry.archived
-                              ? "Friend restored privately."
-                              : "Friend archived. Your ideas are saved.",
-                          );
-                        }}
                       >
-                        {entry.archived
-                          ? "Restore this entry privately. Previously shared ideas will not be shared again automatically."
-                          : "Stop sharing this entry and its ideas with groups and cancel pending connection invitations. Authors keep their own ideas and buyers keep purchase history."}
-                      </Confirm>,
-                    )
-                  }
-                >
-                  {entry.archived ? "Restore friend" : "Archive friend"}
-                </button>
+                        <Settings2 size={16} aria-hidden="true" /> Manage friend
+                      </button>
+                    )}
+                    <FriendArchiveButton entry={entry} />
+                  </ActionMenu>
+                )}
               </div>
               {world.invitations
                 .filter((i) => i.friendEntryId === entry.id)

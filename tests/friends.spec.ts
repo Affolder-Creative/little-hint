@@ -97,6 +97,8 @@ test("name-only friend saves a private idea and can be archived and restored", a
   expect(
     f.state.items.find((i) => i.title === "Christmas coffee set")?.visibility,
   ).toBe("private");
+  await page.getByLabel("Friend actions for Taylor", { exact: true }).click();
+
   await page
     .getByRole("button", { name: "Archive friend", exact: true })
     .click();
@@ -145,6 +147,26 @@ for (const theme of ["light", "dark"] as const) {
         ),
         fullPage: true,
       });
+      const menu = page.getByLabel("Friend actions for Taylor", {
+        exact: true,
+      });
+      await expect(
+        page.getByRole("button", { name: "Archive friend", exact: true }),
+      ).not.toBeVisible();
+      await menu.focus();
+      await page.keyboard.press("Enter");
+      await expect(
+        page.getByRole("button", { name: "Archive friend", exact: true }),
+      ).toBeVisible();
+      await page.screenshot({
+        path: info.outputPath(
+          `friend-actions-${theme}-${mobile ? "mobile" : "desktop"}.png`,
+        ),
+        fullPage: true,
+      });
+      await page.keyboard.press("Escape");
+      await expect(menu).toBeFocused();
+      await menu.click();
       await page
         .getByRole("button", { name: "Manage friend", exact: true })
         .click();
@@ -176,6 +198,8 @@ test("sharing requires review and unsharing preserves private ideas", async ({
     name: "Taylor",
   }) as { id: string; personId: string };
   await page.goto(`/people/${friend.personId}?tab=ideas`);
+  await page.getByLabel("Friend actions for Taylor", { exact: true }).click();
+
   await page
     .getByRole("button", { name: "Manage friend", exact: true })
     .click();
@@ -200,6 +224,8 @@ test("sharing requires review and unsharing preserves private ideas", async ({
   expect(world(f.state, f.actors[1]).items.some((i) => i.id === idea.id)).toBe(
     true,
   );
+  await page.getByLabel("Friend actions for Taylor", { exact: true }).click();
+
   await page
     .getByRole("button", { name: "Manage friend", exact: true })
     .click();

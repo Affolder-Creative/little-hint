@@ -354,8 +354,12 @@ Product photo loading preserves the image area and contains the product. Visible
 
 Your people keeps Add a friend separate from Managed profile. The name-only
 creation dialog uses the existing labeled field and fixed action pattern. Friend
-pages lead with Add gift idea and show compact planning status, followed by
-wrapping management actions for the entry's creator. Shared entries use the same
+pages lead with Add gift idea. Planning status uses a small icon and 14px semibold
+text with a muted explanation beneath it. Invite to connect is the visible
+secondary action; the quieter Friend actions menu holds Manage friend and a
+separated Archive friend action. Archived entries offer Restore friend directly.
+Controls wrap on phones without competing with the page's main gift action.
+Shared entries use the same
 open rows and quiet dividers as the rest of the app. Multiple connected planning
 entries remain visibly distinct in their management section.
 
