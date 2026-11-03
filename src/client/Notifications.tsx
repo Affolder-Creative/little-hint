@@ -106,11 +106,11 @@ export function NotificationBell() {
   );
 }
 export function NotificationCenter() {
-  const { mutate } = useApp();
+  const { mutate, world } = useApp();
   const [unread, setUnread] = useState(false);
   const navigate = useNavigate();
   const query = useInfiniteQuery({
-    queryKey: ["notifications", unread],
+    queryKey: ["notifications", world.me.id, unread],
     initialPageParam: "",
     queryFn: ({ pageParam }) =>
       api<NotificationPage & { asOf: string }>(

@@ -77,3 +77,53 @@ it("falls back to the original on generation failure without partial files", asy
   );
   expect(await readdir(directory)).toEqual(["invalid.webp"]);
 });
+
+it("collects aged abandoned uploads but preserves recent uploads and all referenced media", async () => {
+  const { emptyState } = await import("../src/shared/model");
+  const { transact } = await import("../src/server/db");
+  const { removeDeletedMedia } = await import("../src/server/media");
+  const s = emptyState();
+  const now = new Date().toISOString();
+  for (const id of [
+    "orphan",
+    "tombstoned",
+    "recent",
+    "saved",
+    "draft",
+    "import",
+    "discovery",
+  ]) {
+    s.media.push({
+      id,
+      revision: 1,
+      createdAt: id === "recent" ? now : "2020-01-01T00:00:00Z",
+      userId: "owner",
+      file: id + ".webp",
+      ...(id === "tombstoned" ? { deletedAt: now } : {}),
+    });
+    await writeFile(path.join(directory, id + ".webp"), "image");
+    await writeFile(
+      path.join(directory, id + ".webp.card-v1.webp"),
+      "thumbnail",
+    );
+  }
+  s.items.push({ image: "/api/v1/media/saved", archived: true } as any);
+  s.imports.push({
+    draft: { state: "active", fields: { image: "/api/v1/media/draft" } },
+  } as any);
+  s.imports.push({ result: { image: "/api/v1/media/import" } } as any);
+  s.giftDiscoveryJobs.push({
+    candidates: [{ image: "/api/v1/media/discovery" }],
+  } as any);
+  vi.mocked(transact).mockImplementationOnce(async (fn) => fn(s));
+  await removeDeletedMedia();
+  expect(s.media.map((m) => m.id)).toEqual([
+    "recent",
+    "saved",
+    "draft",
+    "import",
+    "discovery",
+  ]);
+  expect(await readdir(directory)).not.toContain("orphan.webp");
+  expect(await readdir(directory)).not.toContain("orphan.webp.card-v1.webp");
+});

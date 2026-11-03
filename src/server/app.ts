@@ -1,3 +1,4 @@
+import { trustedProxies } from "./proxy";
 import { spendingAvailable } from "./deployment";
 import {
   spendingView,
@@ -106,7 +107,7 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
     },
     logController: new LogController({ disableRequestLogging: true }),
     bodyLimit: 6_000_000,
-    trustProxy: false,
+    trustProxy: trustedProxies(process.env.TRUSTED_PROXIES),
   });
   const auth = makeAuth();
   const cloudflareAnalytics = cloudflareWebAnalyticsEnabled();
@@ -146,6 +147,17 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
   await app.register(rateLimit, {
     max: options.browserTest ? 10_000 : 150,
     timeWindow: "1 minute",
+    allowList: (req) =>
+      !req.url.startsWith("/api/") || req.url.split("?")[0] === "/api/health",
+    keyGenerator: async (req) => {
+      if (req.url.startsWith("/api/v1/")) {
+        const session = await auth.api.getSession({
+          headers: fromNodeHeaders(req.headers),
+        });
+        if (session?.user.emailVerified) return `account:${session.user.id}`;
+      }
+      return `ip:${req.ip}`;
+    },
   });
   app.addContentTypeParser(
     "application/octet-stream",

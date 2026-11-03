@@ -170,3 +170,9 @@ AI and paid shop lookups; gift suggestions retain their separate allowances.
 ## Product image delivery
 
 `PRODUCT_IMAGE_CACHE_ENABLED` and `PRODUCT_IMAGE_PREFETCH_ENABLED` default to on through Administration. Leave both environment values blank for editable controls. Set either to `true` or `false` to override and lock it; invalid values fail validation. Environment changes require recreating the app container. Administration changes reach other clients at their next world refresh. Disabling caching also suspends prefetching and clears device images as clients reconnect. It increases repeat downloads. No database migration is needed.
+
+### Reverse-proxy request limits
+
+Set `TRUSTED_PROXIES` to the actual ingress proxy IP addresses or narrow network CIDRs, separated by commas. Leave it empty for direct connections. Do not use a wildcard, boolean, hop count or a network containing untrusted clients. The proxy must replace or correctly append forwarding headers, and the app origin should only be reachable through the intended ingress. This setting is supplied to both app and worker by the production/staging/source Compose files.
+
+Signed-in API users have independent account allowances. Unauthenticated traffic, including sign-in, uses the validated client IP; without proxy configuration it shares the proxy IP allowance. Static files and health checks are excluded from the application API allowance. Verify that two clients behind the configured proxy receive independent limits and that direct requests cannot spoof a forwarded address.
