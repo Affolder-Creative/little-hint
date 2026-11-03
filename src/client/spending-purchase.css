@@ -84,6 +84,7 @@
   justify-content: center;
 }
 .purchase-payment {
+  align-items: start;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 16px;

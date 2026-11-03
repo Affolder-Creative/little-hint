@@ -47,6 +47,8 @@ for (const [title, amountCents] of [
     recipientIds: [s.people[2].id],
     occasionId: occasion.id,
   });
+s.spendingRecords.find((r) => r.title === "Storybook collection")!.history = [];
+s.spendingRecords.find((r) => r.title === "Watercolor set")!.splits = [3];
 run("spending.budget", {
   scope: "all",
   year: null,
@@ -122,6 +124,97 @@ try {
   ).toBeVisible();
   await expect(page.locator(".spending-numbers")).toContainText("$85");
   await page.screenshot({ path: out + "/desktop.png", fullPage: true });
+  const documentBox = async (selector: string) =>
+    page.locator(selector).evaluate((el) => {
+      const b = el.getBoundingClientRect();
+      return {
+        x: b.x + scrollX,
+        y: b.y + scrollY,
+        width: b.width,
+        height: b.height,
+      };
+    });
+  const checkFilters = async (name: string) => {
+    const button = page.getByRole("button", { name: /^More filters/ });
+    await button.scrollIntoViewIfNeeded();
+    const before = await button.evaluate((el) => {
+      const b = el.getBoundingClientRect();
+      return { x: b.x + scrollX, y: b.y + scrollY, width: b.width };
+    });
+    const selects = await page
+      .locator(".spending-filters select")
+      .evaluateAll((elements) =>
+        elements.map((el) => {
+          const b = el.getBoundingClientRect();
+          return { x: b.x + scrollX, y: b.y + scrollY, width: b.width };
+        }),
+      );
+    await button.click();
+    await expect(page.getByLabel("Wish list", { exact: true })).toBeVisible();
+    const after = await button.evaluate((el) => {
+      const b = el.getBoundingClientRect();
+      return { x: b.x + scrollX, y: b.y + scrollY, width: b.width };
+    });
+    expect(after).toEqual(before);
+    expect(
+      await page.locator(".spending-filters select").evaluateAll((elements) =>
+        elements.map((el) => {
+          const b = el.getBoundingClientRect();
+          return { x: b.x + scrollX, y: b.y + scrollY, width: b.width };
+        }),
+      ),
+    ).toEqual(selects);
+    await page.screenshot({
+      path: out + "/filters-open-" + name + ".png",
+      fullPage: true,
+    });
+    await button.click();
+    await expect(page.getByLabel("Wish list", { exact: true })).toBeHidden();
+  };
+  await checkFilters("desktop");
+  const legacyRow = page.locator(".spending-row").filter({
+    has: page.getByRole("heading", {
+      name: "Storybook collection",
+      exact: true,
+    }),
+  });
+  await expect(
+    legacyRow.getByRole("button", { name: "Record refund", exact: true }),
+  ).toBeVisible();
+  await expect(legacyRow.locator(".entry-actions")).toHaveCount(0);
+  const knownRow = page.locator(".spending-row").filter({
+    has: page.getByRole("heading", { name: "Watercolor set", exact: true }),
+  });
+  const rowHeight = (await knownRow.boundingBox())!.height;
+  await knownRow.locator(".entry-actions > summary").click();
+  expect((await knownRow.boundingBox())!.height).toBe(rowHeight);
+  await page.screenshot({ path: out + "/actions-desktop.png" });
+  await knownRow
+    .getByRole("button", { name: "View history", exact: true })
+    .click();
+  await expect(page.getByRole("dialog")).toContainText("Recorded purchase");
+  await page.screenshot({ path: out + "/purchase-history-desktop.png" });
+  await page.keyboard.press("Escape");
+  await knownRow
+    .getByRole("button", { name: "Edit purchase", exact: true })
+    .click();
+  await expect(
+    page
+      .getByRole("dialog")
+      .getByRole("heading", { name: "Watercolor set", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Split between recipients", { exact: true }),
+  ).toHaveCount(0);
+  await page.screenshot({
+    path: out + "/edit-single-desktop.png",
+  });
+  await page.getByRole("button", { name: "Save changes", exact: true }).click();
+  await expect(page.getByRole("dialog")).toBeHidden();
+  expect(
+    s.spendingRecords.find((r) => r.title === "Watercolor set")!.splits,
+  ).toEqual([3]);
+
   const personFilter = page.getByLabel("Person", { exact: true });
   await personFilter.focus();
   await personFilter.selectOption(s.people[2].id);
@@ -130,6 +223,14 @@ try {
   await personFilter.selectOption("");
   await expect(personFilter).toBeFocused();
   await page.getByRole("button", { name: "Add purchase", exact: true }).click();
+  const paymentFields = page.locator(".purchase-payment input");
+  const amountRect = (await paymentFields.nth(0).boundingBox())!;
+  const dateRect = (await paymentFields.nth(1).boundingBox())!;
+  expect(Math.abs(amountRect.y - dateRect.y)).toBeLessThanOrEqual(1);
+  expect(Math.abs(amountRect.height - dateRect.height)).toBeLessThanOrEqual(1);
+  await page.screenshot({
+    path: out + "/purchase-desktop.png",
+  });
   await page.getByLabel("Gift name").fill("Art easel");
   await page.getByRole("combobox", { name: "Search people" }).fill("Emma");
   await page.getByRole("dialog").getByRole("option", { name: /Emma/ }).click();
@@ -140,11 +241,57 @@ try {
   await expect(page.locator(".spending-numbers")).toContainText("$145");
   await page.setViewportSize({ width: 390, height: 844 });
   await page.screenshot({ path: out + "/mobile.png", fullPage: true });
+  await checkFilters("mobile");
+  const mobileRowHeight = (await knownRow.boundingBox())!.height;
+  await knownRow.locator(".entry-actions > summary").click();
+  expect((await knownRow.boundingBox())!.height).toBe(mobileRowHeight);
+  await page.screenshot({ path: out + "/actions-mobile.png" });
+  await page.keyboard.press("Escape");
   await page.goto(server.resolvedUrls!.local[0] + "settings?section=spending");
   await expect(
     page.getByRole("heading", { name: "Spending", exact: true }),
   ).toBeVisible();
   await page.screenshot({ path: out + "/settings-mobile.png", fullPage: true });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  const saveSettings = page.getByRole("button", {
+    name: "Save spending settings",
+    exact: true,
+  });
+  const viewSpending = page.getByRole("link", {
+    name: "View your spending",
+    exact: true,
+  });
+  const saveBox = (await saveSettings.boundingBox())!;
+  const viewBox = (await viewSpending.boundingBox())!;
+  const formBox = await documentBox(".spending-settings > .form:first-of-type");
+  expect(Math.abs(saveBox.x - formBox.x)).toBeLessThanOrEqual(1);
+  expect(saveBox.x + saveBox.width).toBeLessThan(viewBox.x);
+  expect(
+    await saveSettings.evaluate(
+      (el) =>
+        !!(
+          el.compareDocumentPosition(el.parentElement!.querySelector("a")!) &
+          Node.DOCUMENT_POSITION_FOLLOWING
+        ),
+    ),
+  ).toBe(true);
+  const checkbox = page.getByRole("checkbox", {
+    name: "Track my spending",
+    exact: true,
+  });
+  const checkBox = (await checkbox.boundingBox())!;
+  const labelBox = (await checkbox.locator("..").boundingBox())!;
+  expect(
+    Math.abs(
+      checkBox.y + checkBox.height / 2 - labelBox.y - labelBox.height / 2,
+    ),
+  ).toBeLessThanOrEqual(1);
+  await page.screenshot({
+    path: out + "/settings-desktop.png",
+    fullPage: true,
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+
   await page.evaluate(() => localStorage.setItem("little-hint:theme", "dark"));
   await page.goto(server.resolvedUrls!.local[0] + "buying/spending");
   await expect(page.locator(".spending-numbers")).toContainText("$145");
@@ -284,6 +431,46 @@ try {
       .getByRole("link", { name: /View spending/ }),
   ).toBeVisible();
   await page.screenshot({ path: out + "/person-desktop.png", fullPage: true });
+
+  const joint = run("spending.purchase", {
+    title: "Joint picnic hamper",
+    recipientIds: [s.people[1].id, s.people[2].id],
+    amountCents: 9000,
+    date: "2026-11-02",
+  }) as { id: string };
+  await page.goto(server.resolvedUrls!.local[0] + "buying/spending");
+  const jointRow = page.locator(".spending-row").filter({
+    has: page.getByRole("heading", {
+      name: "Joint picnic hamper",
+      exact: true,
+    }),
+  });
+  await jointRow
+    .getByRole("button", { name: "Edit purchase", exact: true })
+    .click();
+  await expect(
+    page.getByText("Split between recipients", { exact: true }),
+  ).toBeVisible();
+  await page.getByLabel("Jamie", { exact: true }).fill("2");
+  await page.getByLabel("Emma", { exact: true }).fill("1");
+  await page.screenshot({
+    path: out + "/edit-multiple-desktop.png",
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      ),
+  );
+  await page.screenshot({
+    path: out + "/edit-multiple-mobile.png",
+  });
+  await page.getByRole("button", { name: "Save changes", exact: true }).click();
+  await expect(page.getByRole("dialog")).toBeHidden();
+  expect(s.spendingRecords.find((r) => r.id === joint.id)!.splits).toEqual([
+    2, 1,
+  ]);
   await page.setViewportSize({ width: 320, height: 900 });
   await page.evaluate(() => (document.documentElement.style.fontSize = "200%"));
   await page.goto(server.resolvedUrls!.local[0] + "buying/spending");

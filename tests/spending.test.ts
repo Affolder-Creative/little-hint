@@ -1010,3 +1010,103 @@ describe("spending availability and linked entry", () => {
     expect(f.s).toEqual(before);
   });
 });
+
+describe("unique gift counts", () => {
+  it("counts a partial plan, purchases, and refunds as one reserved gift", () => {
+    const f = fixture(),
+      gift = reserved(f, 3);
+    gift.buy(4200);
+    gift.buy(4500);
+    const purchase = f.s.spendingRecords.find((r) => r.kind === "purchase")!;
+    f.run(0, "refund", {
+      id: purchase.id,
+      revision: purchase.revision,
+      amountCents: 1000,
+      date: "2026-11-02",
+    });
+    const history = spendingHistory(f.s, f.actors[0], {});
+    expect(history.total).toBe(4);
+    expect(history.giftCount).toBe(1);
+    expect(history.summary).toMatchObject({ spent: 7700, planned: 5000 });
+  });
+
+  it("counts manual refunds with their purchase across periods, without merging same-name purchases", () => {
+    const f = fixture();
+    f.add();
+    const purchase = f.s.spendingRecords[0];
+    purchase.date = "2025-12-31";
+    f.run(0, "refund", {
+      id: purchase.id,
+      revision: purchase.revision,
+      amountCents: 1000,
+      date: "2026-01-01",
+    });
+    f.run(0, "refund", {
+      id: purchase.id,
+      revision: purchase.revision,
+      amountCents: 500,
+      date: "2026-02-01",
+    });
+    expect(spendingHistory(f.s, f.actors[0], {})).toMatchObject({
+      total: 3,
+      giftCount: 1,
+    });
+    expect(spendingHistory(f.s, f.actors[0], { year: 2026 })).toMatchObject({
+      total: 2,
+      giftCount: 1,
+    });
+    f.add();
+    expect(spendingHistory(f.s, f.actors[0], {})).toMatchObject({
+      total: 4,
+      giftCount: 2,
+    });
+  });
+
+  it("counts across pages and respects recipient filters and visibility", () => {
+    const f = fixture();
+    for (let i = 0; i < 31; i++) f.add();
+    f.add(0, [f.s.people[1].id]);
+    f.add(1);
+    const first = spendingHistory(f.s, f.actors[0], {});
+    const second = spendingHistory(f.s, f.actors[0], { page: 2 });
+    expect(first.records).toHaveLength(30);
+    expect(second.records).toHaveLength(2);
+    expect(first).toMatchObject({ total: 32, giftCount: 32 });
+    expect(second.giftCount).toBe(32);
+    expect(
+      spendingHistory(f.s, f.actors[0], { person: f.s.people[2].id }).giftCount,
+    ).toBe(31);
+    expect(spendingHistory(f.s, f.actors[1], {}).giftCount).toBe(1);
+    expect(spendingHistory(f.s, f.actors[2], {}).giftCount).toBe(0);
+  });
+
+  it("counts shared contributions and their linked purchase once", () => {
+    const f = fixture(),
+      connection = f.connect();
+    for (const i of [0, 1])
+      f.run(i, "connection", {
+        id: connection.id,
+        revision: connection.revision,
+        operation: "rules",
+        rules: ["person:" + f.s.people[2].id],
+      });
+    const gift = reserved(f, 1, 10000);
+    command(f.s, f.actors[0], "reservations.update", {
+      id: gift.reservation.id,
+      revision: gift.reservation.revision,
+      quantity: 1,
+      purchased: 0,
+      poolTargetCents: 10000,
+    });
+    const result = command(f.s, f.actors[1], "contributions.create", {
+      reservationId: gift.reservation.id,
+      amountCents: 4000,
+    }) as { id: string };
+    syncContributions(f.s, [result.id]);
+    gift.buy(10000);
+    const shared = spendingHistory(f.s, f.actors[0], { shared: "true" });
+    expect(shared.total).toBe(2);
+    expect(shared.giftCount).toBe(1);
+    expect(spendingHistory(f.s, f.actors[1], {}).giftCount).toBe(1);
+  });
+});

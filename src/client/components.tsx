@@ -263,10 +263,12 @@ export function Form({
   dialogLayout = false,
   externalBusy = false,
   secondaryActions,
+  secondaryActionsPosition = "before",
 }: {
   dialogLayout?: boolean;
   externalBusy?: boolean;
   secondaryActions?: (busy: boolean) => ReactNode;
+  secondaryActionsPosition?: "before" | "after";
   onBeforeClose?: () => Promise<void>;
   onSubmit: (data: FormData) => Promise<unknown>;
   children: ReactNode;
@@ -437,7 +439,7 @@ export function Form({
     >
       {dialogLayout ? <div className="form-content">{content}</div> : content}
       <div className="form-actions">
-        {secondaryActions?.(busy)}
+        {secondaryActionsPosition === "before" && secondaryActions?.(busy)}
         <button
           disabled={busy || disabled || (!online && !allowOffline)}
           className="button"
@@ -446,6 +448,7 @@ export function Form({
           {busy ? <LoaderCircle className="spin" size={17} /> : null}
           {busy ? busyLabel : pending ? "Confirm and save" : submit}
         </button>
+        {secondaryActionsPosition === "after" && secondaryActions?.(busy)}
         {cancel && (
           <button
             type="button"
