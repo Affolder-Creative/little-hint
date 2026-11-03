@@ -1,3 +1,4 @@
+import { spendingDefaultForState } from "./settings";
 import { smsAuth } from "./sms-auth";
 import { betterAuth, APIError } from "better-auth";
 import { emailOTP } from "better-auth/plugins";
@@ -52,7 +53,11 @@ export function makeAuth() {
                 message: "Verify your email first.",
               });
             await transact((s) =>
-              activateAccount(s, { id: u.id, email: u.email, name: u.name }),
+              activateAccount(
+                s,
+                { id: u.id, email: u.email, name: u.name },
+                spendingDefaultForState(s),
+              ),
             );
             return { data: session };
           },

@@ -1,3 +1,4 @@
+import { adminSpending, enableSpending } from "../src/server/admin-spending";
 import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { stagingFixtures } from "../src/server/staging-fixtures";
@@ -29,6 +30,7 @@ async function setup(
     f.state.people.push(person);
   }
   const settings = [
+    { key: "SPENDING_DEFAULT_ENABLED", value: "false", source: "settings" },
     ...["PRODUCT_IMAGE_CACHE_ENABLED", "PRODUCT_IMAGE_PREFETCH_ENABLED"].map(
       (key) => ({
         key,
@@ -84,6 +86,17 @@ async function setup(
           environment: "development",
           productLookupEnabled: options.lookup !== false,
         },
+      });
+    if (path === "admin/spending")
+      return route.fulfill({ json: adminSpending(f.state, actor) });
+    if (path === "admin/spending/enable")
+      return route.fulfill({
+        json: enableSpending(
+          f.state,
+          actor,
+          route.request().postDataJSON(),
+          route.request().headers()["idempotency-key"],
+        ),
       });
     if (path === "admin/settings") {
       if (route.request().method() === "POST") {
@@ -637,3 +650,77 @@ for (const width of [393, 1280]) {
     ).toHaveCount(0);
   });
 }
+
+for (const width of [393, 1280])
+  test(`admin spending review and opt-outs at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 1000 });
+    const f = await setup(page);
+    f.modelState.spendingSettings = [];
+    command(f.modelState, f.actors[1], "spending.settings", {
+      enabled: false,
+      summaries: false,
+    });
+    await page.goto("/settings?section=admin");
+    await page.getByLabel("Enable spending tracking for new accounts").check();
+    await page.getByRole("button", { name: "Save spending default" }).click();
+    await expect(
+      page.getByText("Spending saved.", { exact: true }),
+    ).toBeVisible();
+    await page.getByLabel("Accounts to enable").selectOption("all");
+    await page.getByRole("button", { name: "Review accounts" }).click();
+    await expect(page.getByRole("dialog")).toContainText(
+      "Records stay private",
+    );
+    await page.getByRole("button", { name: "Cancel", exact: true }).click();
+    expect(f.modelState.spendingSettings).toHaveLength(1);
+    await page.getByRole("button", { name: "Review accounts" }).click();
+    await page
+      .getByRole("button", { name: "Enable tracking", exact: true })
+      .click();
+    await expect(
+      page.getByRole("status").filter({ hasText: "Tracking enabled for" }),
+    ).toContainText("1 opt-outs were preserved");
+    expect(
+      f.modelState.spendingSettings.find((p) => p.userId === f.actors[1].id)
+        ?.enabled,
+    ).toBe(false);
+    await page.screenshot({
+      path: `/tmp/admin-spending-${width}.png`,
+      fullPage: true,
+    });
+  });
+
+test("group spending retains its scope after a failed request and respects unavailable state", async ({
+  page,
+}) => {
+  const f = await setup(page);
+  f.modelState.spendingSettings = [];
+  await page.goto("/settings?section=admin");
+  const group = f.modelState.groups[0];
+  await page.getByLabel("Accounts to enable").selectOption(group.id);
+  await page.route(
+    "**/api/v1/admin/spending/enable",
+    (route) => route.fulfill({ status: 500, json: { error: "Try again" } }),
+    { times: 1 },
+  );
+  await page.getByRole("button", { name: "Review accounts" }).click();
+  await page
+    .getByRole("button", { name: "Enable tracking", exact: true })
+    .click();
+  await expect(page.getByRole("dialog")).toContainText("Try again");
+  await page
+    .getByRole("button", { name: "Enable tracking", exact: true })
+    .click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByLabel("Accounts to enable")).toHaveValue(group.id);
+  await page.route("**/api/v1/admin/spending", (route) =>
+    route.fulfill({
+      json: { ...adminSpending(f.modelState, f.actor), available: false },
+    }),
+  );
+  await page.reload();
+  await expect(page.getByLabel("Accounts to enable")).toBeDisabled();
+  await expect(
+    page.getByRole("button", { name: "Review accounts" }),
+  ).toBeDisabled();
+});

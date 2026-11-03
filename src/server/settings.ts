@@ -90,7 +90,9 @@ export const imageSettingKeys = [
   "PRODUCT_IMAGE_CACHE_ENABLED",
   "PRODUCT_IMAGE_PREFETCH_ENABLED",
 ] as const;
-const applicationSettingKeys = [
+export const spendingDefaultKey = "SPENDING_DEFAULT_ENABLED";
+export const applicationSettingKeys = [
+  spendingDefaultKey,
   productPhotoSettingKey,
   familyGroupCreationKey,
   ...imageSettingKeys,
@@ -165,9 +167,22 @@ export async function productPhotoSetting() {
 export async function automaticallyImportProductPhotos(): Promise<boolean> {
   return (await productPhotoSetting()).value === "true";
 }
+function spendingDefaultSetting(values: Map<string, string>) {
+  return {
+    key: spendingDefaultKey,
+    configured: values.has(spendingDefaultKey),
+    source: values.has(spendingDefaultKey) ? "settings" : "default",
+    default: "false",
+    value: values.get(spendingDefaultKey) ?? "false",
+  };
+}
+export function spendingDefaultForState(s: State) {
+  return spendingDefaultSetting(settingsValues(s.settings)).value === "true";
+}
 export async function settingsSummary() {
   const values = settingsValues(await readSettings());
   return [
+    spendingDefaultSetting(values),
     photoSetting(values),
     groupCreationSetting(values),
     ...imageSettingKeys.map((k) => imageSetting(k, values)),
@@ -178,6 +193,11 @@ function validateSetting(k: string, value: string) {
     if (settingKeys.includes(k as SettingKey))
       fail(409, "This value is set on the server. Change it there instead.");
     fail(400, "Unknown setting.");
+  }
+  if (k === spendingDefaultKey) {
+    if (value !== "true" && value !== "false")
+      fail(400, "Choose true or false for spending tracking.");
+    return;
   }
   if (k === familyGroupCreationKey && !["everyone", "admins"].includes(value))
     fail(400, "Choose everyone or administrators for family-group creation.");
@@ -213,7 +233,7 @@ export async function saveSettings(
   updates: Array<{ key: string; value: string }>,
 ) {
   if (!updates.length || updates.length > applicationSettingKeys.length)
-    fail(400, "Choose between one and four settings to save.");
+    fail(400, "Choose between one and five settings to save.");
   if (new Set(updates.map((update) => update.key)).size !== updates.length)
     fail(400, "Each setting can only appear once.");
   for (const update of updates) validateSetting(update.key, update.value);

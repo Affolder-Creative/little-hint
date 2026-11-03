@@ -71,6 +71,19 @@ function MoneyField({
     </Field>
   );
 }
+function SpendingEnabledNotice({ source }: { source?: "default" | "admin" }) {
+  if (!source) return null;
+  return (
+    <p className="muted">
+      {source === "admin"
+        ? "An app administrator enabled your private spending tracking."
+        : "Private spending tracking was enabled when you joined."}{" "}
+      You can turn it off in{" "}
+      <Link to="/settings?section=spending">Spending settings</Link>. Sharing
+      remains your choice.
+    </p>
+  );
+}
 export function SpendingSettingsPanel() {
   const { world, mutate, open, close } = useApp();
   const { data, error } = useSpending();
@@ -105,6 +118,7 @@ export function SpendingSettingsPanel() {
   return (
     <section className="spending-settings">
       <h2>Spending</h2>
+      <SpendingEnabledNotice source={settings.enabledSource} />
       <Form
         secondaryActionsPosition="after"
         secondaryActions={() =>
@@ -923,6 +937,7 @@ export function SpendingPage() {
     );
   return (
     <div className="spending-page">
+      <SpendingEnabledNotice source={data.settings.enabledSource} />
       <Header
         title="Your spending"
         description="Gift costs, plans, and history."

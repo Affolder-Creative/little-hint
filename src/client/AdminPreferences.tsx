@@ -1,3 +1,4 @@
+import { AdminSpending } from "./AdminSpending";
 import { useApp } from "./context";
 import { useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -117,6 +118,32 @@ export function AdminPreferences({ settings }: { settings: Setting[] }) {
     settings.find((s) => s.key === key)?.source === "environment";
   return (
     <>
+      <PreferenceGroup
+        settings={settings.filter((s) => s.key === "SPENDING_DEFAULT_ENABLED")}
+        title="Spending"
+        submit="Save spending default"
+      >
+        {(value, change) => (
+          <>
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={value("SPENDING_DEFAULT_ENABLED") === "true"}
+                onChange={(e) =>
+                  change("SPENDING_DEFAULT_ENABLED", String(e.target.checked))
+                }
+              />
+              Enable spending tracking for new accounts
+            </label>
+            <p>
+              Applied at first verified sign-in. Existing accounts stay
+              unchanged. Each person can turn tracking off, and records stay
+              private.
+            </p>
+          </>
+        )}
+      </PreferenceGroup>
+      <AdminSpending />
       {!!group.length && (
         <PreferenceGroup
           settings={group}

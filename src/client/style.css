@@ -4195,3 +4195,16 @@ a.button:is(:hover, :focus, :active),
     gap: 8px;
   }
 }
+
+.admin-spending-bulk {
+  margin-block: 24px;
+  display: grid;
+  gap: 16px;
+}
+.admin-spending-bulk p,
+.admin-spending-bulk h4 {
+  margin: 0;
+}
+.admin-spending-bulk > button {
+  justify-self: start;
+}

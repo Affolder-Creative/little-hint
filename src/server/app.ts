@@ -1,3 +1,4 @@
+import { adminSpending, enableSpending } from "./admin-spending";
 import { spendingAvailable } from "./deployment";
 import {
   spendingView,
@@ -65,6 +66,7 @@ import {
 import {
   config,
   settingsSummary,
+  applicationSettingKeys,
   saveSettings,
   effectiveConfig,
   canCreateGroups,
@@ -578,6 +580,20 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
         );
     },
   );
+  app.get("/api/v1/admin/spending", async (req) =>
+    adminSpending(await readState(), await actor(req)),
+  );
+  app.post("/api/v1/admin/spending/enable", async (req) => {
+    const a = await actor(req);
+    return transact((s) =>
+      enableSpending(
+        s,
+        a,
+        req.body,
+        String(req.headers["idempotency-key"] ?? ""),
+      ),
+    );
+  });
   app.get("/api/v1/admin/settings", async (req) => {
     const a = await actor(req);
     if (!isAdmin(await readState(), a))
@@ -590,7 +606,12 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
       fail(403, "Administrator access required.");
     const update = z.object({ key: z.string(), value: z.string().max(10000) });
     const b = z
-      .union([update, z.object({ updates: z.array(update).min(1).max(4) })])
+      .union([
+        update,
+        z.object({
+          updates: z.array(update).min(1).max(applicationSettingKeys.length),
+        }),
+      ])
       .parse(req.body);
     await saveSettings("updates" in b ? b.updates : [b]);
     return { ok: true };

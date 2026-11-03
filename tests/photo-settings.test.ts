@@ -15,6 +15,7 @@ vi.mock("../src/server/db", () => ({
 }));
 import {
   encrypt,
+  spendingDefaultForState,
   automaticallyImportProductPhotos,
   config,
   productPhotoSetting,
@@ -134,7 +135,7 @@ describe("settings read and decryption reuse", () => {
       createdAt: "",
     });
     expect((await config()).SMTP_HOST).toBe("");
-    expect(await settingsSummary()).toHaveLength(4);
+    expect(await settingsSummary()).toHaveLength(5);
     expect(createDecipheriv).not.toHaveBeenCalled();
     expect(readSettings).toHaveBeenCalledTimes(1);
   });
@@ -241,4 +242,17 @@ describe("grouped application settings", () => {
     ).rejects.toThrow();
     expect(storage.state.settings).toHaveLength(0);
   });
+});
+
+it("persists spending defaults without a deployment override", async () => {
+  expect(spendingDefaultForState(storage.state)).toBe(false);
+  await saveSetting("SPENDING_DEFAULT_ENABLED", "true");
+  expect(spendingDefaultForState(storage.state)).toBe(true);
+  vi.stubEnv("SPENDING_ENABLED", "false");
+  expect(spendingDefaultForState(storage.state)).toBe(true);
+  await expect(saveSetting("SPENDING_DEFAULT_ENABLED", "yes")).rejects.toThrow(
+    "true or false",
+  );
+  await saveSetting("SPENDING_DEFAULT_ENABLED", "false");
+  expect(spendingDefaultForState(storage.state)).toBe(false);
 });

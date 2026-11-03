@@ -202,6 +202,7 @@ it("locks environment overrides and validates limits, mode and staging isolation
     "set on the server",
   );
   expect((await settingsSummary()).map((s) => s.key)).toEqual([
+    "SPENDING_DEFAULT_ENABLED",
     "AUTO_IMPORT_PRODUCT_PHOTOS",
     "FAMILY_GROUP_CREATION",
     "PRODUCT_IMAGE_CACHE_ENABLED",
@@ -281,7 +282,7 @@ it("exposes only preferences and safe service status to administrators", async (
   expect(services.statusCode).toBe(200);
   expect(services.body).not.toContain("synthetic-key");
   expect(services.json()).toHaveLength(7);
-  expect((await app.inject("/api/v1/admin/settings")).json()).toHaveLength(4);
+  expect((await app.inject("/api/v1/admin/settings")).json()).toHaveLength(5);
   for (const key of [
     "OPENAI_API_KEY",
     "GIFT_DISCOVERY_MODE",
