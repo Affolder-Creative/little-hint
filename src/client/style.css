@@ -4300,3 +4300,7 @@ a.button:is(:hover, :focus, :active),
 .connection-drafts .form {
   text-align: left;
 }
+.connection-drafts > .text-button {
+  justify-self: center;
+  text-align: center;
+}
