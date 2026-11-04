@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.16.0](https://github.com/Affolder-Creative/little-hint/compare/v0.15.0...v0.16.0) (2026-11-04)
+
+
+### Features
+
+* add friendly PWA outage and offline screens ([#157](https://github.com/Affolder-Creative/little-hint/issues/157)) ([92ab608](https://github.com/Affolder-Creative/little-hint/commit/92ab608018e67d8a3aeccd90d7dc463f224cf599))
+* paginate item grids and gift plans ([#156](https://github.com/Affolder-Creative/little-hint/issues/156)) ([165e3ea](https://github.com/Affolder-Creative/little-hint/commit/165e3eaa36628199499136e87c75ffe87364c511))
+* refresh landing page for year-round gift planning ([#153](https://github.com/Affolder-Creative/little-hint/issues/153)) ([b915d49](https://github.com/Affolder-Creative/little-hint/commit/b915d49678262242fff010e772e137f0a1df7563))
+
+
+### Fixes
+
+* support REI wishlist imports ([#154](https://github.com/Affolder-Creative/little-hint/issues/154)) ([b1efc64](https://github.com/Affolder-Creative/little-hint/commit/b1efc642f2c3ac210340f42cbfe2c896673a1d18))
+
 ## [0.15.0](https://github.com/Affolder-Creative/little-hint/compare/v0.14.1...v0.15.0) (2026-11-04)
 
 
