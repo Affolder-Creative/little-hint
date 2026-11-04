@@ -1,3 +1,5 @@
+import { useCollection } from "./Pagination";
+import type { GiftView } from "../shared/model";
 import { dismissActionMenu } from "./menu-dismiss";
 import { availableNotificationChannels } from "../shared/channel-availability";
 import { useEffect, useState, type ReactNode } from "react";
@@ -390,8 +392,11 @@ export function NotificationDetails() {
 }
 export function WatchButton({ itemId }: { itemId: string }) {
   const { world, mutate } = useApp();
+  const detail = useCollection<GiftView>(`items/${itemId}`);
   const watching =
-    world.watches?.find((w) => w.itemId === itemId)?.watching ?? false;
+    detail.data?.watchingNotes ??
+    world.watches?.find((w) => w.itemId === itemId)?.watching ??
+    false;
   return (
     <AsyncButton
       action={() => mutate("watches", { itemId, watching: !watching })}

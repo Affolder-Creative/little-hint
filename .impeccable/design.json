@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-04T19:14:02.888376+00:00",
+  "generatedAt": "2026-11-04T19:26:51.984983+00:00",
   "title": "Design System: Little Hint",
   "extensions": {
     "colorMeta": {
@@ -1213,6 +1213,13 @@
       "description": "Current verified price, saved baseline and verification timestamp.",
       "html": "<div class=\"ds-item-price\"><span>$39.99</span><small>$49.99 when added \u00b7 Down $10.00</small><small>Price checked \u00b7 Nov 3, 2026</small></div>",
       "css": ".ds-item-price {display:flex;flex-direction:column;gap:4px;font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;font-variant-numeric:tabular-nums;color:var(--text)} .ds-item-price span {font-size:24px} .ds-item-price small {color:var(--muted);font-size:13px}"
+    },
+    {
+      "name": "Collection pagination",
+      "kind": "nav",
+      "description": "Result count with wrapping Previous/Next controls above and below a bounded collection.",
+      "html": "<nav class=\"ds-pages\" aria-label=\"Results pages\"><span>Showing 25\u201348 of 83</span><div><button>Previous</button><span>Page 2 of 4</span><button>Next</button></div></nav>",
+      "css": ".ds-pages{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-block:20px;font-size:14px;color:var(--text)}.ds-pages>div{display:flex;align-items:center;flex-wrap:wrap;gap:12px}.ds-pages button{min-height:44px;padding:12px 18px;border:1px solid var(--border);border-radius:8px;background:var(--paper);color:var(--text);font-size:14px;font-weight:600}.ds-pages button:hover{filter:brightness(.97)}.ds-pages button:focus-visible{outline:3px solid var(--accent);outline-offset:3px}.ds-pages button:disabled{opacity:.5;cursor:not-allowed}@media(max-width:650px){.ds-pages>div{width:100%;justify-content:space-between}}"
     }
   ],
   "narrative": {

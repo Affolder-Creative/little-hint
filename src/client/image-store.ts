@@ -167,6 +167,10 @@ export function configureProductImages(world: World | null | undefined) {
   account = world.me.id;
   enabled = nextEnabled;
   prefetchEnabled = enabled && world.imageDelivery?.prefetchEnabled === true;
+  if (world.paged) {
+    void validateProductImages(world.me.id);
+    return;
+  }
   const next = new Set(world.items.map((item) => item.image).filter(Boolean));
   allowed = next;
   if (!prefetchEnabled) cancelImagePrefetch();
@@ -346,4 +350,68 @@ export function forgetProductImage(url: string) {
 /** Wait for pending persistence work when checking durable storage. */
 export function flushImageWrites() {
   return writes;
+}
+
+/** Grants are ephemeral and come only from a fresh authorized API response. */
+export function grantProductImages(owner: string, value: unknown) {
+  if (owner !== account || !enabled) return;
+  const visit = (value: unknown, depth = 0) => {
+    if (depth > 3 || !value || typeof value !== "object") return;
+    if (Array.isArray(value)) {
+      for (const v of value.slice(0, 200)) visit(v, depth + 1);
+      return;
+    }
+    const row = value as Record<string, unknown>;
+    if (
+      typeof row.image === "string" &&
+      /^\/api\/v1\/media\/[^/?]+$/.test(row.image)
+    ) {
+      allowed.delete(row.image);
+      allowed.add(row.image);
+    }
+    for (const key of ["rows", "item", "gift"]) visit(row[key], depth + 1);
+  };
+  visit(value);
+  while (allowed.size > 200) allowed.delete(allowed.values().next().value!);
+}
+async function validateProductImages(owner: string) {
+  const epoch = generation;
+  try {
+    const records = await entries();
+    const urls = [
+      ...new Set([
+        ...allowed,
+        ...records
+          .filter((e) => e.account === owner)
+          .map((e) => e.url.split("?")[0]),
+      ]),
+    ].slice(0, 200);
+    if (!urls.length) return;
+    const response = await fetch(
+      `/api/v1/media/access?ids=${encodeURIComponent(urls.map((u) => u.split("/").pop()).join(","))}`,
+      { credentials: "same-origin" },
+    );
+    if (!response.ok || owner !== account || epoch !== generation) return;
+    const ids = (await response.json()) as string[];
+    if (owner !== account || epoch !== generation) return;
+    const permittedUrls = new Set(ids.map((id) => `/api/v1/media/${id}`));
+    for (const url of urls)
+      if (!permittedUrls.has(url)) {
+        allowed.delete(url);
+        for (const key of memory.keys())
+          if (key.split("?")[0] === url) memory.delete(key);
+      }
+    for (const [url, task] of pending)
+      if (!permitted(url)) {
+        task.controller.abort();
+        pending.delete(url);
+      }
+    await write(async () => {
+      for (const row of records)
+        if (row.account !== owner || !permittedUrls.has(row.url.split("?")[0]))
+          await removeEntry(row.key);
+    });
+  } catch {
+    /* A failed refresh does not grant access to previously unseen images. */
+  }
 }

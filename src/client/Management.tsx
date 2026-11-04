@@ -1,3 +1,4 @@
+import { CollectionStatus, useCollection } from "./Pagination";
 import { Trash2 } from "lucide-react";
 import { dismissActionMenu } from "./menu-dismiss";
 import "./action-menu.css";
@@ -311,6 +312,19 @@ function PriorityForm({ gift }: { gift: GiftView }) {
     </Form>
   );
 }
+function ItemEditor({ gift }: { gift: GiftView }) {
+  const { world } = useApp();
+  const query = useCollection<GiftView>(`items/${gift.id}`);
+  return world.paged ? (
+    query.data && !query.error ? (
+      <GiftForm gift={query.data} />
+    ) : (
+      <CollectionStatus query={query} />
+    )
+  ) : (
+    <GiftForm gift={gift} />
+  );
+}
 export function ItemActions({ gift }: { gift: GiftView }) {
   const { open, mutate, toast, world } = useApp();
   if (!gift.canEdit) return null;
@@ -324,7 +338,7 @@ export function ItemActions({ gift }: { gift: GiftView }) {
         onClick={() =>
           open(
             gift.listId ? "Edit item" : "Edit gift idea",
-            <GiftForm gift={gift} />,
+            <ItemEditor gift={gift} />,
           )
         }
       >

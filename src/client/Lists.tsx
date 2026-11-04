@@ -238,6 +238,8 @@ export function Lists() {
           <GiftSummaryPanel listId={list.id} />
         ) : (
           <Browser
+            scope="list"
+            scopeId={list.id}
             listId={list.id}
             compactEmpty={!!list.groupEventId}
             items={world.items.filter((i) => i.listId === list.id)}

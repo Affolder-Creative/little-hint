@@ -1,3 +1,4 @@
+import { useCollection } from "./Pagination";
 import { useState } from "react";
 import type { GiftView, World } from "../shared/model";
 import {
@@ -59,10 +60,29 @@ export function SpendingGuidance({
   };
 }) {
   const { world } = useApp();
+  const params = new URLSearchParams(
+    Object.entries({ ...context, ...preview })
+      .filter(([, v]) => v !== undefined)
+      .map(([k, v]) => [k, String(v)]),
+  );
+  const summary = useCollection<ReturnType<typeof spendingSummary>>(
+    `buying/guidance?${params}`,
+    !!context,
+  );
   if (!context) return null;
   const limit = spendingGuideline(world, context);
   if (limit == null) return null;
-  const total = spendingSummary(world, context, preview);
+  const total = world.paged
+    ? summary.data
+    : spendingSummary(world, context, preview);
+  if (!total)
+    return (
+      <p role="status">
+        {summary.error
+          ? "Spending estimate unavailable."
+          : "Loading spending estimate…"}
+      </p>
+    );
   const person =
     world.people.find((p) => p.id === context.recipientId)?.name ??
     "this recipient";
@@ -276,11 +296,16 @@ export function ContributionSpendingGuidance({
   reservationId: string;
 }) {
   const { world } = useApp();
-  const gift = world.items.find((i) =>
-    i.reservations?.some(
-      (r) => r.id === reservationId && !r.exchange && r.quantity > 0,
-    ),
+  const query = useCollection<GiftView | null>(
+    `buying/contribution-context/${reservationId}`,
   );
+  const gift = world.paged
+    ? query.data
+    : world.items.find((i) =>
+        i.reservations?.some(
+          (r) => r.id === reservationId && !r.exchange && r.quantity > 0,
+        ),
+      );
   const reservation = gift?.reservations?.find((r) => r.id === reservationId);
   if (!gift || !reservation) return null;
   return (
