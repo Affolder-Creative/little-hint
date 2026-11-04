@@ -1,3 +1,4 @@
+import { reiProduct, reiProductId } from "./rei";
 import { recoverProduct, recoveryEnabled } from "./product-recovery";
 import {
   productLookupEnabled,
@@ -7,6 +8,8 @@ import {
   brightRetailer,
   retailerDataset,
   unlockPage,
+  unlockReiImage,
+  BrightDataFailure,
   ImportPending,
 } from "./brightdata";
 import { lookup } from "node:dns/promises";
@@ -201,6 +204,8 @@ export function parseProduct(html: string, url: string): ProductPreview {
       product = find(JSON.parse($(el).text())) ?? product;
     } catch {}
   });
+  const rei = reiProduct($, url);
+  if (reiProductId(url)) product = rei ?? {};
   // Retailer-specific evidence supplements generic structured metadata.
   const amazon =
     /(^|\.)amazon\.(com|ca|co\.uk|de|fr|it|es|com\.au|co\.jp)$/.test(
@@ -268,10 +273,9 @@ export function parseProduct(html: string, url: string): ProductPreview {
   const image = [product.image].flat()[0];
   const remote =
     typeof image === "string" ? image : (image?.url ?? meta("og:image"));
-  const amount = String(offer.price ?? meta("product:price:amount")).replace(
-    /,/g,
-    "",
-  );
+  const amount = String(
+    offer.price ?? (rei ? "" : meta("product:price:amount")),
+  ).replace(/,/g, "");
   const price = Number(amount);
   const currency = offer.priceCurrency ?? meta("product:price:currency");
   return {
@@ -279,7 +283,18 @@ export function parseProduct(html: string, url: string): ProductPreview {
     sourceTitle,
     description,
     url,
-    remoteImage: remote ? new URL(remote, url).toString() : undefined,
+    remoteImage: rei?.reiUncertain
+      ? undefined
+      : remote
+        ? new URL(remote, url).toString()
+        : undefined,
+    ...(rei?.reiUncertain
+      ? {
+          warnings: [
+            "Check the selected option at the shop before adding this item.",
+          ],
+        }
+      : {}),
     priceCents:
       amount &&
       Number.isFinite(price) &&
@@ -498,7 +513,7 @@ export async function importProduct(
     ? cfg[scrapingProviders.find((p) => p.id === provider)!.key]
     : "";
   const key = normalized
-    ? importCacheKey("metadata-v7", [
+    ? importCacheKey("metadata-v8", [
         recoveryEnabled(cfg),
         cfg.AI_PRODUCT_RECOVERY_MODEL,
         normalized,
@@ -643,7 +658,15 @@ export async function importProduct(
   const result: Partial<Item> = { ...details, url };
   if (importPhotos && remoteImage) {
     try {
-      const image = await safeFetch(remoteImage, 5_000_000);
+      let image;
+      try {
+        image = await safeFetch(remoteImage, 5_000_000);
+        if (!/^image\/(png|jpeg|webp|gif)(?:;|$)/i.test(image.contentType))
+          throw new Error("Unsupported image");
+      } catch (error) {
+        if (provider !== "brightdata" || !reiProductId(url)) throw error;
+        image = await unlockReiImage(remoteImage, cfg);
+      }
       if (!/^image\/(png|jpeg|webp|gif)/i.test(image.contentType))
         throw new Error("Unsupported image");
       result.image = await saveImage(image.buffer, userId);
@@ -728,7 +751,7 @@ export async function paidProductPreview(
   try {
     await validateUrl(url);
     if (provider === "brightdata") {
-      const html = await unlockPage(url, cfg);
+      const html = await unlockPage(url, cfg, false, !!reiProductId(url));
       evidence?.(html);
       const imported = parseProduct(html, url);
       if (!imported.title)
@@ -766,11 +789,14 @@ export async function paidProductPreview(
     };
   } catch (error) {
     await report?.(
-      error instanceof Error && /limit|allowance|budget/i.test(error.message)
-        ? "Daily attempt allowance exhausted"
-        : error instanceof Error && /timeout|abort/i.test(error.name)
-          ? "Provider timed out"
-          : "Provider response unavailable or unusable",
+      error instanceof BrightDataFailure
+        ? `${error.stage}: ${error.message}`
+        : error instanceof Error &&
+            /limit|allowance|budget/i.test(error.message)
+          ? "Daily attempt allowance exhausted"
+          : error instanceof Error && /timeout|abort/i.test(error.name)
+            ? "Provider timed out"
+            : "Provider response unavailable or unusable",
     );
     return result;
   }
