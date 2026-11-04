@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.15.0](https://github.com/Affolder-Creative/little-hint/compare/v0.14.1...v0.15.0) (2026-11-04)
+
+
+### Features
+
+* add gift planning for friends before they join ([#148](https://github.com/Affolder-Creative/little-hint/issues/148)) ([05031ec](https://github.com/Affolder-Creative/little-hint/commit/05031ec0fd44592248c0d344c4d30772776c4772))
+* add live reload for local and shared previews ([#150](https://github.com/Affolder-Creative/little-hint/issues/150)) ([68bc81a](https://github.com/Affolder-Creative/little-hint/commit/68bc81a1aa944b0460b67838cd4aad04b81b59ae))
+* add scheduled price tracking and private drop alerts ([#151](https://github.com/Affolder-Creative/little-hint/issues/151)) ([d5bb383](https://github.com/Affolder-Creative/little-hint/commit/d5bb383abac96e96585fb2452344211c4dd2eb25))
+
+
+### Fixes
+
+* clarify spending assignments and polish mobile UI ([#152](https://github.com/Affolder-Creative/little-hint/issues/152)) ([b453c17](https://github.com/Affolder-Creative/little-hint/commit/b453c174aa0e6ade84f5154054bb6f8440b09f07))
+
 ## [0.14.1](https://github.com/Affolder-Creative/little-hint/compare/v0.14.0...v0.14.1) (2026-11-03)
 
 
