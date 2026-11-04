@@ -149,6 +149,12 @@ p {
   font-size: 20px;
   line-height: 1.55;
 }
+.hero-support {
+  margin: 10px auto 0;
+  max-width: 65ch;
+  font-size: 15px;
+  color: var(--muted);
+}
 .hero-note {
   margin-top: 17px;
   color: var(--muted);
@@ -188,6 +194,7 @@ p {
   border-color: var(--accent);
 }
 .button.secondary:hover {
+  color: var(--accent-hover);
   background: var(--blush);
 }
 .product-preview {
