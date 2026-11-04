@@ -186,6 +186,7 @@ export function spendingTotals(
 }
 
 export interface SpendingHistoryView {
+  unassignedCount: number;
   records: SpendingView["records"];
   total: number;
   giftCount: number;

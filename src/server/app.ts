@@ -12,6 +12,7 @@ import { trustedProxies } from "./proxy";
 import { spendingAvailable } from "./deployment";
 import {
   spendingView,
+  spendingAssignmentPreview,
   syncSpending,
   syncContributions,
   spendingHistory,
@@ -449,6 +450,10 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
       records: view.records.filter((r) => r.kind === "plan" && !r.sourceId),
     };
   });
+  app.get("/api/v1/spending/assignment-preview", async (req) => {
+    const a = await actor(req);
+    return spendingAssignmentPreview(await spendingState(a), a, req.query);
+  });
   app.get("/api/v1/spending/history", async (req) => {
     const a = await actor(req);
     return spendingHistory(await spendingState(a), a, req.query);
@@ -462,6 +467,7 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
         "occasion",
         "budget",
         "purchase",
+        "update-purchase",
         "record",
         "share",
         "refund",

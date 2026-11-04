@@ -295,7 +295,7 @@ function SpendingDialogForm(
     />
   );
 }
-function RecordForm({
+export function RecordForm({
   record: r,
   onSuccess,
 }: {
@@ -552,6 +552,93 @@ function MissingAmounts({
     </div>
   );
 }
+function UnassignedReview({ params }: { params: string }) {
+  const [page, setPage] = useState(1);
+  const [editing, setEditing] = useState<SpendingView["records"][number]>();
+  const query = new URLSearchParams(params);
+  query.set("unassigned", "true");
+  query.set("page", String(page));
+  const history = useSpendingHistory(query);
+  if (editing)
+    return (
+      <RecordForm
+        record={editing}
+        onSuccess={() => {
+          setEditing(undefined);
+          setPage(1);
+          void history.refetch();
+        }}
+      />
+    );
+  return (
+    <div className="spending-missing-list">
+      <p>
+        These gifts are not assigned to a wish list or occasion. Review each
+        gift and choose its intended wish list. Assigning a list does not add or
+        share the gift.
+      </p>
+      {history.error && (
+        <p role="alert">
+          Unable to load gifts.{" "}
+          <button
+            className="text-button"
+            onClick={() => void history.refetch()}
+          >
+            Try again
+          </button>
+        </p>
+      )}
+      {(!history.data || history.isPlaceholderData) && (
+        <p role="status">Loading gifts…</p>
+      )}
+      {!history.isPlaceholderData &&
+        history.data?.records.map((record) => (
+          <article className="spending-missing-row" key={record.id}>
+            <div>
+              <strong>{record.title}</strong>
+              <p className="muted">
+                For {record.recipientNames.join(" & ")} ·{" "}
+                {record.kind === "plan" ? "Plan" : "Purchase"}
+              </p>
+            </div>
+            {record.canEdit && record.canAssignList ? (
+              <button
+                className="button secondary"
+                onClick={() => setEditing(record)}
+              >
+                Assign wish list
+              </button>
+            ) : (
+              <span className="muted">
+                {record.payerName} can update this entry
+              </span>
+            )}
+          </article>
+        ))}
+      {history.data?.total === 0 && (
+        <p>No unassigned gifts remain in this view.</p>
+      )}
+      <div className="spending-pagination">
+        {page > 1 && (
+          <button
+            className="button secondary"
+            onClick={() => setPage(page - 1)}
+          >
+            Previous page
+          </button>
+        )}
+        {!!history.data && history.data.total > page * 30 && (
+          <button
+            className="button secondary"
+            onClick={() => setPage(page + 1)}
+          >
+            Next page
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
 function SpendingRow({
   r,
   data,
@@ -691,7 +778,6 @@ function SpendingRow({
         <p>
           For {r.recipientNames.join(" & ")}{" "}
           <span className="spending-row-status">
-            ·{" "}
             {r.kind === "plan"
               ? "Reserved"
               : r.kind === "refund"
@@ -1051,20 +1137,24 @@ export function SpendingPage() {
                 }}
               >
                 <option value="">All occasions</option>
-                <optgroup label="Group events">
-                  {events.map((e) => (
-                    <option value={"event:" + e.id} key={e.id}>
-                      {e.name}
-                    </option>
-                  ))}
-                </optgroup>
-                <optgroup label="Personal occasions">
-                  {data.occasions.map((o) => (
-                    <option value={"occasion:" + o.id} key={o.id}>
-                      {o.name}
-                    </option>
-                  ))}
-                </optgroup>
+                {events.length > 0 && (
+                  <optgroup label="Group events">
+                    {events.map((e) => (
+                      <option value={"event:" + e.id} key={e.id}>
+                        {e.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                {data.occasions.length > 0 && (
+                  <optgroup label="Personal occasions">
+                    {data.occasions.map((o) => (
+                      <option value={"occasion:" + o.id} key={o.id}>
+                        {o.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
               </select>
             </Field>
             <button
@@ -1133,8 +1223,8 @@ export function SpendingPage() {
         </div>
         <div className="spending-filter-help">
           <p>
-            Filters update totals, budget, and gift history. Wish lists include
-            linked or assigned gifts.
+            Occasion and wish-list totals include linked or assigned gifts.
+            Unassigned gift ideas appear under All occasions and All wish lists.
           </p>
           {Object.values(filter).some(Boolean) && (
             <button
@@ -1150,6 +1240,19 @@ export function SpendingPage() {
           )}
         </div>
         <p className="spending-scope">{scopeLabel}</p>
+        {!history.isPlaceholderData && !!history.data?.unassignedCount && (
+          <button
+            className="text-button"
+            onClick={() =>
+              open(
+                "Review unassigned gifts",
+                <UnassignedReview params={historyParams.toString()} />,
+              )
+            }
+          >
+            Review unassigned gifts ({history.data.unassignedCount})
+          </button>
+        )}
       </section>
       {paused && (
         <p role="status">

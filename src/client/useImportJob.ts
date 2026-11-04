@@ -43,6 +43,7 @@ export function useImportJob(accountId: string, initial?: ImportJob) {
     forceRefresh = false,
     draft?: Pick<
       NonNullable<ImportJob["draft"]>,
+      | "spendingListId"
       | "listId"
       | "kind"
       | "recipientId"

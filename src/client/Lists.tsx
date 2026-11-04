@@ -63,6 +63,7 @@ export function Lists() {
                 ? `Gift idea for ${ideaRecipients[0].name}`
                 : "Add gift idea",
               <GiftForm
+                initialSpendingListId={list.id}
                 recipientOptions={ideaRecipients.map((person) => person.id)}
                 onSaved={(gift) => navigate(`/gift/${gift.id}`)}
               />,

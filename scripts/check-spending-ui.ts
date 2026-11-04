@@ -1,12 +1,13 @@
 import { existsSync } from "node:fs";
 /** Isolated domain-backed browser verification; never accesses real account data. */
 import { mkdir } from "node:fs/promises";
-import { chromium, expect } from "@playwright/test";
+import { chromium, webkit, expect } from "@playwright/test";
 import { createServer } from "vite";
 import { emptyState } from "../src/shared/model";
 import { command, stamp, world } from "../src/server/domain";
 import {
   spendingView,
+  spendingAssignmentPreview,
   syncSpending,
   syncContributions,
   spendingHistory,
@@ -63,10 +64,11 @@ await server.listen();
 const chrome =
   process.env.CHROME_PATH ??
   "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
-const browser = await chromium.launch(
-  existsSync(chrome) ? { executablePath: chrome } : {},
+const engine = process.env.SPENDING_BROWSER === "webkit" ? webkit : chromium;
+const browser = await engine.launch(
+  engine === chromium && existsSync(chrome) ? { executablePath: chrome } : {},
 );
-const out = ".impeccable/review";
+const out = `.impeccable/review/${engine.name()}`;
 await mkdir(out, { recursive: true });
 try {
   const context = await browser.newContext({
@@ -85,8 +87,27 @@ try {
     );
     try {
       if (path === "world") return route.fulfill({ json: world(s, a) });
-      if (path === "spending")
-        return route.fulfill({ json: spendingView(s, a) });
+      if (path === "buying/contributions" || path === "buying/cancelled")
+        return route.fulfill({ json: { rows: [], nextCursor: null } });
+      if (path === "spending") {
+        const view = spendingView(s, a);
+        return route.fulfill({
+          json: {
+            ...view,
+            records: view.records.filter(
+              (r) => r.kind === "plan" && !r.sourceId,
+            ),
+          },
+        });
+      }
+      if (path === "spending/assignment-preview")
+        return route.fulfill({
+          json: spendingAssignmentPreview(
+            s,
+            a,
+            Object.fromEntries(new URL(route.request().url()).searchParams),
+          ),
+        });
       if (path === "spending/history")
         return route.fulfill({
           json: spendingHistory(
@@ -95,9 +116,17 @@ try {
             Object.fromEntries(new URL(route.request().url()).searchParams),
           ),
         });
-      if (path.startsWith("spending/") && route.request().method() === "POST") {
+      const commands: Record<string, string> = {
+        items: "items.create",
+        "items/update": "items.update",
+        "reservations/update": "reservations.update",
+      };
+      if (
+        (path.startsWith("spending/") || commands[path]) &&
+        route.request().method() === "POST"
+      ) {
         const result = run(
-          path.replace("/", "."),
+          commands[path] ?? path.replace("/", "."),
           route.request().postDataJSON(),
         );
         syncSpending(s, a);
@@ -116,13 +145,22 @@ try {
     }
   });
   const page = await context.newPage();
+  // WebKit reports aborted routed fetches as access-control errors. Let each
+  // fixture request finish before tearing down its document on navigation.
+  const goto = async (url: string) => {
+    await page.waitForLoadState("networkidle");
+    await page.goto(url);
+    await page.waitForLoadState("networkidle");
+  };
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
-  await page.goto(server.resolvedUrls!.local[0] + "buying/spending");
+  await goto(server.resolvedUrls!.local[0] + "buying/spending");
   await expect(
     page.getByRole("heading", { name: "Your spending" }),
   ).toBeVisible();
   await expect(page.locator(".spending-numbers")).toContainText("$85");
+  for (const badge of await page.locator(".spending-row-status").all())
+    expect((await badge.innerText()).trim()).not.toMatch(/^·/);
   await page.screenshot({ path: out + "/desktop.png", fullPage: true });
   const documentBox = async (selector: string) =>
     page.locator(selector).evaluate((el) => {
@@ -218,9 +256,11 @@ try {
   const personFilter = page.getByLabel("Person", { exact: true });
   await personFilter.focus();
   await personFilter.selectOption(s.people[2].id);
+  await page.waitForLoadState("networkidle");
   await expect(personFilter).toBeFocused();
   await expect(page.locator(".spending-numbers")).toContainText("$85");
   await personFilter.selectOption("");
+  await page.waitForLoadState("networkidle");
   await expect(personFilter).toBeFocused();
   await page.getByRole("button", { name: "Add purchase", exact: true }).click();
   const paymentFields = page.locator(".purchase-payment input");
@@ -245,9 +285,22 @@ try {
   const mobileRowHeight = (await knownRow.boundingBox())!.height;
   await knownRow.locator(".entry-actions > summary").click();
   expect((await knownRow.boundingBox())!.height).toBe(mobileRowHeight);
+  await expect
+    .poll(async () => {
+      const menuBox = (await knownRow
+        .locator(".entry-actions-content")
+        .boundingBox())!;
+      const navBox = (await page.locator(".mobile-nav").boundingBox())!;
+      return (
+        menuBox.y + menuBox.height <= navBox.y - 4 &&
+        menuBox.x >= 0 &&
+        menuBox.x + menuBox.width <= 390
+      );
+    })
+    .toBe(true);
   await page.screenshot({ path: out + "/actions-mobile.png" });
   await page.keyboard.press("Escape");
-  await page.goto(server.resolvedUrls!.local[0] + "settings?section=spending");
+  await goto(server.resolvedUrls!.local[0] + "settings?section=spending");
   await expect(
     page.getByRole("heading", { name: "Spending", exact: true }),
   ).toBeVisible();
@@ -293,7 +346,7 @@ try {
   await page.setViewportSize({ width: 390, height: 844 });
 
   await page.evaluate(() => localStorage.setItem("little-hint:theme", "dark"));
-  await page.goto(server.resolvedUrls!.local[0] + "buying/spending");
+  await goto(server.resolvedUrls!.local[0] + "buying/spending");
   await expect(page.locator(".spending-numbers")).toContainText("$145");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await page.screenshot({ path: out + "/mobile-dark.png", fullPage: true });
@@ -333,9 +386,7 @@ try {
   }) as { id: string };
   run("reservations.create", { itemId: gift.id, quantity: 2 });
   await page.evaluate(() => localStorage.setItem("little-hint:theme", "light"));
-  await page.goto(
-    server.resolvedUrls!.local[0] + "buying/spending?view=shared",
-  );
+  await goto(server.resolvedUrls!.local[0] + "buying/spending?view=shared");
   await expect(page.locator(".spending-numbers")).toContainText("$120");
   await expect(page.locator(".spending-numbers")).toContainText("amount");
   await page.screenshot({ path: out + "/shared-mobile.png" });
@@ -378,7 +429,7 @@ try {
     priceCents: 2500,
     quantity: 1,
   }) as { id: string };
-  await page.goto(server.resolvedUrls!.local[0] + "buying/spending");
+  await goto(server.resolvedUrls!.local[0] + "buying/spending");
   await page.getByRole("button", { name: "Add purchase", exact: true }).click();
   await page
     .getByRole("combobox", { name: "Gift name" })
@@ -407,7 +458,7 @@ try {
     throw new Error(
       "Linked purchase did not atomically preserve unknown cost and update status",
     );
-  await page.goto(server.resolvedUrls!.local[0] + "settings?section=spending");
+  await goto(server.resolvedUrls!.local[0] + "settings?section=spending");
   await page
     .getByRole("button", { name: "Allow joint editing", exact: true })
     .click();
@@ -423,7 +474,7 @@ try {
     .scrollIntoViewIfNeeded();
   await page.screenshot({ path: out + "/joint-editing-mobile.png" });
   await page.setViewportSize({ width: 1280, height: 960 });
-  await page.goto(server.resolvedUrls!.local[0] + "people/" + s.people[2].id);
+  await goto(server.resolvedUrls!.local[0] + "people/" + s.people[2].id);
   await expect(page.locator(".spending-quick")).toBeVisible();
   await expect(
     page
@@ -438,7 +489,7 @@ try {
     amountCents: 9000,
     date: "2026-11-02",
   }) as { id: string };
-  await page.goto(server.resolvedUrls!.local[0] + "buying/spending");
+  await goto(server.resolvedUrls!.local[0] + "buying/spending");
   const jointRow = page.locator(".spending-row").filter({
     has: page.getByRole("heading", {
       name: "Joint picnic hamper",
@@ -473,7 +524,7 @@ try {
   ]);
   await page.setViewportSize({ width: 320, height: 900 });
   await page.evaluate(() => (document.documentElement.style.fontSize = "200%"));
-  await page.goto(server.resolvedUrls!.local[0] + "buying/spending");
+  await goto(server.resolvedUrls!.local[0] + "buying/spending");
   await page.evaluate(() => (document.documentElement.style.fontSize = "200%"));
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth > window.innerWidth,
@@ -484,7 +535,7 @@ try {
   await page.evaluate(() => (document.documentElement.style.fontSize = ""));
   for (const width of [320, 390, 768, 1280]) {
     await page.setViewportSize({ width, height: 900 });
-    await page.goto(server.resolvedUrls!.local[0] + "buying/spending");
+    await goto(server.resolvedUrls!.local[0] + "buying/spending");
     await page
       .getByRole("button", { name: "Add purchase", exact: true })
       .click();
@@ -515,7 +566,7 @@ try {
       await page.screenshot({ path: out + "/purchase-keyboard-height.png" });
     }
   }
-  await page.goto(server.resolvedUrls!.local[0] + "buying/spending");
+  await goto(server.resolvedUrls!.local[0] + "buying/spending");
   const assignmentRow = page.locator(".spending-row").filter({
     has: page.getByRole("heading", { name: "Watercolor set", exact: true }),
   });
@@ -523,7 +574,7 @@ try {
     .getByRole("button", { name: "Edit purchase", exact: true })
     .click();
   await page
-    .getByLabel("Wish list, optional", { exact: true })
+    .getByLabel("Wish list for spending, optional", { exact: true })
     .selectOption(list.id);
   await page.getByRole("button", { name: "Save changes", exact: true }).click();
   await expect(page.getByRole("dialog")).toBeHidden();
@@ -537,11 +588,194 @@ try {
     expect(
       await button.evaluate((el) => getComputedStyle(el).textDecorationLine),
     ).toBe("none");
+  // Long names retain their accessible text while the mobile layout remains compact.
+  const longTitle =
+    "Wireless CarPlay and Android Auto Adapter for Factory-Wired Systems with USB-A and USB-C";
+  const idea = run("items.create", {
+    title: longTitle,
+    recipientIds: [s.people[2].id],
+    visibility: "private",
+    priceCents: 1299,
+    quantity: 3,
+  }) as { id: string };
+  const reservation = run("reservations.create", {
+    itemId: idea.id,
+    quantity: 2,
+  }) as { id: string };
+  const plan = s.spendingRecords.find(
+    (r) => r.reservationId === reservation.id && r.kind === "plan",
+  )!;
+  run("spending.purchase", {
+    reservationId: reservation.id,
+    planRevision: plan.revision,
+    title: longTitle,
+    recipientIds: [s.people[2].id],
+    amountCents: 2695,
+    date: "2026-11-02",
+    quantity: 1,
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await goto(
+    server.resolvedUrls!.local[0] + `people/${s.people[2].id}?tab=ideas`,
+  );
+  const gridTitle = page
+    .locator(".gift-card .gift-title")
+    .filter({ hasText: longTitle });
+  await expect(gridTitle).toBeVisible();
+  expect(
+    await gridTitle.evaluate((el) => getComputedStyle(el).webkitLineClamp),
+  ).toBe("2");
+  await page.screenshot({
+    path: out + "/two-line-grid-mobile.png",
+    fullPage: true,
+  });
+  await goto(server.resolvedUrls!.local[0] + "buying/spending");
+  await page.getByRole("button", { name: "Add purchase", exact: true }).click();
+  await page
+    .getByRole("combobox", { name: "Gift name" })
+    .fill("Wireless CarPlay");
+  const longOption = page
+    .getByRole("option", { name: new RegExp(longTitle) })
+    .first();
+  await expect(longOption).toBeVisible();
+  const optionTitle = longOption.locator(".purchase-option-title");
+  expect(
+    await optionTitle.evaluate((el) => ({
+      whiteSpace: getComputedStyle(el).whiteSpace,
+      overflow: getComputedStyle(el).textOverflow,
+    })),
+  ).toEqual({ whiteSpace: "nowrap", overflow: "ellipsis" });
+  await page.screenshot({ path: out + "/long-gift-suggestion-mobile.png" });
+  await page.getByRole("combobox", { name: "Search people" }).fill("Emma");
+  const personOption = page.getByRole("option", { name: /Emma.*Family/ });
+  await expect(personOption).toBeVisible();
+  const nameBox = (await personOption
+    .locator(".purchase-option-title")
+    .boundingBox())!;
+  const familyBox = (await personOption.locator("small").boundingBox())!;
+  expect(Math.abs(nameBox.x - familyBox.x)).toBeLessThanOrEqual(1);
+  await page.screenshot({ path: out + "/recipient-alignment-mobile.png" });
+  // Navigate afresh: this is an unsaved fixture-only dialog.
+  await goto(server.resolvedUrls!.local[0] + `gift/${idea.id}`);
+  await page
+    .getByRole("button", { name: "Edit gift idea", exact: true })
+    .click();
+  await page
+    .getByLabel("Wish list for spending, optional", { exact: true })
+    .selectOption(list.id);
+  await expect(page.getByRole("dialog")).toContainText("existing");
+  await page.screenshot({ path: out + "/idea-assignment-review-mobile.png" });
+  await page.getByRole("button", { name: "Save changes", exact: true }).click();
+  await expect(page.getByRole("dialog")).toBeHidden();
+  const assigned = s.spendingRecords.filter(
+    (r) => r.reservationId === reservation.id,
+  );
+  expect(assigned.every((r) => r.listId === list.id)).toBe(true);
+  expect(assigned.every((r) => r.sharing === "private")).toBe(true);
+  expect(s.items.find((i) => i.id === idea.id)!.listId).toBeUndefined();
+  expect(
+    spendingView(s, users[2]).records.some(
+      (r) => r.reservationId === reservation.id,
+    ),
+  ).toBe(false);
+  // Combined editor saves an existing recorded purchase without duplicating it.
+  const currentReservation = s.reservations.find(
+    (r) => r.id === reservation.id,
+  )!;
+  run("reservations.update", {
+    id: currentReservation.id,
+    revision: currentReservation.revision,
+    quantity: 2,
+    purchased: 2,
+  });
+  syncSpending(s, a);
+  const purchaseCount = s.spendingRecords.filter(
+    (r) => r.reservationId === reservation.id && r.kind === "purchase",
+  ).length;
+  await goto(server.resolvedUrls!.local[0] + "buying");
+  await page.waitForLoadState("networkidle");
+  await page.getByRole("button", { name: /^Purchased \(/ }).click();
+  const buyingRow = page.locator(".buying-row").filter({ hasText: longTitle });
+  await buyingRow
+    .getByRole("button", { name: "Update purchase", exact: true })
+    .click();
+  await expect(
+    page.getByLabel("Quantity purchased", { exact: true }),
+  ).toHaveValue("2");
+  await expect(
+    page.getByLabel("Amount paid in USD, optional", { exact: true }),
+  ).toHaveCount(purchaseCount);
+  await page
+    .getByLabel("Amount paid in USD, optional", { exact: true })
+    .first()
+    .fill("28.95");
+  await expect(
+    page
+      .getByRole("dialog")
+      .getByRole("heading", { name: "Update purchase", exact: true }),
+  ).toBeInViewport({ ratio: 1 });
+  await expect(
+    page
+      .getByRole("dialog")
+      .getByRole("button", { name: "Close dialog", exact: true }),
+  ).toBeInViewport({ ratio: 1 });
+  await page.screenshot({ path: out + "/combined-purchase-mobile.png" });
+  await page
+    .getByRole("button", { name: "Save purchase", exact: true })
+    .click();
+  await expect(page.getByRole("dialog")).toBeHidden();
+  expect(
+    s.spendingRecords.filter(
+      (r) => r.reservationId === reservation.id && r.kind === "purchase",
+    ),
+  ).toHaveLength(purchaseCount);
+  expect(
+    s.spendingRecords.some(
+      (r) =>
+        r.reservationId === reservation.id &&
+        r.kind === "purchase" &&
+        r.amountCents === 2895,
+    ),
+  ).toBe(true);
+  await page.waitForLoadState("networkidle");
+  const unassigned = run("spending.purchase", {
+    title: "Unassigned sketchbook",
+    recipientIds: [s.people[2].id],
+    amountCents: 1000,
+    date: "2026-11-02",
+  }) as { id: string };
+  await goto(server.resolvedUrls!.local[0] + `buying/spending?list=${list.id}`);
+  await page.getByRole("button", { name: /^Review unassigned gifts/ }).click();
+  await page
+    .locator(".spending-missing-row")
+    .filter({ hasText: "Unassigned sketchbook" })
+    .getByRole("button", { name: "Assign wish list" })
+    .click();
+  await page
+    .getByLabel("Wish list for spending, optional", { exact: true })
+    .selectOption(list.id);
+  await page.getByRole("button", { name: "Save changes", exact: true }).click();
+  await expect(
+    page
+      .getByRole("dialog")
+      .getByText("Unassigned sketchbook", { exact: true }),
+  ).toHaveCount(0);
+  expect(s.spendingRecords.find((r) => r.id === unassigned.id)!.listId).toBe(
+    list.id,
+  );
+  await page.keyboard.press("Escape");
+  // A native select must not render empty optgroup labels.
+  s.spendingOccasions = [];
+  await goto(server.resolvedUrls!.local[0] + "buying/spending");
+  await expect(
+    page.getByLabel("Occasion", { exact: true }).locator("optgroup"),
+  ).toHaveCount(0);
   process.env.SPENDING_ENABLED = "false";
-  await page.goto(server.resolvedUrls!.local[0] + "buying/spending");
+  await goto(server.resolvedUrls!.local[0] + "buying/spending");
   await expect(page).toHaveURL(/\/buying$/);
+  await page.waitForLoadState("networkidle");
   await expect(page.locator(".spending-quick")).toHaveCount(0);
-  await page.goto(server.resolvedUrls!.local[0] + "settings?section=spending");
+  await goto(server.resolvedUrls!.local[0] + "settings?section=spending");
   await expect(
     page.getByRole("link", { name: "Spending", exact: true }),
   ).toHaveCount(0);

@@ -58,7 +58,7 @@ import {
   reconcileAccess,
 } from "./domain-access";
 import { spendingAvailable } from "./deployment";
-import { spendingCommand } from "./spending";
+import { spendingCommand, listContext, assignIdeaSpending } from "./spending";
 import {
   productLookupEnabled,
   lookupDisabledMessage,
@@ -286,7 +286,7 @@ export function giftSummary(s: State, a: Actor, listId: string): GiftSummary {
   };
 }
 export function giftView(s: State, a: Actor, i: Item): GiftView {
-  const { creatorId, ...fields } = i;
+  const { creatorId, spendingListId, ...fields } = i;
   const own = recipient(s, a, i);
   const view: GiftView = {
     ...fields,
@@ -301,6 +301,7 @@ export function giftView(s: State, a: Actor, i: Item): GiftView {
     isRecipient: own,
     mode: mode(s, i),
   };
+  if (!i.listId && creatorId === a.id) view.spendingListId = spendingListId;
   if (!i.listId) view.creatorName = name(s, creatorId);
   if (!own || view.mode === "transparent") {
     const rs = s.reservations.filter(
@@ -708,6 +709,8 @@ function checkImage(s: State, a: Actor, url: string) {
     fail(404, "Image not found.");
 }
 const itemInput = z.object({
+  spendingListId: id.nullable().optional(),
+  spendingAssignmentToken: z.string().max(128).optional(),
   priority: z
     .enum(["most-wanted", "would-love", "nice-to-have"])
     .nullable()
@@ -1168,6 +1171,10 @@ export function command(
         if (p.visibility !== "private" && !p.groupIds.length)
           fail(400, "Select a family group to share this idea.");
       }
+      if (p.spendingListId) {
+        if (p.listId) fail(400, "Wish-list items use their source list.");
+        listContext(s, a, p.spendingListId, recipients);
+      }
       const duplicate = s.items.find(
         (i) =>
           itemVisible(s, a, i) &&
@@ -1179,7 +1186,13 @@ export function command(
       );
       if (duplicate && !p.allowDuplicate)
         return { duplicate: giftView(s, a, duplicate) };
-      const { allowDuplicate, importId, importDraftRevision, ...fields } = p;
+      const {
+        allowDuplicate,
+        importId,
+        importDraftRevision,
+        spendingAssignmentToken,
+        ...fields
+      } = p;
       const imported = s.imports.find(
         (j) =>
           j.id === importId &&
@@ -1272,7 +1285,27 @@ export function command(
       }
       if (!i.listId && p.priority)
         fail(400, "Only wish-list items have a recipient priority.");
-      const { importId, importDraftRevision, ...fields } = p;
+      if (
+        p.spendingListId !== undefined &&
+        p.spendingListId !== i.spendingListId
+      ) {
+        if (i.listId) fail(400, "Wish-list items use their source list.");
+        if (p.spendingListId)
+          assignIdeaSpending(
+            s,
+            a,
+            i.id,
+            p.spendingListId,
+            p.spendingAssignmentToken,
+          );
+      }
+      const {
+        importId,
+        importDraftRevision,
+        spendingAssignmentToken,
+        ...fields
+      } = p;
+      if (fields.spendingListId === undefined) delete fields.spendingListId;
       if (fields.priority === undefined) delete fields.priority;
       const imported = s.imports.find(
         (j) =>
@@ -1577,6 +1610,7 @@ export function command(
             .optional(),
           touched: z.array(z.string().max(40)).max(20).optional(),
           listId: id.optional(),
+          spendingListId: id.nullable().optional(),
           kind: z.enum(["item", "idea"]).optional(),
           friendEntryId: id.optional(),
           recipientId: id.optional(),
@@ -1655,7 +1689,13 @@ export function command(
           p.visibility ?? j.draft!.visibility ?? "private",
           p.groupIds ?? j.draft!.groupIds ?? [],
         );
+        const spendingListId =
+          p.spendingListId !== undefined
+            ? p.spendingListId
+            : j.draft!.spendingListId;
+        if (spendingListId) listContext(s, a, spendingListId, [recipientId]);
         Object.assign(j.draft!, {
+          spendingListId,
           friendEntryId: context?.id,
           recipientId,
           visibility: p.visibility ?? j.draft!.visibility,
@@ -1678,6 +1718,7 @@ export function command(
           draft: z
             .object({
               listId: id.optional(),
+              spendingListId: id.nullable().optional(),
               kind: z.enum(["item", "idea"]).optional(),
               friendEntryId: id.optional(),
               recipientId: id.optional(),
@@ -1726,6 +1767,8 @@ export function command(
         if (controls(s, a, p.draft.recipientId))
           fail(400, "Choose another recipient.");
         checkGroups(s, a, p.draft.groupIds ?? []);
+        if (p.draft.spendingListId)
+          listContext(s, a, p.draft.spendingListId, [p.draft.recipientId]);
         delete p.draft.listId;
       }
       const j = {

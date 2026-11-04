@@ -4,6 +4,7 @@ import { emptyState } from "../src/shared/model";
 import { command, stamp, world, idempotent } from "../src/server/domain";
 import {
   spendingView,
+  spendingAssignmentPreview,
   spendingHistory,
   syncContributions,
   syncSpending,
@@ -1278,5 +1279,264 @@ describe("purchase account IDs and wish-list assignment", () => {
         listId: null,
       }),
     ).toThrow("linked gift");
+  });
+});
+
+describe("idea spending defaults and combined purchase edits", () => {
+  function setup() {
+    const f = fixture();
+    const source = reserved(f);
+    const listId = source.gift.listId!;
+    command(f.s, f.actors[0], "reservations.update", {
+      id: source.reservation.id,
+      revision: source.reservation.revision,
+      quantity: 0,
+      purchased: 0,
+    });
+    syncSpending(f.s, f.actors[0]);
+    const eventId = stamp().id;
+    f.s.groupEvents.push({
+      ...stamp(),
+      id: eventId,
+      name: "Christmas 2026",
+      groupId: f.s.groups[0].id,
+      participantIds: [f.s.people[2].id],
+      mode: "surprise",
+      archived: false,
+      description: "",
+      timeZone: "UTC",
+      revealExchangeGivers: false,
+    });
+    f.s.lists.find((l) => l.id === listId)!.groupEventId = eventId;
+    const created = command(f.s, f.actors[0], "items.create", {
+      title: "Private CarPlay idea",
+      recipientIds: [f.s.people[2].id],
+      priceCents: 1299,
+      quantity: 3,
+    }) as { id: string };
+    const idea = f.s.items.find((i) => i.id === created.id)!;
+    const reservation = command(f.s, f.actors[0], "reservations.create", {
+      itemId: idea.id,
+      quantity: 2,
+    }) as { id: string };
+    const plan = f.s.spendingRecords.find(
+      (r) => r.reservationId === reservation.id && r.kind === "plan",
+    )!;
+    f.run(0, "purchase", {
+      reservationId: reservation.id,
+      planRevision: plan.revision,
+      title: idea.title,
+      recipientIds: idea.recipientIds,
+      amountCents: 2695,
+      date: "2026-11-02",
+    });
+    const purchase = f.s.spendingRecords.find(
+      (r) => r.reservationId === reservation.id && r.kind === "purchase",
+    )!;
+    return { ...f, idea, reservation, plan, purchase, listId, eventId };
+  }
+  it("uses assigned event sharing rules on new manual purchases and honors explicit privacy", () => {
+    const f = setup();
+    const c = f.connect();
+    f.run(0, "connection", {
+      id: c.id,
+      revision: c.revision,
+      operation: "rules",
+      rules: ["event:" + f.eventId],
+    });
+    const payload = {
+      title: "Manual Christmas gift",
+      recipientIds: f.idea.recipientIds,
+      amountCents: 1000,
+      date: "2026-11-02",
+      listId: f.listId,
+    };
+    const shared = f.run(0, "purchase", payload) as { id: string };
+    const privatePurchase = f.run(0, "purchase", {
+      ...payload,
+      keepPrivate: true,
+    }) as { id: string };
+    expect(
+      spendingView(f.s, f.actors[1]).records.some((r) => r.id === shared.id),
+    ).toBe(true);
+    expect(
+      spendingView(f.s, f.actors[1]).records.some(
+        (r) => r.id === privatePurchase.id,
+      ),
+    ).toBe(false);
+    const eventOnly = f.run(0, "purchase", {
+      ...payload,
+      listId: null,
+      eventId: f.eventId,
+    }) as { id: string };
+    expect(
+      f.s.spendingRecords.find((r) => r.id === eventOnly.id),
+    ).toMatchObject({ eventId: f.eventId, listId: undefined });
+  });
+  it("keeps the 26.95 actual and 12.99 plan totals scoped until Christmas assignment", () => {
+    const f = setup();
+    for (const filter of [{}, { person: f.s.people[2].id }])
+      expect(spendingHistory(f.s, f.actors[0], filter).summary).toMatchObject({
+        spent: 2695,
+        planned: 1299,
+      });
+    for (const filter of [{ list: f.listId }, { event: f.eventId }])
+      expect(spendingHistory(f.s, f.actors[0], filter).summary).toMatchObject({
+        spent: 0,
+        planned: 0,
+      });
+    const preview = spendingAssignmentPreview(f.s, f.actors[0], {
+      item: f.idea.id,
+      list: f.listId,
+    });
+    command(f.s, f.actors[0], "items.update", {
+      ...f.idea,
+      spendingListId: f.listId,
+      spendingAssignmentToken: preview.token,
+    });
+    for (const filter of [
+      {},
+      { person: f.s.people[2].id },
+      { list: f.listId },
+      { event: f.eventId },
+    ])
+      expect(spendingHistory(f.s, f.actors[0], filter).summary).toMatchObject({
+        spent: 2695,
+        planned: 1299,
+      });
+    expect(spendingHistory(f.s, f.actors[2], { event: f.eventId }).total).toBe(
+      0,
+    );
+  });
+  it("reviews and assigns existing plans, purchases and refunds without changing visibility", () => {
+    const f = setup();
+    f.run(0, "refund", {
+      id: f.purchase.id,
+      revision: f.purchase.revision,
+      amountCents: 100,
+      date: "2026-11-02",
+    });
+    const preview = spendingAssignmentPreview(f.s, f.actors[0], {
+      item: f.idea.id,
+      list: f.listId,
+    });
+    expect(preview.records).toHaveLength(2);
+    command(f.s, f.actors[0], "items.update", {
+      ...f.idea,
+      spendingListId: f.listId,
+      spendingAssignmentToken: preview.token,
+    });
+    expect(f.idea.listId).toBeUndefined();
+    expect(f.purchase.listId).toBe(f.listId);
+    expect(f.plan.listId).toBe(f.listId);
+    expect(
+      f.s.spendingRecords.find((r) => r.sourceId === f.purchase.id)?.listId,
+    ).toBe(f.listId);
+    expect(f.purchase.sharing).toBe("private");
+    expect(
+      spendingHistory(f.s, f.actors[0], { list: f.listId, item: f.idea.id })
+        .summary,
+    ).toMatchObject({ spent: 2595, planned: 1299 });
+    const next = command(f.s, f.actors[0], "reservations.create", {
+      itemId: f.idea.id,
+      quantity: 1,
+    }) as { id: string };
+    expect(
+      f.s.spendingRecords.find((r) => r.reservationId === next.id)?.listId,
+    ).toBe(f.listId);
+  });
+  it("rejects stale assignment reviews before changing the idea or ledger", () => {
+    const f = setup();
+    const preview = spendingAssignmentPreview(f.s, f.actors[0], {
+      item: f.idea.id,
+      list: f.listId,
+    });
+    f.purchase.revision++;
+    const before = JSON.stringify(f.s);
+    expect(() =>
+      command(f.s, f.actors[0], "items.update", {
+        ...f.idea,
+        spendingListId: f.listId,
+        spendingAssignmentToken: preview.token,
+      }),
+    ).toThrow("Review");
+    expect(JSON.stringify(f.s)).toBe(before);
+  });
+  it("keeps the creator default out of shared gift views and other buyers' plans", () => {
+    const f = setup();
+    const preview = spendingAssignmentPreview(f.s, f.actors[0], {
+      item: f.idea.id,
+      list: f.listId,
+    });
+    command(f.s, f.actors[0], "items.update", {
+      ...f.idea,
+      visibility: "hidden",
+      groupIds: [f.s.groups[0].id],
+      spendingListId: f.listId,
+      spendingAssignmentToken: preview.token,
+    });
+    expect(
+      world(f.s, f.actors[0]).items.find((i) => i.id === f.idea.id)
+        ?.spendingListId,
+    ).toBe(f.listId);
+    expect(
+      world(f.s, f.actors[1]).items.find((i) => i.id === f.idea.id),
+    ).not.toHaveProperty("spendingListId");
+    const next = command(f.s, f.actors[1], "reservations.create", {
+      itemId: f.idea.id,
+      quantity: 1,
+    }) as { id: string };
+    expect(
+      f.s.spendingRecords.find((r) => r.reservationId === next.id)?.listId,
+    ).toBeUndefined();
+  });
+  it("reviews only matching editable unassigned records while ordinary totals stay scoped", () => {
+    const f = setup();
+    const normal = spendingHistory(f.s, f.actors[0], {
+      list: f.listId,
+      item: f.idea.id,
+    });
+    expect(normal.total).toBe(0);
+    expect(normal.unassignedCount).toBe(2);
+    expect(
+      spendingHistory(f.s, f.actors[0], {
+        list: f.listId,
+        unassigned: "true",
+        person: f.s.people[2].id,
+      }).records,
+    ).toHaveLength(2);
+    expect(
+      spendingHistory(f.s, f.actors[1], { list: f.listId, unassigned: "true" })
+        .total,
+    ).toBe(0);
+  });
+  it("updates status and recorded details atomically without duplicating purchases", () => {
+    const f = setup();
+    const reservation = f.s.reservations.find(
+      (r) => r.id === f.reservation.id,
+    )!;
+    const payload = {
+      reservationId: reservation.id,
+      reservationRevision: reservation.revision,
+      purchased: 0,
+      records: [{ ...f.purchase, amountCents: 2795, listId: f.listId }],
+    };
+    const before = JSON.stringify(f.s);
+    expect(() =>
+      f.run(0, "update-purchase", {
+        ...payload,
+        records: [{ ...payload.records[0], revision: -1 }],
+      }),
+    ).toThrow("changed");
+    expect(JSON.stringify(f.s)).toBe(before);
+    f.run(0, "update-purchase", payload);
+    expect(
+      f.s.reservations.find((r) => r.id === reservation.id)?.purchased,
+    ).toBe(0);
+    const purchases = f.s.spendingRecords.filter(
+      (r) => r.reservationId === reservation.id && r.kind === "purchase",
+    );
+    expect(purchases).toHaveLength(1);
+    expect(purchases[0]).toMatchObject({ amountCents: 2795, listId: f.listId });
   });
 });

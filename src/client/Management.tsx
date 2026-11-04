@@ -1,7 +1,13 @@
 import { Trash2 } from "lucide-react";
 import { dismissActionMenu } from "./menu-dismiss";
 import "./action-menu.css";
-import { useState, useRef, useEffect, type ReactNode } from "react";
+import {
+  useState,
+  useRef,
+  useEffect,
+  useLayoutEffect,
+  type ReactNode,
+} from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
@@ -82,6 +88,76 @@ export function ActionMenu({
   children: ReactNode;
 }) {
   const ref = useRef<HTMLDetailsElement>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  useLayoutEffect(() => {
+    if (!menuOpen) return;
+    const details = ref.current;
+    const menu = details?.querySelector<HTMLElement>(".entry-actions-content");
+    const trigger = details?.querySelector("summary");
+    if (!menu || !trigger) return;
+    const position = () => {
+      const viewport = window.visualViewport;
+      const left = viewport?.offsetLeft ?? 0;
+      const top = viewport?.offsetTop ?? 0;
+      const right = left + (viewport?.width ?? innerWidth);
+      let bottom = top + (viewport?.height ?? innerHeight);
+      let ceiling = top;
+      const nav = document
+        .querySelector(".mobile-nav")
+        ?.getBoundingClientRect();
+      const header = document.querySelector(".topbar")?.getBoundingClientRect();
+      if (nav && nav.height && nav.top < bottom) bottom = nav.top;
+      if (
+        nav &&
+        nav.height &&
+        header &&
+        header.height &&
+        header.bottom > ceiling
+      )
+        ceiling = header.bottom;
+      const availableWidth = Math.max(1, right - left - 40);
+      menu.style.maxWidth = `${Math.min(280, availableWidth)}px`;
+      menu.style.minWidth = `${Math.min(180, availableWidth)}px`;
+      const anchor = trigger.getBoundingClientRect();
+      const below = Math.max(0, bottom - anchor.bottom - 12);
+      const above = Math.max(0, anchor.top - ceiling - 12);
+      menu.style.maxHeight = "none";
+      const height = menu.getBoundingClientRect().height;
+      const flip = height > below && above > below;
+      const space = Math.max(44, flip ? above : below);
+      menu.style.maxHeight = `${space}px`;
+      const bounds = menu.getBoundingClientRect();
+      const x = Math.max(
+        left + 20,
+        Math.min(anchor.right - bounds.width, right - bounds.width - 20),
+      );
+      const y = Math.max(
+        ceiling + 8,
+        Math.min(
+          flip ? anchor.top - bounds.height - 4 : anchor.bottom + 4,
+          bottom - bounds.height - 8,
+        ),
+      );
+      menu.style.left = `${x}px`;
+      menu.style.top = `${y}px`;
+    };
+    position();
+    const observer = new ResizeObserver(position);
+    observer.observe(trigger);
+    for (const element of document.querySelectorAll(".mobile-nav, .topbar"))
+      observer.observe(element);
+    window.addEventListener("scroll", position, true);
+    window.addEventListener("resize", position);
+    window.visualViewport?.addEventListener("resize", position);
+    window.visualViewport?.addEventListener("scroll", position);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("scroll", position, true);
+      window.removeEventListener("resize", position);
+      window.visualViewport?.removeEventListener("resize", position);
+      window.visualViewport?.removeEventListener("scroll", position);
+    };
+  }, [menuOpen]);
   useEffect(() => {
     // Safari moves focus to the main region between pointerdown and click.
     // Keep the menu mounted until that activation has completed.
@@ -129,20 +205,7 @@ export function ActionMenu({
     <details
       ref={ref}
       className="entry-actions"
-      onToggle={(event) => {
-        if (!event.currentTarget.open) return;
-        const menu = event.currentTarget.querySelector<HTMLElement>(
-          ".entry-actions-content",
-        );
-        if (!menu) return;
-        menu.style.translate = "";
-        const bounds = menu.getBoundingClientRect();
-        const shift = Math.max(
-          20 - bounds.left,
-          Math.min(0, innerWidth - 20 - bounds.right),
-        );
-        menu.style.translate = `${shift}px`;
-      }}
+      onToggle={(event) => setMenuOpen(event.currentTarget.open)}
       onKeyDown={(event) => {
         if (event.key === "Escape") {
           event.currentTarget.open = false;

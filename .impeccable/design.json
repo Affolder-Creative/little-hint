@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-04T00:05:26.502322+00:00",
+  "generatedAt": "2026-11-04T00:54:38.294489+00:00",
   "title": "Design System: Little Hint",
   "extensions": {
     "colorMeta": {
@@ -975,7 +975,11 @@
       "src/client/AdminJobFailures.tsx",
       "src/client/SmsSettings.tsx",
       "src/client/ImportDrafts.tsx",
-      "src/client/Price.tsx"
+      "src/client/Price.tsx",
+      "src/client/Spending.tsx",
+      "src/client/SpendingPurchase.tsx",
+      "src/client/spending-purchase.css",
+      "src/client/UpdatePurchase.tsx"
     ],
     "tonalRampNote": "Synthesized OKLCH previews at constant hue/chroma; these ramps are panel metadata, not additional application tokens.",
     "layout": {
@@ -1027,6 +1031,13 @@
       "jobFailures": "Collapsed categories with counts, queued timestamps and ten-row increments.",
       "phoneManagement": "Separate primary save from number actions and inline removal confirmation.",
       "eventCollections": "Keep event lists beside their event. With editable event lists in the selected status, label the lower section Other wish lists and use a short empty note. Manage event moves into Event actions; participant-list links remain visible."
+    },
+    "spendingAssignments": {
+      "field": "Visible optional wish list for spending; changes totals without publishing gifts.",
+      "preview": "Affected unassigned records are shown before saving an idea assignment.",
+      "recipientOptions": "Checkbox and avatar beside name and family group text; avatar vertically centered.",
+      "mobileGiftSuggestions": "One-line title with ellipsis at 650px; supporting text wraps.",
+      "actionMenus": "Visible viewport collision placement above fixed navigation; flip upward or scroll internally."
     }
   },
   "components": [
@@ -1090,9 +1101,9 @@
       "name": "Gift card",
       "kind": "card",
       "refersTo": "gift-card",
-      "description": "Unboxed gift details without tags; compact aligned price/privacy/status metadata. Mobile titles show at most three lines.",
+      "description": "Unboxed gift details without tags; compact aligned price/privacy/status metadata. Mobile titles show at most two lines.",
       "html": "<a class=\"ds-gift-card\" href=\"#gift\"><div class=\"ds-photo\"><svg aria-hidden=\"true\" width=\"32\" height=\"32\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.1\"><path d=\"M3 8h18v4H3zM5 12v9h14v-9M12 8v13M12 8H7.5A2.5 2.5 0 1 1 10 5.5L12 8Zm0 0h4.5A2.5 2.5 0 1 0 14 5.5L12 8Z\"/></svg><span>No photo yet</span></div><div class=\"ds-card-copy\"><div class=\"ds-recipient\">For Alex</div><h2 class=\"ds-gift-title\">Gift title</h2><span class=\"ds-priority\">Most wanted</span><div class=\"ds-meta\"><span>$25.00</span><span class=\"ds-available\">Available</span></div></div></a>",
-      "css": ".ds-gift-card{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;display:block;max-width:300px;text-decoration:none;color:var(--text, #2b201d)}.ds-photo{aspect-ratio:auto;min-height:80px;padding:12px;flex-direction:column;gap:8px;border-radius:var(--radius,14px);background:#efe7dc;color:#8b7164;display:flex;position:relative;align-items:center;justify-content:center;overflow:hidden}.ds-photo span{position:static;font-size:11px;color:var(--muted,#746057)}.ds-card-copy{padding:16px 2px 0}.ds-recipient{font-size:11px;color:var(--muted, #746057);margin-bottom:11px}.ds-gift-card .ds-gift-title{font-size:16px;line-height:1.4;font-weight:550;margin:0 0 9px}.ds-gift-card:hover .ds-gift-title{text-decoration:underline;text-underline-offset:4px}.ds-meta{display:flex;justify-content:flex-start;align-items:center;flex-wrap:wrap;gap:8px 12px;font-size:14px}.ds-available{font-size:11px;line-height:1.4;border-radius:4px;padding:4px 6px;background:#e9eddf;color:#486348}.ds-gift-card:focus-visible{outline:3px solid var(--accent, #aa4d37);outline-offset:3px;}.ds-priority{display:inline-flex;width:fit-content;margin:6px 0;padding:3px 6px;border-radius:4px;font-size:12px;color:var(--text,#2b201d);border:1px solid transparent;background:var(--soft,#f4e4da);font-weight:600}@media(max-width:650px){.ds-gift-card .ds-gift-title{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden}.ds-meta>span:first-child{flex-basis:100%}}"
+      "css": ".ds-gift-card{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;display:block;max-width:300px;text-decoration:none;color:var(--text, #2b201d)}.ds-photo{aspect-ratio:auto;min-height:80px;padding:12px;flex-direction:column;gap:8px;border-radius:var(--radius,14px);background:#efe7dc;color:#8b7164;display:flex;position:relative;align-items:center;justify-content:center;overflow:hidden}.ds-photo span{position:static;font-size:11px;color:var(--muted,#746057)}.ds-card-copy{padding:16px 2px 0}.ds-recipient{font-size:11px;color:var(--muted, #746057);margin-bottom:11px}.ds-gift-card .ds-gift-title{font-size:16px;line-height:1.4;font-weight:550;margin:0 0 9px}.ds-gift-card:hover .ds-gift-title{text-decoration:underline;text-underline-offset:4px}.ds-meta{display:flex;justify-content:flex-start;align-items:center;flex-wrap:wrap;gap:8px 12px;font-size:14px}.ds-available{font-size:11px;line-height:1.4;border-radius:4px;padding:4px 6px;background:#e9eddf;color:#486348}.ds-gift-card:focus-visible{outline:3px solid var(--accent, #aa4d37);outline-offset:3px;}.ds-priority{display:inline-flex;width:fit-content;margin:6px 0;padding:3px 6px;border-radius:4px;font-size:12px;color:var(--text,#2b201d);border:1px solid transparent;background:var(--soft,#f4e4da);font-weight:600}@media(max-width:650px){.ds-gift-card .ds-gift-title{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}.ds-meta>span:first-child{flex-basis:100%}}"
     },
     {
       "name": "Group event entry",

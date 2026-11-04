@@ -4223,10 +4223,11 @@ a.button:is(:hover, :focus, :active),
   text-decoration: none;
 }
 @media (max-width: 650px) {
-  .gift-card .gift-title {
+  .gift-card .gift-title,
+  .discovery-product h3 {
     display: -webkit-box;
     -webkit-box-orient: vertical;
-    -webkit-line-clamp: 3;
+    -webkit-line-clamp: 2;
     overflow: hidden;
   }
   .gift-card .gift-meta > span:first-child {
