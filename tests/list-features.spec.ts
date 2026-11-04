@@ -621,14 +621,21 @@ test("gift summaries are owner-only, omit financial data, and remain available i
     expect(response.ok()).toBe(true);
     expect(response.headers()["cache-control"]).toBe("no-store");
     const dto = await response.json();
-    expect(dto.gifts[0].buyerName).toBe("Sam Morgan");
-    expect(dto.gifts[0].contributors[0]).toMatchObject({
-      name: "Jamie Chen",
-      status: "sent",
+    // Check the complete public projection. Price-like digits can occur in UUIDs.
+    expect(dto).toEqual({
+      listId: list.id,
+      gifts: [
+        {
+          id: r.id,
+          itemId: gift.id,
+          title: "A shared coffee grinder",
+          purchased: 1,
+          buyerName: "Sam Morgan",
+          exchange: false,
+          contributors: [{ id: c.id, name: "Jamie Chen", status: "sent" }],
+        },
+      ],
     });
-    expect(JSON.stringify(dto)).not.toMatch(
-      /amountCents|poolTargetCents|priceCents|private note|2300|9900/,
-    );
     await page.goto(`/lists/${list.id}`);
     await page
       .getByRole("button", { name: "Gift summary", exact: true })
