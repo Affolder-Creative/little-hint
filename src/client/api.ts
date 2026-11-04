@@ -13,6 +13,16 @@ export class ApiError extends Error {
     super(message);
   }
 }
+export class ApiTimeoutError extends Error {
+  constructor() {
+    super("Little Hint took too long to respond. Please try again.");
+    this.name = "ApiTimeoutError";
+  }
+}
+export const isConnectionError = (error: unknown) =>
+  error instanceof TypeError ||
+  error instanceof ApiTimeoutError ||
+  (error instanceof ApiError && error.status >= 500);
 let pendingWrites = 0;
 let accountId: string | null = null;
 let generation = 0;
@@ -27,7 +37,11 @@ export const hasPendingWrites = () => pendingWrites > 0;
 export async function api<T = any>(
   path: string,
   body?: unknown,
-  options?: { signal?: AbortSignal; idempotencyKey?: string },
+  options?: {
+    signal?: AbortSignal;
+    idempotencyKey?: string;
+    timeoutMs?: number;
+  },
 ): Promise<T> {
   const epoch = generation;
   const operation =
@@ -37,23 +51,51 @@ export async function api<T = any>(
     (operation ? (uncertain.get(operation) ?? crypto.randomUUID()) : undefined);
   if (operation && key) uncertain.set(operation, key);
   if (body !== undefined) pendingWrites++;
+  const controller = options?.timeoutMs ? new AbortController() : undefined;
+  const signal = controller
+    ? options?.signal
+      ? AbortSignal.any([options.signal, controller.signal])
+      : controller.signal
+    : options?.signal;
+  let timer: ReturnType<typeof setTimeout> | undefined;
   try {
-    const response = await fetch(`/api/v1/${path}`, {
-      credentials: "same-origin",
-      signal: options?.signal,
-      method: body === undefined ? "GET" : "POST",
-      headers:
-        body === undefined
-          ? path === "world"
-            ? { "X-Little-Hint-World": "paged-v1" }
-            : {}
-          : {
-              "Content-Type": "application/json",
-              "Idempotency-Key": key!,
-            },
-      body: body === undefined ? undefined : JSON.stringify(body),
-    });
-    const data = await response.json();
+    const request = async () => {
+      const response = await fetch(`/api/v1/${path}`, {
+        credentials: "same-origin",
+        signal,
+        method: body === undefined ? "GET" : "POST",
+        headers:
+          body === undefined
+            ? path === "world"
+              ? { "X-Little-Hint-World": "paged-v1" }
+              : {}
+            : {
+                "Content-Type": "application/json",
+                "Idempotency-Key": key!,
+              },
+        body: body === undefined ? undefined : JSON.stringify(body),
+      });
+      const data = await response.json().catch((error) => {
+        if (!response.ok)
+          throw new ApiError(
+            response.status,
+            "Unable to complete this request.",
+          );
+        throw error;
+      });
+      return { response, data };
+    };
+    const { response, data } = controller
+      ? await Promise.race([
+          request(),
+          new Promise<never>((_, reject) => {
+            timer = setTimeout(() => {
+              reject(new ApiTimeoutError());
+              controller.abort();
+            }, options!.timeoutMs);
+          }),
+        ])
+      : await request();
     if (epoch !== generation && path !== "world")
       throw new Error("Your account changed. Reopen this page to continue.");
     // A retry can be rate-limited after the original request already committed.
@@ -62,10 +104,11 @@ export async function api<T = any>(
     if (!response.ok)
       throw new ApiError(
         response.status,
-        data.error ?? "Unable to complete this request.",
+        data?.error ?? "Unable to complete this request.",
       );
     return data;
   } finally {
+    clearTimeout(timer);
     if (body !== undefined) pendingWrites--;
   }
 }
