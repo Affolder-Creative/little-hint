@@ -1,3 +1,5 @@
+import { priceBaseline, priceCommand } from "./prices";
+import { priceConfig } from "./price-config";
 import {
   friendCommand,
   friendVisible,
@@ -288,6 +290,9 @@ export function giftView(s: State, a: Actor, i: Item): GiftView {
   const own = recipient(s, a, i);
   const view: GiftView = {
     ...fields,
+    priceWatching: s.priceWatches.some(
+      (w) => w.userId === a.id && w.itemId === i.id,
+    ),
     archived: archived(s, i),
     recipientNames: i.recipientIds.map(
       (id) => s.people.find((p) => p.id === id)?.name ?? "Recipient",
@@ -441,6 +446,8 @@ export function world(s: State, a: Actor, compact = false): World {
   const ps = ownIds(s, a);
   return {
     compact,
+    priceChecksEnabled:
+      priceConfig().enabled && productLookupEnabled(effectiveConfig()),
     friendEntries: s.friendEntries
       .filter((f) => friendVisible(s, a, f) && !controls(s, a, f.personId))
       .map((f) => ({
@@ -738,6 +745,7 @@ export function command(
   if (action.startsWith("spending.")) return spendingCommand(s, a, action, raw);
   if (managementActions.includes(action))
     return managementCommand(s, a, action, raw);
+  if (action.startsWith("prices.")) return priceCommand(s, a, action, raw);
   const b = raw as Record<string, unknown>;
   if (
     ["notifications.read", "follows.update", "watches.update"].includes(action)
@@ -1221,6 +1229,7 @@ export function command(
         draftImport.draft!.state = "published";
         touch(draftImport);
       }
+      priceBaseline(i, "when added");
       s.items.push(i);
       if (i.listId)
         emitActivity(
@@ -1295,6 +1304,24 @@ export function command(
           ),
         }))
         .filter((source) => source.fields.length);
+      if (i.url !== p.url) {
+        priceBaseline(i, "when link changed");
+        i.pricing!.baseline = p.priceCents;
+      } else if (i.priceCents !== p.priceCents) {
+        if (!i.pricing) priceBaseline(i, "when tracking started");
+        s.priceChanges.push({
+          ...stamp(),
+          itemId: i.id,
+          generation: i.pricing!.generation,
+          from: i.priceCents,
+          to: p.priceCents,
+          source: "manual",
+        });
+        i.pricing!.paused = true;
+        delete i.pricing!.checkedAt;
+        for (const w of s.priceWatches.filter((w) => w.itemId === i.id))
+          w.reference = null;
+      }
       Object.assign(i, fields);
       touch(i);
       reconcileAccess(s);
@@ -1450,26 +1477,27 @@ export function command(
                 "access",
                 "mention",
                 "wishlist",
+                "price-drop",
               ]),
             )
-            .max(9),
+            .max(10),
           pushEvents: z
             .array(z.string().refine((v) => topicIds.includes(v as any)))
-            .max(9)
+            .max(10)
             .optional(),
           channelEvents: z
             .object({
               email: z
                 .array(z.string().refine((v) => topicIds.includes(v as any)))
-                .max(9)
+                .max(10)
                 .optional(),
               telegram: z
                 .array(z.string().refine((v) => topicIds.includes(v as any)))
-                .max(9)
+                .max(10)
                 .optional(),
               sms: z
                 .array(z.string().refine((v) => topicIds.includes(v as any)))
-                .max(9)
+                .max(10)
                 .optional(),
             })
             .optional(),

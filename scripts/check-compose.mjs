@@ -516,3 +516,31 @@ for (const [file, variables, prefix] of [
     }
   }
 }
+
+const priceVars = {
+  ...productionVars,
+  TZ: "America/Indiana/Indianapolis",
+  PRICE_CHECK_TIME: "08:30",
+  PRICE_CHECK_ENABLED: "true",
+  PRICE_CHECK_PAID_DAILY_LIMIT: "100",
+  PRICE_CHECK_PAID_MONTHLY_LIMIT: "3000",
+};
+const priceRuntime = JSON.parse(
+  config("compose.production.yaml", priceVars).stdout,
+);
+for (const name of ["app", "worker"]) {
+  for (const key of [
+    "TZ",
+    "PRICE_CHECK_TIME",
+    "PRICE_CHECK_ENABLED",
+    "PRICE_CHECK_PAID_DAILY_LIMIT",
+    "PRICE_CHECK_PAID_MONTHLY_LIMIT",
+  ])
+    assert.equal(
+      String(priceRuntime.services[name].environment[key]),
+      priceVars[key],
+    );
+}
+console.log(
+  "Price schedule checks passed: shared timezone, time and allowances reach app and worker.",
+);

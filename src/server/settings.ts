@@ -1,3 +1,4 @@
+import { priceConfig } from "./price-config";
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
 import { readSettings, transact } from "./db";
 import type { Setting, State, Actor } from "../shared/model";
@@ -242,7 +243,11 @@ export async function saveSettings(
     for (const update of updates) applySetting(s, update.key, update.value);
   });
 }
-export async function spend(service: string) {
+export async function spend(
+  service: string,
+  priceCheck = false,
+  priceSource = service,
+) {
   const cfg = await config();
   const limit = Number(cfg.PAID_DAILY_LIMIT);
   const startedAt = new Date().toISOString();
@@ -258,6 +263,31 @@ export async function spend(service: string) {
         429,
         "The daily limit for paid requests has been reached. Try again tomorrow or ask the app administrator to review the limit.",
       );
+    if (priceCheck) {
+      const limits = priceConfig();
+      if (!limits.enabled) fail(429, "Price checks are disabled.");
+      const sourceKey = `price-provider:${startedAt.slice(0, 7)}:${priceSource}`;
+      let source = s.usage.find((u) => u.key === sourceKey);
+      if (!source) {
+        source = { ...stamp(), key: sourceKey, count: 0 };
+        s.usage.push(source);
+      }
+      source.count++;
+      const keys = [
+        `price-paid:${startedAt.slice(0, 10)}`,
+        `price-paid:${startedAt.slice(0, 7)}`,
+      ];
+      for (const [index, key] of keys.entries()) {
+        let counter = s.usage.find((u) => u.key === key);
+        if (!counter) {
+          counter = { ...stamp(), key, count: 0 };
+          s.usage.push(counter);
+        }
+        if (counter.count >= (index === 0 ? limits.daily : limits.monthly))
+          fail(429, "Price-check allowance exhausted.");
+        counter.count++;
+      }
+    }
     row.count++;
     row.revision++;
   });

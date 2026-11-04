@@ -486,6 +486,17 @@ Gift-idea imports use the same private Save for later workflow as item imports. 
 
 Button-style controls never underline on hover, focus, or activation; ordinary text links retain their link treatment. Focus uses the existing accent outline for every focusable element. Sharing reviews focus a compact heading; the dialog shell has no redundant outline. Forced-color mode uses the system Highlight color. Follow is omitted for a list’s sole editor and retained when other owners or guardians can add items.
 
+### Price tracking
+
+Item details group the current price with a quieter original-price comparison and
+last verification time. Use tabular figures, the existing detail-price role and
+13px muted supporting text. State increases, decreases and stale prices in words.
+Cards keep only the current price and a compact original-price comparison.
+Price-drop subscriptions use the existing labeled checkbox with a 44px target.
+Pause/resume is an editor-only text action; errors appear beside these controls.
+Administration shows schedule, timezone and request counts in existing text rows.
+No chart, new color, font or elevation treatment is introduced.
+
 ## Do's and Don'ts
 
 ### Do:

@@ -1228,6 +1228,24 @@ function Admin() {
             </button>
           </div>
         )}
+        {jobs.data?.prices && (
+          <p>
+            Price checks: {jobs.data.prices.enabled ? "Enabled" : "Off"} · Daily
+            at {jobs.data.prices.time} ({jobs.data.prices.zone}).{" "}
+            {jobs.data.prices.pending} waiting, {jobs.data.prices.failed}{" "}
+            failed. Provider attempts: {jobs.data.prices.dailyUsed}/
+            {jobs.data.prices.daily} today, {jobs.data.prices.monthlyUsed}/
+            {jobs.data.prices.monthly} this month.{" "}
+            {jobs.data.prices.providerUsage
+              .map((u) => `${u.source}: ${u.count}`)
+              .join(" · ")}{" "}
+            {jobs.data.prices.lastRun > 0 && (
+              <>
+                Last run: {new Date(jobs.data.prices.lastRun).toLocaleString()}.
+              </>
+            )}
+          </p>
+        )}
         {jobs.data && !jobs.error && (
           <>
             <p>

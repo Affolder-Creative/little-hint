@@ -1,3 +1,4 @@
+import { priceAlertAllowed } from "./prices";
 import { invitationIsPending } from "../shared/invitations";
 import { effectiveConfig } from "./runtime-config";
 import { unavailableChannels } from "./channel-availability";
@@ -349,6 +350,8 @@ export function activityAllowed(s: State, n: Notice): boolean {
   if (n.itemId) {
     const item = s.items.find((i) => i.id === n.itemId);
     if (!item || !itemVisible(s, a, item)) return false;
+    if (n.event === "price-drop")
+      return priceAlertAllowed(s, n.userId, item.id);
     if (n.event === "wishlist") return !!item.listId;
     if (n.commentId) {
       const comment = s.comments.find(
@@ -451,6 +454,7 @@ export function topicEnabled(
   n: Notice,
   channel: "email" | "telegram" | "sms" | "push",
 ) {
+  if (n.event === "price-drop" && channel === "sms") return false;
   const p = preferences(s, actor(s, n.userId));
   return channel === "push"
     ? (p.pushEvents ?? defaultPushEvents).includes(n.event as any)
@@ -489,7 +493,10 @@ function renderActivity(s: State, n: Notice): NotificationView {
     id: n.id,
     event: n.event,
     message:
-      actions[n.action ?? ""] ?? messages[n.event] ?? "You have a gift update",
+      (n.event === "price-drop" ? n.action : undefined) ??
+      actions[n.action ?? ""] ??
+      messages[n.event] ??
+      "You have a gift update",
     context:
       item?.title ??
       list?.name ??

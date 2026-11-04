@@ -230,3 +230,5 @@ requires separate partner consent.
 When `SPENDING_ENABLED=false`, the new-account preference is still saved and
 applied at account activation, but tracking stays unavailable until the deployment
 switch is restored. No database migration or backfill is required.
+
+Optional [background price tracking](docs/price-tracking.md) preserves saved prices and supports private price-drop alerts.

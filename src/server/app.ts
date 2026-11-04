@@ -1,3 +1,4 @@
+import { priceConfig } from "./price-config";
 import {
   requestMetrics,
   databaseMetrics,
@@ -505,6 +506,8 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
     "notifications/read": "notifications.read",
     follows: "follows.update",
     watches: "watches.update",
+    "prices/watch": "prices.watch",
+    "prices/tracking": "prices.tracking",
     exchanges: "exchanges.create",
     "exchanges/update": "exchanges.update",
     "exchanges/guideline": "exchanges.guideline",
@@ -694,6 +697,36 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
     return {
       workerLastSeen:
         s.usage.find((u) => u.key === "worker-heartbeat")?.count ?? null,
+      prices: {
+        ...priceConfig(),
+        providerUsage: s.usage
+          .filter((u) =>
+            u.key.startsWith(
+              `price-provider:${new Date().toISOString().slice(0, 7)}:`,
+            ),
+          )
+          .map((u) => ({ source: u.key.split(":").at(-1)!, count: u.count })),
+        lastRun: Math.max(
+          0,
+          ...s.usage
+            .filter((u) => u.key.startsWith("price-run:"))
+            .map((u) => u.count),
+        ),
+        pending: s.priceChecks.filter((j) =>
+          ["pending", "running"].includes(j.status),
+        ).length,
+        failed: s.priceChecks.filter((j) => j.status === "failed").length,
+        dailyUsed:
+          s.usage.find(
+            (u) =>
+              u.key === `price-paid:${new Date().toISOString().slice(0, 10)}`,
+          )?.count ?? 0,
+        monthlyUsed:
+          s.usage.find(
+            (u) =>
+              u.key === `price-paid:${new Date().toISOString().slice(0, 7)}`,
+          )?.count ?? 0,
+      },
       backupProvider: "backup-sidecar",
       imports: s.imports.map(
         ({ id, status, error, diagnostic, createdAt }) => ({

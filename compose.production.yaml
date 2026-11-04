@@ -7,6 +7,11 @@ x-app: &app
   restart: unless-stopped
   environment:
     NODE_ENV: production
+    TZ: ${TZ:-UTC}
+    PRICE_CHECK_TIME: ${PRICE_CHECK_TIME:-08:00}
+    PRICE_CHECK_ENABLED: ${PRICE_CHECK_ENABLED:-false}
+    PRICE_CHECK_PAID_DAILY_LIMIT: ${PRICE_CHECK_PAID_DAILY_LIMIT:-100}
+    PRICE_CHECK_PAID_MONTHLY_LIMIT: ${PRICE_CHECK_PAID_MONTHLY_LIMIT:-3000}
     APP_ENV: production
     APP_URL: ${APP_URL:?Set APP_URL to the production HTTPS origin}
     CLOUDFLARE_WEB_ANALYTICS: ${CLOUDFLARE_WEB_ANALYTICS:-false}

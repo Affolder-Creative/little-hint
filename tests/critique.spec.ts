@@ -1,3 +1,4 @@
+import { notificationTopics } from "../src/shared/notifications";
 import {
   cancelledBuying,
   contributionHistory,
@@ -396,7 +397,9 @@ for (const width of [1440, 390]) {
     });
     await expect(delivery.getByLabel(/Telegram/)).toBeDisabled();
     await expect(delivery.getByLabel(/Text messages/)).toBeDisabled();
-    await expect(topics).toContainText("Telegram 2/9");
+    await expect(topics).toContainText(
+      `Telegram 2/${notificationTopics.length}`,
+    );
     await expect(settings.locator(".channel-topics")).not.toBeVisible();
     await page.screenshot({
       path: testInfo.outputPath(`notification-settings-${width}.png`),
@@ -448,7 +451,9 @@ for (const width of [1440, 390]) {
     expect(saved.channelEvents?.telegram).toEqual(["wishlist"]);
     expect(saved.notificationDetails?.email).toBe(true);
     await page.reload();
-    await expect(topics).toContainText("Telegram 1/9");
+    await expect(topics).toContainText(
+      `Telegram 1/${notificationTopics.length}`,
+    );
     await expect(privacy).toContainText("Push, Email, Telegram");
     await topics.click();
     await privacy.click();
