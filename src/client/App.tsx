@@ -1,3 +1,5 @@
+import type { GiftView } from "../shared/model";
+import { CollectionStatus, useCollection } from "./Pagination";
 import { Price, PriceControls } from "./Price";
 import { AddFriend, FriendManagement } from "./Friends";
 import "./friends.css";
@@ -247,6 +249,7 @@ export function App() {
       localStorage.setItem("little-hint:engaged", "yes");
     await Promise.all([
       client.invalidateQueries({ queryKey: ["world"] }),
+      client.invalidateQueries({ queryKey: ["collection"] }),
       client.invalidateQueries({ queryKey: ["spending"] }),
       client.invalidateQueries({ queryKey: ["buying-history"] }),
       client.invalidateQueries({ queryKey: ["notifications"] }),
@@ -666,7 +669,7 @@ function Home() {
           {solo ? "My lists" : "View your people"} <ArrowRight size={16} />
         </Link>
       </div>
-      {solo && !items.length ? (
+      {solo && !(world.hasActiveItems ?? !!items.length) ? (
         <Empty
           title={
             hasLists
@@ -970,6 +973,9 @@ function PersonPage() {
         )}
         <Browser
           key={`${id}-${tab}`}
+          scope="person"
+          scopeId={id}
+          tab={tab}
           personScoped
           searchLabel={tab === "ideas" ? "Search gift ideas" : "Search items"}
           listNames={
@@ -1029,9 +1035,14 @@ function GiftDetail() {
   const noteLocation = useLocation();
   const { id } = useParams();
   const { world, open, mutate, toast, close } = useApp();
-  const gift = world.items.find((i) => i.id === id);
+  const detailQuery = useCollection<GiftView>(`items/${id}`);
+  const gift = world.paged
+    ? detailQuery.data
+    : world.items.find((i) => i.id === id);
   const [quantity, setQuantity] = useState(1),
     [exchange, setExchange] = useState("");
+  if (world.paged && (detailQuery.isPending || detailQuery.error))
+    return <CollectionStatus query={detailQuery} />;
   if (!gift)
     return (
       <Empty

@@ -57,6 +57,7 @@ export function BrowseTools({
           <Search size={18} aria-hidden="true" />
           <input
             type="search"
+            maxLength={500}
             aria-label={searchLabel}
             aria-describedby={searchHint ? hintId : undefined}
             placeholder={placeholder}

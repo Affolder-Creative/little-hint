@@ -45,7 +45,7 @@ export async function api<T = any>(
       headers:
         body === undefined
           ? path === "world"
-            ? { "X-Little-Hint-World": "compact" }
+            ? { "X-Little-Hint-World": "paged-v1" }
             : {}
           : {
               "Content-Type": "application/json",

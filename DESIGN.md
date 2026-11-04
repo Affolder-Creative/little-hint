@@ -278,6 +278,12 @@ Paragraph spacing follows content roles across app pages and dialogs. Dense titl
 
 Gift details group the recipient, title, status, price, and quantity with the prose step. Phones place the photo 16px above the details, and the back link leaves 8px below its touch target. Reservation, Gift plans, and Private notes use matching section headings, reduced to the section-phone role on phones. Reservation explanations and private-note guidance use the supporting role, capped at 65ch. Keep their heading-to-copy and paragraph gaps compact; do not compound the privacy-note margin with the section heading margin.
 
+### Collection pagination
+
+Item grids and active gift plans show 24 entries per page. A quiet result count and Previous/Next controls sit above and below the collection. The count uses 14px text; controls reuse secondary buttons and their 44px minimum touch targets. Controls wrap on narrow screens, with the button group spanning the available width. A single page retains its result count without navigation buttons.
+
+Search and filter controls stay mounted while results refresh. Changing a filter starts on page one. Explicit page navigation focuses the results region and brings it below the sticky header; background updates preserve focus and position. Back, Forward, and reload retain the page and existing browse choices. Loading and failed reads remain distinct from empty results, with a Retry action for failures.
+
 ### Spending views
 
 Buying contains the optional spending view. Personal and partner views use the established tabs. Person and occasion selectors lead; less frequent wishlist and period filters sit in More filters. Spent and Still planning use tabular figures, with estimates and missing amounts labeled in text. Budgets appear only after creation and distinguish the balance after purchases from the balance after planned gifts. The progress meter uses the existing accent and soft colors, with text carrying every amount.

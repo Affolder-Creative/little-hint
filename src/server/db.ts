@@ -195,3 +195,40 @@ export async function readBuyingState(userId: string): Promise<State> {
   for (const row of rows) (state[row.kind as Kind] as unknown[]).push(row.data);
   return state;
 }
+
+/** Read lightweight browse metadata; full descriptions and discussions are hydrated only on demand. */
+export async function readCollectionState(): Promise<State> {
+  const { rows } = await pool.query(`SELECT kind, CASE
+    WHEN kind = 'items' THEN data - ARRAY['description','productSources','purchaseOffers','recommendationEvidence']
+    WHEN kind = 'comments' THEN data - ARRAY['body']
+    WHEN kind = 'imports' AND data->'draft'->>'state' IS DISTINCT FROM 'active' AND data->>'status' NOT IN ('pending','running') THEN data - ARRAY['result','providerState','error']
+    ELSE data END AS data FROM app_record
+    WHERE kind NOT IN ('media','replays','usage','giftDiscoveryJobs','priceChecks','priceChanges','smsAttempts','smsChallenges')`);
+  const state = emptyState();
+  for (const row of rows)
+    if (kinds.includes(row.kind))
+      (state[row.kind as Kind] as unknown[]).push(row.data);
+  return state;
+}
+export async function hydrateCollectionItems(
+  state: State,
+  ids: string[],
+  details = false,
+) {
+  if (!ids.length) return;
+  const { rows } = await pool.query(
+    `SELECT kind, data FROM app_record WHERE
+    (kind = 'items' AND id = ANY($1::text[])) OR
+    ($2 AND kind = 'comments' AND data->>'itemId' = ANY($1::text[]))`,
+    [ids, details],
+  );
+  const items = new Map(state.items.map((i) => [i.id, i]));
+  for (const row of rows) {
+    if (row.kind === "items") items.set(row.data.id, row.data);
+    else {
+      state.comments = state.comments.filter((c) => c.id !== row.data.id);
+      state.comments.push(row.data);
+    }
+  }
+  state.items = [...items.values()];
+}

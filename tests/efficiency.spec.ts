@@ -1,18 +1,20 @@
 import { test, expect } from "@playwright/test";
 import { login, post } from "./browser-helpers";
 
-test("requests compact snapshots and loads cancelled history only when opened, one page at a time", async ({
+test("requests paged snapshots and loads cancelled history only when opened, one page at a time", async ({
   page,
 }) => {
   await login(page, "sam@example.test");
   const compact = page.waitForResponse(
     (r) =>
       new URL(r.url()).pathname === "/api/v1/world" &&
-      r.request().headers()["x-little-hint-world"] === "compact",
+      r.request().headers()["x-little-hint-world"] === "paged-v1",
   );
   await page.reload();
   const snapshot = await (await compact).json();
   expect(snapshot.compact).toBe(true);
+  expect(snapshot.paged).toBe(true);
+  expect(snapshot.items).toEqual([]);
   expect(snapshot.contributionHistory).toEqual([]);
   expect(snapshot.buying.every((r: any) => r.quantity > 0 && !r.item)).toBe(
     true,
@@ -100,4 +102,94 @@ test("a cancelled reservation moves out of the compact snapshot and into live hi
     await page.request.get("/api/v1/buying/cancelled")
   ).json();
   expect(history.rows.some((v: any) => v.id === r.id)).toBe(true);
+});
+
+for (const width of [393, 1440]) {
+  test(`item pages bound rendering and restore navigation at ${width}px`, async ({
+    page,
+  }, info) => {
+    await page.setViewportSize({ width, height: 900 });
+    await login(page, "sam@example.test");
+    const w = await (await page.request.get("/api/v1/world")).json();
+    const own = w.people.find((p: any) => p.userId === w.me.id);
+    const created = await post(page, "lists", {
+      name: `Paged wishes ${width}`,
+      ownerIds: [own.id],
+      groupIds: [],
+      mode: "surprise",
+    });
+    for (let n = 0; n < 25; n++)
+      await post(page, "items", {
+        listId: created.id,
+        title: `Paged item ${width} ${String(n).padStart(2, "0")}`,
+        quantity: 1,
+      });
+    await page.goto(`/lists/${created.id}`);
+    await expect(page.locator(".gift-card")).toHaveCount(24);
+    await expect(
+      page.getByRole("navigation", { name: "Results pages above" }),
+    ).toContainText("Showing 1–24 of 25");
+    await page
+      .getByRole("navigation", { name: "Results pages above" })
+      .getByRole("button", { name: "Next" })
+      .click();
+    await expect(page.locator(".gift-card")).toHaveCount(1);
+    await expect(
+      page.getByRole("navigation", { name: "Results pages above" }),
+    ).toContainText("Page 2 of 2");
+    await page.locator(".gift-card").click();
+    await expect(page.getByRole("heading", { level: 1 })).toContainText(
+      `Paged item ${width} 24`,
+    );
+    await page.goBack();
+    await expect(
+      page.getByRole("navigation", { name: "Results pages above" }),
+    ).toContainText("Page 2 of 2");
+    await page.reload();
+    await expect(page.locator(".gift-card")).toHaveCount(1);
+    await page.getByRole("searchbox").fill(`Paged item ${width} 00`);
+    await expect(page.locator(".gift-card")).toHaveCount(1);
+    await expect(page.locator(".gift-card")).toContainText(
+      `Paged item ${width} 00`,
+    );
+    await expect(page.getByRole("searchbox")).toBeFocused();
+    await page.screenshot({
+      path: info.outputPath(`pagination-${width}.png`),
+      fullPage: true,
+    });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+  });
+}
+
+test("active gift plans stay bounded across status filters", async ({
+  page,
+}) => {
+  await login(page, "sam@example.test");
+  const w = await (await page.request.get("/api/v1/world")).json();
+  const recipient = w.people.find(
+    (p: any) => p.userId !== w.me.id && !p.guardians.includes(w.me.id),
+  );
+  for (let n = 0; n < 25; n++) {
+    const gift = await post(page, "items", {
+      title: `Paged plan ${n}`,
+      recipientIds: [recipient.id],
+      visibility: "private",
+      quantity: 1,
+    });
+    await post(page, "reservations", { itemId: gift.id, quantity: 1 });
+  }
+  await page.goto("/buying");
+  await expect(page.locator(".buying-row")).toHaveCount(24);
+  const top = page.getByRole("navigation", { name: "Results pages above" });
+  await top.getByRole("button", { name: "Next" }).click();
+  await expect(top).toContainText("Page 2 of");
+  expect(await page.locator(".buying-row").count()).toBeLessThanOrEqual(24);
+  await page
+    .getByRole("button", { name: /Purchased \(/, exact: false })
+    .click();
+  await expect(top.getByRole("button", { name: "Previous" })).toHaveCount(0);
 });

@@ -134,3 +134,24 @@ both wildcard and enumerated routes, nested assets, ETags, missing files, and
 explicit dotfile exclusion. Remove the override when the plugin's declared
 range includes patched versions. `npm audit --omit=dev` reports zero findings
 with this lockfile as of 2026-11-03.
+
+## Paged collections, 2026-11-04
+
+New clients negotiate `X-Little-Hint-World: paged-v1`. The world omits item,
+active reservation, and discussion-watch collections. Item grids and active
+buying use authenticated pages of 24. Search, filter choices, totals and ordering
+cover the authorized collection. Gift details, purchase search, spending guidance,
+and manual ordering have separate reads. Legacy and compact requests retain their
+existing projections. Writes retain the existing full-state transaction model.
+
+Collection reads load lightweight metadata, then hydrate only selected items.
+Metadata scans still grow with collection size. The image cache validates at most
+200 retained media IDs on world refresh; unseen images need fresh page/detail
+permission before cached bytes can be displayed.
+
+Run `node --import tsx scripts/benchmark-pagination.ts` for synthetic, in-memory
+projection measurements with no provider calls. On Node 24.18.0, 1,000 and 10,000
+items returned 24 cards and 16,001 / 16,003 uncompressed bytes. The shell was 7,475
+bytes in both fixtures; compact worlds were 2,061,342 / 20,556,342 bytes. After five warmups and 40 samples, page projection p50/p95 was 0.70/0.89 ms
+for 1,000 items and 5.82/8.36 ms for 10,000. These exclude PostgreSQL hydration,
+authentication, transport and rendering, and are not production latency claims.

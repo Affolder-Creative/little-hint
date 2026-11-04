@@ -290,6 +290,7 @@ export function giftView(s: State, a: Actor, i: Item): GiftView {
   const own = recipient(s, a, i);
   const view: GiftView = {
     ...fields,
+    watchingNotes: !own && watchesItem(s, a.id, i.id),
     priceWatching: s.priceWatches.some(
       (w) => w.userId === a.id && w.itemId === i.id,
     ),
@@ -442,11 +443,24 @@ function notifyGift(s: State, a: Actor, i: Item, event: Notice["event"]) {
   emitGiftActivity(s, a, i, event);
 }
 
-export function world(s: State, a: Actor, compact = false): World {
+export function world(
+  s: State,
+  a: Actor,
+  compact = false,
+  paged = false,
+): World {
   const people = s.people.filter((p) => personVisible(s, a, p));
   const ps = ownIds(s, a);
   return {
     compact,
+    paged,
+    ...(paged
+      ? {
+          hasActiveItems: s.items.some(
+            (i) => itemVisible(s, a, i) && !archived(s, i),
+          ),
+        }
+      : {}),
     priceChecksEnabled:
       priceConfig().enabled && productLookupEnabled(effectiveConfig()),
     friendEntries: s.friendEntries
@@ -540,9 +554,11 @@ export function world(s: State, a: Actor, compact = false): World {
           !l.groupEventId && l.ownerIds.some((p) => ps.includes(p)),
         revealAvailable: dateHasElapsed(l.revealAfter, l.timeZone),
       })),
-    items: s.items
-      .filter((i) => itemVisible(s, a, i))
-      .map((i) => giftView(s, a, i)),
+    items: paged
+      ? []
+      : s.items
+          .filter((i) => itemVisible(s, a, i))
+          .map((i) => giftView(s, a, i)),
     contributionHistory: compact
       ? []
       : s.contributions.flatMap((contribution) => {
@@ -565,20 +581,22 @@ export function world(s: State, a: Actor, compact = false): World {
             },
           ];
         }),
-    buying: s.reservations
-      .filter((r) => r.buyerId === a.id && (!compact || r.quantity > 0))
-      .map((r) => ({
-        ...r,
-        item:
-          !compact &&
-          s.items.some((i) => i.id === r.itemId && itemVisible(s, a, i))
-            ? giftView(
-                s,
-                a,
-                s.items.find((i) => i.id === r.itemId)!,
-              )
-            : undefined,
-      })),
+    buying: paged
+      ? []
+      : s.reservations
+          .filter((r) => r.buyerId === a.id && (!compact || r.quantity > 0))
+          .map((r) => ({
+            ...r,
+            item:
+              !compact &&
+              s.items.some((i) => i.id === r.itemId && itemVisible(s, a, i))
+                ? giftView(
+                    s,
+                    a,
+                    s.items.find((i) => i.id === r.itemId)!,
+                  )
+                : undefined,
+          })),
     exchanges: s.exchanges
       .filter((e) => !e.deletedAt && groupAccess(s, a, e.groupId))
       .map(({ assignments, ...e }) => {
@@ -610,14 +628,16 @@ export function world(s: State, a: Actor, compact = false): World {
     follows: s.follows.filter(
       (f) => f.userId === a.id && followVisible(s, a, f),
     ),
-    watches: s.items
-      .filter((i) => itemVisible(s, a, i) && !recipient(s, a, i))
-      .map((i) => ({
-        ...stamp(),
-        userId: a.id,
-        itemId: i.id,
-        watching: watchesItem(s, a.id, i.id),
-      })),
+    watches: paged
+      ? []
+      : s.items
+          .filter((i) => itemVisible(s, a, i) && !recipient(s, a, i))
+          .map((i) => ({
+            ...stamp(),
+            userId: a.id,
+            itemId: i.id,
+            watching: watchesItem(s, a.id, i.id),
+          })),
     imports: s.imports
       .filter(
         (j) =>

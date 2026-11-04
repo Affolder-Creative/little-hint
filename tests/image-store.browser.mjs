@@ -28,8 +28,11 @@ for (const [name, engine] of Object.entries({ chromium, webkit })) {
   try {
     const context = await browser.newContext();
     let requests = 0;
+    let access = true;
     await context.route("http://localhost:8923/**", (route) => {
       const path = new URL(route.request().url()).pathname;
+      if (path === "/api/v1/media/access")
+        return route.fulfill({ json: access ? ["photo"] : [] });
       if (path === "/store.js")
         return route.fulfill({ contentType: "text/javascript", body: source });
       if (path.startsWith("/api/")) {
@@ -46,19 +49,25 @@ for (const [name, engine] of Object.entries({ chromium, webkit })) {
     });
     const page = await context.newPage();
     page.setDefaultTimeout(15000);
-    async function boot(target = page, owner = "alice", enabled = true) {
+    async function boot(
+      target = page,
+      owner = "alice",
+      enabled = true,
+      paged = false,
+    ) {
       await target.goto("http://localhost:8923/");
       await target.evaluate(
-        async ({ owner, enabled }) => {
+        async ({ owner, enabled, paged }) => {
           window.store = await import("/store.js");
           window.fixture = {
             me: { id: owner },
-            items: [{ image: "/api/v1/media/photo" }],
+            paged,
+            items: paged ? [] : [{ image: "/api/v1/media/photo" }],
             imageDelivery: { cacheEnabled: enabled, prefetchEnabled: enabled },
           };
           window.store.configureProductImages(window.fixture);
         },
-        { owner, enabled },
+        { owner, enabled, paged },
       );
     }
     await boot();
@@ -129,6 +138,56 @@ for (const [name, engine] of Object.entries({ chromium, webkit })) {
       ),
       true,
       "disabled cache rejects managed reads",
+    );
+    await boot(page, "carol", true, true);
+    assert.equal(
+      await page.evaluate(() =>
+        store.loadProductImage("/api/v1/media/photo").then(
+          () => false,
+          () => true,
+        ),
+      ),
+      true,
+      "paged shell alone grants no images",
+    );
+    await page.evaluate(() => {
+      store.grantProductImages("carol", {
+        rows: [{ image: "/api/v1/media/photo" }],
+      });
+      return store.loadProductImage("/api/v1/media/photo");
+    });
+    await page.evaluate(() => store.flushImageWrites());
+    const beforeReload = requests;
+    await boot(page, "carol", true, true);
+    assert.equal(
+      await page.evaluate(() =>
+        store.loadProductImage("/api/v1/media/photo").then(
+          () => false,
+          () => true,
+        ),
+      ),
+      true,
+      "persisted bytes need a fresh response grant",
+    );
+    await page.evaluate(() => {
+      store.grantProductImages("carol", { image: "/api/v1/media/photo" });
+      return store.loadProductImage("/api/v1/media/photo");
+    });
+    assert.equal(requests, beforeReload, "fresh grant reuses persisted bytes");
+    access = false;
+    await page.evaluate(() => store.configureProductImages(fixture));
+    await page.waitForFunction(
+      () => !store.cachedProductImage("/api/v1/media/photo"),
+    );
+    assert.equal(
+      await page.evaluate(() =>
+        store.loadProductImage("/api/v1/media/photo").then(
+          () => false,
+          () => true,
+        ),
+      ),
+      true,
+      "access validation revokes old page grants",
     );
     console.log(
       `${name}: persistence, deduplication, revocation, account isolation, cross-tab cleanup, disabled policy passed`,

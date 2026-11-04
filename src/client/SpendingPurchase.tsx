@@ -1,3 +1,4 @@
+import { CollectionStatus, useCollection, useDebounced } from "./Pagination";
 import { useEffect, useLayoutEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -260,7 +261,12 @@ export function PurchaseForm({
   useEffect(() => {
     if (selectedItem || selectedReservation) amountInput.current?.focus();
   }, [selectedItem, selectedReservation]);
-  const reservation = suppliedReservation ?? selectedReservation;
+  const reservationQuery = useCollection<PurchaseReservation>(
+    `buying/reservations/${suppliedReservation?.id}`,
+    !!suppliedReservation,
+  );
+  const reservation =
+    reservationQuery.data ?? suppliedReservation ?? selectedReservation;
   const item = reservation?.item ?? selectedItem;
   const [selectionDirty, setSelectionDirty] = useState(false);
   const [title, setTitle] = useState(suppliedReservation?.titleSnapshot ?? "");
@@ -282,6 +288,16 @@ export function PurchaseForm({
     initialOccasion ?? params.get("occasion") ?? undefined,
   );
   const [date, setDate] = useState(new Date().toLocaleDateString("en-CA"));
+  const searchTerm = useDebounced(title);
+  const searchQuery = useCollection<
+    Array<{ gift: GiftView; reservation?: World["buying"][number] }>
+  >(`items/search?search=${encodeURIComponent(searchTerm)}`);
+  if (
+    world.paged &&
+    suppliedReservation &&
+    (!reservationQuery.data || reservationQuery.error)
+  )
+    return <CollectionStatus query={reservationQuery} />;
   if (world.spendingAvailable === false)
     return <p role="status">Spending is unavailable.</p>;
   if (error)
@@ -372,20 +388,23 @@ export function PurchaseForm({
         .toLowerCase()
         .includes(title.toLowerCase()),
   );
-  const candidates = matches
-    .flatMap<{ gift: GiftView; reservation?: World["buying"][number] }>(
-      (gift) => {
-        const reservations = world.buying.filter(
-          (r) => r.itemId === gift.id && !r.former && r.purchased < r.quantity,
-        );
-        return reservations.length
-          ? reservations.map((r) => ({ gift, reservation: r }))
-          : (gift.available ?? 0) > 0
-            ? [{ gift, reservation: undefined }]
-            : [];
-      },
-    )
-    .slice(0, 8);
+  const candidates = world.paged
+    ? (searchQuery.data ?? [])
+    : matches
+        .flatMap<{ gift: GiftView; reservation?: World["buying"][number] }>(
+          (gift) => {
+            const reservations = world.buying.filter(
+              (r) =>
+                r.itemId === gift.id && !r.former && r.purchased < r.quantity,
+            );
+            return reservations.length
+              ? reservations.map((r) => ({ gift, reservation: r }))
+              : (gift.available ?? 0) > 0
+                ? [{ gift, reservation: undefined }]
+                : [];
+          },
+        )
+        .slice(0, 8);
   const giftChoices: Choice[] = candidates.map(({ gift, reservation: r }) => ({
     id: r ? `reservation:${r.id}` : `item:${gift.id}`,
     label: gift.title,
@@ -508,6 +527,18 @@ export function PurchaseForm({
             }
           }}
         />
+      )}
+      {world.paged && !linked && searchQuery.error && (
+        <div role="alert">
+          Gift search is unavailable. You can enter a manual purchase.{" "}
+          <button
+            type="button"
+            className="text-button"
+            onClick={() => searchQuery.refetch()}
+          >
+            Retry search
+          </button>
+        </div>
       )}
       <div className="purchase-recipients">
         <span className="purchase-label">For</span>

@@ -244,6 +244,15 @@ function RestoreNavigation({ account }: { account: string }) {
     // Capture before route DOM is removed, including browsers where tapping a
     // link does not focus it. Stable keys survive sorting and refreshed data.
     const onFocus = (event: Event) => {
+      // Editing takes precedence over delayed history restoration.
+      if (
+        pending &&
+        event.target instanceof HTMLElement &&
+        event.target.matches(
+          'input, textarea, select, [contenteditable="true"]',
+        )
+      )
+        finish();
       const element =
         event.target instanceof Element
           ? event.target.closest<HTMLElement>("[data-navigation-focus]")

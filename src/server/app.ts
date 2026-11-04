@@ -1,3 +1,5 @@
+import { collectionWorld, registerCollections } from "./collections";
+import { readCollectionState } from "./db";
 import { priceConfig } from "./price-config";
 import {
   requestMetrics,
@@ -281,13 +283,17 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
     };
   }
   registerGiftDiscovery(app, actor);
+  registerCollections(app, actor);
   app.get("/api/v1/world", async (req) => {
     const a = await actor(req);
     const notificationAsOf = Date.now();
-    const state = await readState();
+    const paged = req.headers["x-little-hint-world"] === "paged-v1";
+    const state = paged ? await readCollectionState() : await readState();
     const cfg = await config();
     return {
-      ...world(state, a, req.headers["x-little-hint-world"] === "compact"),
+      ...(paged
+        ? collectionWorld(state, a)
+        : world(state, a, req.headers["x-little-hint-world"] === "compact")),
       productLookupEnabled: productLookupEnabled(cfg),
       sms: smsInfo(cfg),
       telegram: telegramInfo(cfg),

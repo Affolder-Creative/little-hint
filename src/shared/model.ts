@@ -582,6 +582,7 @@ export interface Actor {
   name: string;
 }
 export interface GiftView extends Omit<Item, "creatorId"> {
+  watchingNotes?: boolean;
   priceWatching?: boolean;
   recipientNames: string[];
   creatorName?: string;
@@ -616,6 +617,8 @@ export interface GiftView extends Omit<Item, "creatorId"> {
   }>;
 }
 export interface World {
+  paged?: boolean;
+  hasActiveItems?: boolean;
   priceChecksEnabled?: boolean;
   friendEntries?: Array<FriendEntry & { canManage: boolean }>;
   personRedirects?: Record<string, string>;
