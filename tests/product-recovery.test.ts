@@ -213,3 +213,17 @@ it("requires retailer-backed manufacturer identity", () => {
     ),
   ).toBeUndefined();
 });
+
+it("preserves the provider failure when AI recovery also fails", async () => {
+  mocks.state.imports[0].diagnostic = {
+    stage: "brightdata",
+    reason: "brightdata-unlocker: Unlocker HTTP 403",
+  };
+  mocks.fetch.mockResolvedValue(new Response("unavailable", { status: 503 }));
+  await recoverProduct(args());
+  expect(mocks.state.imports[0].diagnostic).toMatchObject({
+    stage: "brightdata",
+    reason:
+      "brightdata-unlocker: Unlocker HTTP 403; Recovery unavailable or evidence insufficient",
+  });
+});

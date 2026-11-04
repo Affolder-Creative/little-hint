@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-04T18:54:44.761657+00:00",
+  "generatedAt": "2026-11-04T19:14:02.888376+00:00",
   "title": "Design System: Little Hint",
   "extensions": {
     "colorMeta": {
@@ -749,6 +749,36 @@
           "oklch(95.00% 0.00000 0.00)"
         ],
         "purpose": ".toast shadow only"
+      },
+      "admin-panel": {
+        "role": "neutral",
+        "displayName": "Warm administration panel",
+        "canonical": "#faeee5",
+        "tonalRamp": [
+          "oklch(15.00% 0.00886 59.48)",
+          "oklch(26.43% 0.01271 59.48)",
+          "oklch(37.86% 0.01579 59.48)",
+          "oklch(49.29% 0.01750 59.48)",
+          "oklch(60.71% 0.01750 59.48)",
+          "oklch(72.14% 0.01579 59.48)",
+          "oklch(83.57% 0.01271 59.48)",
+          "oklch(95.00% 0.00886 59.48)"
+        ]
+      },
+      "dark-admin-panel": {
+        "role": "neutral",
+        "displayName": "Dark administration panel",
+        "canonical": "#342722",
+        "tonalRamp": [
+          "oklch(15.00% 0.01084 42.05)",
+          "oklch(26.43% 0.01554 42.05)",
+          "oklch(37.86% 0.01931 42.05)",
+          "oklch(49.29% 0.02140 42.05)",
+          "oklch(60.71% 0.02140 42.05)",
+          "oklch(72.14% 0.01931 42.05)",
+          "oklch(83.57% 0.01554 42.05)",
+          "oklch(95.00% 0.01084 42.05)"
+        ]
       }
     },
     "typographyMeta": {

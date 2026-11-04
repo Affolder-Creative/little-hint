@@ -163,3 +163,21 @@ Sources appear in draft review and saved gift details. Editing a recovered field
 Recovery dispatches are persisted before requests. Automatic worker redelivery does not repeat uncertain paid requests. Explicit retry or refresh permits a fresh attempt. Bright Data collections that are pending or have uncertain submission outcomes keep their existing resume behavior. Recovery does not replace that state with a new paid scrape.
 
 Keep production disabled until staging evaluation. Use at least 20 actual failed or incomplete imports, compare recovery off/on, and record exact product/variant correctness, name/photo recovery, latency and provider usage per recovered import. Reject activation if any accepted product or variant is wrong, successful imports regress, or the sample shows no useful recovery benefit. Fixture tests establish behavior, not real retailer coverage. Turning the recovery flag off is the rollback; no database migration is required.
+
+## REI wishlist imports
+
+REI product links support numeric and alphanumeric style IDs, including `C10172`.
+The parser reads REI's embedded product model and ProductGroup metadata. Explicit
+SKU, size, and color selections must match; otherwise the draft asks you to check
+the option. Unselected products retain a price only when variant prices agree.
+
+Direct extraction runs first. With Bright Data selected, blocked REI product pages
+use rendered Web Unlocker HTML. When automatic photos are enabled, a failed direct
+REI media download can use one additional budgeted Web Unlocker request. Failed
+photos leave usable text and prices intact. Existing credentials and daily limits
+apply, and no new retailer dataset is required. This does not change automatic
+price tracking or gift-discovery verification.
+
+Provider failures remain visible in Background jobs when AI recovery also fails.
+Verify a fresh REI import with AI recovery disabled before treating a deployment's
+provider access as working; configuration presence alone does not prove access.
