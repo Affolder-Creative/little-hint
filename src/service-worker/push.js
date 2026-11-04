@@ -86,6 +86,7 @@ self.addEventListener("message", (event) => {
 // Only wish-list summaries may carry an explicitly opted-in, versioned preview.
 const pushTitles = {
   invitation: "New invitation",
+  "price-drop": "Price drop",
   "ownership-request": "Ownership request",
   mention: "You were mentioned",
   discussion: "New private note",

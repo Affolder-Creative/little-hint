@@ -1,3 +1,6 @@
+import { schedulePrices } from "./prices";
+import { processPrice } from "./price-worker";
+import { priceConfig } from "./price-config";
 import { recordWorkerMetrics } from "./metrics";
 import { ImportPending, BrightDataFailure } from "./brightdata";
 import { pollSmsStatus, alertLowSmsCredit } from "./sms";
@@ -165,6 +168,18 @@ await boss.work<{ id: string }>(
     for (const j of jobs) await deliverNotice(j.data.id);
   },
 );
+await boss.createQueue("price-check", {
+  policy: "exclusive",
+  retryLimit: 0,
+  expireInSeconds: 360,
+});
+await boss.work<{ id: string }>(
+  "price-check",
+  { batchSize: 1 },
+  async (jobs) => {
+    for (const j of jobs) await processPrice(j.data.id);
+  },
+);
 let busy = false;
 let lastCachePrune = 0;
 async function dispatch() {
@@ -180,6 +195,7 @@ async function dispatch() {
     await transact((s) => {
       pruneDiscovery(s, discoveryConfigForState(s));
       archiveDueLists(s);
+      if (effectiveConfig().SCRAPING_PROVIDER !== "none") schedulePrices(s);
       let row = s.usage.find((u) => u.key === "worker-heartbeat");
       if (!row) {
         row = { ...stamp(), key: "worker-heartbeat", count: 0 };
@@ -195,6 +211,15 @@ async function dispatch() {
         recordWorkerMetrics(s);
     });
     const s = await readState();
+    if (priceConfig().enabled)
+      for (const j of s.priceChecks.filter(
+        (j) =>
+          ["pending", "running"].includes(j.status) &&
+          (!j.leaseUntil || Date.parse(j.leaseUntil) <= Date.now()) &&
+          (!j.providerState?.nextPollAt ||
+            Date.parse(j.providerState.nextPollAt) <= Date.now()),
+      ))
+        await boss.send("price-check", { id: j.id }, { singletonKey: j.id });
     for (const j of s.giftDiscoveryJobs.filter(
       (j) => j.status === "pending" || j.status === "reviewing",
     ))

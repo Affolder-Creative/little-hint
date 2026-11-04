@@ -135,7 +135,41 @@ export interface ProductSource {
   method: "extraction" | "web";
   checkedAt: string;
 }
+export interface PriceTracking {
+  baseline: number | null;
+  baselineLabel: "when added" | "when tracking started" | "when link changed";
+  generation: string;
+  paused?: boolean;
+  checkedAt?: string;
+  status?: "verified" | "unavailable" | "deferred";
+  identity?: string;
+}
+export interface PriceWatch extends Base {
+  userId: string;
+  itemId: string;
+  generation: string;
+  reference: number | null;
+}
+export interface PriceCheck extends Base {
+  paidAttempted?: boolean;
+  url: string;
+  day: string;
+  targets: Array<{ id: string; generation: string; revision: number }>;
+  status: "pending" | "running" | "complete" | "failed";
+  leaseUntil?: string;
+  token?: string;
+  error?: string;
+  providerState?: ImportJob["providerState"];
+}
+export interface PriceChange extends Base {
+  itemId: string;
+  generation: string;
+  from: number | null;
+  to: number | null;
+  source: string;
+}
 export interface Item extends Base {
+  pricing?: PriceTracking;
   friendEntryId?: string;
   productSources?: ProductSource[];
   purchaseOffers?: GiftOffer[];
@@ -227,7 +261,8 @@ export interface Notice extends Base {
     | "access"
     | "mention"
     | "wishlist"
-    | "import";
+    | "import"
+    | "price-drop";
   itemId?: string;
   exchangeId?: string;
   invitationId?: string;
@@ -448,6 +483,9 @@ export interface SmsGrant extends Base {
   expiresAt: string;
 }
 export interface Records {
+  priceChecks: PriceCheck;
+  priceWatches: PriceWatch;
+  priceChanges: PriceChange;
   friendEntries: FriendEntry;
   spendingSettings: SpendingSettings;
   spendingConnections: SpendingConnection;
@@ -490,6 +528,9 @@ export interface Records {
 export type Kind = keyof Records;
 export type State = { [K in Kind]: Records[K][] };
 export const kinds: Kind[] = [
+  "priceChecks",
+  "priceWatches",
+  "priceChanges",
   "friendEntries",
   "spendingSettings",
   "spendingConnections",
@@ -538,6 +579,7 @@ export interface Actor {
   name: string;
 }
 export interface GiftView extends Omit<Item, "creatorId"> {
+  priceWatching?: boolean;
   recipientNames: string[];
   creatorName?: string;
   canEdit: boolean;
@@ -571,6 +613,7 @@ export interface GiftView extends Omit<Item, "creatorId"> {
   }>;
 }
 export interface World {
+  priceChecksEnabled?: boolean;
   friendEntries?: Array<FriendEntry & { canManage: boolean }>;
   personRedirects?: Record<string, string>;
   compact?: boolean;

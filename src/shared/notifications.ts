@@ -1,4 +1,5 @@
 export const notificationTopics = [
+  { id: "price-drop", label: "Price drops on items I follow" },
   { id: "mention", label: "Mentions" },
   { id: "discussion", label: "Private notes I follow" },
   { id: "contribution", label: "Cost sharing" },
@@ -11,4 +12,4 @@ export const notificationTopics = [
 ] as const;
 export const defaultPushEvents = notificationTopics
   .map((t) => t.id)
-  .filter((t) => t !== "reservation" && t !== "purchase");
+  .filter((t) => t !== "reservation" && t !== "purchase" && t !== "price-drop");

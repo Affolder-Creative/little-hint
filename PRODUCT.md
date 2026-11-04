@@ -124,7 +124,6 @@ Wishlist selection in Add purchase links the spending record and purchased statu
 
 The deployment-only SPENDING_ENABLED switch defaults to available; false hides and disables the new spending feature without deleting preferences or records. Normal buying, listed prices, contributions, and existing event spending guidelines remain available. Personal tracking starts off unless enabled by the saved new-account default. Each person retains their own off switch.
 
-
 App administrators can enable private spending tracking by default at first verified
 account activation. This saved preference starts off and does not change existing
 accounts. Each person retains their off switch, and partner consent and sharing
@@ -132,7 +131,6 @@ rules remain unchanged. Newly enabled people see an explanation in Spending
 settings and their spending view. No external notification is sent.
 
 Private gift ideas and manual spending records may be explicitly assigned to an accessible wish list for their recipients. Assignment updates spending totals, budget scope, and the list’s group-event context without adding the gift to the list or changing sharing. Plans pass their assignment to later purchases; purchase reassignment also updates related refunds. Source wish-list gifts retain their source context.
-
 
 ## Friends before signup
 
@@ -156,3 +154,14 @@ access does not republish ideas. Archiving cancels pending invitations and stops
 group sharing without deleting gifts or history; restoration starts private.
 Unconnected friends cannot own lists or enter households, events, or exchanges.
 The feature is built in, without an environment or personal enable switch.
+
+## Price tracking
+
+Deployment-enabled daily price checks cover active linked wishes and gift ideas.
+The current verified price leads, with the original saved price and verification
+time retained. Failed checks preserve the previous amount. Manual price changes
+pause automatic updates until an editor resumes them. Existing items establish a
+baseline when tracking starts. Changing the shopping link starts a new comparison.
+Private per-item subscriptions notify at new lows of at least 5% and $1. Inbox
+alerts respect current access; external channels require explicit topic opt-in.
+Recorded spending remains separate from changing listed-price estimates.

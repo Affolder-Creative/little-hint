@@ -4,6 +4,10 @@ x-app: &app
   pull_policy: never
   restart: unless-stopped
   env_file: ./.local/preview/runtime.env
+  environment:
+    TZ: ${TZ:-UTC}
+    PRICE_CHECK_TIME: ${PRICE_CHECK_TIME:-08:00}
+    PRICE_CHECK_ENABLED: "false"
   volumes:
     - uploads:/data/uploads
     - ./.local/preview/tls/ca.crt:/run/mailpit-ca.crt:ro

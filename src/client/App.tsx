@@ -1,3 +1,4 @@
+import { Price, PriceControls } from "./Price";
 import { AddFriend, FriendManagement } from "./Friends";
 import "./friends.css";
 import { hydrateWorld } from "../shared/world";
@@ -1136,7 +1137,8 @@ function GiftDetail() {
                 : "Manage reservations"}
             </Link>
           )}
-          <p className="detail-price">{dollars(gift.priceCents)}</p>
+          <Price gift={gift} />
+          <PriceControls gift={gift} />
           <GuidelineLabel
             amount={
               spendingContext ? spendingGuideline(world, spendingContext) : null
@@ -1155,7 +1157,7 @@ function GiftDetail() {
           <p className="muted">
             Quantity wanted: {gift.quantity}
             <ProductSources sources={gift.productSources} />
-            {gift.importedAt && (
+            {gift.importedAt && !gift.pricing && (
               <>
                 {" "}
                 · Price checked {new Date(gift.importedAt).toLocaleDateString()}

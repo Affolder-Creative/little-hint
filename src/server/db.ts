@@ -12,7 +12,7 @@ import {
   type Setting,
   type ImportJob,
 } from "../shared/model";
-const supportedSchemaVersion = 2;
+const supportedSchemaVersion = 3;
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   max: 10,
@@ -156,6 +156,9 @@ CREATE TABLE product_import_cache (
 CREATE INDEX product_import_cache_expiry_idx ON product_import_cache(expires_at);
 INSERT INTO schema_migration(version) VALUES (2);`);
     }
+    await client.query(
+      "INSERT INTO schema_migration(version) VALUES (3) ON CONFLICT DO NOTHING",
+    );
     await client.query("COMMIT");
   } catch (e) {
     await client.query("ROLLBACK");

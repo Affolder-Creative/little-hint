@@ -1,3 +1,4 @@
+import { Price } from "./Price";
 import { ProductImage } from "./ProductImage";
 import { prefetchProductImage } from "./image-store";
 import { priorityLabels } from "../shared/organization";
@@ -623,7 +624,7 @@ export function GiftCard({
           <p className="gift-source-list">From {sourceListName}</p>
         )}
         <div className="gift-meta">
-          <span>{dollars(gift.priceCents)}</span>
+          <Price gift={gift} compact />
           <span className="gift-badges">
             <PrivateIdeaBadge gift={gift} />
             {gift.isRecipient ? (

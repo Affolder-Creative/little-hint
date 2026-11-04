@@ -206,11 +206,16 @@ async function jsonRequest(path: string, key: string, body?: unknown) {
   }
   return JSON.parse((await boundedBody(response)).toString("utf8"));
 }
-export async function brightRetailer(url: string, key: string, jobId: string) {
+export async function brightRetailer(
+  url: string,
+  key: string,
+  jobId: string,
+  priceCheck = false,
+) {
   await validateUrl(url);
   let state: ImportJob["providerState"];
   await transact((s) => {
-    const job = s.imports.find((j) => j.id === jobId);
+    const job = [...s.imports, ...s.priceChecks].find((j) => j.id === jobId);
     if (!job) throw new Error("Import missing");
     state = job.providerState;
     if (!state)
@@ -223,10 +228,13 @@ export async function brightRetailer(url: string, key: string, jobId: string) {
   });
   if (!state) {
     try {
-      await spend("brightdata");
+      await (priceCheck
+        ? spend("brightdata", true, "brightdata-scraper")
+        : spend("brightdata"));
     } catch (error) {
       await transact((s) => {
-        delete s.imports.find((j) => j.id === jobId)!.providerState;
+        delete [...s.imports, ...s.priceChecks].find((j) => j.id === jobId)!
+          .providerState;
       });
       throw new BrightDataFailure(
         "brightdata-budget",
@@ -256,14 +264,15 @@ export async function brightRetailer(url: string, key: string, jobId: string) {
         [400, 401, 403, 404, 422, 429].includes(error.status ?? 0)
       )
         await transact((s) => {
-          delete s.imports.find((j) => j.id === jobId)!.providerState;
+          delete [...s.imports, ...s.priceChecks].find((j) => j.id === jobId)!
+            .providerState;
         });
       throw error;
     }
     if (typeof result.snapshot_id !== "string")
       throw new Error("Missing collection ID");
     await transact((s) => {
-      const j = s.imports.find((j) => j.id === jobId)!;
+      const j = [...s.imports, ...s.priceChecks].find((j) => j.id === jobId)!;
       j.providerState!.snapshotId = result.snapshot_id;
       j.providerState!.nextPollAt = new Date(Date.now() + 10000).toISOString();
     });
@@ -284,15 +293,18 @@ export async function brightRetailer(url: string, key: string, jobId: string) {
         "Collection still running at the waiting limit; retry resumes the same collection",
       );
     await transact((s) => {
-      s.imports.find((j) => j.id === jobId)!.providerState!.nextPollAt =
-        new Date(Date.now() + 10000).toISOString();
+      [...s.imports, ...s.priceChecks].find(
+        (j) => j.id === jobId,
+      )!.providerState!.nextPollAt = new Date(Date.now() + 10000).toISOString();
     });
     throw new ImportPending();
   }
   if (progress.status !== "ready") {
     if (["failed", "canceled"].includes(progress.status))
       await transact((s) => {
-        s.imports.find((j) => j.id === jobId)!.providerState!.terminal = true;
+        [...s.imports, ...s.priceChecks].find(
+          (j) => j.id === jobId,
+        )!.providerState!.terminal = true;
       });
     throw new Error("Collection failed");
   }
@@ -302,11 +314,41 @@ export async function brightRetailer(url: string, key: string, jobId: string) {
   );
   if (!Array.isArray(result) || result.length !== 1)
     throw new Error("Unexpected product count");
+  if (priceCheck) {
+    const row = result[0];
+    const ids = [row.asin, row.product_id, row.tcin_id, row.sku]
+      .filter(Boolean)
+      .map(String);
+    const requested =
+      new URL(url).searchParams.get("preselect") ??
+      new URL(url).pathname
+        .match(/(?:dp|product|sku)\/([A-Z0-9]+)|A-(\d+)|(\d+)\.p/i)
+        ?.slice(1)
+        .find(Boolean) ??
+      new URL(url).pathname.split("/").pop();
+    if (
+      !requested ||
+      !ids.includes(requested) ||
+      ![true, "InStock", "in_stock", "In stock"].includes(
+        row.in_stock ?? row.availability,
+      ) ||
+      row.price_type ||
+      row.subscription_price ||
+      row.member_price
+    )
+      throw new Error("Product price cannot be verified");
+  }
   return normalizeRetailer(result[0], url);
 }
-export async function unlockPage(url: string, cfg: Record<string, string>) {
+export async function unlockPage(
+  url: string,
+  cfg: Record<string, string>,
+  priceCheck = false,
+) {
   await validateUrl(url);
-  await spend("brightdata");
+  await (priceCheck
+    ? spend("brightdata", true, "brightdata-unlocker")
+    : spend("brightdata"));
   const response = await fetch("https://api.brightdata.com/request", {
     method: "POST",
     headers: {

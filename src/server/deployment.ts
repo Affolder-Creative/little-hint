@@ -1,3 +1,4 @@
+import { priceConfig } from "./price-config";
 import { discoveryUserOverrides } from "./gift-discovery-limits";
 
 export function deploymentEnvironment(env = process.env) {
@@ -32,6 +33,7 @@ export function assertStagingSeed(env = process.env) {
 }
 
 export function validateDeployment(env = process.env) {
+  priceConfig(env);
   discoveryUserOverrides(env);
   productPhotoOverride(env);
   imageDeliveryOverride("PRODUCT_IMAGE_CACHE_ENABLED", env);
