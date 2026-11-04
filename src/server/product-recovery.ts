@@ -426,7 +426,19 @@ async function recoverUncached(args: {
       if (dispatch)
         await transact((s) => {
           const job = s.imports.find((j) => j.id === args.jobId);
-          if (job)
+          if (
+            job?.diagnostic &&
+            !/Direct metadata sufficient|Paid fallback unavailable or disabled/.test(
+              job.diagnostic.reason,
+            )
+          ) {
+            if (!job.diagnostic.reason.includes("Recovery unavailable"))
+              job.diagnostic.reason =
+                `${job.diagnostic.reason}; Recovery unavailable or evidence insufficient`.slice(
+                  0,
+                  500,
+                );
+          } else if (job)
             job.diagnostic = {
               stage: `ai-${stage}`,
               reason: "Recovery unavailable or evidence insufficient",

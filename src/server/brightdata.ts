@@ -344,6 +344,7 @@ export async function unlockPage(
   url: string,
   cfg: Record<string, string>,
   priceCheck = false,
+  render = false,
 ) {
   await validateUrl(url);
   await (priceCheck
@@ -359,6 +360,7 @@ export async function unlockPage(
       zone: cfg.BRIGHTDATA_UNLOCKER_ZONE,
       url,
       format: "json",
+      ...(render ? { render: "true" } : {}),
       country: "us",
     }),
     redirect: "error",
@@ -366,10 +368,53 @@ export async function unlockPage(
   });
   if (!response.ok) {
     await response.body?.cancel();
-    throw new Error(`Unlocker HTTP ${response.status}`);
+    throw new BrightDataFailure(
+      "brightdata-unlocker",
+      `Unlocker HTTP ${response.status}`,
+      response.status,
+    );
   }
   const envelope = JSON.parse((await boundedBody(response)).toString("utf8"));
   if (envelope.status_code !== 200 || typeof envelope.body !== "string")
-    throw new Error("Shop unavailable");
+    throw new BrightDataFailure(
+      "brightdata-unlocker",
+      `Shop HTTP ${Number(envelope.status_code) || "unknown"}`,
+    );
   return envelope.body as string;
+}
+
+/** A single budgeted image attempt, restricted to REI's public media paths. */
+export async function unlockReiImage(url: string, cfg: Record<string, string>) {
+  const u = await validateUrl(url);
+  if (
+    u.protocol !== "https:" ||
+    !["rei.com", "www.rei.com"].includes(u.hostname) ||
+    !u.pathname.startsWith("/media/")
+  )
+    throw new Error("Unsupported REI image");
+  await spend("brightdata");
+  const response = await fetch("https://api.brightdata.com/request", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${cfg.BRIGHTDATA_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      zone: cfg.BRIGHTDATA_UNLOCKER_ZONE,
+      url,
+      format: "raw",
+      country: "us",
+    }),
+    redirect: "error",
+    signal: AbortSignal.timeout(35000),
+  });
+  const contentType = response.headers.get("content-type") ?? "";
+  if (
+    !response.ok ||
+    !/^image\/(png|jpeg|webp|gif)(?:;|$)/i.test(contentType)
+  ) {
+    await response.body?.cancel();
+    throw new Error("REI image unavailable");
+  }
+  return { buffer: await boundedBody(response, 5_000_000), contentType };
 }

@@ -583,3 +583,84 @@ it("recovers a name from page evidence after the ordinary parser fails", async (
   await importProduct("https://example.com/mug", "another-owner");
   expect(api).toHaveBeenCalledTimes(2);
 });
+
+const reiUrl = "https://www.rei.com/product/C10172/otter-socks";
+const reiHtml = `<script type="application/ld+json">${JSON.stringify({
+  "@type": "ProductGroup",
+  productGroupId: "C10172",
+  name: "Otter socks",
+  image: ["https://www.rei.com/media/otters.jpg"],
+  hasVariant: [
+    {
+      "@type": "Product",
+      sku: "C101720001",
+      size: "S",
+      offers: [{ price: "15.95", priceCurrency: "USD" }],
+    },
+  ],
+})}</script>`;
+it.each([true, false])(
+  "imports blocked REI pages with photos=%s",
+  async (photos) => {
+    mocks.enabled = photos;
+    mocks.cfg = {
+      SCRAPING_PROVIDER: "brightdata",
+      BRIGHTDATA_API_KEY: "test-key",
+      BRIGHTDATA_UNLOCKER_ZONE: "shops",
+    };
+    mocks.request.mockResolvedValue(
+      new Response("Access Denied", { status: 403 }),
+    );
+    const provider = vi.fn(async (_url: unknown, init: RequestInit) => {
+      const body = JSON.parse(String(init.body));
+      if (body.format === "raw")
+        return new Response(new Uint8Array(png), {
+          headers: { "content-type": "image/png" },
+        });
+      expect(body.render).toBe("true");
+      return Response.json({ status_code: 200, body: reiHtml });
+    });
+    vi.stubGlobal("fetch", provider);
+    const result = await importProduct(reiUrl, "owner");
+    expect(result).toMatchObject({ title: "Otter socks", priceCents: 1595 });
+    expect(!!result.image).toBe(photos);
+    expect(provider).toHaveBeenCalledTimes(photos ? 2 : 1);
+    expect(spend).toHaveBeenCalledTimes(photos ? 2 : 1);
+  },
+);
+it.each(["http", "html", "oversize", "budget"])(
+  "keeps REI details when photo fails: %s",
+  async (failure) => {
+    mocks.enabled = true;
+    mocks.cfg = {
+      SCRAPING_PROVIDER: "brightdata",
+      BRIGHTDATA_API_KEY: "test-key",
+      BRIGHTDATA_UNLOCKER_ZONE: "shops",
+    };
+    mocks.request.mockImplementation(async (target) =>
+      target === reiUrl
+        ? new Response(reiHtml)
+        : new Response("blocked", { status: 403 }),
+    );
+    if (failure === "budget")
+      vi.mocked(spend).mockRejectedValue(new Error("Daily limit reached"));
+    const provider = vi.fn(async () =>
+      failure === "http"
+        ? new Response("blocked", { status: 403 })
+        : new Response(
+            failure === "oversize" ? new Uint8Array(5_000_001) : "not an image",
+            {
+              headers: {
+                "content-type":
+                  failure === "oversize" ? "image/png" : "text/html",
+              },
+            },
+          ),
+    );
+    vi.stubGlobal("fetch", provider);
+    const result = await importProduct(reiUrl, "owner");
+    expect(result).toMatchObject({ title: "Otter socks", priceCents: 1595 });
+    expect(result.image).toBeUndefined();
+    expect(provider).toHaveBeenCalledTimes(failure === "budget" ? 0 : 1);
+  },
+);
