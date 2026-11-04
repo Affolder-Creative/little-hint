@@ -1,3 +1,4 @@
+import { notificationTopics } from "../src/shared/notifications";
 import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { stagingFixtures } from "../src/server/staging-fixtures";
@@ -195,11 +196,22 @@ for (const width of [393, 1280]) {
         .filter({ hasText: /^Customize topics/ })
         .click();
       await expect(section.locator('input[name="smsEvents"]')).toHaveCount(
-        sms ? 9 : 0,
+        sms ? notificationTopics.length : 0,
       );
       await expect(section.locator('input[name="telegramEvents"]')).toHaveCount(
-        telegram ? 9 : 0,
+        telegram ? notificationTopics.length : 0,
       );
+      const priceDrops = section.getByRole("group", {
+        name: "Price drops on items I follow",
+        exact: true,
+      });
+      await expect(priceDrops).toBeVisible();
+      for (const input of await priceDrops.getByRole("checkbox").all())
+        await expect(input).not.toBeChecked();
+      if (sms)
+        await expect(
+          priceDrops.getByLabel("Text", { exact: true }),
+        ).toBeDisabled();
       const topics = section
         .locator("summary")
         .filter({ hasText: /^Customize topics/ });
@@ -224,6 +236,9 @@ for (const width of [393, 1280]) {
         "Notification preferences saved.",
       );
       const body = saved[0];
+      expect(body.pushEvents).not.toContain("price-drop");
+      for (const events of Object.values(body.channelEvents))
+        expect(events).not.toContain("price-drop");
       for (const [channel, available] of [
         ["sms", sms],
         ["telegram", telegram],
