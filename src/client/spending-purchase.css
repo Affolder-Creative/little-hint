@@ -187,3 +187,49 @@ dialog.dialog:has(.spending-purchase) {
 .purchase-chip:not(:has(button)) {
   padding: 6px 10px;
 }
+
+.purchase-option-copy {
+  display: block;
+  min-width: 0;
+  flex: 1;
+}
+.purchase-option-title {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.purchase-option .purchase-option-copy small {
+  padding-left: 0;
+}
+.purchase-option .purchase-check,
+.purchase-option .avatar {
+  flex-shrink: 0;
+}
+@media (max-width: 650px) {
+  .purchase-option-gift:not(.purchase-option-manual) .purchase-option-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+.purchase-record-fields {
+  border: 0;
+  border-top: 1px solid var(--border);
+  padding: 16px 0 0;
+  min-width: 0;
+}
+.purchase-record-fields legend {
+  font-weight: 550;
+  padding: 0;
+}
+.assignment-preview {
+  margin-block: 12px;
+  color: var(--muted);
+  font-size: 14px;
+}
+.assignment-preview ul {
+  padding-inline-start: 20px;
+}
+
+.purchase-record-fields .field {
+  margin-top: 16px;
+}

@@ -1,3 +1,6 @@
+import { useQuery } from "@tanstack/react-query";
+import { PurchaseListField } from "./SpendingPurchase";
+import { dollars } from "./api";
 import { ProductSources } from "./ProductSources";
 import { DiscoveryLink } from "./GiftPreferences";
 import { GuidelineField, guidelineValue } from "./SpendingGuidance";
@@ -243,6 +246,7 @@ export function GiftForm({
   listId,
   recipientId: initialRecipientId,
   recipientOptions,
+  initialSpendingListId,
   onSaved,
   draft,
   importDraft,
@@ -251,6 +255,7 @@ export function GiftForm({
   listId?: string;
   recipientId?: string;
   recipientOptions?: string[];
+  initialSpendingListId?: string;
   onSaved?: (gift: GiftView) => void;
   draft?: Draft;
   importDraft?: ImportJob;
@@ -350,6 +355,42 @@ export function GiftForm({
     !!initialRecipientId ||
     !!recipientOptions ||
     (!!gift && !gift.listId);
+  const [spendingListId, setSpendingListId] = useState(
+    gift?.spendingListId ??
+      importDraft?.draft?.spendingListId ??
+      initialSpendingListId ??
+      "",
+  );
+  const assignmentChanged =
+    !!gift && spendingListId !== (gift.spendingListId ?? "");
+  const needsAssignmentPreview = !!(
+    idea &&
+    world.spendingEnabled &&
+    assignmentChanged &&
+    spendingListId
+  );
+  const assignmentPreview = useQuery({
+    queryKey: [
+      "spending",
+      world.me.id,
+      "assignment-preview",
+      gift?.id,
+      spendingListId,
+    ],
+    queryFn: () =>
+      api<{
+        token: string;
+        records: Array<{
+          id: string;
+          revision: number;
+          title: string;
+          kind: string;
+          amountCents: number | null;
+          voided?: boolean;
+        }>;
+      }>(`spending/assignment-preview?item=${gift!.id}&list=${spendingListId}`),
+    enabled: needsAssignmentPreview,
+  });
   const recipientName =
     gift?.recipientNames.join(" & ") ??
     world.people.find((person) => person.id === recipientId)?.name;
@@ -382,7 +423,14 @@ export function GiftForm({
     fields: { ...data, priority },
     touched: [...touched.current],
     ...(idea
-      ? { kind: "idea", recipientId, visibility, groupIds, friendEntryId }
+      ? {
+          kind: "idea",
+          recipientId,
+          visibility,
+          groupIds,
+          friendEntryId,
+          spendingListId: spendingListId || null,
+        }
       : { listId: destination }),
   });
   const currentSnapshot = useRef(snapshot);
@@ -476,7 +524,13 @@ export function GiftForm({
         !gift
           ? {
               ...(idea
-                ? { kind: "idea" as const, recipientId, visibility, groupIds }
+                ? {
+                    kind: "idea" as const,
+                    recipientId,
+                    visibility,
+                    groupIds,
+                    spendingListId: spendingListId || null,
+                  }
                 : { listId: destination }),
               fields: { ...data, priority },
               touched: [...touched.current],
@@ -566,6 +620,8 @@ export function GiftForm({
       }
       disabled={
         uploading ||
+        (needsAssignmentPreview &&
+          (!assignmentPreview.data || assignmentPreview.isFetching)) ||
         (idea && !gift && !recipientId) ||
         (!!duplicate && !allowDuplicate) ||
         (sharingIdea && !audienceGroups.length)
@@ -580,6 +636,14 @@ export function GiftForm({
           importDraftRevision: savedDraft.current?.draft?.revision,
           ...data,
           ...(!idea ? { priority } : {}),
+          ...(idea && world.spendingEnabled
+            ? {
+                spendingListId: spendingListId || null,
+                spendingAssignmentToken: needsAssignmentPreview
+                  ? assignmentPreview.data?.token
+                  : undefined,
+              }
+            : {}),
           tags: data.tags
             .split(",")
             .map((s) => s.trim())
@@ -656,6 +720,15 @@ export function GiftForm({
             value={recipientId}
             onChange={(e) => {
               setRecipientId(e.target.value);
+              setSpendingListId((current) =>
+                world.lists.some(
+                  (list) =>
+                    list.id === current &&
+                    list.ownerIds.includes(e.target.value),
+                )
+                  ? current
+                  : "",
+              );
               setChosenFriend("");
               setGroupIds([]);
               setVisibility("private");
@@ -715,6 +788,15 @@ export function GiftForm({
                 value={recipientId}
                 onChange={(event) => {
                   setRecipientId(event.target.value);
+                  setSpendingListId((current) =>
+                    world.lists.some(
+                      (list) =>
+                        list.id === current &&
+                        list.ownerIds.includes(event.target.value),
+                    )
+                      ? current
+                      : "",
+                  );
                   setChosenFriend("");
                   setGroupIds([]);
                   setVisibility("private");
@@ -801,6 +883,78 @@ export function GiftForm({
               </p>
             )}
           </div>
+        </>
+      )}
+      {idea && world.spendingEnabled && (
+        <>
+          <PurchaseListField
+            recipientIds={
+              gift?.recipientIds ?? (recipientId ? [recipientId] : [])
+            }
+            value={spendingListId}
+            onChange={setSpendingListId}
+          />
+          {assignmentChanged && !spendingListId && (
+            <p className="muted">
+              This clears the default for future plans. Existing spending
+              assignments stay unchanged.
+            </p>
+          )}
+          {needsAssignmentPreview && (
+            <div className="assignment-preview" role="status">
+              <button
+                type="button"
+                className="text-button"
+                disabled={assignmentPreview.isFetching}
+                onClick={() => void assignmentPreview.refetch()}
+              >
+                Refresh review
+              </button>
+              {assignmentPreview.isPending && (
+                <p>Checking existing plans and purchases…</p>
+              )}
+              {assignmentPreview.error && (
+                <p role="alert">
+                  Unable to review existing records.{" "}
+                  <button
+                    type="button"
+                    className="text-button"
+                    onClick={() => void assignmentPreview.refetch()}
+                  >
+                    Try again
+                  </button>
+                </p>
+              )}
+              {assignmentPreview.data &&
+                (assignmentPreview.data.records.some((r) => !r.voided) ? (
+                  <>
+                    <p>
+                      Saving will also assign these existing unassigned records.
+                      Records already assigned elsewhere will keep their
+                      choices.
+                    </p>
+                    <ul>
+                      {assignmentPreview.data.records
+                        .filter((r) => !r.voided)
+                        .map((r) => (
+                          <li key={r.id}>
+                            {r.title} ·{" "}
+                            {r.kind === "plan" ? "Plan" : "Purchase"} ·{" "}
+                            {r.amountCents === null
+                              ? "Amount not recorded"
+                              : dollars(r.amountCents)}
+                          </li>
+                        ))}
+                    </ul>
+                  </>
+                ) : (
+                  <p>
+                    This assignment will be used for your future plans for this
+                    idea.
+                  </p>
+                ))}
+            </div>
+          )}
         </>
       )}
       {!gift && (!idea || recipientId) && (

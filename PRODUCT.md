@@ -165,3 +165,5 @@ baseline when tracking starts. Changing the shopping link starts a new compariso
 Private per-item subscriptions notify at new lows of at least 5% and $1. Inbox
 alerts respect current access; external channels require explicit topic opt-in.
 Recorded spending remains separate from changing listed-price estimates.
+
+Gift idea creators can choose a private default wish list for spending. Their new plans inherit the choice; saving a changed assignment previews and updates their existing unassigned plans and purchases, including related refunds. Already assigned records and other buyers' records retain their context. Clearing the default affects future plans only. Assignment never publishes the idea or changes its audience. The Purchased view offers a combined status and recorded-spending editor. Occasion and wish-list filters count explicitly linked or assigned gifts; guided review helps organize unassigned entries.

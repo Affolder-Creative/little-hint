@@ -179,7 +179,7 @@ function PurchaseSearch({
                   aria-selected={
                     multiple ? selected.includes(choice.id) : index === i
                   }
-                  className={`purchase-option ${index === i ? "active" : ""} ${choice.id === "manual" ? "purchase-option-manual" : ""}`}
+                  className={`purchase-option ${multiple ? "purchase-option-person" : "purchase-option-gift"} ${index === i ? "active" : ""} ${choice.id === "manual" ? "purchase-option-manual" : ""}`}
                   onPointerDown={(e) => e.preventDefault()}
                   onClick={() => choose(choice)}
                 >
@@ -198,9 +198,13 @@ function PurchaseSearch({
                     ) : (
                       <Gift size={18} aria-hidden="true" />
                     )}
-                    {choice.label}
+                    <span className="purchase-option-copy">
+                      <span className="purchase-option-title">
+                        {choice.label}
+                      </span>
+                      {choice.detail && <small>{choice.detail}</small>}
+                    </span>
                   </span>
-                  {choice.detail && <small>{choice.detail}</small>}
                 </button>
               ))}
               {!choices.length && (
@@ -316,11 +320,17 @@ export function PurchaseForm({
     );
   const linked = !!reservation || !!item;
   const recipientIds = plan?.recipientIds ?? item?.recipientIds ?? recipients;
-  const assignmentId = assignedList ?? plan?.listId ?? "";
+  const assignmentId =
+    assignedList ?? (plan ? (plan.listId ?? "") : (item?.spendingListId ?? ""));
   const assignmentList = world.lists.find((l) => l.id === assignmentId);
   const sourceList = world.lists.find((l) => l.id === item?.listId);
+  const overridesAssignment =
+    !sourceList && (assignedList !== undefined || (!plan && !!assignmentId));
   const eventId =
-    plan?.eventId ?? sourceList?.groupEventId ?? (linked ? undefined : event);
+    sourceList?.groupEventId ??
+    (overridesAssignment
+      ? assignmentList?.groupEventId
+      : (plan?.eventId ?? (linked ? undefined : event)));
   const occasionId = occasion ?? plan?.occasionId ?? "";
   const price = item?.priceCents ?? plan?.unitEstimateCents ?? null;
   const maxQuantity = reservation
@@ -436,8 +446,9 @@ export function PurchaseForm({
           eventId: eventId || undefined,
           payerId: payer === world.me.id ? undefined : payer,
           listId:
-            !sourceList && assignedList !== undefined
-              ? assignedList || null
+            !sourceList &&
+            (assignedList !== undefined || (!plan && assignmentId))
+              ? assignmentId || null
               : undefined,
           planRevision: plan?.revision,
         });
@@ -614,17 +625,17 @@ export function PurchaseForm({
           </button>
         </p>
       )}
+      {!sourceList && (
+        <PurchaseListField
+          recipientIds={recipientIds}
+          value={assignmentId}
+          onChange={setAssignedList}
+        />
+      )}
       <details className="purchase-details">
         <summary>
           Occasion details, optional{occasionId || eventId ? " · Selected" : ""}
         </summary>
-        {!sourceList && (
-          <PurchaseListField
-            recipientIds={recipientIds}
-            value={assignmentId}
-            onChange={setAssignedList}
-          />
-        )}
         <Field
           label="Personal occasion"
           hint="Organize your gift history, such as a birthday."
@@ -662,7 +673,10 @@ export function PurchaseForm({
             <select
               name="event"
               value={event}
-              onChange={(e) => setEvent(e.target.value)}
+              onChange={(e) => {
+                setEvent(e.target.value);
+                setAssignedList(undefined);
+              }}
             >
               <option value="">No group event</option>
               {world.groupEvents.map((e) => (
@@ -739,8 +753,8 @@ export function PurchaseListField({
   );
   return (
     <Field
-      label="Wish list, optional"
-      hint="Assign spending to a list without adding or sharing the gift. Event lists also supply the group event."
+      label="Wish list for spending, optional"
+      hint="Includes this gift in the list’s spending totals without adding or sharing the gift. Event lists also include it in that event’s totals."
     >
       <select value={value} onChange={(e) => onChange(e.target.value)}>
         <option value="">No wish list</option>

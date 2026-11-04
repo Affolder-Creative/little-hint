@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { spendingAvailable } from "./deployment";
 import { spendingMatches, spendingTotals } from "../shared/spending";
 import { z } from "zod";
@@ -117,7 +118,14 @@ function snapshot(s: State, a: Actor, reservationId: string): SpendingRecord {
     s.reservations.find((r) => r.id === reservationId && r.buyerId === a.id) ??
     fail(404, "Reservation not found.");
   const i = s.items.find((i) => i.id === r.itemId && itemVisible(s, a, i));
-  const l = s.lists.find((l) => l.id === i?.listId);
+  const sourceListId =
+    i?.listId ?? (i?.creatorId === a.id ? i.spendingListId : undefined);
+  const l = s.lists.find(
+    (l) =>
+      l.id === sourceListId &&
+      listVisible(s, a, l) &&
+      i?.recipientIds.every((id) => l.ownerIds.includes(id)),
+  );
   const recipients = i?.recipientIds ?? [];
   return {
     ...stamp(),
@@ -155,7 +163,7 @@ function canAssignList(s: State, r: SpendingRecord) {
   const item = s.items.find((v) => v.id === reservation?.itemId);
   return !!item && !item.listId;
 }
-function listContext(
+export function listContext(
   s: State,
   a: Actor,
   listId: string | null,
@@ -182,6 +190,86 @@ function listContext(
     eventName: event?.name,
   };
 }
+/** A revision-bound review of the exact records an idea assignment will change. */
+export function spendingAssignmentPreview(s: State, a: Actor, raw: unknown) {
+  const q = z.object({ item: id, list: id }).parse(raw);
+  if (!spendingAvailable() || !spendingSettings(s, a).enabled)
+    fail(403, "Enable spending tracking first.");
+  const item = s.items.find(
+    (i) =>
+      i.id === q.item &&
+      i.creatorId === a.id &&
+      !i.listId &&
+      itemVisible(s, a, i),
+  );
+  if (!item) fail(404, "Gift idea not available.");
+  listContext(s, a, q.list, item.recipientIds);
+  const reservations = new Set(
+    s.reservations
+      .filter((r) => r.itemId === item.id && r.buyerId === a.id)
+      .map((r) => r.id),
+  );
+  const records = s.spendingRecords.filter(
+    (r) =>
+      r.ownerId === a.id &&
+      !r.listId &&
+      !r.eventId &&
+      !r.occasionId &&
+      reservations.has(r.reservationId ?? "") &&
+      !r.sourceId &&
+      (r.kind === "plan" || (r.kind === "purchase" && !r.voided)),
+  );
+  const token = createHash("sha256")
+    .update(
+      JSON.stringify([
+        a.id,
+        q,
+        item.revision,
+        records.map((r) => [r.id, r.revision]).sort(),
+      ]),
+    )
+    .digest("hex");
+  return {
+    token,
+    records: records.map((r) => ({
+      id: r.id,
+      revision: r.revision,
+      title: r.title,
+      kind: r.kind,
+      amountCents: r.amountCents,
+      voided: r.voided,
+    })),
+  };
+}
+export function assignIdeaSpending(
+  s: State,
+  a: Actor,
+  itemId: string,
+  listId: string,
+  token?: string,
+) {
+  const preview = spendingAssignmentPreview(s, a, {
+    item: itemId,
+    list: listId,
+  });
+  if (token !== preview.token)
+    fail(409, "Review the affected plans and purchases again before saving.");
+  const item = s.items.find((i) => i.id === itemId)!;
+  const context = listContext(s, a, listId, item.recipientIds);
+  const affected = new Set(preview.records.map((r) => r.id));
+  for (const r of s.spendingRecords) {
+    if (
+      affected.has(r.id) ||
+      (r.kind === "refund" &&
+        r.ownerId === a.id &&
+        affected.has(r.sourceId ?? ""))
+    ) {
+      Object.assign(r, context);
+      touch(r, a, "Assigned spending from gift idea");
+    }
+  }
+}
+
 // Called only inside the domain transaction. Importing legacy status never invents cost or dates.
 export function syncSpending(s: State, a: Actor) {
   if (!spendingAvailable()) return;
@@ -545,6 +633,57 @@ export function spendingCommand(
       });
     return { ok: true };
   }
+  if (action === "spending.update-purchase") {
+    const p = z
+      .object({
+        reservationId: id,
+        reservationRevision: z.number().int(),
+        purchased: z.number().int().min(0).max(999),
+        records: z
+          .array(
+            z.object({
+              id,
+              revision: z.number().int(),
+              amountCents: cents.nullable(),
+              date: date.nullable(),
+              planningYear: year,
+              splits: z.array(z.number().min(0).max(1000000)).min(1),
+              listId: id.nullable().optional(),
+            }),
+          )
+          .max(1000),
+      })
+      .parse(b);
+    // Validate and execute on an isolated copy so a stale detail never leaves status changed.
+    const draft = structuredClone(s);
+    const reservation =
+      draft.reservations.find(
+        (r) => r.id === p.reservationId && r.buyerId === a.id,
+      ) ?? fail(404, "Reservation not available.");
+    revision(reservation, { revision: p.reservationRevision });
+    if (new Set(p.records.map((r) => r.id)).size !== p.records.length)
+      fail(400, "Choose each purchase once.");
+    for (const values of p.records) {
+      const record = draft.spendingRecords.find(
+        (r) =>
+          r.id === values.id &&
+          r.reservationId === reservation.id &&
+          r.kind === "purchase" &&
+          !r.voided,
+      );
+      if (!record) fail(404, "Purchase not available.");
+      spendingCommand(draft, a, "spending.record", values);
+    }
+    command(draft, a, "reservations.update", {
+      id: reservation.id,
+      revision: reservation.revision,
+      quantity: reservation.quantity,
+      purchased: p.purchased,
+    });
+    syncSpending(draft, a);
+    Object.assign(s, draft);
+    return { ok: true };
+  }
   if (action === "spending.purchase") {
     const p = z
       .object({
@@ -707,6 +846,13 @@ export function spendingCommand(
       occasionId: p.occasionId ?? base?.occasionId,
       protected: base?.protected,
     };
+    if (assignment) {
+      Object.assign(r, assignment);
+      if (p.listId === null && p.eventId) {
+        r.eventId = p.eventId;
+        r.eventName = s.groupEvents.find((e) => e.id === p.eventId)?.name;
+      }
+    }
     if (!p.keepPrivate && sourceItem) {
       autoShare(s, a, r);
     } else if (!p.keepPrivate && base && shared(s, base, c)) {
@@ -714,7 +860,6 @@ export function spendingCommand(
       r.sharing = base.ownerId === payer ? base.sharing : "explicit";
       r.rule = base.ownerId === payer ? base.rule : undefined;
     } else if (!base && !p.keepPrivate) autoShare(s, a, r);
-    if (assignment) Object.assign(r, assignment);
     s.spendingRecords.push(r);
     if (reservation) syncSpending(s, { ...a, id: reservation.buyerId });
     return { id: r.id };
@@ -849,6 +994,9 @@ export function spendingHistory(s: State, a: Actor, raw: unknown) {
       year: z.coerce.number().int().min(1900).max(2200).optional(),
       page: z.coerce.number().int().min(1).max(100000).default(1),
       missingAmounts: z.enum(["actual", "planned"]).optional(),
+      item: id.optional(),
+      reservation: id.optional(),
+      unassigned: z.enum(["true", "false"]).optional(),
     })
     .parse(raw);
   const view = spendingView(s, a);
@@ -862,8 +1010,49 @@ export function spendingHistory(s: State, a: Actor, raw: unknown) {
           r.sharing !== "private"
         : r.ownerId === a.id),
   );
-  const rows = ledger
-    .filter((r) => spendingMatches(r, { ...q, shared: isShared }))
+  const targetList = q.list
+    ? s.lists.find((l) => l.id === q.list && listVisible(s, a, l))
+    : undefined;
+  const targetEvent = q.event
+    ? s.groupEvents.find(
+        (e) =>
+          e.id === q.event &&
+          s.groups.some(
+            (g) => g.id === e.groupId && g.memberIds.includes(a.id),
+          ),
+      )
+    : undefined;
+  const sourceMatches = (r: SpendingRecord) =>
+    (!q.reservation || r.reservationId === q.reservation) &&
+    (!q.item ||
+      s.reservations.some(
+        (v) => v.id === r.reservationId && v.itemId === q.item,
+      ));
+  const unassigned = ledger.filter(
+    (r) =>
+      sourceMatches(r) &&
+      r.canEdit &&
+      r.canAssignList &&
+      !r.listId &&
+      !r.eventId &&
+      !r.occasionId &&
+      spendingMatches(r, { person: q.person, year: q.year }) &&
+      (!q.list ||
+        (!!targetList &&
+          r.recipientIds.every((id) => targetList.ownerIds.includes(id)))) &&
+      (!q.event ||
+        (!!targetEvent &&
+          r.recipientIds.every((id) =>
+            targetEvent.participantIds.includes(id),
+          ))),
+  );
+  const rows = (q.unassigned === "true" ? unassigned : ledger)
+    .filter(sourceMatches)
+    .filter(
+      (r) =>
+        q.unassigned === "true" ||
+        spendingMatches(r, { ...q, shared: isShared }),
+    )
     .filter(
       (r) =>
         !q.missingAmounts ||
@@ -879,6 +1068,7 @@ export function spendingHistory(s: State, a: Actor, raw: unknown) {
     );
   return {
     records: rows.slice((q.page - 1) * 30, q.page * 30),
+    unassignedCount: unassigned.length,
     total: rows.length,
     // Count only matching authorized activity. A refund carries its purchase
     // identity even when that purchase falls outside the selected period.

@@ -310,7 +310,7 @@ Availability labels use text as well as color. Available gifts use a muted green
 
 ### Cards / Containers
 
-Gift cards are unboxed links. A contained image or labeled fallback leads, followed by recipient, title, price, privacy, and availability. Grid cards omit tags. Mobile titles clamp to three lines; full titles remain accessible and appear on gift details. Price sits above a wrapping badge group on phones; desktop metadata aligns in one compact group. The title underlines on hover. Actual images use a 1.13 aspect ratio on desktop and become square on narrow screens. Missing or failed photos use a compact 32px icon and in-flow label with an 80px minimum area that grows for enlarged text. Desktop gift details give the no-photo area a narrow 144px column beside the gift information; phones stack it above the information with a 96px minimum height. Actual photos retain their full detail layout. Replacing a failed image URL restores the photo. People, lists, purchases, and settings use open rows with bottom dividers. Invitations and installation prompts use soft rounded panels.
+Gift cards are unboxed links. A contained image or labeled fallback leads, followed by recipient, title, price, privacy, and availability. Grid cards omit tags. Mobile titles clamp to two lines; full titles remain accessible and appear on gift details. Price sits above a wrapping badge group on phones; desktop metadata aligns in one compact group. The title underlines on hover. Actual images use a 1.13 aspect ratio on desktop and become square on narrow screens. Missing or failed photos use a compact 32px icon and in-flow label with an 80px minimum area that grows for enlarged text. Desktop gift details give the no-photo area a narrow 144px column beside the gift information; phones stack it above the information with a 96px minimum height. Actual photos retain their full detail layout. Replacing a failed image URL restores the photo. People, lists, purchases, and settings use open rows with bottom dividers. Invitations and installation prompts use soft rounded panels.
 
 ### Collection actions
 
@@ -496,6 +496,14 @@ Price-drop subscriptions use the existing labeled checkbox with a 44px target.
 Pause/resume is an editor-only text action; errors appear beside these controls.
 Administration shows schedule, timezone and request counts in existing text rows.
 No chart, new color, font or elevation treatment is introduced.
+
+### Spending assignment and mobile controls
+
+Gift ideas and purchase forms show an optional Wish list for spending field outside collapsed occasion details. Explain that assignment changes spending totals without adding or sharing the gift. An idea assignment preview lists the existing unassigned plans and purchases affected before saving. Guided review uses the existing individual record editor. The Purchased view combines quantity status and separate recorded purchase entries in one dialog, retaining the fixed header and action footer.
+
+Recipient search options use a checkbox, fixed avatar, and one text column. Family groups sit directly below the name; the avatar is centered beside the complete text block. Gift search titles truncate to one line on phones while supporting text wraps. Full titles remain available after selection and to assistive technology. Empty occasion option groups are omitted. Spending status badges contain only the status label, without a leading separator.
+
+Action menus position within the visible viewport above the bottom navigation and below the sticky header. They open upward when that provides more space, remain anchored while scrolling, and scroll internally when needed. Preserve Escape, outside-click dismissal, and trigger focus restoration.
 
 ## Do's and Don'ts
 

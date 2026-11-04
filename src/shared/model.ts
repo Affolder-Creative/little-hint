@@ -169,6 +169,8 @@ export interface PriceChange extends Base {
   source: string;
 }
 export interface Item extends Base {
+  /** Creator-private spending default; never changes wish-list membership. */
+  spendingListId?: string | null;
   pricing?: PriceTracking;
   friendEntryId?: string;
   productSources?: ProductSource[];
@@ -359,6 +361,7 @@ export interface Preferences extends Base {
   smsConsentedDailyLimit?: number;
 }
 export interface ImportDraft {
+  spendingListId?: string | null;
   friendEntryId?: string;
   kind?: "item" | "idea";
   recipientId?: string;

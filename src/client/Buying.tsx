@@ -1,3 +1,4 @@
+import { UpdatePurchase } from "./UpdatePurchase";
 import { useBuyingHistory } from "./useBuyingHistory";
 import { SpendingSummary, PurchaseForm } from "./Spending";
 import { Action } from "./Action";
@@ -108,52 +109,63 @@ export function Buying() {
                           }}
                         />,
                       )
-                    : open(
-                        "Update purchase",
-                        <Form
-                          submit="Save purchase status"
-                          onSubmit={async (f) => {
-                            await mutate("reservations/update", {
-                              id: r.id,
-                              revision: r.revision,
-                              quantity: r.quantity,
-                              purchased: Number(value(f, "purchased")),
-                            });
-                            close();
-                            toast("Purchase status updated.");
-                            if (
-                              !matchesView({
+                    : world.spendingEnabled
+                      ? open(
+                          "Update purchase",
+                          <UpdatePurchase
+                            reservation={r}
+                            onSuccess={() => {
+                              toast("Purchase updated.");
+                              focusView();
+                            }}
+                          />,
+                        )
+                      : open(
+                          "Update purchase",
+                          <Form
+                            submit="Save purchase status"
+                            onSubmit={async (f) => {
+                              await mutate("reservations/update", {
+                                id: r.id,
+                                revision: r.revision,
                                 quantity: r.quantity,
                                 purchased: Number(value(f, "purchased")),
-                              })
-                            )
-                              focusView();
-                          }}
-                        >
-                          <p>
-                            <strong>{r.titleSnapshot}</strong>
-                            {r.item
-                              ? ` · For ${r.item.recipientNames.join(" & ")}`
-                              : ""}
-                          </p>
-                          <Field label="Quantity purchased">
-                            <input
-                              name="purchased"
-                              type="number"
-                              min="0"
-                              max={r.quantity}
-                              defaultValue={r.purchased}
-                              required
-                            />
-                          </Field>
-                          <p>
-                            {isPrivateIdea(r.item)
-                              ? privateIdeaDescription
-                              : "Mark what you have bought so others know it is covered."}{" "}
-                            If your plans change, choose Cancel reservation.
-                          </p>
-                        </Form>,
-                      )
+                              });
+                              close();
+                              toast("Purchase status updated.");
+                              if (
+                                !matchesView({
+                                  quantity: r.quantity,
+                                  purchased: Number(value(f, "purchased")),
+                                })
+                              )
+                                focusView();
+                            }}
+                          >
+                            <p>
+                              <strong>{r.titleSnapshot}</strong>
+                              {r.item
+                                ? ` · For ${r.item.recipientNames.join(" & ")}`
+                                : ""}
+                            </p>
+                            <Field label="Quantity purchased">
+                              <input
+                                name="purchased"
+                                type="number"
+                                min="0"
+                                max={r.quantity}
+                                defaultValue={r.purchased}
+                                required
+                              />
+                            </Field>
+                            <p>
+                              {isPrivateIdea(r.item)
+                                ? privateIdeaDescription
+                                : "Mark what you have bought so others know it is covered."}{" "}
+                              If your plans change, choose Cancel reservation.
+                            </p>
+                          </Form>,
+                        )
                 }
               >
                 Update purchase

@@ -25,3 +25,10 @@
 .entry-actions-content :is(.button, .text-button):hover {
   background: var(--bg);
 }
+
+.entry-actions[open] > .entry-actions-content {
+  position: fixed;
+  inset-inline-end: auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
