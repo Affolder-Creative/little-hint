@@ -47,6 +47,8 @@ typography:
     fontSize: "clamp(36px, 9.7vw, 54px)"
   hero-description:
     fontSize: "20px"
+  hero-support:
+    fontSize: "15px"
   hero-description-phone:
     fontSize: "17px"
   section-description:
@@ -95,6 +97,7 @@ components:
     padding: "13px 22px"
   button-secondary-hover:
     backgroundColor: "{colors.blush}"
+    textColor: "{colors.accent-hover}"
   screen-detail:
     backgroundColor: "{colors.bg}"
     rounded: "{rounded.screen-detail}"
@@ -151,7 +154,7 @@ Component and responsive roles in frontmatter describe the existing page. The si
 
 Fraunces, with Georgia and serif fallbacks, supplies every heading. Heading weight, tight tracking, balanced wrapping, and the `SOFT` 65 / `WONK` 1 variable settings remain consistent. The body and controls use the platform sans stack. The logo remains artwork rather than recreated type.
 
-Display, headline, and feature title form a descending serif hierarchy. Feature and hosting copy use the body role; notes and captions step down to 12–14px. The hero description uses 20px and 1.55 line height on larger screens, then 17px on phones. Feature paragraphs cap at 52ch, with hosting explanations capped at 60ch.
+Display, headline, and feature title form a descending serif hierarchy. Feature and hosting copy use the body role; notes and captions step down to 12–14px. The hero description uses 20px and 1.55 line height on larger screens, then 17px on phones. The muted hero supporting sentence uses 15px type, a 65ch measure, and a 10px top gap. Feature paragraphs cap at 52ch, with hosting explanations capped at 60ch.
 
 At 600px and below, the hero uses `clamp(36px, 9.7vw, 54px)`, feature titles use 25px, and the self-host heading uses 33px. These are responsive adjustments rather than another type family.
 
@@ -179,7 +182,7 @@ Actions have gently rounded corners using the action radius. Repeated screenshot
 
 ### Buttons
 
-Primary buttons pair sienna backgrounds with paper text. Secondary buttons use sienna text and a one-pixel sienna outline over a transparent background. Both have a 50px minimum height and aligned SVG icons. Primary hover deepens the background; secondary hover fills with blush. Background transitions take 160ms with ease-out and disappear under reduced motion.
+Primary buttons pair sienna backgrounds with paper text. Secondary buttons use sienna text and a one-pixel sienna outline over a transparent background. Both have a 50px minimum height and aligned SVG icons. Primary hover deepens the background; secondary hover fills with blush and deepens the text to the accent-hover color. Background transitions take 160ms with ease-out and disappear under reduced motion.
 
 All links receive a visible sienna focus outline, 3px wide with 5px offset. Inline text links keep an underline and at least 44px height. They use sienna text, with 14px semibold type.
 
@@ -189,7 +192,7 @@ Header navigation uses plain sans text, small SVG icons where needed, and a 44px
 
 ### Screenshot details
 
-Feature captures sit inside flat ivory containers with rounded corners and modest padding. These are real app images, not reconstructed widgets. Preserve the original screenshot proportions, meaningful alt text, and the visible statement that data is illustrative. `marketing/assets/screens/capture.json` records the unmodified React capture source, isolated `example.test` fixtures, and capture command.
+Feature captures sit inside flat ivory containers with rounded corners and modest padding. These are real app images, not reconstructed widgets. Preserve the original screenshot proportions, meaningful alt text, and the visible statement that data is illustrative. `marketing/assets/screens/capture.json` records the unmodified React capture source, isolated `example.test` fixtures, and capture command. Product photos are original unbranded demo assets, with prompts and provenance stored beside the capture fixtures.
 
 ### Capability row
 

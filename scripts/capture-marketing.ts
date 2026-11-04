@@ -1,8 +1,9 @@
 /** Real app UI, isolated demonstration records. Never connects to a database. */
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import assert from "node:assert/strict";
-import { chromium } from "@playwright/test";
+import { spendingView } from "../src/server/spending";
+import { chromium, expect } from "@playwright/test";
 import { createServer } from "vite";
 import sharp from "sharp";
 import { emptyState, type Actor, type List } from "../src/shared/model";
@@ -32,7 +33,7 @@ state.people.push(...people);
 const group = {
   ...stamp(),
   name: "Our favorite people",
-  ownerId: actors[0].id,
+  ownerId: actors[1].id,
   memberIds: actors.map((a) => a.id),
 };
 state.groups.push(group);
@@ -95,10 +96,19 @@ const gifts = [
     tags: ["Coffee"],
   },
 ];
+gifts.forEach((gift, index) =>
+  state.media.push({
+    ...stamp(),
+    id: `marketing-${index}`,
+    userId: actors[gift.person].id,
+    file: `gift-${index}.webp`,
+  }),
+);
 const items = gifts.map(
-  ({ person, ...gift }) =>
+  ({ person, ...gift }, index) =>
     command(state, actors[person], "items.create", {
       ...gift,
+      image: `/api/v1/media/marketing-${index}`,
       listId: lists[person].id,
       quantity: 1,
     }) as { id: string },
@@ -141,6 +151,15 @@ drawn.assignments = people.map((p, i) => [
   p.id,
   people[(i + 1) % people.length].id,
 ]);
+command(state, actors[0], "gift-preferences.update", {
+  personId: people[0].id,
+  categoryIds: [],
+  interests: "Coffee and weekend walks",
+  likes: "",
+  avoid: "",
+  groupIds: [],
+  setup: "done",
+});
 const demo = world(state, actors[0]);
 assert.equal(demo.exchanges[0].myAssignments.length, 1);
 assert.ok(
@@ -173,24 +192,52 @@ try {
     localStorage.setItem("little-hint:theme", "light");
     localStorage.setItem("little-hint:install", "never");
   });
-  // All API reads are local projections; unknown requests fail closed.
-  await context.route("**/api/**", (route) =>
-    route.request().url().endsWith("/api/v1/world")
-      ? route.fulfill({ json: demo })
-      : route.fulfill({
-          status: 404,
-          json: { error: "Not available in screenshot capture" },
-        }),
-  );
-  const page = await context.newPage();
   const errors: string[] = [];
+  // Only local assets and explicit in-memory API projections are permitted.
+  await context.route("**/*", async (route) => {
+    const url = new URL(route.request().url());
+    if (url.origin !== new URL(origin).origin) {
+      errors.push(`Unexpected external request: ${url.origin}${url.pathname}`);
+      return route.abort();
+    }
+    if (!url.pathname.startsWith("/api/")) return route.continue();
+    if (url.pathname === "/api/v1/world") return route.fulfill({ json: demo });
+    if (url.pathname === "/api/v1/spending")
+      return route.fulfill({ json: spendingView(state, actors[0]) });
+    if (
+      ["/api/v1/buying/contributions", "/api/v1/buying/cancelled"].includes(
+        url.pathname,
+      )
+    )
+      return route.fulfill({ json: { rows: [], nextCursor: null } });
+    const photo = url.pathname.match(/^\/api\/v1\/media\/marketing-([0-5])$/);
+    if (photo)
+      return route.fulfill({
+        contentType: "image/webp",
+        body: await readFile(
+          `scripts/fixtures/marketing/gift-${photo[1]}.webp`,
+        ),
+      });
+    errors.push(`Unexpected API request: ${url.pathname}`);
+    return route.fulfill({
+      status: 404,
+      json: { error: "Not available in screenshot capture" },
+    });
+  });
+  const page = await context.newPage();
   page.on("pageerror", (e) => errors.push(e.message));
   async function visit(path: string) {
     await page.goto(new URL(path, origin).href);
     await page.locator("main h1").waitFor();
     await page.evaluate(() => document.fonts.ready);
+    await page.waitForLoadState("networkidle");
   }
   async function save(name: string, selector?: string) {
+    await page.waitForFunction(() =>
+      [...document.images]
+        .filter((img) => img.getBoundingClientRect().top < innerHeight)
+        .every((img) => img.complete && img.naturalWidth > 0),
+    );
     const buffer = selector
       ? await page.locator(selector).screenshot()
       : await page.screenshot();
@@ -210,11 +257,25 @@ try {
   await save("home-mobile");
   await page.setViewportSize({ width: 720, height: 820 });
   await visit("/buying");
+  await page.getByRole("button", { name: /^Purchased \(/ }).click();
+  await expect(page.locator(".buying-row").first()).toContainText(
+    "A ceramic pour-over set",
+  );
+  await expect(
+    page.locator(".buying-row").first().locator("img"),
+  ).toBeVisible();
   await save("buying", ".buying-list");
   await visit("/exchanges");
   await save("exchange", ".exchange-panel");
   await page.setViewportSize({ width: 390, height: 844 });
   await visit("/buying");
+  await page.getByRole("button", { name: /^Purchased \(/ }).click();
+  await expect(page.locator(".buying-row").first()).toContainText(
+    "A ceramic pour-over set",
+  );
+  await expect(
+    page.locator(".buying-row").first().locator("img"),
+  ).toBeVisible();
   await save("buying-mobile", ".buying-list");
   await save("buying-detail", ".buying-row:first-child");
   await visit("/exchanges");
@@ -227,6 +288,8 @@ try {
         source: "Unmodified React app rendered by Playwright",
         data: "Isolated example.test fixtures using domain commands and world projection; no database",
         command: "npm run marketing:capture",
+        photos:
+          "Original AI-generated unbranded demo products; local sources and prompts in scripts/fixtures/marketing",
         screenshots: [
           "home-desktop.webp",
           "home-mobile.webp",
