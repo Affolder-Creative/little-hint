@@ -51,6 +51,7 @@ test("generated worker bounds navigation waits without caching private responses
         },
         URL,
         AbortController,
+        Response,
         fetch,
         setTimeout: (fn, ms) => {
           timeout = ms;
@@ -129,6 +130,36 @@ test("generated worker bounds navigation waits without caching private responses
         assert.deepEqual(w.puts, []);
         assert.equal(w.request("/uploads/private.jpg", "cors"), undefined);
         assert.equal(w.request("/assets/unknown.js", "cors"), undefined);
+      },
+    );
+    for (const status of [500, 502, 503, 504]) {
+      await t.test(
+        `HTTP ${status} navigation uses the cached shell`,
+        async () => {
+          const w = worker(
+            async () => new Response("proxy failure", { status }),
+          );
+          assert.equal(await w.request("/lists/private-id"), "cached shell");
+          assert.deepEqual(w.puts, []);
+        },
+      );
+    }
+    await t.test(
+      "missing shell preserves the server error or returns a network error",
+      async () => {
+        const response = new Response("unavailable", { status: 503 });
+        assert.equal(
+          await worker(async () => response, null).request("/"),
+          response,
+        );
+        assert.equal(
+          (
+            await worker(async () => {
+              throw new Error("offline");
+            }, null).request("/")
+          ).type,
+          "error",
+        );
       },
     );
     await t.test("successful navigation uses the network", async () => {

@@ -4259,3 +4259,44 @@ a.button:is(:hover, :focus, :active),
 .item-price .detail-price {
   margin: 0;
 }
+
+/* Connection fallback shares the app's quiet gift-notebook identity. */
+.connection-screen {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 40px;
+  padding: max(40px, env(safe-area-inset-top))
+    max(24px, env(safe-area-inset-right)) max(40px, env(safe-area-inset-bottom))
+    max(24px, env(safe-area-inset-left));
+  text-align: center;
+}
+.connection-intro {
+  width: 100%;
+  max-width: 480px;
+}
+.connection-intro .logo {
+  width: 200px;
+  max-width: 100%;
+  margin: 0 auto 40px;
+}
+.connection-intro h1 {
+  margin: 0 0 16px;
+  text-wrap: balance;
+}
+.connection-intro p {
+  margin: 0 auto 24px;
+  max-width: 38ch;
+  color: var(--muted);
+}
+.connection-drafts {
+  width: 100%;
+  max-width: 450px;
+  display: grid;
+  gap: 24px;
+}
+.connection-drafts .form {
+  text-align: left;
+}

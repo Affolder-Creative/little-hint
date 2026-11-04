@@ -511,6 +511,10 @@ Recipient search options use a checkbox, fixed avatar, and one text column. Fami
 
 Action menus position within the visible viewport above the bottom navigation and below the sticky header. They open upward when that provides more space, remain anchored while scrolling, and scroll internally when needed. Preserve Escape, outside-click dismissal, and trigger focus restoration.
 
+### Connection fallback
+
+Connection screens use approved horizontal artwork, the existing headline and body typography, and the current light or dark palette. Center a narrow text group with generous space after the logo, then a primary retry action. Supporting text uses the muted foreground. Personal draft controls follow as a separate, quieter group. Preserve mobile safe-area padding, visible focus, and a stable layout during retries. A playful headline may introduce the problem; the explanation and recovery action stay plain.
+
 ## Do's and Don'ts
 
 ### Do:

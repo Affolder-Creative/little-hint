@@ -91,6 +91,7 @@ import type { World } from "../shared/model";
 import {
   api,
   ApiError,
+  isConnectionError,
   clearPersonalData,
   dollars,
   setApiAccount,
@@ -166,7 +167,7 @@ export function App() {
     queryFn: async ({ signal }): Promise<World | null> => {
       try {
         const next = hydrateWorld(
-          await api<World>("world", undefined, { signal }),
+          await api<World>("world", undefined, { signal, timeoutMs: 10000 }),
         );
         if (!signal.aborted) await isolateAccount(next.me.id);
         return next;
@@ -180,6 +181,10 @@ export function App() {
     },
     refetchInterval: (q) => (q.state.data ? 20000 : false),
   });
+  const startupConnectionFailure = useRef(false);
+  if (query.error)
+    startupConnectionFailure.current = isConnectionError(query.error);
+  if (query.data !== undefined) startupConnectionFailure.current = false;
   useProductImages(query.data, location.key, () => {
     void query.refetch();
   });
@@ -262,6 +267,19 @@ export function App() {
     return (
       <>
         <OfflineDrafts dark={dark} />
+        <UpdateNotice />
+      </>
+    );
+  if (query.data === undefined && startupConnectionFailure.current)
+    return (
+      <>
+        <ConnectionScreen
+          dark={dark}
+          busy={query.isFetching}
+          onRetry={() => {
+            void query.refetch();
+          }}
+        />
         <UpdateNotice />
       </>
     );
@@ -546,6 +564,46 @@ export function App() {
     </AppContext.Provider>
   );
 }
+function ConnectionScreen({
+  dark,
+  offline = false,
+  busy = false,
+  onRetry,
+  children,
+}: {
+  dark: boolean;
+  offline?: boolean;
+  busy?: boolean;
+  onRetry: () => void;
+  children?: ReactNode;
+}) {
+  return (
+    <main className="connection-screen">
+      <div className="connection-intro">
+        <Logo dark={dark} />
+        <h1>
+          {offline
+            ? "A little out of touch."
+            : "Well, this wasn't on the wish list."}
+        </h1>
+        <p>
+          {offline
+            ? "Your device appears to be offline. Reconnect to open your wish lists."
+            : "We can't reach Little Hint right now. Try again in a moment."}
+        </p>
+        <button className="button" disabled={busy} onClick={onRetry}>
+          {busy ? "Trying again…" : "Try again"}
+        </button>
+        {!offline && (
+          <span className="sr-only" role="status">
+            {busy ? "Trying to connect to Little Hint." : ""}
+          </span>
+        )}
+      </div>
+      {children && <div className="connection-drafts">{children}</div>}
+    </main>
+  );
+}
 function OfflineDrafts({ dark }: { dark: boolean }) {
   const account = localStorage.getItem("little-hint:last-account");
   const enabled =
@@ -553,13 +611,7 @@ function OfflineDrafts({ dark }: { dark: boolean }) {
   const [saved, setSaved] = useState(false);
   const [clearing, setClearing] = useState(false);
   return (
-    <div className="offline-page">
-      <Logo dark={dark} />
-      <h1>A little pause.</h1>
-      <p>
-        You’re offline. Shared lists and buying details are available when you
-        reconnect.
-      </p>
+    <ConnectionScreen dark={dark} offline onRetry={() => location.reload()}>
       {enabled ? (
         <Form
           submit="Save personal draft"
@@ -596,9 +648,6 @@ function OfflineDrafts({ dark }: { dark: boolean }) {
           your own wish lists here.
         </p>
       )}
-      <button className="button secondary" onClick={() => location.reload()}>
-        Try connecting again
-      </button>
       <button className="text-button" onClick={() => setClearing(true)}>
         Clear personal data on this device
       </button>
@@ -627,7 +676,7 @@ function OfflineDrafts({ dark }: { dark: boolean }) {
           </div>
         </Modal>
       )}
-    </div>
+    </ConnectionScreen>
   );
 }
 function Home() {

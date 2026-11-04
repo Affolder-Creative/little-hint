@@ -53,7 +53,7 @@ test("static-only offline caching, private draft review, and sign-out cleanup", 
   await context.setOffline(true);
   await page.reload();
   await expect(
-    page.getByRole("heading", { name: "A little pause." }),
+    page.getByRole("heading", { name: "A little out of touch." }),
   ).toBeVisible();
   await page
     .getByLabel("Item name", { exact: true })

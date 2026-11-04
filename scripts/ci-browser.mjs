@@ -135,7 +135,11 @@ try {
         ]
       : []),
     ...(suite === "pwa"
-      ? ["tests/update-notice.spec.ts", "tests/update-lifecycle.spec.ts"]
+      ? [
+          "tests/update-notice.spec.ts",
+          "tests/update-lifecycle.spec.ts",
+          "tests/pwa-fallback.spec.ts",
+        ]
       : []),
     ...(suite === "notifications"
       ? ["tests/channel-availability.spec.ts"]

@@ -3,7 +3,12 @@ vi.mock("../src/client/image-store", () => ({ clearProductImages: vi.fn() }));
 vi.mock("better-auth/react", () => ({ createAuthClient: () => ({}) }));
 vi.mock("better-auth/client/plugins", () => ({ emailOTPClient: () => ({}) }));
 vi.mock("@better-auth/passkey/client", () => ({ passkeyClient: () => ({}) }));
-import { api, setApiAccount } from "../src/client/api";
+import {
+  api,
+  setApiAccount,
+  ApiError,
+  ApiTimeoutError,
+} from "../src/client/api";
 import { trustedProxies } from "../src/server/proxy";
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -82,4 +87,45 @@ it("accepts explicit proxy networks and rejects unsafe trust configurations", ()
     "127.0.0.1,",
   ])
     expect(() => trustedProxies(value)).toThrow();
+});
+
+it.each([401, 502, 503, 504])(
+  "preserves HTTP %s for non-JSON responses",
+  async (status) => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("<html>Unavailable</html>", { status })),
+    );
+    await expect(api("world")).rejects.toMatchObject({ status });
+  },
+);
+it("bounds stalled headers and response bodies and aborts the request", async () => {
+  for (const body of [false, true]) {
+    let signal: AbortSignal;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_: unknown, options: any) => {
+        signal = options.signal;
+        return body
+          ? new Response(new ReadableStream({ start() {} }))
+          : new Promise<Response>(() => {});
+      }),
+    );
+    await expect(
+      api("world", undefined, { timeoutMs: 10 }),
+    ).rejects.toBeInstanceOf(ApiTimeoutError);
+    expect(signal!.aborted).toBe(true);
+  }
+});
+it("preserves JSON error messages", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(
+      async () =>
+        new Response(JSON.stringify({ error: "Please wait." }), {
+          status: 429,
+        }),
+    ),
+  );
+  await expect(api("world")).rejects.toEqual(new ApiError(429, "Please wait."));
 });
