@@ -2,6 +2,7 @@
   "source": "Unmodified React app rendered by Playwright",
   "data": "Isolated example.test fixtures using domain commands and world projection; no database",
   "command": "npm run marketing:capture",
+  "photos": "Original AI-generated unbranded demo products; local sources and prompts in scripts/fixtures/marketing",
   "screenshots": [
     "home-desktop.webp",
     "home-mobile.webp",

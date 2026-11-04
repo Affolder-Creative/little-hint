@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-28T00:31:57.849465+00:00",
+  "generatedAt": "2026-11-04T18:54:44.762489+00:00",
   "title": "Design System: Little Hint marketing",
   "extensions": {
     "colorMeta": {
@@ -253,6 +253,9 @@
       "self-host-title-phone": {
         "displayName": "Self host title phone",
         "purpose": ".self-host h2 at max-width 600px"
+      },
+      "hero-support": {
+        "purpose": ".hero-support; muted supporting sentence, max-width 65ch"
       }
     },
     "shadows": [
@@ -301,10 +304,7 @@
         "purpose": ".window-bar > span:not(.window-title) only"
       }
     },
-    "sourceFiles": [
-      "marketing/index.html",
-      "marketing/style.css"
-    ],
+    "sourceFiles": ["marketing/index.html", "marketing/style.css"],
     "tonalRampNote": "Synthesized OKLCH previews at constant hue/chroma; these ramps are panel metadata, not additional marketing tokens."
   },
   "components": [
@@ -313,7 +313,7 @@
       "kind": "button",
       "refersTo": "button-primary",
       "description": "Marketing action link with a visible keyboard focus outline.",
-      "html": "<a class=\"ds-button-primary\" href=\"#self-host\">Self-host Little Hint</a>",
+      "html": "<a class=\"ds-button-primary\" href=\"#self-host\">Set up Little Hint</a>",
       "css": ".ds-button-primary{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:50px;padding:13px 22px;border:1px solid transparent;border-radius:8px;font-size:15px;font-weight:600;line-height:1.4;text-decoration:none;transition:background-color 160ms ease-out;font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;background:var(--accent,#aa4d37);color:var(--paper,#fffdf9);}.ds-button-primary:hover{background:var(--accent-hover,#913e2c)}.ds-button-primary:focus-visible{outline:3px solid var(--accent,#aa4d37);outline-offset:5px;border-radius:3px}@media(prefers-reduced-motion:reduce){.ds-button-primary{transition:none}}"
     },
     {
@@ -322,7 +322,7 @@
       "refersTo": "button-secondary",
       "description": "Marketing action link with a visible keyboard focus outline.",
       "html": "<a class=\"ds-button-secondary\" href=\"#self-host\">View on GitHub</a>",
-      "css": ".ds-button-secondary{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:50px;padding:13px 22px;border:1px solid transparent;border-radius:8px;font-size:15px;font-weight:600;line-height:1.4;text-decoration:none;transition:background-color 160ms ease-out;font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;color:var(--accent,#aa4d37);background:transparent;border-color:var(--accent,#aa4d37);}.ds-button-secondary:hover{background:var(--blush,#f4e4da)}.ds-button-secondary:focus-visible{outline:3px solid var(--accent,#aa4d37);outline-offset:5px;border-radius:3px}@media(prefers-reduced-motion:reduce){.ds-button-secondary{transition:none}}"
+      "css": ".ds-button-secondary{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:50px;padding:13px 22px;border:1px solid transparent;border-radius:8px;font-size:15px;font-weight:600;line-height:1.4;text-decoration:none;transition:background-color 160ms ease-out;font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;color:var(--accent,#aa4d37);background:transparent;border-color:var(--accent,#aa4d37);}.ds-button-secondary:hover{color:var(--accent-hover,#913e2c);background:var(--blush,#f4e4da)}.ds-button-secondary:focus-visible{outline:3px solid var(--accent,#aa4d37);outline-offset:5px;border-radius:3px}@media(prefers-reduced-motion:reduce){.ds-button-secondary{transition:none}}"
     },
     {
       "name": "Text link",
@@ -335,7 +335,7 @@
       "name": "Header navigation",
       "kind": "nav",
       "description": "Plain links with generous keyboard and pointer targets.",
-      "html": "<nav class=\"ds-nav\" aria-label=\"Main navigation\"><a href=\"#features\">Features</a><a href=\"#self-host\">Self-host</a></nav>",
+      "html": "<nav class=\"ds-nav\" aria-label=\"Main navigation\"><a href=\"#features\">Features</a><a href=\"#self-host\">Set up</a></nav>",
       "css": ".ds-nav{display:flex;gap:32px;align-items:center;font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;}.ds-nav a{display:inline-flex;align-items:center;min-height:44px;font-size:14px;text-decoration:none;color:var(--ink,#2b201d);text-underline-offset:5px}.ds-nav a:hover{color:var(--accent,#aa4d37);text-decoration:underline}.ds-nav a:focus-visible{outline:3px solid var(--accent,#aa4d37);outline-offset:5px;border-radius:3px}@media(max-width:600px){.ds-nav{justify-content:center;width:100%;gap:30px}.ds-nav a{font-size:13px}}"
     },
     {
@@ -356,7 +356,7 @@
   ],
   "narrative": {
     "northStar": "See it together",
-    "overview": "This record covers the finished static marketing page in `marketing/index.html` and `marketing/style.css`. It follows the user's selected concept B in `design/marketing-concepts/b-see-it-together.png`. The application has its own root `DESIGN.md`; this document does not change that system.\n\nIvory backgrounds, sienna actions, blush sections, and Fraunces headings surround actual app captures. The approved SVG logo supplies the lettering. The marketing page stays light regardless of system theme. Product screenshots explain gift coordination, while compact feature descriptions keep the page short.",
+    "overview": "**Creative North Star: \"See it together\"**\n\nRepository paths in this record are relative to the repository root. Copy follows the voice and terminology in `PRODUCT.md`. The headline is \u201cGo ahead.\nDrop a hint.\u201d Setup instructions explain self-hosting plainly. Screenshots and the\nsocial preview use the same vocabulary as the app.\n\nThis record covers the finished static marketing page in `marketing/index.html` and `marketing/style.css`. It follows the user's selected concept B in `design/marketing-concepts/b-see-it-together.png`. The application has its own root `DESIGN.md`; this document does not change that system.\n\nIvory backgrounds, sienna actions, blush sections, and Fraunces headings surround actual app captures. The approved SVG logo supplies the lettering. The marketing page stays light regardless of system theme. Product screenshots explain gift coordination, while compact feature descriptions keep the page short.\n\n**Key Characteristics:**\n\n- Approved logo artwork, with Fraunces for page headings.\n- Warm, fixed light colors and restrained borders.\n- Real app screenshots with disclosed illustrative fixtures.\n- Compact feature rows and responsive device presentation.",
     "keyCharacteristics": [
       "Approved logo artwork, with Fraunces for page headings.",
       "Warm, fixed light colors and restrained borders.",
