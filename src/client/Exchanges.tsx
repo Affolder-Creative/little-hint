@@ -234,7 +234,10 @@ export function Exchanges() {
                 <div className="assignments">
                   <h3>Who you’re giving to</h3>
                   {e.myAssignments.map(([g, r]) => (
-                    <Link to={`/people/${r}`} key={`${g}:${r}`}>
+                    <Link
+                      to={`/people/${r}?shopping=${encodeURIComponent(`${e.id}:${g}:${r}`)}`}
+                      key={`${g}:${r}`}
+                    >
                       <Avatar
                         name={
                           world.people.find((p) => p.id === r)?.name ??

@@ -135,7 +135,9 @@ try {
         ]
       : []),
     ...(suite === "management" ? ["tests/account-closure.spec.ts"] : []),
-    ...(suite === "group-events" ? ["tests/repeat-event.spec.ts"] : []),
+    ...(suite === "group-events"
+      ? ["tests/repeat-event.spec.ts", "tests/surprise-privacy.spec.ts"]
+      : []),
     ...(suite === "pwa"
       ? [
           "tests/update-notice.spec.ts",

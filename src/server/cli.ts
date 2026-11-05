@@ -1,6 +1,7 @@
+import { privacyPreflight } from "./privacy-review";
 import "dotenv/config";
 import { randomUUID } from "node:crypto";
-import { pool, migrate, transact } from "./db";
+import { pool, migrate, transact, readState } from "./db";
 import { stamp, command, activateAccount } from "./domain";
 import type { Actor } from "../shared/model";
 import {
@@ -16,7 +17,9 @@ const cmd = process.argv[2];
 try {
   if (process.env.APP_ENV === "preview") assertPreviewDatabase();
   if (process.env.APP_ENV === "staging") assertStagingDatabase();
-  if (cmd === "migrate") {
+  if (cmd === "privacy-preflight") {
+    console.log(JSON.stringify(privacyPreflight(await readState()), null, 2));
+  } else if (cmd === "migrate") {
     await migrate();
     console.log("Database migrations applied.");
   } else if (cmd === "seed-preview" || cmd === "ensure-preview") {

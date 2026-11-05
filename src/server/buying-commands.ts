@@ -1,3 +1,4 @@
+import { resolveShoppingContext } from "./shopping-context";
 import { z } from "zod";
 import type { State, Actor, Reservation, Exchange } from "../shared/model";
 
@@ -41,6 +42,7 @@ export function buyingCommand(
         .object({
           itemId: id,
           quantity: z.number().int().min(1).max(999),
+          ordinary: z.boolean().optional(),
           exchangeId: id.optional(),
           exchangeRecipientId: id.optional(),
           giverId: id.optional(),
@@ -50,6 +52,7 @@ export function buyingCommand(
       if (recipient(s, a, i))
         fail(403, "You cannot reserve a gift for yourself.");
       if (archived(s, i)) fail(409, "This gift is archived.");
+      resolveShoppingContext(s, a, i, p);
       if (p.exchangeId) {
         const e =
           s.exchanges.find(
@@ -96,6 +99,7 @@ export function buyingCommand(
       const r: Reservation = {
         ...stamp(),
         ...p,
+        ordinary: !p.exchangeId,
         buyerId: a.id,
         purchased: 0,
         former: false,

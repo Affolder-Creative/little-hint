@@ -460,9 +460,29 @@ describe("privacy and reconciliation edge cases", () => {
       r = reserve(f);
     r.exchangeId = stamp().id;
     r.giverId = f.people[1].id;
+    const context = {
+      exchangeId: r.exchangeId,
+      giverId: r.giverId,
+      exchangeRecipientId: f.people[0].id,
+    };
+    f.s.exchanges.push({
+      ...stamp(),
+      id: r.exchangeId,
+      name: "Secret exchange",
+      groupId: f.group.id,
+      organizerId: f.actors[0].id,
+      participantIds: f.people.map((p) => p.id),
+      count: 1,
+      excludeHousehold: false,
+      exclusions: [],
+      status: "drawn",
+      assignments: [[r.giverId, f.people[0].id]],
+    });
+
     f.s.notices = [];
     command(f.s, f.actors[1], "comments.create", {
       itemId: f.item.id,
+      ...context,
       body: "Secret exchange purchase",
     });
     command(f.s, f.actors[1], "reservations.update", {

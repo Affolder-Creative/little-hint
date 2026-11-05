@@ -1,3 +1,4 @@
+import { shoppingLink } from "./shopping-context";
 import { Price } from "./Price";
 import { ProductImage } from "./ProductImage";
 import { prefetchProductImage } from "./image-store";
@@ -32,7 +33,7 @@ import {
   LockKeyhole,
   Eye,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useOnline } from "./pwa";
 import { useApp } from "./context";
 import type { GiftView } from "../shared/model";
@@ -596,6 +597,7 @@ export function GiftCard({
   sourceListName?: string;
   headingLevel?: 2 | 3;
 }) {
+  const location = useLocation();
   const Heading = headingLevel === 2 ? "h2" : "h3";
   return (
     <Link
@@ -605,7 +607,7 @@ export function GiftCard({
       onFocus={() => gift.image && prefetchProductImage(gift.image, true)}
       onTouchStart={() => gift.image && prefetchProductImage(gift.image, true)}
       className="gift-card"
-      to={`/gift/${gift.id}`}
+      to={shoppingLink(`/gift/${gift.id}`, location.search)}
       data-navigation-focus={`gift-${gift.id}`}
     >
       <GiftPhoto gift={gift} />

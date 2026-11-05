@@ -4323,3 +4323,12 @@ a.button:is(:hover, :focus, :active),
   justify-self: center;
   text-align: center;
 }
+
+.shopping-context {
+  max-width: 42rem;
+  margin-bottom: 1.5rem;
+}
+.shopping-context > p {
+  margin: 0.5rem 0 0;
+  overflow-wrap: anywhere;
+}

@@ -1,3 +1,8 @@
+import {
+  shoppingChoices,
+  shoppingLink,
+  shoppingPayload,
+} from "./shopping-context";
 import type { GiftView } from "../shared/model";
 import { CollectionStatus, useCollection } from "./Pagination";
 import { Price, PriceControls } from "./Price";
@@ -835,6 +840,7 @@ function People() {
   );
 }
 function PersonPage() {
+  const shoppingLocation = useLocation();
   const { id } = useParams();
   const { world, open } = useApp();
   const [params, setParams] = useSearchParams();
@@ -1003,7 +1009,10 @@ function PersonPage() {
                   <li key={list.id}>
                     <Link
                       className="person-list-link"
-                      to={`/lists/${list.id}`}
+                      to={shoppingLink(
+                        `/lists/${list.id}`,
+                        shoppingLocation.search,
+                      )}
                       aria-labelledby={`person-list-name-${list.id}`}
                       aria-describedby={`person-list-type-${list.id}`}
                     >
@@ -1087,6 +1096,7 @@ function PersonPage() {
 }
 function GiftDetail() {
   const noteLocation = useLocation();
+  const [, setShoppingParams] = useSearchParams();
   const { id } = useParams();
   const { world, open, mutate, toast, close } = useApp();
   const detailQuery = useCollection<GiftView>(`items/${id}`);
@@ -1094,7 +1104,12 @@ function GiftDetail() {
     ? detailQuery.data
     : world.items.find((i) => i.id === id);
   const [quantity, setQuantity] = useState(1),
-    [exchange, setExchange] = useState("");
+    [exchange, setExchange] = useState(
+      new URLSearchParams(noteLocation.search).get("shopping") ?? "",
+    );
+  useEffect(() => {
+    setExchange(new URLSearchParams(noteLocation.search).get("shopping") ?? "");
+  }, [id, noteLocation.search]);
   if (world.paged && (detailQuery.isPending || detailQuery.error))
     return <CollectionStatus query={detailQuery} />;
   if (!gift)
@@ -1124,19 +1139,7 @@ function GiftDetail() {
     (total, reservation) => total + (reservation.purchased ?? 0),
     0,
   );
-  const choices = world.exchanges.flatMap((e) =>
-    e.status === "drawn" && !e.archived
-      ? e.myAssignments
-          .filter(([, r]) => gift.recipientIds.includes(r))
-          .map(([g, r]) => ({
-            key: `${e.id}:${g}:${r}`,
-            label: `${e.name} · ${world.people.find((p) => p.id === g)?.name ?? "Giver"} to ${world.people.find((p) => p.id === r)?.name ?? "Recipient"}`,
-            id: e.id,
-            giver: g,
-            recipient: r,
-          }))
-      : [],
-  );
+  const choices = shoppingChoices(world, gift);
   const selectedExchange = choices.find((c) => c.key === exchange);
   const spendingContext = selectedExchange
     ? {
@@ -1150,13 +1153,14 @@ function GiftDetail() {
     <>
       <Link
         className="back-link"
-        to={
+        to={shoppingLink(
           gift.listId
             ? `/lists/${gift.listId}`
             : ideaRecipientId
               ? `/people/${ideaRecipientId}?tab=ideas`
-              : "/"
-        }
+              : "/",
+          noteLocation.search,
+        )}
       >
         <ArrowLeft size={16} />
         {gift.listId
@@ -1165,6 +1169,43 @@ function GiftDetail() {
             ? "Back to gift ideas"
             : "Back to Home"}
       </Link>
+      {(choices.length > 0 ||
+        exchange ||
+        gift.comments?.some((c) => c.needsPrivacyReview) ||
+        gift.reservations?.some((r) => r.needsPrivacyReview)) && (
+        <div className="shopping-context">
+          <Field label="Buying for">
+            <select
+              value={exchange}
+              onChange={(e) => {
+                const value = e.target.value;
+                setExchange(value);
+                setShoppingParams(
+                  (current) => {
+                    const next = new URLSearchParams(current);
+                    next.set("shopping", value);
+                    return next;
+                  },
+                  { replace: true },
+                );
+              }}
+            >
+              <option value="" disabled>
+                Choose who this gift is for
+              </option>
+              <option value="ordinary">Not part of an exchange</option>
+              {choices.map((c) => (
+                <option key={c.key} value={c.key}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+          </Field>
+          {selectedExchange && (
+            <p className="muted">{selectedExchange.label}</p>
+          )}
+        </div>
+      )}
       <div className="gift-detail">
         <GiftPhoto gift={gift} size="full" />
         <section className="gift-detail-info">
@@ -1306,21 +1347,6 @@ function GiftDetail() {
                         onChange={(e) => setQuantity(Number(e.target.value))}
                       />
                     </Field>
-                    {choices.length > 0 && (
-                      <Field label="Buying for">
-                        <select
-                          value={exchange}
-                          onChange={(e) => setExchange(e.target.value)}
-                        >
-                          <option value="">Not part of an exchange</option>
-                          {choices.map((c) => (
-                            <option key={c.key} value={c.key}>
-                              {c.label}
-                            </option>
-                          ))}
-                        </select>
-                      </Field>
-                    )}
                   </div>
                   <SpendingGuidance
                     context={spendingContext}
@@ -1328,9 +1354,16 @@ function GiftDetail() {
                   />
                   <Action
                     onClick={async () => {
+                      if (choices.length && !exchange)
+                        throw new Error("Choose who this gift is for.");
                       const c = choices.find((c) => c.key === exchange);
+                      if (exchange && exchange !== "ordinary" && !c)
+                        throw new Error(
+                          "This assignment is unavailable. Choose again.",
+                        );
                       await mutate("reservations", {
                         itemId: gift.id,
+                        ordinary: exchange === "ordinary",
                         quantity,
                         exchangeId: c?.id,
                         giverId: c?.giver,
@@ -1355,6 +1388,26 @@ function GiftDetail() {
           <h2>Gift plans</h2>
           {gift.reservations.map((r) => (
             <div className="reservation-row" key={r.id}>
+              {r.needsPrivacyReview && (
+                <div>
+                  <p>
+                    This older gift needs a context choice. Other shoppers see
+                    an anonymous reservation until you confirm.
+                  </p>
+                  <Action
+                    onClick={() =>
+                      mutate("privacy/review", {
+                        id: r.id,
+                        revision: r.revision,
+                        kind: "reservation",
+                        ...shoppingPayload(exchange),
+                      })
+                    }
+                  >
+                    Confirm gift context
+                  </Action>
+                </div>
+              )}
               <Avatar name={r.buyerName} small />
               <div>
                 <strong>
@@ -1414,9 +1467,12 @@ function GiftDetail() {
             Private notes
           </h2>
           <p className="muted">
-            The recipient cannot see this conversation. Notes from an exchange
-            giver are visible only to that giver and anyone managing their
-            profile.
+            {selectedExchange
+              ? `New notes are visible only to ${world.people.find((p) => p.id === selectedExchange.giver)?.name ?? "this giver"} and people managing their profile. Recipients cannot read them.`
+              : (choices.length && !exchange) ||
+                  (exchange !== "ordinary" && exchange && !selectedExchange)
+                ? "Choose who this gift is for before writing a note."
+                : "New notes are visible to other shoppers with access to this gift. Recipients cannot read them."}
           </p>
           {noteLocation.hash.startsWith("#note-") &&
             !gift.comments.some(
@@ -1428,18 +1484,62 @@ function GiftDetail() {
             )}
           {gift.comments.length ? (
             gift.comments.map((c) => (
-              <PrivateNote
-                key={c.id}
-                note={c}
-                itemId={gift.id}
-                targeted={noteLocation.hash === `#note-${c.id}`}
-              />
+              <div key={c.id}>
+                {c.needsPrivacyReview && (
+                  <div>
+                    <p>
+                      This older note may describe an exchange. Only you can
+                      read it until you choose its audience.
+                    </p>
+                    <Action
+                      secondary
+                      onClick={() =>
+                        mutate("privacy/review", {
+                          id: c.id,
+                          revision: c.revision,
+                          kind: "note",
+                          authorOnly: true,
+                        })
+                      }
+                    >
+                      Keep note private
+                    </Action>
+                    <Action
+                      onClick={() =>
+                        mutate("privacy/review", {
+                          id: c.id,
+                          revision: c.revision,
+                          kind: "note",
+                          ...shoppingPayload(exchange),
+                        })
+                      }
+                    >
+                      Confirm selected audience
+                    </Action>
+                  </div>
+                )}
+                <p className="muted">Visible to: {c.audience}</p>
+                <PrivateNote
+                  note={c}
+                  itemId={gift.id}
+                  targeted={noteLocation.hash === `#note-${c.id}`}
+                />
+              </div>
             ))
           ) : (
             <p>No notes yet. Sizes, plans, and helpful details go here.</p>
           )}
           <WatchButton itemId={gift.id} />
-          {!gift.archived && <MentionNote itemId={gift.id} />}
+          {!gift.archived &&
+            ((!choices.length && !exchange) ||
+              exchange === "ordinary" ||
+              selectedExchange) && (
+              <MentionNote
+                key={`${gift.id}:${exchange}`}
+                itemId={gift.id}
+                context={shoppingPayload(exchange)}
+              />
+            )}
         </section>
       )}
     </>

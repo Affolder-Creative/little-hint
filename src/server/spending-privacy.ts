@@ -1,3 +1,4 @@
+import { reservationNeedsReview } from "./privacy-review";
 import type { State } from "../shared/model";
 import type { SpendingRecord, SpendingConnection } from "../shared/spending";
 import { controllers } from "./domain-access";
@@ -17,6 +18,7 @@ export function protectedSpending(
   return (
     !!r.protected ||
     !!reservation?.exchangeId ||
+    !!(reservation && reservationNeedsReview(s, reservation)) ||
     !!(r.reservationId && (!reservation || !item)) ||
     !!(item && !item.listId && item.visibility === "private") ||
     !!(parent && protectedSpending(s, parent, c, seen)) ||
