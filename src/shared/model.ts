@@ -1,3 +1,4 @@
+import type { LookupDiagnostic } from "./lookup-diagnostics";
 import type {
   SpendingSettings,
   SpendingConnection,
@@ -398,7 +399,15 @@ export interface ImportJob extends Base {
     nextPollAt?: string;
     deadline: string;
   };
-  diagnostic?: { stage: string; reason: string; elapsedMs?: number };
+  diagnostic?: LookupDiagnostic;
+  diagnostics?: LookupDiagnostic[];
+  unlockerRetry?: {
+    attempts: number;
+    status: "dispatched" | "scheduled" | "finished";
+    nextAttemptAt?: string;
+    configuration: string;
+    failure?: LookupDiagnostic;
+  };
 
   userId: string;
   url: string;

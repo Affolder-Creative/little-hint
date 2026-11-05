@@ -144,6 +144,21 @@ async function setup(
               createdAt: "2026-10-31T16:00:00Z",
               status: "failed",
               error: "Shop lookup failed.",
+              attempts: 2,
+              diagnostics: [
+                {
+                  stage: "brightdata-unlocker",
+                  reason: "Destination connection timed out",
+                  status: 502,
+                  code: "target_40020",
+                },
+                {
+                  stage: "ai-web",
+                  reason: "AI quota exhausted",
+                  status: 429,
+                  code: "insufficient_quota",
+                },
+              ],
             },
           ],
           notifications: state.retried
@@ -254,6 +269,13 @@ test("service status can recover and failed jobs remain actionable", async ({
     "datetime",
     "2026-10-31T16:00:00Z",
   );
+  await expect(jobs).toContainText(
+    "brightdata-unlocker: Destination connection timed out",
+  );
+  await expect(jobs).toContainText("target_40020");
+  await expect(jobs).toContainText("ai-web: AI quota exhausted");
+  await expect(jobs).toContainText("insufficient_quota");
+  await expect(jobs).toContainText("2 attempts");
   await jobs.getByText("Failed updates (1)", { exact: true }).click();
   await jobs.getByRole("button", { name: "Retry", exact: true }).click();
   await expect(jobs).not.toContainText("Delivery failed");

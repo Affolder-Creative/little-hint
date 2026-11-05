@@ -47,11 +47,18 @@ export function AdminJobFailures({
             ) : (
               <p>Queue time unavailable</p>
             )}
-            {job.diagnostic && (
-              <p className="job-diagnostic">
-                {job.diagnostic.stage}: {job.diagnostic.reason}
+            {(job.diagnostics?.length
+              ? job.diagnostics
+              : job.diagnostic
+                ? [job.diagnostic]
+                : []
+            ).map((diagnostic, index) => (
+              <p className="job-diagnostic" key={index}>
+                {diagnostic.stage}: {diagnostic.reason}
+                {diagnostic.status ? ` · HTTP ${diagnostic.status}` : ""}
+                {diagnostic.code ? ` · ${diagnostic.code}` : ""}
               </p>
-            )}
+            ))}
             {job.attempts !== undefined && <p>{job.attempts} attempts</p>}
           </div>
           {retry && (

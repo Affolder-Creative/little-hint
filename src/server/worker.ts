@@ -232,7 +232,9 @@ async function dispatch() {
         (!j.draft || j.draft.state === "active") &&
         (j.status === "pending" || j.status === "running") &&
         (!j.providerState?.nextPollAt ||
-          Date.parse(j.providerState.nextPollAt) <= Date.now()),
+          Date.parse(j.providerState.nextPollAt) <= Date.now()) &&
+        (!j.unlockerRetry?.nextAttemptAt ||
+          Date.parse(j.unlockerRetry.nextAttemptAt) <= Date.now()),
     ))
       await boss.send("product-import", { id: j.id }, { singletonKey: j.id });
     for (const n of s.notices.filter(

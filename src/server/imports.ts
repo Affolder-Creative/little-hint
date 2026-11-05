@@ -1,3 +1,6 @@
+import { retryableUnlock } from "./import-retry";
+import { recordLookupDiagnostic } from "./lookup-diagnostics";
+import type { LookupDiagnostic } from "../shared/lookup-diagnostics";
 import { reiProduct, reiProductId } from "./rei";
 import { recoverProduct, recoveryEnabled } from "./product-recovery";
 import {
@@ -493,6 +496,21 @@ export async function importProduct(
   };
   const normalized = productCacheUrl(url);
   const provider = selectedScrapingProvider(cfg);
+  if (jobId && provider !== "brightdata") {
+    const changed = await transact((s) => {
+      const job = s.imports.find((j) => j.id === jobId);
+      if (job?.unlockerRetry?.status !== "scheduled") return false;
+      job.unlockerRetry.status = "finished";
+      delete job.unlockerRetry.nextAttemptAt;
+      recordLookupDiagnostic(job, {
+        stage: "brightdata-unlocker",
+        reason: "Lookup configuration changed; retry manually",
+      });
+      return true;
+    });
+    if (changed)
+      throw new Error("Lookup configuration changed; retry manually");
+  }
   let lookupUrl = url;
   if (
     provider === "brightdata" &&
@@ -624,10 +642,14 @@ export async function importProduct(
           cfg,
           importPhotos,
           jobId
-            ? async (reason) => {
+            ? async (reason, diagnostic) => {
                 await transact((s) => {
                   const j = s.imports.find((j) => j.id === jobId);
-                  if (j) j.diagnostic = { stage: provider ?? "direct", reason };
+                  if (j)
+                    recordLookupDiagnostic(
+                      j,
+                      diagnostic ?? { stage: provider ?? "direct", reason },
+                    );
                 });
                 console.info("Product lookup", { jobId, provider, reason });
               }
@@ -635,6 +657,7 @@ export async function importProduct(
           (html) => {
             evidenceHtml = html;
           },
+          jobId,
         );
       if (!result.title || (importPhotos && !result.remoteImage))
         result = await recover(result, targetUrl);
@@ -736,8 +759,9 @@ export async function paidProductPreview(
   result: ProductPreview,
   cfg: Record<string, string>,
   importPhotos = false,
-  report?: (reason: string) => Promise<void>,
+  report?: (reason: string, diagnostic?: LookupDiagnostic) => Promise<void>,
   evidence?: (html: string) => void,
+  jobId?: string,
 ): Promise<ProductPreview> {
   const provider = selectedScrapingProvider(cfg);
   if ((result.title && (!importPhotos || result.remoteImage)) || !provider) {
@@ -751,7 +775,8 @@ export async function paidProductPreview(
   try {
     await validateUrl(url);
     if (provider === "brightdata") {
-      const html = await unlockPage(url, cfg, false, !!reiProductId(url));
+      const fetchPage = () => unlockPage(url, cfg, false, !!reiProductId(url));
+      const html = await retryableUnlock(jobId, cfg, fetchPage, !result.title);
       evidence?.(html);
       const imported = parseProduct(html, url);
       if (!imported.title)
@@ -788,6 +813,7 @@ export async function paidProductPreview(
       ),
     };
   } catch (error) {
+    if (error instanceof ImportPending) throw error;
     await report?.(
       error instanceof BrightDataFailure
         ? `${error.stage}: ${error.message}`
@@ -797,6 +823,7 @@ export async function paidProductPreview(
           : error instanceof Error && /timeout|abort/i.test(error.name)
             ? "Provider timed out"
             : "Provider response unavailable or unusable",
+      error instanceof BrightDataFailure ? error.diagnostic : undefined,
     );
     return result;
   }

@@ -181,3 +181,35 @@ price tracking or gift-discovery verification.
 Provider failures remain visible in Background jobs when AI recovery also fails.
 Verify a fresh REI import with AI recovery disabled before treating a deployment's
 provider access as working; configuration presence alone does not prove access.
+
+## Lookup failures and automatic retries
+
+Background jobs retains up to eight sanitized diagnostic entries per lookup,
+including separate provider and AI recovery failures. Provider HTTP status and
+safe error codes distinguish account restrictions from connection failures.
+Raw response bodies, credentials, product links, and arbitrary provider messages
+are never included. Older jobs retain their original diagnostic; details discarded
+by older versions cannot be reconstructed.
+
+Ordinary product imports receive one automatic Web Unlocker retry after 20 seconds
+when the provider explicitly reports a transient destination connection, internal,
+or failover error and no usable product name was obtained. Both dispatched attempts
+count against the existing daily allowance and may incur provider charges. The
+worker remains available while the job waits. Unknown 502s, account or policy
+restrictions, parsing failures, and uncertain request outcomes are not retried
+automatically. Dedicated retailer collections, price checks, and optional photo
+improvements retain their existing behavior.
+
+Retries persist across worker restarts. Before dispatch, the app checks the draft,
+configuration, and allowance again. Publishing or discarding the draft stops further
+attempts. A manual retry starts a fresh allowance of one automatic retry; it does not
+reset daily spending limits. Already dispatched requests cannot be recalled.
+
+AI recovery runs after the permitted provider retry. Diagnostics distinguish API
+rejection, quota, timeout, invalid output, identity/citation/evidence failures, and
+unverified photos. A zero web-search count alone does not prove an evidence problem:
+a request may have failed before returning search usage. Existing evidence checks
+and protections against repeating uncertain AI requests still apply.
+
+Failed shop lookups records the import attempt's outcome. Entering the details
+manually and publishing the gift does not erase that historical failure.

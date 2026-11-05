@@ -7,6 +7,8 @@ export function importView(job: ImportJob): ImportJob {
     recoveryState,
     recoveryCheckpoint,
     diagnostic,
+    diagnostics,
+    unlockerRetry,
     ...view
   } = job;
   return view;

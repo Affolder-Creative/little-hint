@@ -99,3 +99,24 @@ it("reauthorizes import replay ownership and refuses removed jobs", () => {
   ).toThrow("Import not found");
   expect(f.state.imports).toHaveLength(0);
 });
+
+it("manual retry resets automatic attempts and diagnostics while preserving draft edits and usage", () => {
+  const f = fixture();
+  f.job.status = "failed";
+  f.job.unlockerRetry = {
+    attempts: 2,
+    status: "finished",
+    configuration: "old",
+  };
+  f.job.diagnostic = { stage: "ai-web", reason: "AI request rejected" };
+  f.job.diagnostics = [f.job.diagnostic];
+  f.state.usage.push({ ...stamp(), key: "test:brightdata", count: 2 });
+  const view = command(f.state, f.actor, "imports.retry", {
+    id: f.job.id,
+  }) as ImportJob;
+  expect(f.job.status).toBe("pending");
+  expect(f.job.unlockerRetry).toBeUndefined();
+  expect(f.job.diagnostics).toBeUndefined();
+  expect(view.draft?.fields.title).toBe("Draft");
+  expect(f.state.usage[0].count).toBe(2);
+});

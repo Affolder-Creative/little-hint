@@ -753,9 +753,19 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
       },
       backupProvider: "backup-sidecar",
       imports: s.imports.map(
-        ({ id, status, error, diagnostic, createdAt }) => ({
+        ({
+          id,
+          status,
+          error,
+          diagnostic,
+          diagnostics,
+          unlockerRetry,
+          createdAt,
+        }) => ({
           createdAt,
           diagnostic,
+          diagnostics,
+          attempts: unlockerRetry?.attempts,
           id,
           status,
           error,
