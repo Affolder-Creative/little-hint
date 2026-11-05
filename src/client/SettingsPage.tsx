@@ -21,6 +21,7 @@ import {
   clearPushBinding,
 } from "./Notifications";
 import { SettingsNavigation, settingsSections } from "./SettingsNavigation";
+import { AccountClosure } from "./AccountClosure";
 import { Confirm } from "./Confirm";
 import { familyGroupLabel } from "../shared/households";
 import { AccountInvitations } from "./AccountInvitations";
@@ -802,6 +803,7 @@ export default function SettingsPage({
             <p className="creator-credit">Created by Affolder Creative</p>
             <p className="muted">Version {__APP_VERSION__}</p>
           </section>
+          {section === "security" && <AccountClosure />}
           <section
             className="settings-sign-out"
             id="settings-sign-out"

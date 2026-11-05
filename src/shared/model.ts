@@ -414,7 +414,7 @@ export interface Setting extends Base {
 export interface Link extends Base {
   requestedBy?: string;
   userId: string;
-  kind: "telegram" | "profile" | "ownership";
+  kind: "telegram" | "profile" | "ownership" | "guardian" | "admin";
   targetId?: string;
   email?: string;
   tokenHash?: string;
@@ -432,6 +432,7 @@ export interface Usage extends Base {
   count: number;
 }
 export interface Media extends Base {
+  purgeAfterAccountClosure?: boolean;
   deletedAt?: string;
   userId: string;
   file: string;

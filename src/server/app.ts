@@ -66,6 +66,7 @@ import { validationMessage } from "./validation-message";
 import { createReadStream, existsSync } from "node:fs";
 import path from "node:path";
 import { makeAuth, appUrl } from "./auth";
+import { registerAccountClosure } from "./account-closure";
 import { readState, readImport, transact, pool } from "./db";
 import {
   activateAccount,
@@ -286,6 +287,14 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
   registerGiftDiscovery(app, actor);
   registerAccountExport(app, actor);
   registerCollections(app, actor);
+  registerAccountClosure(app, async (req) => {
+    const a = await actor(req);
+    const session = await auth.api.getSession({
+      headers: fromNodeHeaders(req.headers),
+    });
+    if (!session) fail(401, "Sign in to continue.");
+    return { a, sessionId: session.session.id };
+  });
   app.get("/api/v1/world", async (req) => {
     const a = await actor(req);
     const notificationAsOf = Date.now();

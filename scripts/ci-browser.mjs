@@ -134,6 +134,7 @@ try {
           "tests/pagination.spec.ts",
         ]
       : []),
+    ...(suite === "management" ? ["tests/account-closure.spec.ts"] : []),
     ...(suite === "group-events" ? ["tests/repeat-event.spec.ts"] : []),
     ...(suite === "pwa"
       ? [
