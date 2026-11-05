@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.19.0](https://github.com/Affolder-Creative/little-hint/compare/v0.18.0...v0.19.0) (2026-11-05)
+
+
+### Features
+
+* add confirmed account closure and handoffs ([#165](https://github.com/Affolder-Creative/little-hint/issues/165)) ([165a027](https://github.com/Affolder-Creative/little-hint/commit/165a02754f2e0d6ae418cc1935aadf0066e4c69b))
+* add personal JSON and CSV data exports ([#162](https://github.com/Affolder-Creative/little-hint/issues/162)) ([74bf1ab](https://github.com/Affolder-Creative/little-hint/commit/74bf1ab494798b6b35a9716977e0cd36034b1a4a))
+* add verified account email changes ([#163](https://github.com/Affolder-Creative/little-hint/issues/163)) ([009a014](https://github.com/Affolder-Creative/little-hint/commit/009a014032a1f62b14dda8dffae70dca77610254))
+
 ## [0.18.0](https://github.com/Affolder-Creative/little-hint/compare/v0.17.0...v0.18.0) (2026-11-05)
 
 
