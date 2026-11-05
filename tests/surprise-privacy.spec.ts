@@ -77,6 +77,13 @@ for (const width of [1440, 393]) {
       await expect(giver).toHaveURL(
         new RegExp(`/people/${recipientId}\\?shopping=`),
       );
+      if (width === 1440) {
+        await giver
+          .locator("a.person-list-link")
+          .filter({ hasText: `Audit wishes ${recipientIndex}` })
+          .click();
+        await expect(giver).toHaveURL(/\/lists\/.*\?shopping=/);
+      }
       await giver.locator(`a.gift-card[href^="/gift/${item.id}?"]`).click();
       await expect(giver).toHaveURL(new RegExp(`/gift/${item.id}\\?shopping=`));
       await giver.reload();
@@ -89,6 +96,29 @@ for (const width of [1440, 393]) {
       await expect(
         giver.getByText("New notes are visible only to", { exact: false }),
       ).toBeVisible();
+      await giver
+        .locator("textarea")
+        .fill("Unsent note survives audience selection");
+      await giver
+        .getByLabel("Buying for", { exact: true })
+        .selectOption("ordinary");
+      await expect(giver.locator("textarea")).toHaveValue(
+        "Unsent note survives audience selection",
+      );
+      await giver.locator("textarea").fill("");
+      await giver.reload();
+      await expect(giver.getByLabel("Buying for", { exact: true })).toHaveValue(
+        "ordinary",
+      );
+      await giver
+        .getByLabel("Buying for", { exact: true })
+        .selectOption(`${e.id}:${e.myAssignments[0][0]}:${recipientId}`);
+      const extraTab = await contexts[1].newPage();
+      await extraTab.goto(giver.url());
+      await expect(
+        extraTab.getByLabel("Buying for", { exact: true }),
+      ).toHaveValue(`${e.id}:${e.myAssignments[0][0]}:${recipientId}`);
+      await extraTab.close();
       await giver.screenshot({
         path: `test-results/privacy-${width}.png`,
         fullPage: true,
@@ -122,6 +152,28 @@ for (const width of [1440, 393]) {
       expect(exposed.reservations[0].buyerName).toBe("Exchange giver");
       expect(exposed.reservations[0]).not.toHaveProperty("reservedAt");
       expect(exposed.comments).toEqual([]);
+      const own = await (
+        await giver.request.get(`/api/v1/items/${item.id}`)
+      ).json();
+      const reservation = own.reservations.find((r: any) => r.mine);
+      await post(giver, "reservations/update", {
+        id: reservation.id,
+        revision: reservation.revision,
+        quantity: 0,
+        purchased: 0,
+      });
+      await giver.reload();
+      await giver.locator("textarea").fill("Still private after release");
+      await giver
+        .getByRole("button", { name: "Add private note", exact: true })
+        .click();
+      await expect(
+        giver.getByText("Still private after release", { exact: true }),
+      ).toBeVisible();
+      expect(
+        (await (await observer.request.get(`/api/v1/items/${item.id}`)).json())
+          .comments,
+      ).toEqual([]);
     } finally {
       for (const context of contexts) await context.close();
     }
