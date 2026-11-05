@@ -115,7 +115,7 @@ it("collects aged abandoned uploads but preserves recent uploads and all referen
   s.giftDiscoveryJobs.push({
     candidates: [{ image: "/api/v1/media/discovery" }],
   } as any);
-  vi.mocked(transact).mockImplementationOnce(async (fn) => fn(s));
+  vi.mocked(transact).mockImplementationOnce(async (fn) => fn(s, {} as never));
   await removeDeletedMedia();
   expect(s.media.map((m) => m.id)).toEqual([
     "recent",
@@ -126,4 +126,33 @@ it("collects aged abandoned uploads but preserves recent uploads and all referen
   ]);
   expect(await readdir(directory)).not.toContain("orphan.webp");
   expect(await readdir(directory)).not.toContain("orphan.webp.card-v1.webp");
+});
+
+it("purges closed-account uploads even if a delayed job leaves a stale reference", async () => {
+  const { emptyState } = await import("../src/shared/model");
+  const { transact } = await import("../src/server/db");
+  const { removeDeletedMedia } = await import("../src/server/media");
+  const state = emptyState();
+  state.media.push({
+    id: "closed",
+    revision: 1,
+    createdAt: new Date().toISOString(),
+    deletedAt: new Date().toISOString(),
+    purgeAfterAccountClosure: true,
+    userId: "anonymous",
+    file: "closed.webp",
+  });
+  state.imports.push({ result: { image: "/api/v1/media/closed" } } as any);
+  await writeFile(path.join(directory, "closed.webp"), "image");
+  await writeFile(
+    path.join(directory, "closed.webp.card-v1.webp"),
+    "thumbnail",
+  );
+  vi.mocked(transact).mockImplementationOnce(async (fn) =>
+    fn(state, {} as never),
+  );
+  await removeDeletedMedia();
+  expect(state.media).toEqual([]);
+  expect(await readdir(directory)).not.toContain("closed.webp");
+  expect(await readdir(directory)).not.toContain("closed.webp.card-v1.webp");
 });

@@ -1,0 +1,51 @@
+.settings-account-closure {
+  margin-top: 40px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+}
+.settings-account-closure h2 {
+  font-size: 17px;
+  margin-bottom: 8px;
+}
+.settings-account-closure p {
+  max-width: 65ch;
+  font-size: 13px;
+  color: var(--muted);
+}
+.closure-blocker {
+  padding-block: var(--space-controls);
+  border-bottom: 1px solid var(--border);
+}
+.closure-blocker p {
+  margin-block: var(--space-related) var(--space-controls);
+}
+.form-dialog.account-closure-form > .form-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: stretch;
+}
+.form-dialog.account-closure-form > .form-actions > .button[type="submit"] {
+  width: 100%;
+  min-width: 0;
+  justify-self: stretch;
+}
+
+.account-closure-form .closure-consequences {
+  margin-block: 0;
+  padding-left: 20px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.account-closure-form .closure-consequences > li + li {
+  margin-top: var(--space-related);
+}
+
+.form-dialog.account-closure-form > .form-content > fieldset {
+  gap: var(--space-controls);
+}
+.account-closure-form > .form-actions > .text-button {
+  grid-column: 1 / -1;
+  justify-self: center;
+  text-align: center;
+  min-height: 44px;
+}

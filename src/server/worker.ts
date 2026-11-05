@@ -101,7 +101,8 @@ await boss.work<{ id: string }>(
       )
         continue;
       await transact((s) => {
-        s.imports.find((i) => i.id === j.id)!.status = "running";
+        const row = s.imports.find((i) => i.id === j.id);
+        if (row) row.status = "running";
       });
       try {
         const result = await importProduct(
@@ -111,7 +112,8 @@ await boss.work<{ id: string }>(
           j.id,
         );
         await transact((s) => {
-          const row = s.imports.find((i) => i.id === j.id)!;
+          const row = s.imports.find((i) => i.id === j.id);
+          if (!row) return;
           if (row.draft && row.draft.state !== "active") return;
           row.status = "complete";
           row.result = result;
@@ -136,7 +138,8 @@ await boss.work<{ id: string }>(
       } catch (error) {
         if (error instanceof ImportPending) continue;
         await transact((s) => {
-          const row = s.imports.find((i) => i.id === j.id)!;
+          const row = s.imports.find((i) => i.id === j.id);
+          if (!row) return;
           row.status = "failed";
           row.diagnostic ??=
             error instanceof BrightDataFailure

@@ -1,3 +1,4 @@
+import { rejectClosedAccountReferences } from "./closed-accounts";
 import { databaseMetrics } from "./metrics";
 import "dotenv/config";
 import { Pool } from "pg";
@@ -12,7 +13,7 @@ import {
   type Setting,
   type ImportJob,
 } from "../shared/model";
-const supportedSchemaVersion = 3;
+const supportedSchemaVersion = 4;
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   max: 10,
@@ -62,8 +63,11 @@ export async function readState(): Promise<State> {
 }
 // A single transaction lock coordinates domain writes across app and worker processes.
 // This deliberately favors correctness for a private family installation over write throughput.
+export type DomainTransaction = Parameters<
+  Parameters<typeof db.transaction>[0]
+>[0];
 export async function transact<T>(
-  fn: (s: State) => T | Promise<T>,
+  fn: (s: State, tx: DomainTransaction) => T | Promise<T>,
 ): Promise<T> {
   const started = performance.now();
   try {
@@ -86,12 +90,18 @@ export async function transact<T>(
         if (kinds.includes(row.kind as Kind))
           (state[row.kind as Kind] as unknown[]).push(row.data);
       }
-      const result = await fn(state);
+      const result = await fn(state, tx);
+      const closed = new Set(
+        (await tx.execute(sql`SELECT id_hash FROM closed_account`)).rows.map(
+          (r) => String(r.id_hash),
+        ),
+      );
       const after = new Set<string>();
       for (const kind of kinds)
         for (const record of state[kind]) {
           after.add(record.id);
-          if (before.get(record.id) !== JSON.stringify(record))
+          if (before.get(record.id) !== JSON.stringify(record)) {
+            rejectClosedAccountReferences(record, closed);
             await tx
               .insert(schema.records)
               .values({ id: record.id, kind, data: record })
@@ -99,6 +109,7 @@ export async function transact<T>(
                 target: schema.records.id,
                 set: { data: record, kind },
               });
+          }
         }
       for (const id of before.keys())
         if (!after.has(id))
@@ -158,6 +169,12 @@ INSERT INTO schema_migration(version) VALUES (2);`);
     }
     await client.query(
       "INSERT INTO schema_migration(version) VALUES (3) ON CONFLICT DO NOTHING",
+    );
+    await client.query(
+      "CREATE TABLE IF NOT EXISTS closed_account (id_hash text PRIMARY KEY)",
+    );
+    await client.query(
+      "INSERT INTO schema_migration(version) VALUES (4) ON CONFLICT DO NOTHING",
     );
     await client.query("COMMIT");
   } catch (e) {
