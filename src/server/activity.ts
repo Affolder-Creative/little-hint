@@ -1,3 +1,9 @@
+import { noteNeedsReview, reservationNeedsReview } from "./privacy-review";
+import type { Comment } from "../shared/model";
+import {
+  resolveShoppingContext,
+  type ShoppingContext,
+} from "./shopping-context";
 import { priceAlertAllowed } from "./prices";
 import { invitationIsPending } from "../shared/invitations";
 import { effectiveConfig } from "./runtime-config";
@@ -44,25 +50,26 @@ const actor = (s: State, id: string): Actor => ({
 export const accountIds = (s: State) => [
   ...new Set(s.people.flatMap((p) => controllers(p))),
 ];
-export const noteVisible = (s: State, a: Actor, item: Item, giverId?: string) =>
+export const noteVisible = (
+  s: State,
+  a: Actor,
+  item: Item,
+  giverId?: string,
+  comment?: Comment,
+) =>
   itemVisible(s, a, item) &&
   !recipient(s, a, item) &&
-  (!giverId || controls(s, a, giverId));
-export function noteGiver(s: State, a: Actor, itemId: string) {
-  return s.reservations.find(
-    (r) =>
-      r.itemId === itemId &&
-      r.buyerId === a.id &&
-      r.exchangeId &&
-      r.quantity > 0,
-  )?.giverId;
-}
+  (!giverId || controls(s, a, giverId)) &&
+  (!comment ||
+    !(comment.authorOnly || noteNeedsReview(s, comment)) ||
+    comment.authorId === a.id);
 export function mentionCandidates(
   s: State,
   a: Actor,
   itemId: string,
   query = "",
   commentId?: string,
+  context: ShoppingContext = {},
 ) {
   const item = s.items.find((i) => i.id === itemId);
   if (
@@ -77,9 +84,14 @@ export function mentionCandidates(
         (c) => c.id === commentId && c.itemId === itemId && c.authorId === a.id,
       )
     : undefined;
-  if (commentId && (!comment || !noteVisible(s, a, item, comment.giverId)))
+  if (
+    commentId &&
+    (!comment || !noteVisible(s, a, item, comment.giverId, comment))
+  )
     fail(404, "Note not available.");
-  const giverId = comment ? comment.giverId : noteGiver(s, a, itemId);
+  const giverId = comment
+    ? comment.giverId
+    : resolveShoppingContext(s, a, item, context)?.giverId;
   const people = s.people
     .filter(
       (p, index, people) =>
@@ -90,7 +102,7 @@ export function mentionCandidates(
       (p) =>
         p.userId &&
         p.userId !== a.id &&
-        noteVisible(s, actor(s, p.userId), item, giverId),
+        noteVisible(s, actor(s, p.userId), item, giverId, comment),
     )
     .filter((p) =>
       p.name.toLocaleLowerCase().includes(query.toLocaleLowerCase()),
@@ -114,15 +126,16 @@ export function validateMentions(
   mentions: Mention[],
   storedGiverId?: string,
   editing = false,
+  comment?: Comment,
 ) {
-  const giverId = editing ? storedGiverId : noteGiver(s, a, item.id);
+  const giverId = storedGiverId;
   let end = 0;
   for (const m of [...mentions].sort((a, b) => a.start - b.start)) {
     const person = s.people.find((p) => p.userId === m.userId);
     if (
       !person ||
       m.userId === a.id ||
-      !noteVisible(s, actor(s, m.userId), item, giverId)
+      !noteVisible(s, actor(s, m.userId), item, giverId, comment)
     )
       fail(
         409,
@@ -359,7 +372,7 @@ export function activityAllowed(s: State, n: Notice): boolean {
       );
       return (
         !!comment &&
-        noteVisible(s, a, item, comment.giverId) &&
+        noteVisible(s, a, item, comment.giverId, comment) &&
         (n.event !== "mention" ||
           !!comment.mentions?.some((m) => m.userId === a.id))
       );
@@ -375,7 +388,11 @@ export function activityAllowed(s: State, n: Notice): boolean {
     }
     if (n.reservationId) {
       const r = s.reservations.find((r) => r.id === n.reservationId);
-      if (!r || (r.exchangeId && r.buyerId !== a.id)) return false;
+      if (
+        !r ||
+        ((r.exchangeId || reservationNeedsReview(s, r)) && r.buyerId !== a.id)
+      )
+        return false;
     }
   }
   return true;

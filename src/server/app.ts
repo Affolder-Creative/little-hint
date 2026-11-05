@@ -376,6 +376,10 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
         .object({
           q: z.string().max(160).default(""),
           commentId: z.string().uuid().optional(),
+          ordinary: z.enum(["true", "false"]).optional(),
+          exchangeId: z.string().uuid().optional(),
+          giverId: z.string().uuid().optional(),
+          exchangeRecipientId: z.string().uuid().optional(),
         })
         .parse(req.query);
       return mentionCandidates(
@@ -384,6 +388,7 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
         req.params.id,
         q.q,
         q.commentId,
+        { ...q, ordinary: q.ordinary === "true" },
       );
     },
   );
@@ -520,6 +525,7 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
     "lists/update": "lists.update",
     items: "items.create",
     "items/update": "items.update",
+    "privacy/review": "privacy.review",
     reservations: "reservations.create",
     "reservations/update": "reservations.update",
     contributions: "contributions.create",

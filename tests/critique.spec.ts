@@ -44,9 +44,12 @@ for (const width of [320, 393, 1440]) {
     await expect
       .poll(async () => (await menu.boundingBox())!.x)
       .toBeGreaterThanOrEqual(19);
-    expect(
-      (await menu.boundingBox())!.x + (await menu.boundingBox())!.width,
-    ).toBeLessThanOrEqual(width - 19);
+    await expect
+      .poll(async () => {
+        const bounds = (await menu.boundingBox())!;
+        return bounds.x + bounds.width;
+      })
+      .toBeLessThanOrEqual(width - 19);
     await row
       .getByRole("button", { name: "Update purchase", exact: true })
       .click();
@@ -2227,6 +2230,7 @@ test("private note success clears the composer and offline actions are disabled"
     (i) => !i.isRecipient && !i.archived && i.available && i.comments,
   )!;
   await page.goto(`/gift/${gift.id}`);
+  await page.getByLabel("Buying for", { exact: true }).selectOption("ordinary");
   await page.getByLabel("Your note").fill("A useful private detail");
   await page.getByRole("button", { name: "Add private note" }).click();
   await expect(
@@ -3025,6 +3029,7 @@ test("gift availability keeps personal reservations and their next action in vie
   await expect(
     page.getByLabel("Additional quantity", { exact: true }),
   ).toHaveValue("1");
+  await page.getByLabel("Buying for", { exact: true }).selectOption("ordinary");
   await page.getByRole("button", { name: "Reserve more", exact: true }).click();
   await expect(status).toHaveText(
     "Taken care of · You reserved 2 · 0 purchased",
@@ -3615,6 +3620,7 @@ for (const width of [1440, 390]) {
     const partial = command(state, actor, "reservations.create", {
       itemId: item.id,
       quantity: 3,
+      ordinary: true,
     }) as (typeof state.reservations)[number];
     command(state, actor, "reservations.update", {
       id: partial.id,
@@ -3629,6 +3635,7 @@ for (const width of [1440, 390]) {
     const cancelled = command(state, actor, "reservations.create", {
       itemId: cancelledItem.id,
       quantity: 1,
+      ordinary: true,
     }) as (typeof state.reservations)[number];
     command(state, actor, "reservations.update", {
       id: cancelled.id,
@@ -4274,6 +4281,7 @@ test.describe("navigation scroll restoration", () => {
     for (let i = 0; i < 20; i++)
       command(state, actor, "comments.create", {
         itemId: item.id,
+        ordinary: true,
         body: `Private note ${i + 1}`,
       });
     const note = world(state, actor)
@@ -4531,6 +4539,7 @@ for (const [width, theme] of [
     expect(idea.listId).toBeUndefined();
     await expect(page).toHaveURL(new RegExp(`/gift/${idea.id}$`));
     await expect(page.locator(".private-idea-badge")).toHaveText("Only me");
+    await page.getByLabel("Buying for", { exact: true }).selectOption("ordinary");
     await page
       .getByRole("button", { name: "Reserve gift", exact: true })
       .click();
@@ -5007,6 +5016,8 @@ for (const engine of ["chromium", "webkit"] as const) {
       ? await browser.newPage({
           baseURL: process.env.E2E_BASE_URL ?? "http://localhost:5173",
           viewport: { width: 393, height: 852 },
+          // Keep this mocked API flow from going through the production worker.
+          serviceWorkers: "block",
         })
       : defaultPage;
     if (browser)
@@ -5275,6 +5286,7 @@ for (const width of [390, 1440]) {
     )!;
     command(state, actor, "comments.create", {
       itemId: item.id,
+      ordinary: true,
       body: "Original helpful note",
     });
     const note = state.comments.at(-1)!;

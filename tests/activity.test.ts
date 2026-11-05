@@ -232,12 +232,39 @@ describe("notification inbox and audiences", () => {
     const r = f.s.reservations.find((r) => r.id === result.id)!;
     r.exchangeId = stamp().id;
     r.giverId = f.people[1].id;
+    const context = {
+      exchangeId: r.exchangeId,
+      giverId: r.giverId,
+      exchangeRecipientId: f.people[0].id,
+    };
+    f.s.exchanges.push({
+      ...stamp(),
+      id: r.exchangeId,
+      name: "Secret exchange",
+      groupId: f.group.id,
+      organizerId: f.actors[0].id,
+      participantIds: f.people.map((p) => p.id),
+      count: 1,
+      excludeHousehold: false,
+      exclusions: [],
+      status: "drawn",
+      assignments: [[r.giverId, f.people[0].id]],
+    });
+
     f.people[1].guardians = [f.actors[2].id];
     expect(
-      mentionCandidates(f.s, f.actors[1], f.item.id).map((p) => p.userId),
+      mentionCandidates(
+        f.s,
+        f.actors[1],
+        f.item.id,
+        "",
+        undefined,
+        context,
+      ).map((p) => p.userId),
     ).toEqual([f.actors[2].id]);
     command(f.s, f.actors[1], "comments.create", {
       itemId: f.item.id,
+      ...context,
       body: "@Helper",
       mentions: [{ userId: f.actors[2].id, start: 0, end: 7 }],
     });

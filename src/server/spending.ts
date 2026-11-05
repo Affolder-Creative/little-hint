@@ -682,6 +682,10 @@ export function spendingCommand(
         reservationId: id.optional(),
         itemId: id.optional(),
         itemRevision: z.number().int().optional(),
+        ordinary: z.boolean().optional(),
+        exchangeId: id.optional(),
+        giverId: id.optional(),
+        exchangeRecipientId: id.optional(),
         listId: id.nullable().optional(),
         title: z.string().trim().min(1).max(200),
         recipientIds: z.array(id).min(1).max(20),
@@ -785,6 +789,10 @@ export function spendingCommand(
     if (sourceItem) {
       const created = command(s, a, "reservations.create", {
         itemId: sourceItem.id,
+        ordinary: p.ordinary,
+        exchangeId: p.exchangeId,
+        giverId: p.giverId,
+        exchangeRecipientId: p.exchangeRecipientId,
         quantity: p.quantity,
       }) as { id: string };
       p.reservationId = created.id;

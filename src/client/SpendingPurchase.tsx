@@ -1,3 +1,4 @@
+import { shoppingChoices, shoppingPayload } from "./shopping-context";
 import { CollectionStatus, useCollection, useDebounced } from "./Pagination";
 import { useEffect, useLayoutEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -281,6 +282,7 @@ export function PurchaseForm({
   const [amount, setAmount] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [keepPrivate, setKeepPrivate] = useState(false);
+  const [shopping, setShopping] = useState({ itemId: "", key: "" });
   const [payer, setPayer] = useState(world.me.id);
   const [event, setEvent] = useState(initialEvent ?? params.get("event") ?? "");
   const [assignedList, setAssignedList] = useState<string | undefined>();
@@ -352,9 +354,12 @@ export function PurchaseForm({
   const maxQuantity = reservation
     ? reservation.quantity - reservation.purchased
     : (item?.available ?? 1);
+  const choices = item && !reservation ? shoppingChoices(world, item) : [];
+  const shoppingKey = shopping.itemId === item?.id ? shopping.key : "";
   const c = data.connection;
   const protectedGift =
     !!plan?.protected ||
+    (!!shoppingKey && shoppingKey !== "ordinary") ||
     (!item?.listId && item?.visibility === "private") ||
     recipientIds.some((id) =>
       world.people.some(
@@ -454,7 +459,10 @@ export function PurchaseForm({
       onSubmit={async () => {
         if (!recipientIds.length)
           throw new Error("Choose at least one recipient.");
+        if (choices.length && !shoppingKey)
+          throw new Error("Choose who this gift is for.");
         await mutate("spending/purchase", {
+          ...shoppingPayload(shoppingKey),
           keepPrivate: keepPrivate || !prospectiveShared,
           reservationId: reservation?.id,
           itemId: !reservation ? item?.id : undefined,
@@ -479,6 +487,26 @@ export function PurchaseForm({
         onSuccess?.();
       }}
     >
+      {!!choices.length && (
+        <Field label="Buying for">
+          <select
+            value={shoppingKey}
+            onChange={(e) =>
+              setShopping({ itemId: item!.id, key: e.target.value })
+            }
+          >
+            <option value="" disabled>
+              Choose who this gift is for
+            </option>
+            <option value="ordinary">Not part of an exchange</option>
+            {choices.map((c) => (
+              <option key={c.key} value={c.key}>
+                {c.label}
+              </option>
+            ))}
+          </select>
+        </Field>
+      )}
       {linked ? (
         <div className="purchase-source">
           <span className="purchase-label">Gift</span>

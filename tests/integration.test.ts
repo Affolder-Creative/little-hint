@@ -371,6 +371,7 @@ describe.skipIf(!url)("PostgreSQL transaction integrity", () => {
       [1, 2].map(() =>
         storage.transact((s) =>
           idempotent(s, b, "same_request_00001", "reservations.create", {
+            ordinary: true,
             itemId: gift.id,
             quantity: 1,
           }),

@@ -17,12 +17,22 @@ export function MentionNote({
   itemId,
   note,
   onDone,
+  context = {},
 }: {
   itemId: string;
+  context?: {
+    ordinary?: boolean;
+    exchangeId?: string;
+    giverId?: string;
+    exchangeRecipientId?: string;
+  };
   note?: NonNullable<GiftView["comments"]>[number];
   onDone?: () => void;
 }) {
   const { mutate, toast } = useApp();
+  const contextQuery = new URLSearchParams(
+    Object.entries(context).map(([k, v]) => [k, String(v)]),
+  ).toString();
   const [revision, setRevision] = useState(note?.revision);
   const [conflict, setConflict] = useState(false);
   const [reloadError, setReloadError] = useState("");
@@ -122,10 +132,16 @@ export function MentionNote({
     };
   }, [active, body, caret]);
   const candidates = useQuery({
-    queryKey: ["mention-candidates", itemId, note?.id, match?.[1]],
+    queryKey: [
+      "mention-candidates",
+      itemId,
+      note?.id,
+      match?.[1],
+      contextQuery,
+    ],
     queryFn: () =>
       api<Candidate[]>(
-        `items/${itemId}/mention-candidates?q=${encodeURIComponent(match?.[1] ?? "")}${note ? `&commentId=${note.id}` : ""}`,
+        `items/${itemId}/mention-candidates?q=${encodeURIComponent(match?.[1] ?? "")}${note ? `&commentId=${note.id}` : `&${contextQuery}`}`,
       ),
     enabled: active,
   });
@@ -158,6 +174,7 @@ export function MentionNote({
         try {
           await mutate(note ? "comments/update" : "comments", {
             itemId,
+            ...context,
             body,
             mentions,
             ...(note ? { id: note.id, revision } : {}),

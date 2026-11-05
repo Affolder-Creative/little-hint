@@ -197,6 +197,8 @@ export interface Item extends Base {
   source?: string;
 }
 export interface Reservation extends Base {
+  privacyReview?: boolean;
+  ordinary?: boolean;
   itemId: string;
   buyerId: string;
   quantity: number;
@@ -218,6 +220,11 @@ export interface Contribution extends Base {
   status: "pledged" | "sent" | "received" | "cancelled";
 }
 export interface Comment extends Base {
+  privacyReview?: boolean;
+  authorOnly?: boolean;
+  ordinary?: boolean;
+  exchangeId?: string;
+  exchangeRecipientId?: string;
   editedAt?: string;
   giverId?: string;
   itemId: string;
@@ -603,6 +610,8 @@ export interface GiftView extends Omit<Item, "creatorId"> {
   reserved?: number;
   purchased?: number;
   reservations?: Array<{
+    needsPrivacyReview?: boolean;
+    revision?: number;
     id: string;
     buyerName: string;
     mine: boolean;
@@ -615,6 +624,8 @@ export interface GiftView extends Omit<Item, "creatorId"> {
     contributions?: Contribution[];
   }>;
   comments?: Array<{
+    audience?: string;
+    needsPrivacyReview?: boolean;
     revision: number;
     canEdit: boolean;
     canDelete: boolean;

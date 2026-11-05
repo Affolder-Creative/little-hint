@@ -1,3 +1,4 @@
+import { reconcilePrivacyReview } from "./privacy-review";
 import { reconcileSpendingPrivacy } from "./spending-privacy";
 import { rejectClosedAccountReferences } from "./closed-accounts";
 import { databaseMetrics } from "./metrics";
@@ -14,7 +15,7 @@ import {
   type Setting,
   type ImportJob,
 } from "../shared/model";
-const supportedSchemaVersion = 5;
+const supportedSchemaVersion = 6;
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   max: 10,
@@ -91,8 +92,10 @@ export async function transact<T>(
         if (kinds.includes(row.kind as Kind))
           (state[row.kind as Kind] as unknown[]).push(row.data);
       }
+      reconcilePrivacyReview(state);
       reconcileSpendingPrivacy(state);
       const result = await fn(state, tx);
+      reconcilePrivacyReview(state);
       reconcileSpendingPrivacy(state);
       const closed = new Set(
         (await tx.execute(sql`SELECT id_hash FROM closed_account`)).rows.map(
@@ -181,6 +184,9 @@ INSERT INTO schema_migration(version) VALUES (2);`);
     );
     await client.query(
       "INSERT INTO schema_migration(version) VALUES (5) ON CONFLICT DO NOTHING",
+    );
+    await client.query(
+      "INSERT INTO schema_migration(version) VALUES (6) ON CONFLICT DO NOTHING",
     );
     await client.query("COMMIT");
   } catch (e) {

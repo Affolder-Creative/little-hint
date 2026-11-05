@@ -1,3 +1,9 @@
+import {
+  reservationNeedsReview,
+  noteNeedsReview,
+  reconcilePrivacyReview,
+} from "./privacy-review";
+import { resolveShoppingContext } from "./shopping-context";
 import { reconcileSpendingPrivacy } from "./spending-privacy";
 import { priceBaseline, priceCommand } from "./prices";
 import { priceConfig } from "./price-config";
@@ -258,6 +264,7 @@ export function giftSummary(s: State, a: Actor, listId: string): GiftSummary {
         !item ||
         itemTrashed(s, item) ||
         r.purchased < 1 ||
+        reservationNeedsReview(s, r) ||
         (r.exchangeId && !list.revealExchangeGivers)
       )
         return [];
@@ -312,28 +319,38 @@ export function giftView(s: State, a: Actor, i: Item): GiftView {
     view.reserved = rs.reduce((n, r) => n + r.quantity, 0);
     view.available = Math.max(0, i.quantity - view.reserved);
     view.purchased = rs.reduce(
-      (n, r) => n + (r.exchangeId && r.buyerId !== a.id ? 0 : r.purchased),
+      (n, r) =>
+        n +
+        ((r.exchangeId || reservationNeedsReview(s, r)) && r.buyerId !== a.id
+          ? 0
+          : r.purchased),
       0,
     );
     view.reservations = rs.map((r) => ({
+      ...(r.buyerId === a.id
+        ? {
+            needsPrivacyReview: reservationNeedsReview(s, r),
+            revision: r.revision,
+          }
+        : {}),
       id: r.id,
       buyerName:
-        r.exchangeId && r.buyerId !== a.id
+        (r.exchangeId || reservationNeedsReview(s, r)) && r.buyerId !== a.id
           ? "Exchange giver"
           : r.former
             ? "Former member"
             : name(s, r.buyerId),
       mine: r.buyerId === a.id,
       quantity: r.quantity,
-      ...(!r.exchangeId || r.buyerId === a.id
+      ...(!(r.exchangeId || reservationNeedsReview(s, r)) || r.buyerId === a.id
         ? {
             purchased: r.purchased,
             reservedAt: r.createdAt,
             purchasedAt: r.purchasedAt,
           }
         : {}),
-      exchange: !!r.exchangeId,
-      ...(!own && !r.exchangeId
+      exchange: !!(r.exchangeId || reservationNeedsReview(s, r)),
+      ...(!own && !(r.exchangeId || reservationNeedsReview(s, r))
         ? {
             poolTargetCents: r.poolTargetCents,
             contributions: s.contributions
@@ -345,12 +362,17 @@ export function giftView(s: State, a: Actor, i: Item): GiftView {
   }
   if (!own)
     view.comments = s.comments
-      .filter(
-        (c) => c.itemId === i.id && (!c.giverId || controls(s, a, c.giverId)),
-      )
+      .filter((c) => c.itemId === i.id && noteVisible(s, a, i, c.giverId, c))
       .map((c) => ({
         id: c.id,
         revision: c.revision,
+        needsPrivacyReview: c.authorId === a.id && noteNeedsReview(s, c),
+        audience:
+          c.authorOnly || noteNeedsReview(s, c)
+            ? "Only you"
+            : c.giverId
+              ? "Giver and profile managers"
+              : "Other shoppers",
         canEdit: c.authorId === a.id && !archived(s, i),
         canDelete: c.authorId === a.id || isAdmin(s, a),
         editedAt: c.editedAt,
@@ -761,8 +783,10 @@ export function command(
   action: string,
   raw: unknown,
 ): unknown {
+  reconcilePrivacyReview(s);
   reconcileSpendingPrivacy(s);
   const result = commandCore(s, a, action, raw);
+  reconcilePrivacyReview(s);
   reconcileSpendingPrivacy(s);
   return result;
 }
@@ -787,6 +811,75 @@ function commandCore(
   )
     return activityCommand(s, a, action, raw);
   switch (action) {
+    case "privacy.review": {
+      const p = z
+        .object({
+          id,
+          revision,
+          kind: z.enum(["note", "reservation"]),
+          ordinary: z.boolean().optional(),
+          authorOnly: z.boolean().optional(),
+          exchangeId: id.optional(),
+          giverId: id.optional(),
+          exchangeRecipientId: id.optional(),
+        })
+        .parse(b);
+      const r =
+        p.kind === "note"
+          ? s.comments.find(
+              (c) =>
+                c.id === p.id && c.authorId === a.id && noteNeedsReview(s, c),
+            )
+          : s.reservations.find(
+              (r) =>
+                r.id === p.id &&
+                r.buyerId === a.id &&
+                reservationNeedsReview(s, r),
+            );
+      if (!r) fail(404, "Review is no longer available.");
+      checkRevision(r, p.revision);
+      const item = getItem(s, a, r.itemId);
+      if (recipient(s, a, item)) fail(403, "This review is unavailable.");
+      if (!p.ordinary && !p.exchangeId && !(p.kind === "note" && p.authorOnly))
+        fail(400, "Choose an audience before confirming.");
+      if (p.kind === "note" && p.authorOnly) {
+        Object.assign(r, { authorOnly: true });
+      } else {
+        const context = resolveShoppingContext(s, a, item, p);
+        if (
+          p.kind === "reservation" &&
+          context &&
+          s.contributions.some((c) => c.reservationId === r.id)
+        )
+          fail(
+            409,
+            "A gift with contributions cannot become an exchange gift.",
+          );
+        if (p.kind === "note") {
+          const c = s.comments.find((c) => c.id === r.id)!;
+          validateMentions(
+            s,
+            a,
+            item,
+            c.body,
+            c.mentions ?? [],
+            context?.giverId,
+            true,
+          );
+        }
+        Object.assign(r, context ?? {}, { ordinary: !context });
+      }
+      for (const notice of s.notices.filter(
+        (n) => n.commentId === r.id || n.reservationId === r.id,
+      )) {
+        notice.readAt ??= new Date().toISOString();
+        touch(notice);
+      }
+      delete r.privacyReview;
+      touch(r);
+      return { ok: true };
+    }
+
     case "gift-preferences.update":
       return updateGiftPreferences(s, a, raw);
     case "households.create": {
@@ -1452,7 +1545,7 @@ function commandCore(
         s.comments.find((c) => c.id === p.id) ??
         fail(404, "Note not available.");
       const i = getItem(s, a, c.itemId);
-      if (!noteVisible(s, a, i, c.giverId)) fail(404, "Note not available.");
+      if (!noteVisible(s, a, i, c.giverId, c)) fail(404, "Note not available.");
       if (
         c.authorId !== a.id &&
         !(action === "comments.delete" && isAdmin(s, a))
@@ -1466,7 +1559,7 @@ function commandCore(
       }
       if (archived(s, i)) fail(403, "Archived notes cannot be edited.");
       if (!p.body) fail(400, "Write a note.");
-      validateMentions(s, a, i, p.body, p.mentions, c.giverId, true);
+      validateMentions(s, a, i, p.body, p.mentions, c.giverId, true, c);
       const previous = new Set(c.mentions?.map((m) => m.userId));
       if (
         c.body === p.body &&
@@ -1489,6 +1582,10 @@ function commandCore(
       const p = z
         .object({
           itemId: id,
+          ordinary: z.boolean().optional(),
+          exchangeId: id.optional(),
+          giverId: id.optional(),
+          exchangeRecipientId: id.optional(),
           body: z
             .string()
             .min(1)
@@ -1509,19 +1606,14 @@ function commandCore(
       const i = getItem(s, a, p.itemId);
       if (recipient(s, a, i) || archived(s, i))
         fail(403, "Private notes are not available for this item.");
-      const exchangeReservation = s.reservations.find(
-        (r) =>
-          r.itemId === i.id &&
-          r.buyerId === a.id &&
-          r.exchangeId &&
-          r.quantity > 0,
-      );
-      validateMentions(s, a, i, p.body, p.mentions);
+      const context = resolveShoppingContext(s, a, i, p);
+      validateMentions(s, a, i, p.body, p.mentions, context?.giverId, true);
       const comment = {
         ...stamp(),
         ...p,
         authorId: a.id,
-        giverId: exchangeReservation?.giverId,
+        giverId: context?.giverId,
+        ordinary: !context,
       };
       s.comments.push(comment);
       const mentioned = [...new Set(p.mentions.map((m) => m.userId))];
