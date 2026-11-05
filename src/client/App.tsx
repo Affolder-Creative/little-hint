@@ -11,6 +11,7 @@ import { Buying } from "./Buying";
 import { ProductSources } from "./ProductSources";
 import { SpendingPage, SpendingSummary } from "./Spending";
 import { PrivateNote } from "./PrivateNotes";
+import { Capture } from "./Capture";
 import { ImportDrafts } from "./ImportDrafts";
 import { useProductImages } from "./useProductImages";
 import { ProfileEditor, GiftPreferencesShortcut } from "./ProfileEditor";
@@ -462,6 +463,10 @@ export function App() {
               <GiftPreferenceOnboarding key={world.me.id}>
                 <Routes>
                   <Route path="/" element={<Home />} />
+                  <Route
+                    path="/capture"
+                    element={<Capture key={location.search} />}
+                  />
                   <Route
                     path="/notifications"
                     element={<NotificationCenter />}

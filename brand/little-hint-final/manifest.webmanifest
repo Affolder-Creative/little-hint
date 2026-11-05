@@ -5,6 +5,11 @@
   "description": "Gift ideas, shared thoughtfully.",
   "start_url": "/",
   "scope": "/",
+  "share_target": {
+    "action": "/capture",
+    "method": "GET",
+    "params": { "title": "title", "text": "text", "url": "url" }
+  },
   "display": "standalone",
   "background_color": "#FFF8F0",
   "theme_color": "#AA4D37",
