@@ -229,8 +229,36 @@ describe("account closure policy", () => {
       fingerprint: "f",
       result: { personId: person.id, name: a.name },
     });
+    s.spendingRecords.push({
+      ...stamp(),
+      ownerId: b.id,
+      title: "Shared purchase",
+      recipientIds: [person.id],
+      recipientNames: [a.name],
+      listId: joint.id,
+      listOwnerNames: [a.name, b.name],
+      quantity: 1,
+      amountCents: 100,
+      date: "2026-11-01",
+      planningYear: 2026,
+      kind: "purchase",
+      sharing: "private",
+      splits: [1],
+      history: [
+        {
+          actorId: b.id,
+          at: new Date().toISOString(),
+          description: "Updated recipients",
+          changes: { recipientNames: { before: [a.name], after: [a.name] } },
+        },
+      ],
+    });
     expect(closurePlan(s, a).blockers).toEqual([]);
     closeAccountData(s, a);
+    expect(s.spendingRecords[0].listOwnerNames).toEqual([
+      "Former member",
+      b.name,
+    ]);
     expect(s.lists.map((l) => l.id)).toEqual([joint.id]);
     expect(s.lists[0].ownerIds).toEqual([other.id]);
     expect(s.items.map((i) => i.id)).toEqual([jointItem.id]);

@@ -213,6 +213,26 @@ export function closeAccountData(s: State, a: Actor) {
       "Resolve the listed responsibilities and gift commitments first.",
     );
   const anonymous = randomUUID();
+  const formerNames = new Set(
+    s.people.filter((p) => plan.own.has(p.id)).map((p) => p.name),
+  );
+  const formerlyOwnedLists = new Set(
+    s.lists
+      .filter((l) => l.ownerIds.some((id) => plan.own.has(id)))
+      .map((l) => l.id),
+  );
+  const scrubSnapshot = (value: unknown): unknown =>
+    typeof value === "string"
+      ? formerNames.has(value) || value === a.email
+        ? "Former member"
+        : value
+      : Array.isArray(value)
+        ? value.map(scrubSnapshot)
+        : value && typeof value === "object"
+          ? Object.fromEntries(
+              Object.entries(value).map(([k, v]) => [k, scrubSnapshot(v)]),
+            )
+          : value;
   const orphanFriends = new Set(
     s.friendEntries
       .filter((f) => f.creatorId === a.id)
@@ -357,7 +377,17 @@ export function closeAccountData(s: State, a: Actor) {
       r.listName = "Former member's list";
       r.listOwnerNames = ["Former member"];
     }
+    if (r.listId && formerlyOwnedLists.has(r.listId))
+      r.listOwnerNames = r.listOwnerNames?.map((name) =>
+        formerNames.has(name) ? "Former member" : name,
+      );
     r.history = r.history.filter((h) => h.actorId !== a.id);
+    if (
+      r.recipientIds.some((id) => plan.own.has(id)) ||
+      (!!r.listId && formerlyOwnedLists.has(r.listId))
+    )
+      for (const h of r.history)
+        if (h.changes) h.changes = scrubSnapshot(h.changes) as typeof h.changes;
   }
   const connections = new Set(
     s.spendingConnections
