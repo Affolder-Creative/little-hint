@@ -1,5 +1,5 @@
 export type EmailMessage =
-  | { kind: "sign-in"; code: string; purpose?: "sms-settings" }
+  | { kind: "sign-in"; code: string; purpose?: "sms-settings" | "email-change" }
   | {
       kind:
         "invitation" | "account-invitation" | "friend-invitation" | "update";
@@ -34,11 +34,18 @@ export function renderEmail(message: EmailMessage, appUrl: string) {
   }
   const isCode = message.kind === "sign-in";
   const smsSettings = isCode && message.purpose === "sms-settings";
-  const codeName = smsSettings ? "phone settings confirmation" : "sign-in";
+  const emailChange = isCode && message.purpose === "email-change";
+  const codeName = smsSettings
+    ? "phone settings confirmation"
+    : emailChange
+      ? "email change"
+      : "sign-in";
   const minutes = smsSettings ? 5 : 10;
   const codeAction = smsSettings
     ? "confirm changes to your phone or SMS sign-in settings"
-    : "sign in to Little Hint";
+    : emailChange
+      ? "confirm your email address change"
+      : "sign in to Little Hint";
   const invitation = message.kind === "invitation";
   const accountInvitation = message.kind === "account-invitation";
   const friendInvitation = message.kind === "friend-invitation";
