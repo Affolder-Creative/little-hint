@@ -41,6 +41,7 @@ import { api, authClient, clearPersonalData } from "./api";
 import { useApp } from "./context";
 import { Avatar, Form, Field, Header, Logo } from "./components";
 import { GroupForm, GiftForm, value, getDrafts, draftKey } from "./forms";
+import { AccountExport } from "./AccountExport";
 import { Install } from "./pwa";
 import { GroupEventSettings } from "./GroupEvents";
 import { Action } from "./Action";
@@ -760,6 +761,9 @@ export default function SettingsPage({
               </div>
             ))}
           </section>
+          <div hidden={section !== "device"}>
+            <AccountExport />
+          </div>
           <div hidden={section !== "security"}>
             <Security />
           </div>
