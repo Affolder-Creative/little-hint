@@ -1427,6 +1427,22 @@ main {
   padding: 0;
   border: 0;
 }
+.settings-content .settings-section.settings-subsection {
+  margin-top: 40px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+}
+.settings-content .settings-subsection > h2 {
+  font-size: 17px;
+}
+.settings-section > .account-export-help {
+  margin-top: var(--space-controls);
+  margin-bottom: var(--space-controls);
+  max-width: 65ch;
+}
+.settings-subsection > .field + .action-wrap {
+  margin-top: var(--space-controls);
+}
 .settings-sign-out {
   margin-top: 40px;
   padding-top: 24px;

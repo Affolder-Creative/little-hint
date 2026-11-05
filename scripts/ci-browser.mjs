@@ -147,7 +147,9 @@ try {
       ? ["tests/channel-availability.spec.ts"]
       : []),
     ...(suite === "sign-in" ? ["tests/sms.spec.ts"] : []),
-    ...(suite === "polish" ? ["tests/settings-polish.spec.ts"] : []),
+    ...(suite === "polish"
+      ? ["tests/settings-polish.spec.ts", "tests/account-export.spec.ts"]
+      : []),
     ...(suite === "gift-discovery" ? ["tests/friends.spec.ts"] : []),
   ]).done;
 } finally {
