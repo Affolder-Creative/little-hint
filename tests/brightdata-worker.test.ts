@@ -18,6 +18,7 @@ vi.mock("node:dns/promises", () => ({
   lookup: async () => [{ address: "93.184.216.34", family: 4 }],
 }));
 import { brightRetailer, ImportPending } from "../src/server/brightdata";
+import { lookupPrice } from "../src/server/price-products";
 import {
   applyShopifyVariant,
   paidProductPreview,
@@ -92,6 +93,7 @@ it.each([
   "https://www.bestbuy.com/product/lg-tv/JJ8VPZKKFW/sku/6673142",
   "https://www.walmart.com/ip/Nintendo-Switch-2-System/15949610846",
   "https://www.target.com/p/slippers/-/A-1010085867?preselect=95250268",
+  "https://www.etsy.com/listing/1154909286/custom-handwriting-necklace-actual-your",
 ])("uses the dedicated scraper first for %s", async (link) => {
   const fetch = vi
     .fn()
@@ -106,7 +108,9 @@ it.each([
     input: [
       {
         url: link,
-        ...(link.includes("amazon.com") ? { all_variations: false } : {}),
+        ...(/amazon\.com|etsy\.com/.test(link)
+          ? { all_variations: false }
+          : {}),
       },
     ],
     limit_per_input: 1,
@@ -332,7 +336,8 @@ it("matches Shopify variants without substituting a retired selection", () => {
 it("retries a classified Unlocker failure once, with a separate paid allowance check", async () => {
   vi.useFakeTimers();
   try {
-    mock.state.imports[0].url = "https://www.etsy.com/listing/1653410438/item";
+    mock.state.imports[0].url =
+      "https://shop.example/product/embroidery-pattern";
     mock.request.mockRejectedValue(new Error("Direct blocked"));
     const fetcher = vi
       .fn()
@@ -373,7 +378,7 @@ it("records outer HTTP and envelope failures without retrying unknown 502s", asy
     delete mock.state.imports[0].unlockerRetry;
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(response));
     await expect(
-      importProduct("https://etsy.com/listing/1/item", "owner", false, "job"),
+      importProduct("https://shop.example/product/item", "owner", false, "job"),
     ).rejects.toThrow();
     expect(mock.state.imports[0].diagnostic).toMatchObject({
       stage: "brightdata-unlocker",
@@ -384,4 +389,102 @@ it("records outer HTTP and envelope failures without retrying unknown 502s", asy
       "secret",
     );
   }
+});
+
+const etsyUrl =
+  "https://www.etsy.com/listing/1154909286/custom-handwriting-necklace-actual-your";
+it("imports the failed Etsy necklace through one resumable collection, without Unlocker or AI", async () => {
+  mock.state.imports[0].url = etsyUrl;
+  mock.state.imports[0].draft = {
+    state: "active",
+    fields: { title: "My necklace idea" },
+    touched: ["title"],
+    revision: 2,
+  };
+  const draft = structuredClone(mock.state.imports[0].draft);
+  const fetcher = vi
+    .fn()
+    .mockResolvedValueOnce(Response.json({ snapshot_id: "etsy" }))
+    .mockResolvedValueOnce(Response.json({ status: "running" }))
+    .mockResolvedValueOnce(Response.json({ status: "ready" }))
+    .mockResolvedValueOnce(
+      Response.json([
+        {
+          product_id: "1154909286",
+          url: etsyUrl,
+          title: "Custom Handwriting Necklace",
+          final_price: 39.9,
+          currency: "USD",
+          listing_has_variations: true,
+        },
+      ]),
+    );
+  vi.stubGlobal("fetch", fetcher);
+  const run = () => importProduct(etsyUrl, "owner", false, "job");
+  await expect(run()).rejects.toBeInstanceOf(ImportPending);
+  mock.state = structuredClone(mock.state);
+  await expect(run()).rejects.toBeInstanceOf(ImportPending);
+  expect(await run()).toMatchObject({
+    title: "Custom Handwriting Necklace",
+    priceCents: null,
+  });
+  expect(mock.state.imports[0].draft).toEqual(draft);
+  expect(mock.spend).toHaveBeenCalledExactlyOnceWith("brightdata");
+  expect(mock.request).not.toHaveBeenCalled();
+  expect(fetcher.mock.calls[0][0]).toContain("dataset_id=gd_ltppk0jdv1jqz25mz");
+  expect(
+    fetcher.mock.calls.filter(([, init]) => init.method === "POST"),
+  ).toHaveLength(1);
+  expect(
+    fetcher.mock.calls.every(([endpoint]) =>
+      endpoint.includes("/datasets/v3/"),
+    ),
+  ).toBe(true);
+});
+
+it("does not cascade an Etsy rejection into Unlocker or discard the draft", async () => {
+  mock.state.imports[0].draft = {
+    state: "active",
+    fields: { title: "Keep my edits" },
+    touched: ["title"],
+    revision: 1,
+  };
+  const fetcher = vi
+    .fn()
+    .mockResolvedValue(new Response("secret account detail", { status: 403 }));
+  vi.stubGlobal("fetch", fetcher);
+  await expect(
+    importProduct(etsyUrl, "owner", false, "job"),
+  ).rejects.toMatchObject({ stage: "brightdata-submit", status: 403 });
+  expect(fetcher).toHaveBeenCalledTimes(1);
+  expect(mock.state.imports[0].draft.fields.title).toBe("Keep my edits");
+  expect(mock.state.imports[0].providerState).toBeUndefined();
+});
+
+it("keeps Etsy background price checks on the existing Unlocker path", async () => {
+  const priceJob = {
+    ...mock.state.imports[0],
+    url: etsyUrl,
+    day: "2026-11-05",
+    targets: [],
+  };
+  mock.state.priceChecks.push(priceJob);
+  mock.request.mockRejectedValue(new Error("Direct blocked"));
+  const fetcher = vi
+    .fn()
+    .mockResolvedValue(Response.json({ status_code: 502 }));
+  vi.stubGlobal("fetch", fetcher);
+  await expect(
+    lookupPrice(etsyUrl, "job", await config(), async () => {}),
+  ).rejects.toThrow();
+  expect(fetcher).toHaveBeenCalledExactlyOnceWith(
+    "https://api.brightdata.com/request",
+    expect.anything(),
+  );
+  expect(priceJob.providerState).toBeUndefined();
+  expect(mock.spend).toHaveBeenCalledExactlyOnceWith(
+    "brightdata",
+    true,
+    "brightdata-unlocker",
+  );
 });

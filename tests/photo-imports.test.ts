@@ -50,6 +50,7 @@ vi.mock("../src/server/db", () => {
 import { importProduct, saveImage } from "../src/server/imports";
 import { importCacheKey } from "../src/server/import-cache";
 import { spend } from "../src/server/settings";
+import { ImportPending } from "../src/server/brightdata";
 let dir: string;
 let png: Buffer;
 const page =
@@ -129,6 +130,113 @@ describe("photo import policy", () => {
     expect(mocks.state.media).toHaveLength(1);
     expect(mocks.request).not.toHaveBeenCalled();
   });
+});
+
+describe("Etsy import photos and cache", () => {
+  const url =
+    "https://www.etsy.com/listing/1154909286/custom-handwriting-necklace-actual-your";
+  const setup = () => {
+    mocks.cfg = {
+      SCRAPING_PROVIDER: "brightdata",
+      BRIGHTDATA_API_KEY: "synthetic-key",
+      BRIGHTDATA_UNLOCKER_ZONE: "shops",
+    };
+    mocks.state.imports.push({
+      id: "etsy-job",
+      userId: "owner",
+      url,
+      status: "pending",
+      createdAt: new Date().toISOString(),
+      revision: 1,
+    });
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(Response.json({ snapshot_id: "etsy" }))
+      .mockResolvedValueOnce(Response.json({ status: "ready" }))
+      .mockResolvedValueOnce(
+        Response.json([
+          {
+            product_id: "1154909286",
+            url,
+            title: "Custom Handwriting Necklace",
+            description: "An engraved pendant",
+            currency: "USD",
+            final_price: 39.9,
+            listing_has_variations: true,
+            images: ["https://example.com/photo.png"],
+          },
+        ]),
+      );
+    vi.stubGlobal("fetch", fetcher);
+    return fetcher;
+  };
+
+  it("bypasses old generic metadata, saves the photo, and reuses the new metadata", async () => {
+    mocks.enabled = true;
+    const fetcher = setup();
+    const oldKey = importCacheKey("metadata-v8", [
+      false,
+      undefined,
+      url,
+      "brightdata",
+      mocks.cfg.BRIGHTDATA_API_KEY,
+      "shops",
+      true,
+    ]);
+    const now = new Date();
+    mocks.cache.set(oldKey, {
+      checked: now,
+      expires: new Date(now.getTime() + 3600000),
+      data: {
+        title: "Stale generic result",
+        sourceTitle: "Stale generic result",
+        source: "www.etsy.com",
+        importedAt: now.toISOString(),
+        shareable: true,
+      },
+    });
+    await expect(
+      importProduct(url, "owner", false, "etsy-job"),
+    ).rejects.toBeInstanceOf(ImportPending);
+    const result = await importProduct(url, "owner", false, "etsy-job");
+    expect(result).toMatchObject({
+      title: "Custom Handwriting Necklace",
+      priceCents: null,
+    });
+    expect(result.image).toMatch(/^\/api\/v1\/media\//);
+    expect(mocks.request).toHaveBeenCalledExactlyOnceWith(
+      "https://example.com/photo.png",
+      expect.anything(),
+    );
+    expect(mocks.state.media).toHaveLength(1);
+    expect(await importProduct(url, "owner", false, "etsy-job")).toMatchObject({
+      title: result.title,
+      priceCents: null,
+    });
+    expect(fetcher).toHaveBeenCalledTimes(3);
+    expect(spend).toHaveBeenCalledExactlyOnceWith("brightdata");
+  });
+
+  it.each(["disabled", "download failed"])(
+    "keeps Etsy details when photos are %s",
+    async (mode) => {
+      mocks.enabled = mode !== "disabled";
+      setup();
+      mocks.request.mockRejectedValue(new Error("Photo unavailable"));
+      await expect(
+        importProduct(url, "owner", false, "etsy-job"),
+      ).rejects.toBeInstanceOf(ImportPending);
+      const result = await importProduct(url, "owner", false, "etsy-job");
+      expect(result).toMatchObject({
+        title: "Custom Handwriting Necklace",
+        description: "An engraved pendant",
+        priceCents: null,
+      });
+      expect(result.image).toBeUndefined();
+      expect(mocks.state.media).toHaveLength(0);
+      expect(mocks.request).toHaveBeenCalledTimes(mode === "disabled" ? 0 : 1);
+    },
+  );
 });
 
 describe("AI product copy", () => {

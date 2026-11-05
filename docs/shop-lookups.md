@@ -1,6 +1,6 @@
 # Configure shop lookups
 
-Little Hint first uses its built-in product parser for ordinary shops. You can choose one paid provider to help with blocked or incomplete pages. Bright Data additionally supports dedicated product APIs for Amazon, Walmart, Target, and Best Buy US product links.
+Little Hint first uses its built-in product parser for ordinary shops. You can choose one paid provider to help with blocked or incomplete pages. Bright Data additionally supports dedicated product APIs for Amazon, Walmart, Target, and Best Buy US product links, plus Etsy listing imports.
 
 A generic page title that only repeats the shop name or hostname does not count as a product name. Little Hint tries another available title, retailer-specific data, and then the configured paid provider. If none supplies a product name, the draft stays editable for manual entry. A real product title can still import without a price, description, or photo.
 
@@ -39,7 +39,7 @@ Prefix every variable with `STAGING_` for staging. Production credentials are ig
 1. Create a Bright Data account and review its current pay-as-you-go terms, account verification requirements, and spending controls. Free credits depend on account eligibility; the app does not assume they are available.
 2. In the Bright Data dashboard, enable Web Unlocker and create a zone, for example `little_hint_shops`. Copy the exact zone name. This is a Bright Data product configuration, not a DNS record or another server.
 3. Create an API token with access to Web Unlocker and the Scraper APIs. Store it in your deployment secret manager. Do not put it in Git or browser configuration.
-4. Confirm access to the four product scrapers below. Little Hint supplies the dataset IDs itself. You do not need a schedule, webhook, cloud storage destination, separate token per store, or a custom scraper.
+4. Confirm access to the five product scrapers below. Little Hint supplies the dataset IDs itself. You do not need a schedule, webhook, cloud storage destination, separate token per store, or a custom scraper.
 
 | Store    | Product scraper dataset ID |
 | -------- | -------------------------- |
@@ -47,12 +47,13 @@ Prefix every variable with `STAGING_` for staging. Production credentials are ig
 | Walmart  | `gd_l95fol7l1ru6rlo116`    |
 | Target   | `gd_ltppk5mx2lp0v1k0vo`    |
 | Best Buy | `gd_ltre1jqe1jfr7cccf`     |
+| Etsy     | `gd_ltppk0jdv1jqz25mz`    |
 
-These adapters target US product links. Category pages, search results, and other regional storefronts use the general website path. Retailer coverage is explicit: enabling Bright Data does not automatically install every scraper in its catalog.
+The first four adapters target US product links. Etsy accepts listing links on `etsy.com` and `www.etsy.com`, including localized listing paths. Category pages, search results, and other regional storefronts use the general website path. Retailer coverage is explicit: enabling Bright Data does not automatically install every scraper in its catalog.
 
 ### Retailer routing and verification
 
-With Bright Data selected, supported Amazon, Target, Walmart, and Best Buy product links go directly to their dedicated scraper. Ordinary shops use built-in extraction first, then Web Unlocker if needed. A retailer collection failure keeps the private draft for retry or manual entry; it does not trigger another paid scraper automatically.
+With Bright Data selected, supported Amazon, Target, Walmart, Best Buy, and Etsy product imports go directly to their dedicated scraper. Ordinary shops use built-in extraction first, then Web Unlocker if needed. A retailer collection failure keeps the private draft for retry or manual entry; it does not trigger another paid scraper automatically.
 
 Direct-only probes from the staging worker on 2026-10-31 produced these results for the supplied products:
 
@@ -116,7 +117,7 @@ Staging calls can use real provider credits. Preview environments do not inherit
 
 Open Settings → Administration → Service status. Shop lookups should report **Configured — Bright Data**. This checks configuration presence, not connectivity or credit balance. Confirm the worker is running under Background jobs.
 
-Try one current product URL for each of the four stores, an Amazon short link, and an independent store. Check the imported product identity, selected option, currency, and photo. Repeat a successful lookup to exercise the cache. For a slow lookup, save the draft, close the PWA, and reopen it from My lists. It must remain private until you review and add it.
+Try one current product URL for each of the five stores, an Amazon short link, and an independent store. Check the imported product identity, selected option, currency, and photo. Repeat a successful lookup to exercise the cache. For a slow lookup, save the draft, close the PWA, and reopen it from My lists. It must remain private until you review and add it.
 
 Failed lookups retain the draft. Check Background jobs for sanitized diagnostics. HTTP 401/403 usually calls for checking token permissions; billing/allowance failures require checking the account and application limits. A missing zone prevents Bright Data selection. Never send API keys when reporting an error.
 
@@ -179,6 +180,28 @@ price tracking or gift-discovery verification.
 Provider failures remain visible in Background jobs when AI recovery also fails.
 Verify a fresh REI import with AI recovery disabled before treating a deployment's
 provider access as working; configuration presence alone does not prove access.
+
+## Etsy wishlist imports
+
+Etsy listing imports use the dedicated dataset above with `all_variations=false`.
+The returned product ID and any returned listing URL must match the requested
+listing. The adapter keeps the title, description, and primary listing photo when
+available. It accepts a price only when it is an unambiguous USD amount with no
+variant uncertainty. Listings with variations remain usable with a blank price
+and a reminder to check the option. Explicit option selections also omit the
+listing photo because it may show a different option.
+
+Existing automatic-photo settings, safe image downloading, private drafts,
+collection resume behavior, and daily allowances apply. Etsy imports bypass older
+generic metadata cache entries. This changes wishlist imports only; background
+price checks retain their existing routing and verification.
+
+A staging probe on 2026-11-05 used one collection for listing `1154909286` and
+verified its product identity, title, description, and a downloadable, decodable
+photo. Its variation data correctly left the price blank. This verifies that
+listing with the staging credentials, not every Etsy listing or production access.
+The [official scraper catalog](https://docs.brightdata.com/scrapers-full.json)
+was checked the same day. No production gift or draft was changed by the probe.
 
 ## Lookup failures and automatic retries
 

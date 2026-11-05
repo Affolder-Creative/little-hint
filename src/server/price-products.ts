@@ -90,7 +90,7 @@ export async function lookupPrice(
     const result = parsePrice(page.buffer.toString("utf8"), page.url);
     return {
       ...result,
-      ...(retailerDataset(url) ? { identity: `retailer:${url}` } : {}),
+      ...(retailerDataset(url, "price") ? { identity: `retailer:${url}` } : {}),
       source: "direct",
     };
   } catch {
@@ -100,7 +100,7 @@ export async function lookupPrice(
   await validateUrl(url);
   const provider = selectedScrapingProvider(cfg);
   if (!provider) throw new Error("Paid fallback unavailable");
-  if (!(provider === "brightdata" && retailerDataset(url))) {
+  if (!(provider === "brightdata" && retailerDataset(url, "price"))) {
     await transact((s) => {
       const job = s.priceChecks.find((j) => j.id === id);
       if (!job || job.paidAttempted)
@@ -109,7 +109,7 @@ export async function lookupPrice(
     });
   }
   if (provider === "brightdata") {
-    if (retailerDataset(url)) {
+    if (retailerDataset(url, "price")) {
       const r = await brightRetailer(url, cfg.BRIGHTDATA_API_KEY, id, true);
       if (!r.priceCents) throw new Error("Price cannot be verified");
       return {

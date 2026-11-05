@@ -1,4 +1,5 @@
 import { retryableUnlock } from "./import-retry";
+import { etsyListingId } from "./etsy";
 import { recordLookupDiagnostic } from "./lookup-diagnostics";
 import type { LookupDiagnostic } from "../shared/lookup-diagnostics";
 import { reiProduct, reiProductId } from "./rei";
@@ -531,15 +532,20 @@ export async function importProduct(
     ? cfg[scrapingProviders.find((p) => p.id === provider)!.key]
     : "";
   const key = normalized
-    ? importCacheKey("metadata-v8", [
-        recoveryEnabled(cfg),
-        cfg.AI_PRODUCT_RECOVERY_MODEL,
-        normalized,
-        provider,
-        providerKey,
-        cfg.BRIGHTDATA_UNLOCKER_ZONE,
-        importPhotos,
-      ])
+    ? importCacheKey(
+        provider === "brightdata" && etsyListingId(lookupUrl)
+          ? "metadata-etsy-v1"
+          : "metadata-v8",
+        [
+          recoveryEnabled(cfg),
+          cfg.AI_PRODUCT_RECOVERY_MODEL,
+          normalized,
+          provider,
+          providerKey,
+          cfg.BRIGHTDATA_UNLOCKER_ZONE,
+          importPhotos,
+        ],
+      )
     : undefined;
   const metadata = await cachedImport(
     key,

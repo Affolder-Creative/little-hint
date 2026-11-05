@@ -5,6 +5,7 @@ import { spend } from "./settings";
 import { validateUrl, boundedBody } from "./imports";
 import type { ImportJob, Item } from "../shared/model";
 import { retailerCollectionTimeoutMs } from "../shared/imports";
+import { etsyListingId, normalizeEtsyProduct } from "./etsy";
 
 export class ImportPending extends Error {}
 export class BrightDataFailure extends Error {
@@ -78,8 +79,12 @@ const datasets: Record<string, string> = {
   "walmart.com": "gd_l95fol7l1ru6rlo116",
   "target.com": "gd_ltppk5mx2lp0v1k0vo",
   "bestbuy.com": "gd_ltre1jqe1jfr7cccf",
+  "etsy.com": "gd_ltppk0jdv1jqz25mz",
 };
-export function retailerDataset(value: string) {
+export function retailerDataset(
+  value: string,
+  purpose: "import" | "price" = "import",
+) {
   const u = new URL(value),
     host = u.hostname.replace(/^www\./, "");
   const product =
@@ -91,13 +96,27 @@ export function retailerDataset(value: string) {
           ? u.pathname.startsWith("/p/")
           : host === "bestbuy.com"
             ? /\/(?:\d+\.p|sku\/\d+)\/?$/.test(u.pathname)
-            : false;
+            : purpose === "import" && !!etsyListingId(value);
   return product ? datasets[host] : undefined;
 }
 export function normalizeRetailer(
   row: any,
   url: string,
-): Partial<Item> & { sourceTitle: string; remoteImage?: string } {
+): Partial<Item> & {
+  sourceTitle: string;
+  remoteImage?: string;
+  warnings?: string[];
+} {
+  if (etsyListingId(url)) {
+    try {
+      return normalizeEtsyProduct(row, url);
+    } catch {
+      throw new BrightDataFailure(
+        "brightdata-result",
+        "Etsy product details or listing identity could not be verified",
+      );
+    }
+  }
   if (!row || row.error) throw new Error("Retailer returned no product");
   const title = row.title ?? row.product_name ?? row.name;
   if (typeof title !== "string" || !title.trim())
@@ -216,6 +235,12 @@ export async function brightRetailer(
   priceCheck = false,
 ) {
   await validateUrl(url);
+  const dataset = retailerDataset(url, priceCheck ? "price" : "import");
+  if (!dataset)
+    throw new BrightDataFailure(
+      "brightdata-submit",
+      "Unsupported retailer product link",
+    );
   let state: ImportJob["providerState"];
   await transact((s) => {
     const job = [...s.imports, ...s.priceChecks].find((j) => j.id === jobId);
@@ -247,13 +272,14 @@ export async function brightRetailer(
     let result;
     try {
       result = await jsonRequest(
-        `/datasets/v3/trigger?dataset_id=${retailerDataset(url)}&include_errors=true&notify=false`,
+        `/datasets/v3/trigger?dataset_id=${dataset}&include_errors=true&notify=false`,
         key,
         {
           input: [
             {
               url,
-              ...(new URL(url).hostname.replace(/^www\./, "") === "amazon.com"
+              ...(new URL(url).hostname.replace(/^www\./, "") ===
+                "amazon.com" || etsyListingId(url)
                 ? { all_variations: false }
                 : {}),
             },
