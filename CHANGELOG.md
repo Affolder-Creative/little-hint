@@ -376,7 +376,6 @@ namespace for existing installations and older release bundles.
 
 ### Fixes
 
-* enable Scraping Fish JavaScript rendering ([#31](https://github.com/kaffolder7/little-hint/issues/31)) ([38836c9](https://github.com/kaffolder7/little-hint/commit/38836c9a3996d8f9f6d8d5b4e8ed62b57260e87d))
 * refresh Little Hint copy and terminology ([#32](https://github.com/kaffolder7/little-hint/issues/32)) ([5412eaf](https://github.com/kaffolder7/little-hint/commit/5412eaf1a5d77ad55cea397a32f150ce33cc1ac3))
 * resolve Fastify and Cloudflare analytics warnings ([#28](https://github.com/kaffolder7/little-hint/issues/28)) ([5c1fc84](https://github.com/kaffolder7/little-hint/commit/5c1fc849369cd9acddb0c35df82c23ac6007f2fd))
 

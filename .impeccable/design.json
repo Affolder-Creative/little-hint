@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-04T19:54:28.746901+00:00",
+  "generatedAt": "2026-11-05T19:14:16.768762+00:00",
   "title": "Design System: Little Hint",
   "extensions": {
     "colorMeta": {
@@ -1260,6 +1260,11 @@
       {
         "name": "Connection fallback",
         "body": "Connection screens use approved horizontal artwork, the existing headline and body typography, and the current light or dark palette. Center a narrow text group with generous space after the logo, then a primary retry action. Supporting text uses the muted foreground. Personal draft controls follow as a separate, quieter group. Center the standalone clear-device action beneath this group. Preserve mobile safe-area padding, visible focus, and a stable layout during retries. A playful headline may introduce the problem; the explanation and recovery action stay plain.",
+        "section": "components"
+      },
+      {
+        "name": "Administration service status",
+        "body": "Administration contains App settings, This month's usage, Service status, and Background jobs. Family-group creation, automatic product photos, device photo caching, and photo prefetching are editable, with optional locking ENV overrides. All service credentials, providers, models, limits, and AI availability are deployment-only. Service status reports configuration presence, not verified connectivity. When AI_ENABLED is false, omit AI service rows, AI usage groups, and AI-specific explanatory copy even when history exists. Retain other disabled services\u2019 current-month usage with Currently off; omit sections with only prior-month or skipped SMS history. Preserve notification retries, failed shop lookups, and the note that backup status is unavailable.",
         "section": "components"
       }
     ],

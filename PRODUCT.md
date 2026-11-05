@@ -106,7 +106,7 @@ Service status remains visible. Connections, consent, and saved choices survive
 disablement. Suppressed updates remain in the inbox and are never caught up after
 re-enabling. Configured but unconnected channels still offer setup.
 
-Product lookups support Bright Data retailer scrapers for Amazon, Walmart, Target, and Best Buy US product pages, plus Web Unlocker after built-in extraction for other shops. New wish-list imports are private server-saved drafts until explicitly added. Configuration and limitations are documented in [Shop lookup configuration](docs/shop-lookups.md).
+Product lookups support Bright Data retailer scrapers for Amazon, Walmart, Target, and Best Buy US product pages, plus Web Unlocker after built-in extraction for other shops. New wish-list imports are private server-saved drafts until explicitly added. Automatic provider selection prefers Bright Data, ScrapingBee, Scrape.do, then Scrapingdog. Bright Data requires an API key and Unlocker zone. Explicit selections never fall through to another paid provider. Configuration and limitations are documented in [Shop lookup configuration](docs/shop-lookups.md).
 
 `SCRAPING_PROVIDER=none` means manual product entry, including no direct extraction or product-detail AI. Existing drafts and uploaded photos remain usable. `auto` retains direct extraction and configured paid services. Gift discovery is independently configured.
 

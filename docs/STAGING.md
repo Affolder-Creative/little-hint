@@ -191,7 +191,7 @@ in the staging host's runtime secrets:
 
 | Provider      | Staging variable               |
 | ------------- | ------------------------------ |
-| Scraping Fish | `STAGING_SCRAPINGFISH_API_KEY` |
+| Bright Data | `STAGING_BRIGHTDATA_API_KEY` and `STAGING_BRIGHTDATA_UNLOCKER_ZONE` |
 | ScrapingBee   | `STAGING_SCRAPINGBEE_API_KEY`  |
 | Scrape.do     | `STAGING_SCRAPEDO_API_KEY`     |
 | Scrapingdog   | `STAGING_SCRAPINGDOG_API_KEY`  |
@@ -200,12 +200,12 @@ Use dedicated staging credentials. Ordinary `SCRAPING_PROVIDER` and unprefixed
 provider keys, along with saved database credentials, remain ignored in staging.
 Both app and worker receive these variables from `compose.staging.yaml`.
 
-The selector accepts `auto`, `none`, `scrapingfish`, `scrapingbee`, `scrapedo`,
+The selector accepts `auto`, `none`, `brightdata`, `scrapingbee`, `scrapedo`,
 or `scrapingdog`. Empty defaults to `auto`, which chooses the first configured
-provider in this order: Fish, Bee, Scrape.do, Dog. It does not try another provider
-if the selected one fails. An explicit selection without its staging key uses
-direct lookup only. Set `none` or remove all staging scraping keys to disable
-paid scraping without disabling AI.
+provider in this order: Bright Data, ScrapingBee, Scrape.do, Scrapingdog. It does not try another provider
+if the selected one fails. Bright Data requires its staging API key and Unlocker zone. An explicit selection without its required staging credentials uses
+direct lookup only. Set `none` for manual product entry only. Remove all staging scraping keys to keep
+direct lookup without paid scraping. Gift discovery is configured separately.
 
 Set `STAGING_PAID_DAILY_LIMIT=10` to allow paid requests. This setting applies
 separately to each paid service, including product-detail AI. A value of `0`

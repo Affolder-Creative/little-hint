@@ -14,7 +14,6 @@ export function scrapingRequest(
         )?.[1]
       : undefined;
   const endpoints = {
-    scrapingfish: "https://api.scrapingfish.com/api/v1/",
     scrapingbee: asin
       ? "https://app.scrapingbee.com/api/v1/amazon/product"
       : "https://app.scrapingbee.com/api/v1/",
@@ -33,7 +32,6 @@ export function scrapingRequest(
   } else
     url.searchParams.set(provider === "scrapedo" ? "token" : "api_key", key);
   if (!asin) url.searchParams.set("url", target);
-  if (provider === "scrapingfish") url.searchParams.set("render_js", "true");
   if (provider === "scrapingdog") url.searchParams.set("dynamic", "false");
   return { url, headers, amazon: !!asin };
 }

@@ -247,7 +247,8 @@ for (const missing of Object.keys(stagingVars)) {
 }
 const stagingAI = {
   STAGING_SCRAPING_PROVIDER: "auto",
-  STAGING_SCRAPINGFISH_API_KEY: "compose-fish-only",
+  STAGING_BRIGHTDATA_API_KEY: "compose-brightdata-only",
+  STAGING_BRIGHTDATA_UNLOCKER_ZONE: "compose-zone-only",
   STAGING_SCRAPINGBEE_API_KEY: "compose-bee-only",
   STAGING_SCRAPEDO_API_KEY: "compose-scrapedo-only",
   STAGING_SCRAPINGDOG_API_KEY: "compose-dog-only",
@@ -273,7 +274,8 @@ for (const name of ["app", "worker"]) {
   assert.equal(environment.OPENAI_API_KEY, undefined);
   for (const key of [
     "SCRAPING_PROVIDER",
-    "SCRAPINGFISH_API_KEY",
+    "BRIGHTDATA_API_KEY",
+    "BRIGHTDATA_UNLOCKER_ZONE",
     "SCRAPINGBEE_API_KEY",
     "SCRAPEDO_API_KEY",
     "SCRAPINGDOG_API_KEY",

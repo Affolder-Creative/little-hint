@@ -1,9 +1,8 @@
 export const scrapingProviders = [
-  { id: "scrapingfish", name: "Scraping Fish", key: "SCRAPINGFISH_API_KEY" },
+  { id: "brightdata", name: "Bright Data", key: "BRIGHTDATA_API_KEY" },
   { id: "scrapingbee", name: "ScrapingBee", key: "SCRAPINGBEE_API_KEY" },
   { id: "scrapedo", name: "Scrape.do", key: "SCRAPEDO_API_KEY" },
   { id: "scrapingdog", name: "Scrapingdog", key: "SCRAPINGDOG_API_KEY" },
-  { id: "brightdata", name: "Bright Data", key: "BRIGHTDATA_API_KEY" },
 ] as const;
 export type ScrapingProvider = (typeof scrapingProviders)[number]["id"];
 export const scrapingSelections = [

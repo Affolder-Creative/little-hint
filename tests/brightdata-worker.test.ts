@@ -276,7 +276,7 @@ it("keeps polling a collection that takes more than three minutes", async () => 
   );
   expect(mock.spend).not.toHaveBeenCalled();
 });
-it("uses Scraping Fish's resolved Amazon URL", async () => {
+it("uses a validated resolved Amazon URL from a generic provider", async () => {
   vi.stubGlobal(
     "fetch",
     vi.fn().mockResolvedValue(
@@ -288,7 +288,7 @@ it("uses Scraping Fish's resolved Amazon URL", async () => {
   const result = await paidProductPreview(
     "https://a.co/d/test",
     {},
-    { SCRAPING_PROVIDER: "scrapingfish", SCRAPINGFISH_API_KEY: "key" },
+    { SCRAPING_PROVIDER: "scrapingbee", SCRAPINGBEE_API_KEY: "key" },
   );
   expect(result.title).toBe("A real product");
 });
