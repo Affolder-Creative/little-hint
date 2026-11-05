@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.17.0](https://github.com/Affolder-Creative/little-hint/compare/v0.16.0...v0.17.0) (2026-11-05)
+
+
+### Features
+
+* add shopping app capture and paste flow ([#158](https://github.com/Affolder-Creative/little-hint/issues/158)) ([8973e72](https://github.com/Affolder-Creative/little-hint/commit/8973e729e519bf00d568e5c017859660cd88ca49))
+
 ## [0.16.0](https://github.com/Affolder-Creative/little-hint/compare/v0.15.0...v0.16.0) (2026-11-04)
 
 
