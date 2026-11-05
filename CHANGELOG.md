@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.19.3](https://github.com/Affolder-Creative/little-hint/compare/v0.19.2...v0.19.3) (2026-11-05)
+
+
+### Fixes
+
+* use dedicated Etsy product imports ([#173](https://github.com/Affolder-Creative/little-hint/issues/173)) ([f8f67ca](https://github.com/Affolder-Creative/little-hint/commit/f8f67ca83d8af6159287da164173aea2fa090ab5))
+
 ## [0.19.2](https://github.com/Affolder-Creative/little-hint/compare/v0.19.1...v0.19.2) (2026-11-05)
 
 
