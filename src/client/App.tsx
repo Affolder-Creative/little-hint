@@ -1535,7 +1535,7 @@ function GiftDetail() {
               exchange === "ordinary" ||
               selectedExchange) && (
               <MentionNote
-                key={`${gift.id}:${exchange}`}
+                key={gift.id}
                 itemId={gift.id}
                 context={shoppingPayload(exchange)}
               />
