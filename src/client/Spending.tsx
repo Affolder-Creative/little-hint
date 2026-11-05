@@ -664,7 +664,7 @@ function SpendingRow({
     ),
     r.ownerId === world.me.id &&
       data.connection?.status === "active" &&
-      !r.protected && (
+      r.canShare && (
         <Action
           key="share"
           secondary

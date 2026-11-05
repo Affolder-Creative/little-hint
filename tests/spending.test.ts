@@ -668,6 +668,18 @@ describe("authorized spending history API", () => {
       amountCents: 10000,
       date: "2026-12-30",
     };
+    // Use a real source: orphaned reservation snapshots are intentionally private.
+    const item = command(f.s, f.actors[0], "items.create", {
+      title: "Transfer source",
+      recipientIds: [f.s.people[2].id],
+      visibility: "hidden",
+      groupIds: [f.s.groups[0].id],
+    }) as { id: string };
+    const reservation = command(f.s, f.actors[0], "reservations.create", {
+      itemId: item.id,
+      quantity: 1,
+    }) as { id: string };
+    purchase.reservationId = reservation.id;
     const sourceId = stamp().id;
     f.s.spendingRecords = [
       purchase,

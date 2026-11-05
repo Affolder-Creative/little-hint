@@ -14,7 +14,7 @@
     "db:migrate": "tsx src/server/cli.ts migrate",
     "bootstrap": "tsx src/server/cli.ts bootstrap",
     "test": "vitest run",
-    "test:integration": "vitest run --no-file-parallelism tests/integration.test.ts tests/friends.integration.test.ts tests/pagination.integration.test.ts tests/account-*.integration.test.ts",
+    "test:integration": "vitest run --no-file-parallelism tests/integration.test.ts tests/friends.integration.test.ts tests/pagination.integration.test.ts tests/account-*.integration.test.ts tests/surprise-privacy.integration.test.ts",
     "test:e2e": "playwright test",
     "typecheck": "tsc --noEmit",
     "demo": "tsx src/server/cli.ts demo",
