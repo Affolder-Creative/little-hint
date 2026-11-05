@@ -30,13 +30,17 @@ export function AccountExport() {
       {format === "csv" && (
         <>
           <Field label="CSV table">
-            <select value={table} onChange={(e) => setTable(e.target.value)}>
+            <select
+              aria-describedby="account-csv-help"
+              value={table}
+              onChange={(e) => setTable(e.target.value)}
+            >
               <option value="wishes">Wishes &amp; ideas</option>
               <option value="buying">Buying history</option>
               <option value="spending">Spending records</option>
             </select>
           </Field>
-          <p>
+          <p id="account-csv-help" className="account-export-help">
             One row per item or record, with names and dollar amounts. Download
             each table separately. Blank amounts mean no price was entered.
             Refunds are positive amounts marked as refunds. CSV tables include

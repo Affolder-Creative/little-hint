@@ -81,7 +81,16 @@ test("downloads JSON and lets users retry a failed export on mobile", async ({
       const style = getComputedStyle(element);
       const heading = element.querySelector("h2")!;
       const signOut = document.querySelector(".settings-sign-out h2")!;
+      const help = element
+        .querySelector("#account-csv-help")!
+        .getBoundingClientRect();
+      const select = element
+        .querySelector('[aria-describedby="account-csv-help"]')!
+        .getBoundingClientRect();
+      const button = element.querySelector("button")!.getBoundingClientRect();
       return {
+        helpGap: help.top - select.bottom,
+        buttonGap: button.top - help.bottom,
         margin: parseFloat(style.marginTop),
         padding: parseFloat(style.paddingTop),
         border: parseFloat(style.borderTopWidth),
@@ -89,6 +98,8 @@ test("downloads JSON and lets users retry a failed export on mobile", async ({
         otherHeadingSize: getComputedStyle(signOut).fontSize,
       };
     });
+    expect(layout.helpGap).toBeGreaterThanOrEqual(16);
+    expect(layout.buttonGap).toBeGreaterThanOrEqual(16);
     expect(layout.margin).toBeGreaterThanOrEqual(40);
     expect(layout.padding).toBeGreaterThanOrEqual(24);
     expect(layout.border).toBe(1);
