@@ -30,6 +30,20 @@ export function makeAuth() {
     rateLimit: { enabled: true, window: 60, max: 30 },
     databaseHooks: {
       user: {
+        update: {
+          after: async (user, ctx) => {
+            if (ctx?.path !== "/email-otp/change-email") return;
+            // Require every device to sign in using the newly verified address.
+            await pool.query("DELETE FROM session WHERE user_id=$1", [user.id]);
+            await transact((s) => {
+              s.pushDevices = s.pushDevices.filter((d) => d.userId !== user.id);
+              s.smsChallenges = s.smsChallenges.filter(
+                (c) => c.userId !== user.id,
+              );
+              s.smsGrants = s.smsGrants.filter((g) => g.userId !== user.id);
+            });
+          },
+        },
         create: {
           before: async (u) => {
             if (!signupAllowed(await readState(), u.email))
@@ -67,17 +81,34 @@ export function makeAuth() {
     plugins: [
       smsAuth(),
       emailOTP({
+        changeEmail: { enabled: true, verifyCurrentEmail: true },
         otpLength: 6,
         expiresIn: 600,
         allowedAttempts: 5,
         storeOTP: "hashed",
         sendVerificationOTP: async ({ email, otp, type }) => {
+          if (type === "change-email") {
+            await sendEmail(email, {
+              kind: "sign-in",
+              purpose: "email-change",
+              code: otp,
+            });
+            return;
+          }
           const known = await pool.query(
             'SELECT id FROM "user" WHERE email=$1',
             [normalizedEmail(email)],
           );
           if (!known.rowCount && !signupAllowed(await readState(), email))
             return;
+          if (type === "email-verification" && known.rowCount) {
+            await sendEmail(email, {
+              kind: "sign-in",
+              purpose: "email-change",
+              code: otp,
+            });
+            return;
+          }
           if (type !== "sign-in") return;
           await sendEmail(email, { kind: "sign-in", code: otp });
         },

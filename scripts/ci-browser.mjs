@@ -146,7 +146,9 @@ try {
     ...(suite === "notifications"
       ? ["tests/channel-availability.spec.ts"]
       : []),
-    ...(suite === "sign-in" ? ["tests/sms.spec.ts"] : []),
+    ...(suite === "sign-in"
+      ? ["tests/sms.spec.ts", "tests/account-email.spec.ts"]
+      : []),
     ...(suite === "polish"
       ? ["tests/settings-polish.spec.ts", "tests/account-export.spec.ts"]
       : []),

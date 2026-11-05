@@ -1,0 +1,16 @@
+.form-dialog.account-email-form > .form-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: stretch;
+}
+.form-dialog.account-email-form > .form-actions > .button[type="submit"] {
+  width: 100%;
+  min-width: 0;
+  justify-self: stretch;
+}
+.account-email-form > .form-actions > .text-button {
+  grid-column: 1 / -1;
+  justify-self: center;
+  text-align: center;
+  min-height: 44px;
+}

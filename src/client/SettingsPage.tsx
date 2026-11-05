@@ -11,6 +11,7 @@ import { FollowingSettings } from "./FollowSettings";
 import type { AdminServiceStatus } from "../shared/admin-services";
 import { AdminUsage } from "./AdminUsage";
 import { KyleSignature } from "./KyleSignature";
+import { AccountEmail } from "./AccountEmail";
 import { ProfileEditor, GiftPreferencesShortcut } from "./ProfileEditor";
 import {
   FollowButton,
@@ -1002,6 +1003,7 @@ function Security() {
   return (
     <section className="settings-section">
       <h2>Sign-in & security</h2>
+      <AccountEmail />
       <p>
         Email codes are always available. Add a passkey for a quicker sign-in on
         trusted devices.
