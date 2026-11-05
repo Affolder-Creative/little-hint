@@ -1236,44 +1236,111 @@ function Admin() {
             </button>
           </div>
         )}
-        {jobs.data?.prices && (
-          <p>
-            Price checks: {jobs.data.prices.enabled ? "Enabled" : "Off"} · Daily
-            at {jobs.data.prices.time} ({jobs.data.prices.zone}).{" "}
-            {jobs.data.prices.pending} waiting, {jobs.data.prices.failed}{" "}
-            failed. Provider attempts: {jobs.data.prices.dailyUsed}/
-            {jobs.data.prices.daily} today, {jobs.data.prices.monthlyUsed}/
-            {jobs.data.prices.monthly} this month.{" "}
-            {jobs.data.prices.providerUsage
-              .map((u) => `${u.source}: ${u.count}`)
-              .join(" · ")}{" "}
-            {jobs.data.prices.lastRun > 0 && (
-              <>
-                Last run: {new Date(jobs.data.prices.lastRun).toLocaleString()}.
-              </>
-            )}
-          </p>
-        )}
         {jobs.data && !jobs.error && (
-          <>
-            <p>
-              Updates and shop lookups:{" "}
-              {jobs.data?.workerLastSeen &&
-              Date.now() - jobs.data.workerLastSeen < 60000
-                ? "Running"
-                : "No recent activity reported"}
-              .
-            </p>
-            <p>
-              {jobs.data?.imports.filter(
-                (j) => j.status === "pending" || j.status === "running",
-              ).length ?? 0}{" "}
-              shop lookups waiting ·{" "}
-              {jobs.data?.notifications.filter((j) => j.status === "pending")
-                .length ?? 0}{" "}
-              updates waiting
-            </p>
-          </>
+          <div className="admin-job-summary">
+            {jobs.data.prices && (
+              <section aria-label="Price checks" className="admin-job-group">
+                <div className="admin-job-heading">
+                  <h4>Price checks</h4>
+                  <span
+                    className={`status ${jobs.data.prices.enabled ? "available" : ""}`}
+                  >
+                    {jobs.data.prices.enabled ? "Enabled" : "Off"}
+                  </span>
+                </div>
+                <dl className="admin-job-facts">
+                  <div>
+                    <dt>Schedule</dt>
+                    <dd>
+                      Daily at {jobs.data.prices.time}
+                      <small>{jobs.data.prices.zone}</small>
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Last run</dt>
+                    <dd>
+                      {jobs.data.prices.lastRun > 0
+                        ? new Date(jobs.data.prices.lastRun).toLocaleString()
+                        : "Not run yet"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Waiting</dt>
+                    <dd>{jobs.data.prices.pending}</dd>
+                  </div>
+                  <div>
+                    <dt>Failed</dt>
+                    <dd
+                      className={jobs.data.prices.failed ? "error" : undefined}
+                    >
+                      {jobs.data.prices.failed}
+                    </dd>
+                  </div>
+                </dl>
+                <details className="admin-provider-details">
+                  <summary>Provider attempts</summary>
+                  <dl className="admin-job-facts">
+                    <div>
+                      <dt>Today</dt>
+                      <dd>
+                        {jobs.data.prices.dailyUsed} / {jobs.data.prices.daily}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>This month</dt>
+                      <dd>
+                        {jobs.data.prices.monthlyUsed} /{" "}
+                        {jobs.data.prices.monthly}
+                      </dd>
+                    </div>
+                    {jobs.data.prices.providerUsage.map((usage) => (
+                      <div key={usage.source}>
+                        <dt>{usage.source}</dt>
+                        <dd>{usage.count}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </details>
+              </section>
+            )}
+            <section
+              aria-label="Updates and shop lookups"
+              className="admin-job-group"
+            >
+              <div className="admin-job-heading">
+                <h4>Updates and shop lookups</h4>
+              </div>
+              <p className="muted">
+                {jobs.data.workerLastSeen &&
+                Date.now() - jobs.data.workerLastSeen < 60000
+                  ? "Worker active"
+                  : "No recent worker activity reported"}
+              </p>
+              <dl className="admin-job-facts">
+                <div>
+                  <dt>Shop lookups waiting</dt>
+                  <dd>
+                    {
+                      jobs.data.imports.filter(
+                        (job) =>
+                          job.status === "pending" || job.status === "running",
+                      ).length
+                    }
+                  </dd>
+                </div>
+                <div>
+                  <dt>Updates waiting</dt>
+                  <dd>
+                    {
+                      jobs.data.notifications.filter(
+                        (job) => job.status === "pending",
+                      ).length
+                    }
+                  </dd>
+                </div>
+              </dl>
+            </section>
+          </div>
         )}
         {jobs.data && (
           <>

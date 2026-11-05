@@ -1,3 +1,4 @@
+import { InfoHelp } from "./InfoHelp";
 import { shoppingLink } from "./shopping-context";
 import { Price } from "./Price";
 import { ProductImage } from "./ProductImage";
@@ -476,22 +477,37 @@ export function Field({
   label,
   children,
   hint,
+  help,
 }: {
   label: string;
   children: ReactNode;
   hint?: ReactNode;
+  help?: string;
 }) {
   const id = useId();
   const child = children as ReactElement<Record<string, unknown>>;
   const description = [
     child.props["aria-describedby"],
     hint ? `${id}-hint` : null,
+    help ? `${id}-help` : null,
   ]
     .filter(Boolean)
     .join(" ");
   return (
     <div className="field">
-      <label htmlFor={id}>{label}</label>
+      {help ? (
+        <div className="field-heading">
+          <label htmlFor={id}>{label}</label>
+          <InfoHelp title={label}>{help}</InfoHelp>
+        </div>
+      ) : (
+        <label htmlFor={id}>{label}</label>
+      )}
+      {help && (
+        <span className="sr-only" id={`${id}-help`}>
+          {help}
+        </span>
+      )}
       {cloneElement(child, {
         id,
         "aria-describedby": description || undefined,
@@ -614,7 +630,12 @@ export function GiftCard({
       <div className="gift-card-content">
         <div className="gift-recipient">
           <Avatar small name={gift.recipientNames[0] ?? "Gift"} />
-          <span>For {gift.recipientNames.join(" & ")}</span>
+          <span>
+            <span className="gift-kind">
+              {gift.listId ? "Wish" : "Gift idea"}
+            </span>{" "}
+            for {gift.recipientNames.join(" & ")}
+          </span>
           <ArrowUpRight size={15} />
         </div>
         <Heading className="gift-title">{gift.title}</Heading>

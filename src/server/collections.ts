@@ -40,7 +40,8 @@ export const browseQuery = z.object({
   search: z.string().max(500).default(""),
   tag: z.string().max(200).default(""),
   people: z.string().max(10000).default(""),
-  available: z.enum(["true", "false"]).default("false"),
+  available: z.enum(["true", "false"]).default("true"),
+  type: z.enum(["all", "wish", "idea"]).default("all"),
   status: z.enum(["active", "archived"]).default("active"),
   sort: z
     .enum([
@@ -106,12 +107,17 @@ export async function itemPage(
           archived(s, i) === (canManage && q.status === "archived")) &&
         `${i.title} ${i.recipientIds.map((id) => names.get(id) ?? "Recipient").join(" ")} ${i.tags.join(" ")}`
           .toLowerCase()
-          .includes(q.search.toLowerCase()) &&
+          .includes(q.search.trim().toLowerCase()) &&
+        (q.type === "all" || !!i.listId === (q.type === "wish")) &&
         (!q.tag || i.tags.includes(q.tag)) &&
         (!chosen.length || i.recipientIds.some((id) => chosen.includes(id))) &&
         (!showAvailability ||
           q.available !== "true" ||
-          (available !== undefined && available > 0))
+          !!q.search.trim() ||
+          q.status === "archived" ||
+          (!!list && listIsArchived(list)) ||
+          available === undefined ||
+          available > 0)
       );
     }),
     q.sort,

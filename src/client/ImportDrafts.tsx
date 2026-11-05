@@ -1,3 +1,4 @@
+import { CheckCircle2, CircleHelp, ExternalLink } from "lucide-react";
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
@@ -62,10 +63,17 @@ function DraftRow({ initial }: { initial: ImportJob }) {
       job.result?.title ||
       `Item from ${new URL(job.url).hostname}`,
   );
+  const ready = job.status === "complete";
+  const state = busy ? "working" : ready ? "ready" : "needs-details";
   return (
-    <div className="draft-row">
+    <div className={`draft-row draft-${state}`}>
       <div>
-        <strong>{title}</strong>
+        <h3 className="draft-title">
+          <a href={job.url} target="_blank" rel="noopener noreferrer">
+            {title} <ExternalLink size={13} aria-hidden="true" />
+            <span className="sr-only"> (opens in a new tab)</span>
+          </a>
+        </h3>
         {job.draft.kind === "idea" && (
           <p>
             Gift idea for{" "}
@@ -73,12 +81,28 @@ function DraftRow({ initial }: { initial: ImportJob }) {
               "an unavailable person"}
           </p>
         )}
-        <p role="status">
-          {busy
-            ? "Finding details…"
-            : job.status === "complete"
-              ? "Ready to review"
-              : "Needs details"}
+        <p role="status" className="draft-status">
+          {busy ? (
+            <>
+              <span>
+                Finding details
+                <span className="working-dots" aria-hidden="true">
+                  <span>.</span>
+                  <span>.</span>
+                  <span>.</span>
+                </span>
+              </span>
+            </>
+          ) : (
+            <>
+              {ready ? (
+                <CheckCircle2 size={14} aria-hidden="true" />
+              ) : (
+                <CircleHelp size={14} aria-hidden="true" />
+              )}
+              {ready ? "Ready to review" : "Needs details"}
+            </>
+          )}
         </p>
         {query.error && (
           <p>Could not check progress. Your saved draft is still available.</p>
@@ -86,12 +110,12 @@ function DraftRow({ initial }: { initial: ImportJob }) {
       </div>
       <div className="actions">
         <button
-          className="button secondary"
+          className={`button secondary ${ready ? "draft-review" : ""}`}
           onClick={() =>
             open("Review your draft", <GiftForm importDraft={job} />)
           }
         >
-          {busy ? "Open draft" : "Review and add"}
+          {busy ? "Open draft" : ready ? "Review and add" : "Add details"}
         </button>
         {world.productLookupEnabled !== false && job.status === "failed" && (
           <RunButton

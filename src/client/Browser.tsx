@@ -17,11 +17,12 @@ import {
   useItemScope,
   useOrganization,
 } from "./Management";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type { GiftView } from "../shared/model";
 import { useApp } from "./context";
 import { Empty, GiftCard } from "./components";
-import { value } from "./forms";
+import { SearchSelect } from "./SearchSelect";
+import { X } from "lucide-react";
 export function Browser({
   items,
   scope = "home",
@@ -53,11 +54,13 @@ export function Browser({
 }) {
   const [search, setSearch] = useNavigationState<string>("search", ""),
     [tag, setTag] = useNavigationState<string>("tag", ""),
-    [available, setAvailable] = useNavigationState<boolean>("available", false);
+    [available, setAvailable] = useNavigationState<boolean>("available", true);
   const [selectedPeople, setSelectedPeople] = useNavigationState<string[]>(
     "people",
     [],
   );
+  const [itemType, setItemType] = useNavigationState<string>("itemType", "all");
+  const [peopleSearch, setPeopleSearch] = useState("");
   const { world, open, mutate, toast } = useApp();
   const settings = useOrganization(useItemScope(listId));
   const parentList = world.lists.find((l) => l.id === listId);
@@ -66,6 +69,9 @@ export function Browser({
     "active",
   );
   const debounced = useDebounced(search);
+  const availabilityApplies =
+    !debounced.trim() && itemStatus === "active" && !parentList?.archived;
+  const availableOnly = available && availabilityApplies;
   const queryParams = new URLSearchParams({
     scope,
     ...(scopeId ? { id: scopeId } : {}),
@@ -73,7 +79,8 @@ export function Browser({
     search: debounced,
     tag,
     people: selectedPeople.join(","),
-    available: String(available),
+    available: String(availableOnly),
+    type: itemType,
     status: itemStatus,
     sort: settings.sort,
   });
@@ -116,13 +123,15 @@ export function Browser({
       (i) =>
         `${i.title} ${i.recipientNames.join(" ")} ${i.tags.join(" ")}`
           .toLowerCase()
-          .includes(search.toLowerCase()) &&
+          .includes(debounced.trim().toLowerCase()) &&
+        (itemType === "all" || !!i.listId === (itemType === "wish")) &&
         (!tag || i.tags.includes(tag)) &&
         (!chosenPeople.length ||
           chosenPeople.some((person) => i.recipientIds.includes(person.id))) &&
         (!showAvailability ||
-          !available ||
-          (i.available !== undefined && i.available > 0)),
+          !availableOnly ||
+          i.available === undefined ||
+          i.available > 0),
     );
   if (world.paged && (!query.data || query.error))
     return <CollectionStatus query={query} />;
@@ -164,7 +173,8 @@ export function Browser({
             searchHint="Search by name, person, or tag"
             activeCount={
               Number(!!tag) +
-              Number(showAvailability && available) +
+              Number(showAvailability && availableOnly) +
+              Number(itemType !== "all") +
               Number(chosenPeople.length > 0)
             }
             summary={[
@@ -177,12 +187,22 @@ export function Browser({
                     `For ${chosenPeople.map((person) => person.name).join(", ")}`,
                   ]
                 : []),
-              ...(showAvailability && available ? ["Available to give"] : []),
+              ...(itemType !== "all"
+                ? [itemType === "wish" ? "Wishes" : "Gift ideas"]
+                : []),
+              ...(showAvailability && availableOnly
+                ? ["Available to give"]
+                : []),
+              ...(showAvailability && debounced.trim()
+                ? ["Search includes taken-care-of gifts"]
+                : []),
             ]}
             clear={() => {
               setTag("");
               setAvailable(false);
               setSelectedPeople([]);
+              setItemType("all");
+              setPeopleSearch("");
             }}
           >
             <SortSelect
@@ -241,52 +261,77 @@ export function Browser({
                 ))}
               </select>
             </label>
+            {scope === "home" && (
+              <label>
+                Item type
+                <select
+                  value={itemType}
+                  onChange={(e) => setItemType(e.target.value)}
+                >
+                  <option value="all">All items</option>
+                  <option value="wish">Wishes</option>
+                  <option value="idea">Gift ideas</option>
+                </select>
+              </label>
+            )}
             {showPeople && (
-              <fieldset className="people-filter">
-                <legend>People</legend>
-                <details>
-                  <summary>
-                    {chosenPeople.length
-                      ? `${chosenPeople.length} selected`
-                      : "All people"}
-                  </summary>
-                  <div className="people-filter-options">
-                    {people.map((person) => (
-                      <label className="check" key={person.id}>
-                        <input
-                          type="checkbox"
-                          checked={chosenPeople.some(
-                            (selected) => selected.id === person.id,
-                          )}
-                          onChange={(event) =>
+              <div className="people-filter">
+                <SearchSelect
+                  label="People"
+                  value={peopleSearch}
+                  onChange={setPeopleSearch}
+                  placeholder="Search people by name"
+                  multiple
+                  selected={chosenPeople.map((person) => person.id)}
+                  choices={people
+                    .filter((person) =>
+                      person.name
+                        .toLowerCase()
+                        .includes(peopleSearch.trim().toLowerCase()),
+                    )
+                    .slice(0, 20)
+                    .map((person) => ({ id: person.id, label: person.name }))}
+                  hint={
+                    people.length > 20
+                      ? "Type to narrow the results. No selection includes everyone."
+                      : "No selection includes everyone."
+                  }
+                  onChoose={(id) =>
+                    setSelectedPeople(
+                      selectedPeople.includes(id)
+                        ? selectedPeople.filter((value) => value !== id)
+                        : [...selectedPeople, id],
+                    )
+                  }
+                />
+                {!!chosenPeople.length && (
+                  <div className="purchase-chips">
+                    {chosenPeople.map((person) => (
+                      <span className="purchase-chip" key={person.id}>
+                        {person.name}
+                        <button
+                          type="button"
+                          aria-label={`Remove ${person.name}`}
+                          onClick={() =>
                             setSelectedPeople(
-                              event.target.checked
-                                ? [
-                                    ...chosenPeople.map(
-                                      (selected) => selected.id,
-                                    ),
-                                    person.id,
-                                  ]
-                                : chosenPeople
-                                    .filter(
-                                      (selected) => selected.id !== person.id,
-                                    )
-                                    .map((selected) => selected.id),
+                              selectedPeople.filter((id) => id !== person.id),
                             )
                           }
-                        />
-                        {person.name}
-                      </label>
+                        >
+                          <X size={14} aria-hidden="true" />
+                        </button>
+                      </span>
                     ))}
                   </div>
-                </details>
-              </fieldset>
+                )}
+              </div>
             )}
             {showAvailability && (
               <label className="check filter-check">
                 <input
                   type="checkbox"
-                  checked={available}
+                  checked={availableOnly}
+                  disabled={!availabilityApplies}
                   onChange={(e) => setAvailable(e.target.checked)}
                 />
                 Available to give
@@ -338,6 +383,8 @@ export function Browser({
                     setTag("");
                     setAvailable(false);
                     setSelectedPeople([]);
+                    setItemType("all");
+                    setPeopleSearch("");
                   }}
                 >
                   Clear filters

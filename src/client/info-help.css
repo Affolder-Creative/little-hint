@@ -1,0 +1,87 @@
+.info-help {
+  display: inline-flex;
+  vertical-align: middle;
+  flex: none;
+}
+.info-help-trigger {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  margin-block: -8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.info-help-trigger:hover,
+.info-help-trigger[aria-expanded="true"] {
+  background: var(--soft);
+  color: var(--text);
+}
+.info-help-panel {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  width: min(24rem, calc(100vw - 24px));
+  padding: 16px;
+  overflow-y: auto;
+  border: 1px solid var(--control-border);
+  border-radius: 12px;
+  background: var(--paper);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+.info-help-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.info-help-heading strong {
+  font-size: 14px;
+  font-weight: 600;
+}
+.info-help-heading .icon-button {
+  flex: none;
+  margin: -8px -8px -8px 0;
+}
+.info-help-copy {
+  color: var(--muted);
+}
+.field-heading,
+.price-watch {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.field-heading {
+  margin: 0;
+}
+.field-heading .info-help {
+  position: relative;
+  width: 44px;
+  height: 1lh;
+}
+.field-heading .info-help-trigger {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  margin: 0;
+}
+.field .field-heading label {
+  margin: 0;
+}
+.price-watch {
+  max-width: 100%;
+  flex-wrap: nowrap;
+}
+.price-watch .check {
+  margin: 0;
+}

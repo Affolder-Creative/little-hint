@@ -1,3 +1,4 @@
+import { ArrowRight } from "lucide-react";
 import "./account-closure.css";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -212,70 +213,88 @@ function ClosureReview() {
       )}
       {blockers.length > 0 ? (
         <>
-          <h3>Resolve these first</h3>
-          {blockers.map((b) => (
-            <div className="closure-blocker" key={`${b.kind}:${b.id}`}>
-              <strong>{b.title}</strong>
-              <p>{b.detail}</p>
-              {["admin", "guardian"].includes(b.kind) ? (
-                candidates.length ? (
-                  <button
-                    type="button"
-                    className="button secondary"
-                    onClick={() =>
-                      open(
-                        "Request a handoff",
-                        <Form
-                          dialogLayout
-                          className="account-closure-form"
-                          submit="Request handoff"
-                          cancel={close}
-                          onSubmit={async (data) => {
-                            await api("account/handoff", {
-                              kind: b.kind,
-                              personId: b.id,
-                              userId: data.get("userId"),
-                            });
-                            await client.invalidateQueries();
-                            close();
-                          }}
-                        >
-                          <p>
-                            {b.title}. The other person must accept in Settings
-                            → Sign-in & security. This does not close your
-                            account.
-                          </p>
-                          <Field label="Trusted member">
-                            <select name="userId" required defaultValue="">
-                              <option value="" disabled>
-                                Choose a member
-                              </option>
-                              {candidates.map((p) => (
-                                <option value={p.id} key={p.id}>
-                                  {p.name}
-                                </option>
-                              ))}
-                            </select>
-                          </Field>
-                        </Form>,
-                      )
-                    }
-                  >
-                    Choose someone to take over
-                  </button>
-                ) : (
-                  <p>
-                    Invite a trusted person and connect through a family group
-                    first, then return here.
-                  </p>
-                )
-              ) : (
-                <Link to={b.href} onClick={close}>
-                  Review this in the app
-                </Link>
-              )}
+          <section
+            className="closure-blockers"
+            aria-labelledby="closure-blockers-heading"
+          >
+            <h3 id="closure-blockers-heading">Resolve these first</h3>
+            <div className="closure-blocker-list">
+              {blockers.map((b) => (
+                <div className="closure-blocker" key={`${b.kind}:${b.id}`}>
+                  <h4>{b.title}</h4>
+                  <p>{b.detail}</p>
+                  {["admin", "guardian"].includes(b.kind) ? (
+                    candidates.length ? (
+                      <button
+                        type="button"
+                        className="button secondary"
+                        onClick={() =>
+                          open(
+                            "Request a handoff",
+                            <Form
+                              dialogLayout
+                              className="account-closure-form"
+                              submit="Request handoff"
+                              cancel={close}
+                              onSubmit={async (data) => {
+                                await api("account/handoff", {
+                                  kind: b.kind,
+                                  personId: b.id,
+                                  userId: data.get("userId"),
+                                });
+                                await client.invalidateQueries();
+                                close();
+                              }}
+                            >
+                              <p>
+                                {b.title}. The other person must accept in
+                                Settings → Sign-in & security. This does not
+                                close your account.
+                              </p>
+                              <Field label="Trusted member">
+                                <select name="userId" required defaultValue="">
+                                  <option value="" disabled>
+                                    Choose a member
+                                  </option>
+                                  {candidates.map((p) => (
+                                    <option value={p.id} key={p.id}>
+                                      {p.name}
+                                    </option>
+                                  ))}
+                                </select>
+                              </Field>
+                            </Form>,
+                          )
+                        }
+                      >
+                        Choose someone to take over
+                      </button>
+                    ) : (
+                      <p>
+                        Invite a trusted person and connect through a family
+                        group first, then return here.
+                      </p>
+                    )
+                  ) : (
+                    <Link
+                      className="button secondary small"
+                      to={b.href}
+                      onClick={close}
+                    >
+                      {b.kind === "group" || b.kind === "shared-activity"
+                        ? "Open family groups"
+                        : b.kind === "commitments"
+                          ? "Review gift commitments"
+                          : b.kind === "exchange"
+                            ? "Open exchange"
+                            : "Review in the app"}
+                      <ArrowRight size={15} aria-hidden="true" />
+                    </Link>
+                  )}
+                </div>
+              ))}
             </div>
-          ))}
+          </section>
           <Action secondary onClick={() => review.refetch()}>
             Refresh account review
           </Action>

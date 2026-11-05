@@ -3135,7 +3135,7 @@ for (const viewport of [
     const guidance = page.getByText(/Backup status is unavailable here/);
     await expect(guidance).toBeVisible();
     await expect(
-      page.getByText(/Updates and shop lookups: Running/),
+      page.getByText("Worker active", { exact: true }),
     ).toBeVisible();
     await expect(
       page.getByText(
@@ -4539,7 +4539,9 @@ for (const [width, theme] of [
     expect(idea.listId).toBeUndefined();
     await expect(page).toHaveURL(new RegExp(`/gift/${idea.id}$`));
     await expect(page.locator(".private-idea-badge")).toHaveText("Only me");
-    await page.getByLabel("Buying for", { exact: true }).selectOption("ordinary");
+    await page
+      .getByLabel("Buying for", { exact: true })
+      .selectOption("ordinary");
     await page
       .getByRole("button", { name: "Reserve gift", exact: true })
       .click();
@@ -4841,24 +4843,31 @@ for (const width of [393, 1440]) {
       (item) => !item.archived && !item.isRecipient,
     );
     await browse.click();
-    await page.locator(".people-filter summary").click();
     const picker = page.locator(".people-filter");
-    await picker
-      .getByRole("checkbox", { name: people[1].name, exact: true })
-      .check();
+    await page
+      .getByRole("combobox", { name: "People", exact: true })
+      .fill(people[1].name);
+    await page
+      .getByRole("option", { name: new RegExp(people[1].name) })
+      .click();
     await page.getByRole("button", { name: "Done", exact: true }).click();
     await expect(page.locator(".gift-card")).toHaveCount(
-      eligible.filter((item) => item.recipientIds.includes(people[1].id))
-        .length,
+      eligible.filter(
+        (item) =>
+          item.recipientIds.includes(people[1].id) &&
+          (item.available === undefined || item.available > 0),
+      ).length,
     );
     await expect(
       page.locator(".gift-card").filter({ hasText: jointItem.title }),
     ).toBeVisible();
     await browse.click();
-    await page.locator(".people-filter summary").click();
-    await picker
-      .getByRole("checkbox", { name: people[0].name, exact: true })
-      .check();
+    await page
+      .getByRole("combobox", { name: "People", exact: true })
+      .fill(people[0].name);
+    await page
+      .getByRole("option", { name: new RegExp(people[0].name) })
+      .click();
     await page.getByLabel("Filter by tag").selectOption("Filter test");
     await page.getByLabel("Available to give", { exact: true }).check();
     await page.getByRole("button", { name: "Done", exact: true }).click();
@@ -4944,7 +4953,7 @@ test.describe("interface rhythm", () => {
         page.getByRole("searchbox", { name: "Search items and gift ideas" }),
       ).toHaveCSS("font-size", "16px");
       await page.getByRole("button", { name: /^Sort & filter/ }).click();
-      await page.locator(".people-filter summary").click();
+      await page.getByRole("combobox", { name: "People", exact: true }).click();
       await capture("filters");
       expect(
         (

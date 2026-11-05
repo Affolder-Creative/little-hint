@@ -45,6 +45,7 @@ export async function processPrice(id: string) {
       throw new Error("Check no longer eligible");
   };
   try {
+    await guard();
     const result = await lookupPrice(
       job.url,
       id,
@@ -135,7 +136,8 @@ export async function processPrice(id: string) {
         const i = s.items.find((i) => i.id === t.id);
         if (
           i?.pricing?.generation === t.generation &&
-          i.revision === t.revision
+          i.revision === t.revision &&
+          priceEligible(s, i)
         )
           i.pricing.status = deferred ? "deferred" : "unavailable";
       }

@@ -12,12 +12,27 @@
   font-size: 13px;
   color: var(--muted);
 }
-.closure-blocker {
-  padding-block: var(--space-controls);
-  border-bottom: 1px solid var(--border);
+.closure-blockers > h3 {
+  margin: 0 0 16px;
+  font-size: 17px;
+}
+.closure-blocker-list {
+  display: grid;
+  gap: 24px;
+}
+.closure-blocker h4 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.closure-blocker .button {
+  justify-self: start;
 }
 .closure-blocker p {
-  margin-block: var(--space-related) var(--space-controls);
+  margin-block: 4px 8px;
+  font-size: 13px;
+  color: var(--muted);
 }
 .form-dialog.account-closure-form > .form-actions {
   display: grid;

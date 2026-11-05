@@ -18,6 +18,7 @@ export function priceBaseline(
 }
 export function priceEligible(s: State, i: Item) {
   return (
+    i.priceCents !== null &&
     !!i.url &&
     !itemTrashed(s, i) &&
     (!i.listId || s.lists.some((l) => l.id === i.listId)) &&
@@ -73,6 +74,8 @@ export function priceCommand(s: State, a: Actor, action: string, raw: unknown) {
     }
   } else if (action === "prices.tracking") {
     if (!canEdit(s, a, item)) fail(403, "You cannot edit this item.");
+    if (p.enabled && (item.priceCents === null || !item.url))
+      fail(400, "Add a price and product link before resuming price checks.");
     item.pricing!.paused = !p.enabled;
     for (const w of s.priceWatches.filter((w) => w.itemId === item.id))
       w.reference = null;
