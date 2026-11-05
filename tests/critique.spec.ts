@@ -2227,6 +2227,7 @@ test("private note success clears the composer and offline actions are disabled"
     (i) => !i.isRecipient && !i.archived && i.available && i.comments,
   )!;
   await page.goto(`/gift/${gift.id}`);
+  await page.getByLabel("Buying for", { exact: true }).selectOption("ordinary");
   await page.getByLabel("Your note").fill("A useful private detail");
   await page.getByRole("button", { name: "Add private note" }).click();
   await expect(
@@ -4274,6 +4275,7 @@ test.describe("navigation scroll restoration", () => {
     for (let i = 0; i < 20; i++)
       command(state, actor, "comments.create", {
         itemId: item.id,
+        ordinary: true,
         body: `Private note ${i + 1}`,
       });
     const note = world(state, actor)
@@ -5275,6 +5277,7 @@ for (const width of [390, 1440]) {
     )!;
     command(state, actor, "comments.create", {
       itemId: item.id,
+      ordinary: true,
       body: "Original helpful note",
     });
     const note = state.comments.at(-1)!;
