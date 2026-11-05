@@ -1,3 +1,4 @@
+import { reconcileSpendingPrivacy } from "./spending-privacy";
 import { rejectClosedAccountReferences } from "./closed-accounts";
 import { databaseMetrics } from "./metrics";
 import "dotenv/config";
@@ -13,7 +14,7 @@ import {
   type Setting,
   type ImportJob,
 } from "../shared/model";
-const supportedSchemaVersion = 4;
+const supportedSchemaVersion = 5;
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   max: 10,
@@ -90,7 +91,9 @@ export async function transact<T>(
         if (kinds.includes(row.kind as Kind))
           (state[row.kind as Kind] as unknown[]).push(row.data);
       }
+      reconcileSpendingPrivacy(state);
       const result = await fn(state, tx);
+      reconcileSpendingPrivacy(state);
       const closed = new Set(
         (await tx.execute(sql`SELECT id_hash FROM closed_account`)).rows.map(
           (r) => String(r.id_hash),
@@ -175,6 +178,9 @@ INSERT INTO schema_migration(version) VALUES (2);`);
     );
     await client.query(
       "INSERT INTO schema_migration(version) VALUES (4) ON CONFLICT DO NOTHING",
+    );
+    await client.query(
+      "INSERT INTO schema_migration(version) VALUES (5) ON CONFLICT DO NOTHING",
     );
     await client.query("COMMIT");
   } catch (e) {

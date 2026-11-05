@@ -43,6 +43,7 @@ export interface SpendingRecord extends Base {
   splits: number[];
   voided?: boolean;
   protected?: boolean;
+  privacyRevoked?: boolean;
   history: Array<{
     actorId: string;
     at: string;
@@ -66,6 +67,7 @@ export interface SpendingView {
   records: Array<
     SpendingRecord & {
       canEdit: boolean;
+      canShare?: boolean;
       canAssignList?: boolean;
       payerName: string;
     }

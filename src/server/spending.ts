@@ -1,3 +1,4 @@
+import { protectedSpending } from "./spending-privacy";
 import { createHash } from "node:crypto";
 import { spendingAvailable } from "./deployment";
 import { spendingMatches, spendingTotals } from "../shared/spending";
@@ -56,19 +57,8 @@ function active(s: State, c?: SpendingConnection): c is SpendingConnection {
     )
   );
 }
-function protectedRecord(s: State, r: SpendingRecord, c: SpendingConnection) {
-  const original = s.reservations.find((v) => v.id === r.reservationId);
-  const item = s.items.find((i) => i.id === original?.itemId);
-  return (
-    r.protected ||
-    !!original?.exchangeId ||
-    [...r.recipientIds, ...(item?.recipientIds ?? [])].some((id) =>
-      s.people.some(
-        (p) => p.id === id && !!p.userId && c.users.includes(p.userId),
-      ),
-    )
-  );
-}
+const protectedRecord = protectedSpending;
+
 function shared(s: State, r: SpendingRecord, c?: SpendingConnection) {
   return (
     active(s, c) &&
@@ -99,7 +89,7 @@ function touch(r: SpendingRecord, a: Actor, description: string) {
 }
 function autoShare(s: State, a: Actor, r: SpendingRecord) {
   const c = connection(s, a);
-  if (!active(s, c) || protectedRecord(s, r, c)) return;
+  if (r.privacyRevoked || !active(s, c) || protectedRecord(s, r, c)) return;
   if (r.date && r.date.slice(0, 10) < c.createdAt.slice(0, 10)) return;
   const rules = [
     ...r.recipientIds.map((p) => "person:" + p),
@@ -403,6 +393,8 @@ export function spendingView(s: State, a: Actor): SpendingView {
         : undefined,
     canEdit:
       !s.contributions.some((c) => c.id === r.sourceId) && editable(s, a, r),
+    canShare: r.ownerId === a.id && active(s, c) && !protectedRecord(s, r, c),
+    protected: protectedRecord(s, r, c),
     canAssignList: canAssignList(s, r),
     payerName: name(s, r.ownerId),
     history: r.history.map((h) => ({

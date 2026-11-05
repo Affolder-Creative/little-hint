@@ -358,7 +358,11 @@ export function PurchaseForm({
     (!item?.listId && item?.visibility === "private") ||
     recipientIds.some((id) =>
       world.people.some(
-        (p) => p.id === id && !!p.userId && c?.users.includes(p.userId),
+        (p) =>
+          p.id === id &&
+          [p.userId, ...p.guardians].some(
+            (user) => !!user && c?.users.includes(user),
+          ),
       ),
     );
   const prospectiveShared =

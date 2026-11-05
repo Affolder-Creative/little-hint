@@ -1,3 +1,4 @@
+import { reconcileSpendingPrivacy } from "./spending-privacy";
 import { priceBaseline, priceCommand } from "./prices";
 import { priceConfig } from "./price-config";
 import {
@@ -755,6 +756,17 @@ const itemInput = z.object({
   quantity: z.number().int().min(1).max(999).default(1),
 });
 export function command(
+  s: State,
+  a: Actor,
+  action: string,
+  raw: unknown,
+): unknown {
+  reconcileSpendingPrivacy(s);
+  const result = commandCore(s, a, action, raw);
+  reconcileSpendingPrivacy(s);
+  return result;
+}
+function commandCore(
   s: State,
   a: Actor,
   action: string,
