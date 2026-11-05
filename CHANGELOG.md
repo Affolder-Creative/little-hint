@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.19.2](https://github.com/Affolder-Creative/little-hint/compare/v0.19.1...v0.19.2) (2026-11-05)
+
+
+### Fixes
+
+* remove Scraping Fish and prioritize Bright Data ([#171](https://github.com/Affolder-Creative/little-hint/issues/171)) ([9fd3c2b](https://github.com/Affolder-Creative/little-hint/commit/9fd3c2bf7963624ac1fa5f4363ac2d381a16cac7))
+
 ## [0.19.1](https://github.com/Affolder-Creative/little-hint/compare/v0.19.0...v0.19.1) (2026-11-05)
 
 
