@@ -70,6 +70,11 @@ export function ListIndex() {
           Create a list
         </button>
       </Header>
+      <p>
+        <Link to="/capture" className="button secondary">
+          Capture a product
+        </Link>
+      </p>
       <ImportDrafts />
       <div className="tabs" role="group" aria-label="List status">
         {["active", "archived", "trash"].map((value) => (

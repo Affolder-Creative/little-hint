@@ -1,0 +1,18 @@
+.capture-form,
+.capture-help {
+  max-width: 42rem;
+}
+.capture-form textarea {
+  width: 100%;
+  resize: vertical;
+}
+.capture-form .actions {
+  flex-wrap: wrap;
+}
+.capture-help {
+  margin-top: 2rem;
+}
+.capture-form {
+  display: grid;
+  gap: 0.75rem;
+}

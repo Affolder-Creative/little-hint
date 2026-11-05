@@ -250,6 +250,7 @@ export function GiftForm({
   onSaved,
   draft,
   importDraft,
+  capture,
 }: {
   gift?: GiftView;
   listId?: string;
@@ -259,12 +260,13 @@ export function GiftForm({
   onSaved?: (gift: GiftView) => void;
   draft?: Draft;
   importDraft?: ImportJob;
+  capture?: { url: string; title: string };
 }) {
   const { world, mutate, close, toast } = useApp();
   const lists = world.lists.filter((l) => l.canEdit && !l.archived);
   const [data, setData] = useState({
-    title: gift?.title ?? draft?.title ?? "",
-    url: gift?.url ?? draft?.url ?? "",
+    title: gift?.title ?? draft?.title ?? capture?.title ?? "",
+    url: gift?.url ?? draft?.url ?? capture?.url ?? "",
     description: gift?.description ?? draft?.description ?? "",
     price: gift?.priceCents == null ? "" : String(gift.priceCents / 100),
     image: gift?.image ?? "",
@@ -543,6 +545,20 @@ export function GiftForm({
       setError(actionError(e));
     }
   }
+  const captureStarted = useRef(false);
+  useEffect(() => {
+    if (!capture || captureStarted.current || (!idea && !destination)) return;
+    // Let Strict Mode finish its setup/cleanup cycle before starting a write.
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (cancelled || captureStarted.current) return;
+      captureStarted.current = true;
+      if (world.productLookupEnabled !== false) void importUrl();
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [capture, destination, idea]);
   async function upload(file?: File) {
     if (!file) return;
     setPhotoError("");
