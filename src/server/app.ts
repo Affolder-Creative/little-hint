@@ -37,6 +37,7 @@ import {
 } from "./sms";
 import { serviceStatuses } from "./service-status";
 import { batchJob, retryWishlistBatch } from "./wishlist-delivery";
+import { registerAccountExport } from "./account-export";
 import { registerGiftDiscovery } from "./gift-discovery-routes";
 import { adminUsage } from "./usage";
 import { discoveryJob } from "./gift-discovery";
@@ -283,6 +284,7 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
     };
   }
   registerGiftDiscovery(app, actor);
+  registerAccountExport(app, actor);
   registerCollections(app, actor);
   app.get("/api/v1/world", async (req) => {
     const a = await actor(req);
