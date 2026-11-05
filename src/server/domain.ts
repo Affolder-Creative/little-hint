@@ -1691,6 +1691,8 @@ export function command(
         j.status = "pending";
         delete j.error;
         delete j.diagnostic;
+        delete j.diagnostics;
+        delete j.unlockerRetry;
         delete j.recoveryState;
         delete j.recoveryCheckpoint;
         touch(j);

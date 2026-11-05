@@ -1,3 +1,5 @@
+import { unlockerDiagnostic } from "./lookup-diagnostics";
+import type { LookupDiagnostic } from "../shared/lookup-diagnostics";
 import { transact } from "./db";
 import { spend } from "./settings";
 import { validateUrl, boundedBody } from "./imports";
@@ -10,6 +12,7 @@ export class BrightDataFailure extends Error {
     public stage: string,
     message: string,
     public status?: number,
+    public diagnostic?: LookupDiagnostic,
   ) {
     super(message);
   }
@@ -366,20 +369,41 @@ export async function unlockPage(
     redirect: "error",
     signal: AbortSignal.timeout(100000),
   });
-  if (!response.ok) {
-    await response.body?.cancel();
+  let envelope: any;
+  try {
+    envelope = JSON.parse((await boundedBody(response)).toString("utf8"));
+  } catch {
+    const diagnostic = unlockerDiagnostic(
+      response.status,
+      {},
+      response.headers,
+    );
+    diagnostic.reason = response.ok
+      ? "Provider returned an invalid or oversized response"
+      : diagnostic.reason;
     throw new BrightDataFailure(
       "brightdata-unlocker",
-      `Unlocker HTTP ${response.status}`,
+      diagnostic.reason,
       response.status,
+      diagnostic,
     );
   }
-  const envelope = JSON.parse((await boundedBody(response)).toString("utf8"));
-  if (envelope.status_code !== 200 || typeof envelope.body !== "string")
+  if (
+    !response.ok ||
+    envelope?.status_code !== 200 ||
+    typeof envelope?.body !== "string"
+  ) {
+    const status = response.ok
+      ? Number(envelope?.status_code) || 0
+      : response.status;
+    const diagnostic = unlockerDiagnostic(status, envelope, response.headers);
     throw new BrightDataFailure(
       "brightdata-unlocker",
-      `Shop HTTP ${Number(envelope.status_code) || "unknown"}`,
+      `${response.ok ? "Shop" : "Unlocker"} HTTP ${status || "unknown"}: ${diagnostic.reason}`,
+      status,
+      diagnostic,
     );
+  }
   return envelope.body as string;
 }
 

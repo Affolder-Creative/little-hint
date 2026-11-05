@@ -328,3 +328,60 @@ it("matches Shopify variants without substituting a retired selection", () => {
   expect(missing.remoteImage).toBeUndefined();
   expect(missing.warnings).toHaveLength(1);
 });
+
+it("retries a classified Unlocker failure once, with a separate paid allowance check", async () => {
+  vi.useFakeTimers();
+  try {
+    mock.state.imports[0].url = "https://www.etsy.com/listing/1653410438/item";
+    mock.request.mockRejectedValue(new Error("Direct blocked"));
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(
+        Response.json({ status_code: 502, error_code: "target_40020" }),
+      )
+      .mockResolvedValueOnce(
+        Response.json({
+          status_code: 200,
+          body: '<meta property="og:title" content="Desert embroidery pattern">',
+        }),
+      );
+    vi.stubGlobal("fetch", fetcher);
+    const run = () =>
+      importProduct(mock.state.imports[0].url, "owner", false, "job");
+    await expect(run()).rejects.toBeInstanceOf(ImportPending);
+    expect(mock.state.imports[0].status).toBe("pending");
+    expect(mock.spend).toHaveBeenCalledTimes(1);
+    await expect(run()).rejects.toBeInstanceOf(ImportPending);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    vi.advanceTimersByTime(20000);
+    expect(await run()).toMatchObject({ title: "Desert embroidery pattern" });
+    expect(mock.spend).toHaveBeenCalledTimes(2);
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  } finally {
+    vi.useRealTimers();
+  }
+});
+it("records outer HTTP and envelope failures without retrying unknown 502s", async () => {
+  mock.request.mockRejectedValue(new Error("Direct blocked"));
+  for (const response of [
+    Response.json(
+      { error_code: "client_10100", error_message: "secret" },
+      { status: 502 },
+    ),
+    Response.json({ status_code: 502, error_message: "secret" }),
+  ]) {
+    delete mock.state.imports[0].unlockerRetry;
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(response));
+    await expect(
+      importProduct("https://etsy.com/listing/1/item", "owner", false, "job"),
+    ).rejects.toThrow();
+    expect(mock.state.imports[0].diagnostic).toMatchObject({
+      stage: "brightdata-unlocker",
+      status: 502,
+      retryable: false,
+    });
+    expect(JSON.stringify(mock.state.imports[0].diagnostics)).not.toContain(
+      "secret",
+    );
+  }
+});

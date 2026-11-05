@@ -1,3 +1,8 @@
+import {
+  recordLookupDiagnostic,
+  recoveryApiFailure,
+  recoveryDiagnostic,
+} from "./lookup-diagnostics";
 import { load } from "cheerio";
 import { z } from "zod";
 import { transact } from "./db";
@@ -139,9 +144,18 @@ async function recoverUncached(args: {
   }
   const evidence =
     args.checkpoint?.evidence ?? pageEvidence(args.html || "", args.url);
+  const report = async (stage: string, reason: string) => {
+    await transact((s) => {
+      const job = s.imports.find((j) => j.id === args.jobId);
+      if (job) recordLookupDiagnostic(job, { stage: `ai-${stage}`, reason });
+    });
+  };
   for (const stage of ["extraction", "web"] as const) {
     if (result.title && (!args.photos || result.remoteImage)) break;
-    if (Date.now() >= args.deadline) break;
+    if (Date.now() >= args.deadline) {
+      await report(stage, "Recovery skipped: deadline exhausted");
+      break;
+    }
     if (
       stage === "extraction" &&
       (!evidence.text.trim() ||
@@ -151,6 +165,7 @@ async function recoverUncached(args: {
     const startedAt = new Date().toISOString();
     let dispatch = false;
     let prior: RecoveryProduct | undefined;
+    let skipped: string | undefined;
     try {
       await transact((s) => {
         const job = args.jobId
@@ -167,6 +182,8 @@ async function recoverUncached(args: {
         const existing = job?.recoveryState?.[stage];
         if (existing) {
           prior = existing.result;
+          if (!prior)
+            skipped = "Recovery skipped: previous request outcome uncertain";
           return;
         }
         for (const [service, limit] of [
@@ -180,8 +197,10 @@ async function recoverUncached(args: {
           if (
             !Number.isFinite(limit) ||
             (s.usage.find((u) => u.key === key)?.count || 0) >= limit
-          )
+          ) {
+            skipped = "Recovery skipped: daily attempt allowance exhausted";
             return;
+          }
         }
         for (const service of ["openai", "product-recovery"]) {
           const key = `${startedAt.slice(0, 10)}:${service}`;
@@ -209,7 +228,10 @@ async function recoverUncached(args: {
         result = { ...result, ...prior };
         continue;
       }
-      if (!dispatch) continue;
+      if (!dispatch) {
+        if (skipped) await report(stage, skipped);
+        continue;
+      }
       const signal = AbortSignal.timeout(
         Math.max(
           1,
@@ -269,7 +291,7 @@ async function recoverUncached(args: {
           },
         }),
       });
-      if (!response.ok) throw new Error("Recovery unavailable");
+      if (!response.ok) throw await recoveryApiFailure(response);
       const body = (await response.json()) as any;
       await transact((s) => {
         recordProductTokens(
@@ -381,6 +403,8 @@ async function recoverUncached(args: {
               parseProduct(page.buffer.toString("utf8"), page.url)
                 .remoteImage === proposal.image;
           }
+          if (!supported)
+            await report(stage, "Photo lacked supporting page evidence");
           if (supported) {
             const photo = await safeFetch(
               proposal.image,
@@ -394,12 +418,17 @@ async function recoverUncached(args: {
             ) {
               patch.remoteImage = proposal.image;
               fields.push("image");
-            }
+            } else await report(stage, "Photo response was not a usable image");
           }
         } catch {
-          /* A photo failure must preserve usable text. */
+          await report(
+            stage,
+            "Photo could not be independently verified or downloaded",
+          );
         }
       }
+      if (args.photos && !result.remoteImage && !proposal.image)
+        await report(stage, "AI supplied no photo evidence");
       if (fields.length)
         patch.productSources = [
           ...(result.productSources || []),
@@ -422,28 +451,19 @@ async function recoverUncached(args: {
           job.recoveryState[stage] = { status: "complete", result: patch };
       });
       result = { ...result, ...patch };
-    } catch {
+    } catch (error) {
       if (dispatch)
         await transact((s) => {
           const job = s.imports.find((j) => j.id === args.jobId);
-          if (
-            job?.diagnostic &&
-            !/Direct metadata sufficient|Paid fallback unavailable or disabled/.test(
-              job.diagnostic.reason,
-            )
-          ) {
-            if (!job.diagnostic.reason.includes("Recovery unavailable"))
-              job.diagnostic.reason =
-                `${job.diagnostic.reason}; Recovery unavailable or evidence insufficient`.slice(
-                  0,
-                  500,
-                );
-          } else if (job)
-            job.diagnostic = {
-              stage: `ai-${stage}`,
-              reason: "Recovery unavailable or evidence insufficient",
-              elapsedMs: Date.now() - Date.parse(startedAt),
-            };
+          if (!job) return;
+          recordLookupDiagnostic(
+            job,
+            recoveryDiagnostic(
+              error,
+              `ai-${stage}`,
+              Date.now() - Date.parse(startedAt),
+            ),
+          );
         });
     }
   }

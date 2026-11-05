@@ -221,9 +221,78 @@ it("preserves the provider failure when AI recovery also fails", async () => {
   };
   mocks.fetch.mockResolvedValue(new Response("unavailable", { status: 503 }));
   await recoverProduct(args());
-  expect(mocks.state.imports[0].diagnostic).toMatchObject({
-    stage: "brightdata",
-    reason:
-      "brightdata-unlocker: Unlocker HTTP 403; Recovery unavailable or evidence insufficient",
+  expect(mocks.state.imports[0].diagnostics).toEqual([
+    { stage: "brightdata", reason: "brightdata-unlocker: Unlocker HTTP 403" },
+    expect.objectContaining({
+      stage: "ai-web",
+      status: 503,
+      reason: "AI service unavailable",
+    }),
+  ]);
+});
+
+it("reports exhausted allowance without dispatching recovery", async () => {
+  mocks.cfg.AI_PRODUCT_RECOVERY_DAILY_LIMIT = "0";
+  await recoverProduct(args());
+  expect(mocks.fetch).not.toHaveBeenCalled();
+  expect(mocks.state.imports[0].diagnostics).toContainEqual({
+    stage: "ai-web",
+    reason: "Recovery skipped: daily attempt allowance exhausted",
   });
+});
+it("reports an exhausted recovery deadline", async () => {
+  await recoverProduct({ ...args(), deadline: Date.now() - 1 });
+  expect(mocks.fetch).not.toHaveBeenCalled();
+  expect(mocks.state.imports[0].diagnostic?.reason).toBe(
+    "Recovery skipped: deadline exhausted",
+  );
+});
+it.each([
+  [
+    () => Response.json({ status: "incomplete", output: [] }),
+    "AI response incomplete",
+  ],
+  [
+    () => Response.json({ status: "completed", output: [] }),
+    "AI returned invalid structured output",
+  ],
+  [
+    () =>
+      Response.json({
+        status: "completed",
+        output: [
+          {
+            content: [
+              {
+                type: "output_text",
+                text: JSON.stringify({
+                  title: "Mug",
+                  description: "",
+                  image: "",
+                  source: url,
+                  evidence: "Mug",
+                }),
+              },
+            ],
+          },
+        ],
+      }),
+    "AI response lacked a matching source citation",
+  ],
+])("records the recovery validation failure", async (make, reason) => {
+  mocks.fetch.mockResolvedValue(make());
+  await recoverProduct(args());
+  expect(mocks.state.imports[0].diagnostic).toMatchObject({
+    stage: "ai-web",
+    reason,
+  });
+});
+it("reports timeout without exposing network error text", async () => {
+  mocks.fetch.mockRejectedValue(
+    new DOMException("secret endpoint", "TimeoutError"),
+  );
+  await recoverProduct(args());
+  expect(mocks.state.imports[0].diagnostic?.reason).toBe(
+    "AI recovery timed out",
+  );
 });

@@ -1,9 +1,11 @@
+import type { LookupDiagnostic } from "./lookup-diagnostics";
 export interface AdminJob {
   id: string;
   createdAt?: string;
   status: string;
   error?: string;
-  diagnostic?: { stage: string; reason: string };
+  diagnostic?: LookupDiagnostic;
+  diagnostics?: LookupDiagnostic[];
   attempts?: number;
 }
 export interface AdminJobs {
