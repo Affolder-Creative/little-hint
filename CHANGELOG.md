@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.19.1](https://github.com/Affolder-Creative/little-hint/compare/v0.19.0...v0.19.1) (2026-11-05)
+
+
+### Fixes
+
+* enforce recipient and private-idea spending privacy ([#168](https://github.com/Affolder-Creative/little-hint/issues/168)) ([cf64776](https://github.com/Affolder-Creative/little-hint/commit/cf64776c2886a0efc0d496ec0b143ec1f58af443))
+* prepare privacy release checks for 0.19.1 ([#170](https://github.com/Affolder-Creative/little-hint/issues/170)) ([e73fc4f](https://github.com/Affolder-Creative/little-hint/commit/e73fc4f64698d0ed7ca0d8070a61fd43ea21e616))
+* preserve exchange shopping and note privacy ([#169](https://github.com/Affolder-Creative/little-hint/issues/169)) ([eda83f7](https://github.com/Affolder-Creative/little-hint/commit/eda83f74daa7f47528dca08c064d1f130e8b8f7f))
+* retry transient shop lookups and preserve failure diagnostics ([#166](https://github.com/Affolder-Creative/little-hint/issues/166)) ([fd6de9b](https://github.com/Affolder-Creative/little-hint/commit/fd6de9b5387c823d106442867d745150d7760311))
+
 ## [0.19.0](https://github.com/Affolder-Creative/little-hint/compare/v0.18.0...v0.19.0) (2026-11-05)
 
 
