@@ -269,7 +269,7 @@ export function Form({
   dialogLayout?: boolean;
   externalBusy?: boolean;
   secondaryActions?: (busy: boolean) => ReactNode;
-  secondaryActionsPosition?: "before" | "after";
+  secondaryActionsPosition?: "before" | "after" | "after-cancel";
   onBeforeClose?: () => Promise<void>;
   onSubmit: (data: FormData) => Promise<unknown>;
   children: ReactNode;
@@ -460,6 +460,8 @@ export function Form({
             {cancelLabel}
           </button>
         )}
+        {secondaryActionsPosition === "after-cancel" &&
+          secondaryActions?.(busy)}
         {status && (
           <p className="muted form-status" role="status">
             {status}

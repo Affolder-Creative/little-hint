@@ -1,3 +1,4 @@
+import "./account-email.css";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { authClient, clearPersonalData } from "./api";
@@ -41,6 +42,8 @@ function EmailChange() {
   return (
     <Form
       key={step}
+      className="account-email-form"
+      secondaryActionsPosition="after-cancel"
       dialogLayout
       submit={
         step === "address"

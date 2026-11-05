@@ -53,8 +53,32 @@ test("email change verifies both addresses and keeps failed codes recoverable", 
     otp: "123456",
   });
   await expect(page.getByRole("dialog")).toContainText("new@example.test");
-  await expectDialogFieldsToFit(page);
-  await page.screenshot({ path: info.outputPath("email-change-mobile.png") });
+  for (const width of [320, 393, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await expectDialogFieldsToFit(page);
+    const confirm = await page
+      .getByRole("button", { name: "Confirm new email", exact: true })
+      .boundingBox();
+    const cancel = await page
+      .getByRole("button", { name: "Cancel", exact: true })
+      .boundingBox();
+    const restart = await page
+      .getByRole("button", { name: "Start over or request a new code" })
+      .boundingBox();
+    expect(Math.abs(confirm!.y - cancel!.y)).toBeLessThanOrEqual(1);
+    expect(cancel!.x).toBeGreaterThan(confirm!.x + confirm!.width);
+    expect(restart!.y).toBeGreaterThan(confirm!.y + confirm!.height);
+    expect(
+      Math.abs(
+        restart!.x +
+          restart!.width / 2 -
+          (confirm!.x + cancel!.x + cancel!.width) / 2,
+      ),
+    ).toBeLessThanOrEqual(1);
+    await page.screenshot({
+      path: info.outputPath(`email-change-${width}.png`),
+    });
+  }
   await page
     .getByRole("button", { name: "Start over or request a new code" })
     .click();
