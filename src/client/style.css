@@ -2589,6 +2589,9 @@ main {
 .form-review {
   outline-offset: 4px;
 }
+.repeat-event-form .form-review p {
+  margin-bottom: 12px;
+}
 .form-review h3 {
   margin-top: 0;
 }

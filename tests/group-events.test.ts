@@ -20,6 +20,7 @@ import {
 import {
   canManageGroupEvents,
   peopleForGroup,
+  repeatEventDefaults,
 } from "../src/shared/group-events";
 
 function fixture() {
@@ -512,5 +513,176 @@ describe("event lifecycle", () => {
       )?.archived,
     ).toBe(true);
     expect(f.lists(event)).toHaveLength(2);
+  });
+});
+
+describe("repeat annual events", () => {
+  const payload = (f: ReturnType<typeof fixture>, event: GroupEvent) => ({
+    ...repeatEventDefaults(event, f.state.people, f.group),
+    sourceId: event.id,
+    sourceRevision: event.revision,
+  });
+  it("copies editable settings and current selections but clears old dates", () => {
+    const f = fixture();
+    const event = f.create({
+      archiveAfter: "2099-12-31",
+      revealAfter: "2099-12-26",
+      timeZone: "America/New_York",
+      spendingGuidelineCents: 5000,
+    });
+    const defaults = repeatEventDefaults(event, f.state.people, f.group);
+    expect(defaults).toMatchObject({
+      mode: "surprise",
+      modeLocked: false,
+      archiveAfter: null,
+      revealAfter: null,
+      timeZone: "America/New_York",
+      spendingGuidelineCents: 5000,
+      participantIds: event.participantIds,
+    });
+    f.group.memberIds = f.group.memberIds.filter((id) => id !== f.actors[2].id);
+    expect(
+      repeatEventDefaults(event, f.state.people, f.group).participantIds,
+    ).toEqual([]);
+  });
+  it("creates independent empty lists from an archived event without touching any old activity", () => {
+    const f = fixture();
+    const event = f.create();
+    const list = f.lists(event)[0];
+    const gift = command(f.state, f.actors[2], "items.create", {
+      listId: list.id,
+      title: "Original gift",
+    }) as Item;
+    const reservation = command(f.state, f.actors[3], "reservations.create", {
+      itemId: gift.id,
+      quantity: 1,
+    }) as { id: string };
+    command(f.state, f.actors[3], "reservations.update", {
+      ...f.state.reservations.find((r) => r.id === reservation.id)!,
+      purchased: 1,
+      poolTargetCents: 2500,
+    });
+    f.state.contributions.push({
+      ...stamp(),
+      reservationId: reservation.id,
+      userId: f.actors[1].id,
+      amountCents: 1000,
+      status: "sent",
+    });
+    f.update(event, { archived: true });
+    const before = structuredClone(f.state);
+    const result = command(f.state, f.actors[0], "group-events.repeat", {
+      ...payload(f, event),
+      mode: "transparent",
+      revealAfter: "2099-12-26",
+      archiveAfter: "2099-12-31",
+    }) as { id: string };
+    const next = f.state.groupEvents.find((e) => e.id === result.id)!;
+    expect(next).toMatchObject({
+      archived: false,
+      groupId: event.groupId,
+      mode: "transparent",
+      revealAfter: "2099-12-26",
+    });
+    expect(f.lists(next)).toHaveLength(event.participantIds.length);
+    expect(
+      f
+        .lists(next)
+        .every(
+          (l) =>
+            l.modeLocked &&
+            l.mode === "transparent" &&
+            !before.lists.some((old) => old.id === l.id),
+        ),
+    ).toBe(true);
+    expect(f.state.groupEvents.find((e) => e.id === event.id)).toEqual(
+      before.groupEvents.find((e) => e.id === event.id),
+    );
+    expect(f.lists(event)).toEqual(before.lists);
+    for (const key of [
+      "items",
+      "reservations",
+      "contributions",
+      "exchanges",
+      "comments",
+      "spendingRecords",
+    ] as const)
+      expect(f.state[key]).toEqual(before[key]);
+  });
+  it("requires a current owner or leader and refuses deleted or stale sources", () => {
+    const f = fixture();
+    const event = f.create();
+    const p = payload(f, event);
+    for (const actor of [f.actors[1], f.actors[2], f.actors[4]])
+      expect(() => command(f.state, actor, "group-events.repeat", p)).toThrow();
+    f.leaders([f.actors[1].id]);
+    expect(
+      command(f.state, f.actors[1], "group-events.repeat", p),
+    ).toHaveProperty("id");
+    f.leaders([]);
+    expect(() =>
+      command(f.state, f.actors[1], "group-events.repeat", p),
+    ).toThrow();
+    f.update(event, { name: "Changed" });
+    expect(() =>
+      command(f.state, f.actors[0], "group-events.repeat", p),
+    ).toThrow("changed since");
+    event.deletedAt = new Date().toISOString();
+    expect(() =>
+      command(f.state, f.actors[0], "group-events.repeat", payload(f, event)),
+    ).toThrow("Event not found");
+  });
+  it("rejects empty or departed participants, invalid dates, and past schedules without creating anything", () => {
+    const f = fixture();
+    const event = f.create();
+    const p = payload(f, event);
+    const before = structuredClone(f.state);
+    for (const patch of [
+      { participantIds: [] },
+      { participantIds: [f.people[4].id] },
+      { archiveAfter: "2025-02-29" },
+      { revealAfter: "2000-01-01" },
+      { archiveAfter: "2000-01-01" },
+    ])
+      expect(() =>
+        command(f.state, f.actors[0], "group-events.repeat", {
+          ...p,
+          ...patch,
+        }),
+      ).toThrow();
+    expect(f.state).toEqual(before);
+  });
+  it("uses source group authority and creates only one new event on retry", () => {
+    const f = fixture();
+    const event = f.create();
+    const p = {
+      ...payload(f, event),
+      groupId: "unrelated",
+      archived: true,
+      id: event.id,
+    };
+    const key = stamp().id;
+    const first = idempotent(
+      f.state,
+      f.actors[0],
+      key,
+      "group-events.repeat",
+      p,
+    );
+    const second = idempotent(
+      f.state,
+      f.actors[0],
+      key,
+      "group-events.repeat",
+      p,
+    );
+    expect(first).toHaveProperty("id");
+    expect(second).toMatchObject({ ok: true, replayed: true });
+    expect(f.state.groupEvents).toHaveLength(2);
+    expect(f.state.groupEvents[1]).toMatchObject({
+      groupId: event.groupId,
+      archived: false,
+    });
+    expect(f.state.lists).toHaveLength(4);
   });
 });

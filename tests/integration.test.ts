@@ -424,6 +424,52 @@ describe.skipIf(!url)("PostgreSQL transaction integrity", () => {
     expect(restored.archived).toBe(false);
     expect(restored.archiveAfter).toBeNull();
   });
+  it("repeats an event atomically and replays simultaneous submissions to the same new event", async () => {
+    const source = await storage.transact((s) => {
+      const result = command(s, a, "group-events.create", {
+        groupId,
+        name: "Annual source",
+        mode: "surprise",
+        participantIds: s.people
+          .filter((p) => [a.id, b.id].includes(p.userId!))
+          .map((p) => p.id),
+      }) as { id: string };
+      return s.groupEvents.find((e) => e.id === result.id)!;
+    });
+    const payload = {
+      sourceId: source.id,
+      sourceRevision: source.revision,
+      name: "Annual repeat",
+      description: "New occasion",
+      participantIds: source.participantIds,
+      mode: source.mode,
+      timeZone: "UTC",
+      archiveAfter: null,
+      revealAfter: null,
+    };
+    const repeat = () =>
+      storage.transact((s) =>
+        idempotent(
+          s,
+          a,
+          "repeat_event_retry_01",
+          "group-events.repeat",
+          payload,
+        ),
+      );
+    const results = (await Promise.all([repeat(), repeat()])) as Array<{
+      id: string;
+    }>;
+    expect(results[0].id).toBe(results[1].id);
+    const state = await storage.readState();
+    expect(
+      state.groupEvents.filter((e) => e.name === "Annual repeat"),
+    ).toHaveLength(1);
+    expect(
+      state.lists.filter((l) => l.groupEventId === results[0].id),
+    ).toHaveLength(source.participantIds.length);
+    expect(state.groupEvents.find((e) => e.id === source.id)).toEqual(source);
+  });
   it("persists event lists atomically, deduplicates retries, and rejects simultaneous stale edits", async () => {
     const setup = await storage.transact((s) => {
       const group = command(s, a, "groups.create", {

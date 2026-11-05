@@ -134,6 +134,7 @@ try {
           "tests/pagination.spec.ts",
         ]
       : []),
+    ...(suite === "group-events" ? ["tests/repeat-event.spec.ts"] : []),
     ...(suite === "pwa"
       ? [
           "tests/update-notice.spec.ts",
