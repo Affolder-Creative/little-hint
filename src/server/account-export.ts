@@ -1,5 +1,7 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { Actor, State } from "../shared/model";
+import { z } from "zod";
+import { accountCsv } from "./account-csv";
 import { readState } from "./db";
 
 /** Deliberate allowlist: never serialize State, World, auth rows, or provider jobs. */
@@ -116,11 +118,19 @@ export function registerAccountExport(
     async (req, reply) => {
       const a = await actor(req);
       reply.header("Cache-Control", "no-store");
+      const options = z
+        .object({
+          format: z.enum(["json", "csv"]).default("json"),
+          table: z.enum(["wishes", "buying", "spending"]).default("wishes"),
+        })
+        .parse(req.body ?? {});
+      const state = await readState();
+      if (options.format === "csv") return accountCsv(state, a, options.table);
       reply.header(
         "Content-Disposition",
         'attachment; filename="little-hint-personal-data.json"',
       );
-      return accountExport(await readState(), a);
+      return accountExport(state, a);
     },
   );
 }

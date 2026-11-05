@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import { stagingFixtures } from "../src/server/staging-fixtures";
+import { accountCsv } from "../src/server/account-csv";
 import { world } from "../src/server/domain";
 test("downloads JSON and lets users retry a failed export on mobile", async ({
   page,
@@ -21,10 +22,17 @@ test("downloads JSON and lets users retry a failed export on mobile", async ({
             json: { error: "Export unavailable. Try again." },
           })
         : route.fulfill({
-            json: {
-              format: "little-hint-personal-data",
-              account: { name: "Alex" },
-            },
+            json:
+              route.request().postDataJSON()?.format === "csv"
+                ? accountCsv(
+                    f.state,
+                    f.actors[0],
+                    route.request().postDataJSON().table,
+                  )
+                : {
+                    format: "little-hint-personal-data",
+                    account: { name: "Alex" },
+                  },
           });
     if (path.endsWith("/push"))
       return route.fulfill({ json: { publicKey: null, devices: [] } });
@@ -51,8 +59,41 @@ test("downloads JSON and lets users retry a failed export on mobile", async ({
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBe(true);
-  await page
-    .getByRole("heading", { name: "Export your data" })
-    .scrollIntoViewIfNeeded();
-  await page.screenshot({ path: info.outputPath("export-mobile.png") });
+  await page.getByLabel("Export format").selectOption("csv");
+  for (const table of ["wishes", "buying", "spending"]) {
+    await page.getByLabel("CSV table").selectOption(table);
+    const download = page.waitForEvent("download");
+    await page
+      .getByRole("button", { name: "Download CSV", exact: true })
+      .click();
+    const result = await download;
+    expect(result.suggestedFilename()).toBe(`little-hint-${table}.csv`);
+    const text = await readFile((await result.path())!, "utf8");
+    expect(text.startsWith('\uFEFF"Type"')).toBe(true);
+    expect(text).toContain("\r\n");
+  }
+  for (const width of [393, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    const exportSection = page.getByRole("region", {
+      name: "Export your data",
+    });
+    const layout = await exportSection.evaluate((element) => {
+      const style = getComputedStyle(element);
+      const heading = element.querySelector("h2")!;
+      const signOut = document.querySelector(".settings-sign-out h2")!;
+      return {
+        margin: parseFloat(style.marginTop),
+        padding: parseFloat(style.paddingTop),
+        border: parseFloat(style.borderTopWidth),
+        headingSize: getComputedStyle(heading).fontSize,
+        otherHeadingSize: getComputedStyle(signOut).fontSize,
+      };
+    });
+    expect(layout.margin).toBeGreaterThanOrEqual(40);
+    expect(layout.padding).toBeGreaterThanOrEqual(24);
+    expect(layout.border).toBe(1);
+    expect(layout.headingSize).toBe(layout.otherHeadingSize);
+    await exportSection.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: info.outputPath(`export-${width}.png`) });
+  }
 });
