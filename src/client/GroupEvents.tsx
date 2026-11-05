@@ -20,7 +20,11 @@ import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, ArrowRight, CalendarDays, Plus } from "lucide-react";
 import type { Group, GroupEvent, List } from "../shared/model";
-import { canManageGroupEvents, peopleForGroup } from "../shared/group-events";
+import {
+  canManageGroupEvents,
+  peopleForGroup,
+  repeatEventDefaults,
+} from "../shared/group-events";
 import { Avatar, Empty, Field, Form, Header, Privacy } from "./components";
 import { useApp } from "./context";
 import {
@@ -31,9 +35,11 @@ import {
 
 export function EventForm({
   event,
+  repeatFrom,
   groupId: initialGroupId,
 }: {
   event?: GroupEvent;
+  repeatFrom?: GroupEvent;
   groupId?: string;
 }) {
   const { world, mutate, close, toast } = useApp();
@@ -42,14 +48,25 @@ export function EventForm({
     canManageGroupEvents(g, world.me.id),
   );
   const [groupId, setGroupId] = useState(
-    event?.groupId ?? initialGroupId ?? groups[0]?.id ?? "",
+    event?.groupId ??
+      repeatFrom?.groupId ??
+      initialGroupId ??
+      groups[0]?.id ??
+      "",
   );
   const group = groups.find((g) => g.id === groupId);
   const people = group ? peopleForGroup(world.people, group) : [];
+  const defaults =
+    repeatFrom && group
+      ? repeatEventDefaults(repeatFrom, world.people, group)
+      : undefined;
   const [participants, setParticipants] = useState(
-    event?.participantIds ?? people.map((p) => p.id),
+    event?.participantIds ??
+      defaults?.participantIds ??
+      people.map((p) => p.id),
   );
-  const policy = event ? { ...event, modeLocked: true } : undefined;
+  const policy = event ? { ...event, modeLocked: true } : defaults;
+  const initial = event ?? defaults;
   if (!group)
     return (
       <p>
@@ -59,7 +76,7 @@ export function EventForm({
     );
   return (
     <Form
-      className="list-form"
+      className={repeatFrom ? "list-form repeat-event-form" : "list-form"}
       submit={
         event
           ? "Save event"
@@ -69,7 +86,31 @@ export function EventForm({
       review={(data) =>
         !event ? (
           <>
+            {repeatFrom && (
+              <p>
+                This creates a separate event with {participants.length} empty
+                wish {participants.length === 1 ? "list" : "lists"}. The
+                original event and its gift activity stay unchanged.
+              </p>
+            )}
             <SharingReview data={data} audience={[group.name]} />
+            {repeatFrom && (
+              <>
+                <p>
+                  Wish lists for:{" "}
+                  {people
+                    .filter((person) => participants.includes(person.id))
+                    .map((person) => person.name)
+                    .join(", ")}
+                  .
+                </p>
+                <p>
+                  {data.get("archiveAfter")
+                    ? `Archive after ${data.get("archiveAfter")} in ${data.get("timeZone")}.`
+                    : "No automatic archive date is scheduled."}
+                </p>
+              </>
+            )}
             <GuidelineLabel amount={guidelineValue(data)} />
           </>
         ) : null
@@ -80,7 +121,11 @@ export function EventForm({
             "The people in this family group have changed. Reopen this form to choose from the current members.",
           );
         const result = await mutate<{ id: string }>(
-          event ? "group-events/update" : "group-events",
+          event
+            ? "group-events/update"
+            : repeatFrom
+              ? "group-events/repeat"
+              : "group-events",
           {
             ...(event
               ? {
@@ -88,7 +133,12 @@ export function EventForm({
                   revision: event.revision,
                   archived: event.archived,
                 }
-              : { groupId }),
+              : repeatFrom
+                ? {
+                    sourceId: repeatFrom.id,
+                    sourceRevision: repeatFrom.revision,
+                  }
+                : { groupId }),
             name: String(form.get("name") ?? ""),
             description: String(form.get("description") ?? ""),
             spendingGuidelineCents: guidelineValue(form),
@@ -105,7 +155,28 @@ export function EventForm({
         );
       }}
     >
-      {!event && groups.length > 1 ? (
+      {repeatFrom && (
+        <div className="form-section">
+          <p>
+            Repeat <strong>{repeatFrom.name}</strong> with fresh, empty wish
+            lists.
+          </p>
+          <p className="muted">
+            Review the name, participants, and privacy settings. Set new dates
+            below if needed. Items, buying activity, contributions, and secret
+            exchanges are not copied.
+          </p>
+          {defaults &&
+            defaults.participantIds.length <
+              repeatFrom.participantIds.length && (
+              <p role="status">
+                Some previous participants are no longer in this family group
+                and have been left out.
+              </p>
+            )}
+        </div>
+      )}
+      {!event && !repeatFrom && groups.length > 1 ? (
         <Field label="Family group">
           <select
             value={groupId}
@@ -134,7 +205,7 @@ export function EventForm({
           name="name"
           required
           maxLength={160}
-          defaultValue={event?.name}
+          defaultValue={initial?.name}
           placeholder="Christmas 2026"
         />
       </Field>
@@ -143,11 +214,11 @@ export function EventForm({
           name="description"
           rows={2}
           maxLength={2000}
-          defaultValue={event?.description}
+          defaultValue={initial?.description}
           placeholder="Dates, gift ideas, or anything everyone should know."
         />
       </Field>
-      <GuidelineField amount={event?.spendingGuidelineCents} />
+      <GuidelineField amount={initial?.spendingGuidelineCents} />
       <ListPolicyFields list={policy} event>
         <fieldset className="choice-group form-section event-participants">
           <legend>Who needs a wish list?</legend>
@@ -469,6 +540,17 @@ export function GroupEventsSection({ archived }: { archived: boolean }) {
                   >
                     {event.archived ? "Restore event" : "Archive event"}
                   </button>
+                  <button
+                    className="text-button"
+                    onClick={() =>
+                      open(
+                        "Repeat group event",
+                        <EventForm repeatFrom={event} />,
+                      )
+                    }
+                  >
+                    Repeat event
+                  </button>
                   <TrashButton kind="group-events" entry={event} />
                 </ActionMenu>
               ) : (
@@ -593,6 +675,14 @@ export function EventPage() {
               }
             >
               Edit event
+            </button>
+            <button
+              className="text-button"
+              onClick={() =>
+                open("Repeat group event", <EventForm repeatFrom={event} />)
+              }
+            >
+              Repeat event
             </button>
             <TrashButton kind="group-events" entry={event} />
           </ActionMenu>

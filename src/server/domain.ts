@@ -911,6 +911,30 @@ export function command(
       syncEventLists(s, event);
       return { id: event.id };
     }
+    case "group-events.repeat": {
+      const p = eventInput
+        .extend({
+          sourceId: id,
+          sourceRevision: revision,
+          participantIds: ids.min(1),
+        })
+        .parse(b);
+      const source =
+        s.groupEvents.find(
+          (event) => event.id === p.sourceId && !event.deletedAt,
+        ) ?? fail(404, "Event not found.");
+      managedEventGroup(s, a, source.groupId);
+      checkRevision(source, p.sourceRevision);
+      for (const date of [p.archiveAfter, p.revealAfter]) {
+        if (dateHasElapsed(date, p.timeZone ?? "UTC"))
+          fail(400, "Choose new dates that have not already passed.");
+      }
+      // Only creation fields are accepted. Source activity and list IDs are never copied.
+      return command(s, a, "group-events.create", {
+        ...p,
+        groupId: source.groupId,
+      });
+    }
     case "group-events.update": {
       const p = eventInput
         .extend({ id, revision, archived: z.boolean() })
