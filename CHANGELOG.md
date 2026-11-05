@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.18.0](https://github.com/Affolder-Creative/little-hint/compare/v0.17.0...v0.18.0) (2026-11-05)
+
+
+### Features
+
+* repeat annual group events with fresh wish lists ([#160](https://github.com/Affolder-Creative/little-hint/issues/160)) ([4428cb2](https://github.com/Affolder-Creative/little-hint/commit/4428cb2038cce80dd2c891ac915c1f5d66508574))
+
 ## [0.17.0](https://github.com/Affolder-Creative/little-hint/compare/v0.16.0...v0.17.0) (2026-11-05)
 
 
