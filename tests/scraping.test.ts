@@ -41,8 +41,39 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("provider selection", () => {
-  it("prefers Fish, retains Bee-only installations, and never falls through an explicit choice", () => {
-    expect(selectedScrapingProvider(keys)).toBe("scrapingfish");
+  it("selects the first fully configured provider in priority order", () => {
+    const configured: Record<string, string> = {
+      ...keys,
+      BRIGHTDATA_UNLOCKER_ZONE: "shops",
+    };
+    expect(selectedScrapingProvider(configured)).toBe("brightdata");
+    for (const selection of [
+      "brightdata",
+      "scrapingbee",
+      "scrapedo",
+      "scrapingdog",
+    ]) {
+      expect(
+        selectedScrapingProvider({
+          ...configured,
+          SCRAPING_PROVIDER: selection,
+        }),
+      ).toBe(selection);
+    }
+    expect(
+      selectedScrapingProvider({ ...configured, BRIGHTDATA_API_KEY: "" }),
+    ).toBe("scrapingbee");
+    configured.BRIGHTDATA_UNLOCKER_ZONE = "";
+    expect(selectedScrapingProvider(configured)).toBe("scrapingbee");
+    configured.SCRAPINGBEE_API_KEY = "";
+    expect(selectedScrapingProvider(configured)).toBe("scrapedo");
+    configured.SCRAPEDO_API_KEY = "";
+    expect(selectedScrapingProvider(configured)).toBe("scrapingdog");
+    configured.SCRAPINGDOG_API_KEY = "";
+    expect(selectedScrapingProvider(configured)).toBeUndefined();
+  });
+  it("uses Bee without a Bright Data zone and never falls through an explicit choice", () => {
+    expect(selectedScrapingProvider(keys)).toBe("scrapingbee");
     expect(selectedScrapingProvider({ SCRAPINGBEE_API_KEY: "bee" })).toBe(
       "scrapingbee",
     );
@@ -52,7 +83,7 @@ describe("provider selection", () => {
     expect(
       selectedScrapingProvider({
         SCRAPINGBEE_API_KEY: "bee",
-        SCRAPING_PROVIDER: "scrapingfish",
+        SCRAPING_PROVIDER: "scrapedo",
       }),
     ).toBeUndefined();
     expect(
@@ -89,8 +120,8 @@ describe("provider selection", () => {
     expect(r.url.searchParams.get("query")).toBe("B012345678");
     expect(
       scrapingRequest(
-        "scrapingfish",
-        "fish",
+        "scrapingdog",
+        "dog",
         "https://www.amazon.com/dp/B012345678",
       ).amazon,
     ).toBe(false);
@@ -102,14 +133,7 @@ describe("provider selection", () => {
       ).amazon,
     ).toBe(false);
   });
-  it("enables rendering only for Fish, using its default rendering wait", () => {
-    const fish = scrapingRequest("scrapingfish", "fish", target);
-    expect(fish.url.origin + fish.url.pathname).toBe(
-      "https://api.scrapingfish.com/api/v1/",
-    );
-    expect(fish.url.searchParams.get("render_js")).toBe("true");
-    expect(fish.url.searchParams.has("render_js_timeout_ms")).toBe(false);
-    expect(fish.url.searchParams.has("extract_rules")).toBe(false);
+  it("keeps generic integrations on their existing rendering settings", () => {
     expect(
       scrapingRequest("scrapingbee", "bee", target).url.searchParams.get(
         "render_js",
@@ -283,7 +307,7 @@ describe("full import fallback flow", () => {
     },
   );
 
-  describe.each(["scrapingfish", "brightdata"])(
+  describe.each(["scrapingbee", "brightdata"])(
     "%s shop-only results",
     (provider) => {
       const discogs = "https://www.discogs.com/shop/item/4212139164";
@@ -375,7 +399,7 @@ describe("full import fallback flow", () => {
     },
   );
 
-  it("keeps successful direct imports free even with Fish configured", async () => {
+  it("keeps successful direct imports free even with Bee configured", async () => {
     mocks.direct.mockResolvedValue(new Response(productHtml));
     const fetcher = vi.fn();
     vi.stubGlobal("fetch", fetcher);
@@ -389,7 +413,7 @@ describe("full import fallback flow", () => {
     expect(spend).not.toHaveBeenCalled();
   });
 
-  it("parses Fish HTML after a failed direct fetch without downloading disabled photos", async () => {
+  it("parses Bee HTML after a failed direct fetch without downloading disabled photos", async () => {
     mocks.direct.mockRejectedValue(new Error("Shop unavailable"));
     const fetcher = vi.fn(async () => new Response(productHtml));
     vi.stubGlobal("fetch", fetcher);
@@ -403,10 +427,10 @@ describe("full import fallback flow", () => {
     expect(result).not.toHaveProperty("remoteImage");
     expect(mocks.direct).toHaveBeenCalledTimes(1);
     expect(fetcher).toHaveBeenCalledTimes(1);
-    expect(spend).toHaveBeenCalledExactlyOnceWith("scrapingfish");
+    expect(spend).toHaveBeenCalledExactlyOnceWith("scrapingbee");
   });
 
-  it("retains the manual-entry error when direct fetching and Fish both fail", async () => {
+  it("retains the manual-entry error when direct fetching and Bee both fail", async () => {
     mocks.direct.mockRejectedValue(new Error("Shop unavailable"));
     const fetcher = vi.fn(async () => {
       throw new DOMException("Provider timed out", "TimeoutError");
@@ -416,7 +440,7 @@ describe("full import fallback flow", () => {
       "You can still add the gift manually.",
     );
     expect(fetcher).toHaveBeenCalledTimes(1);
-    expect(spend).toHaveBeenCalledExactlyOnceWith("scrapingfish");
+    expect(spend).toHaveBeenCalledExactlyOnceWith("scrapingbee");
   });
 });
 

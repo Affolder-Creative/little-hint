@@ -11,11 +11,10 @@ Set `SCRAPING_PROVIDER` in production, or `STAGING_SCRAPING_PROVIDER` in staging
 | Value          | Behavior                                                                        |
 | -------------- | ------------------------------------------------------------------------------- |
 | `brightdata`   | Bright Data retailer Scraper APIs and Web Unlocker                              |
-| `scrapingfish` | Scraping Fish                                                                   |
 | `scrapingbee`  | ScrapingBee                                                                     |
 | `scrapedo`     | Scrape.do                                                                       |
 | `scrapingdog`  | Scrapingdog                                                                     |
-| `auto`         | First configured provider in this order: Fish, Bee, Scrape.do, Dog, Bright Data |
+| `auto`         | First configured provider in this order: Bright Data, ScrapingBee, Scrape.do, Scrapingdog |
 | `none`         | Manual entry only; no extraction, automatic photos, or product-detail AI                                      |
 
 An explicit selection never silently falls through to another paid provider. Supply that provider's credentials to both the app and worker. Bright Data also requires its Unlocker zone. Restart/recreate both services after changing the environment.
@@ -24,7 +23,6 @@ An explicit selection never silently falls through to another paid provider. Sup
 
 | Provider      | Production credential variables                     |
 | ------------- | --------------------------------------------------- |
-| Scraping Fish | `SCRAPINGFISH_API_KEY`                              |
 | ScrapingBee   | `SCRAPINGBEE_API_KEY`                               |
 | Scrape.do     | `SCRAPEDO_API_KEY`                                  |
 | Scrapingdog   | `SCRAPINGDOG_API_KEY`                               |
@@ -130,7 +128,7 @@ Collections run asynchronously and normally get checked about every ten seconds 
 
 ## Other providers and limitations
 
-To use Scraping Fish again, set `SCRAPING_PROVIDER=scrapingfish` and its API key, or use the corresponding staging variables. There is no automatic paid-provider cascade. Existing `auto` precedence is preserved.
+Select a supported provider and supply its credentials, using the corresponding staging variables in staging. Automatic selection prefers Bright Data, ScrapingBee, Scrape.do, then Scrapingdog. Bright Data requires both its API key and Unlocker zone. There is no automatic paid-provider cascade.
 
 The app keeps currency in USD. Unknown prices, ranges, unavailable variants, and unverified currencies may require manual entry. Automatic-photo settings still apply. Scraping success depends on the shop and provider; configuration alone does not guarantee successful extraction.
 

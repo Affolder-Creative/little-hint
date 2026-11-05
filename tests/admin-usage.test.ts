@@ -40,8 +40,8 @@ it("aggregates feature usage without counting web searches as shop lookups", () 
     ["discovery:metrics:2026-10:gpt-6-luna:reported", 4],
     ["discovery:metrics:2026-10:gpt-6-luna:searches", 8],
     ["2026-10-01:openai", 3],
-    ["2026-10-28:scrapingfish", 2],
-    ["2026-09-30:scrapingfish", 9],
+    ["2026-10-28:scrapingbee", 2],
+    ["2026-09-30:scrapingbee", 9],
     ["2026-10-28:telegram", 8],
   ] as const)
     addDiscoveryUsage(s, key, count);
@@ -68,7 +68,7 @@ it("aggregates feature usage without counting web searches as shop lookups", () 
   expect(report.scraping).toMatchObject({
     requests: 2,
     enabled: false,
-    providers: [{ id: "scrapingfish", requests: 2 }],
+    providers: [{ id: "scrapingbee", requests: 2 }],
   });
   expect(report.visible).toBe(true);
   expect(report.resetsAt).toBe("2026-11-01T00:00:00.000Z");

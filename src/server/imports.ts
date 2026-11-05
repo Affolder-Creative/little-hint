@@ -789,7 +789,7 @@ export async function paidProductPreview(
     const response = await fetch(request.url, {
       headers: request.headers,
       redirect: "error",
-      signal: AbortSignal.timeout(provider === "scrapingfish" ? 100000 : 35000),
+      signal: AbortSignal.timeout(35000),
     });
     if (!response.ok) {
       await report?.(`Provider HTTP ${response.status}`);

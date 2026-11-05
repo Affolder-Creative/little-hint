@@ -63,7 +63,7 @@ async function setup(
     [`imports:metrics:${month}:gpt-6-luna:reported`, 5],
     [`imports:metrics:${month}:gpt-6-luna:input`, 3200],
     [`imports:metrics:${month}:gpt-6-luna:output`, 800],
-    [`${month}-01:scrapingfish`, 4],
+    [`${month}-01:scrapingbee`, 4],
   ] as const)
     addDiscoveryUsage(f.state, key, count);
   const state = {
@@ -108,7 +108,7 @@ async function setup(
                 OPENAI_API_KEY: "synthetic",
                 SMTP_HOST: "synthetic",
                 PAID_DAILY_LIMIT: "50",
-                SCRAPINGFISH_API_KEY: "synthetic",
+                SCRAPINGBEE_API_KEY: "synthetic",
               },
               false,
             ),
@@ -128,7 +128,7 @@ async function setup(
             AI_ENABLED: String(options.ai !== false),
             OPENAI_API_KEY: "synthetic",
             PAID_DAILY_LIMIT: "50",
-            SCRAPINGFISH_API_KEY: "synthetic",
+            SCRAPINGBEE_API_KEY: "synthetic",
           }),
           visible: state.visible,
         },

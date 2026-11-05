@@ -711,7 +711,7 @@ test("provider configuration is deployment-only and service status is read-only"
   ]);
   const rejected = await page.request.post("/api/v1/admin/settings", {
     headers: { Origin: new URL(page.url()).origin },
-    data: { key: "SCRAPING_PROVIDER", value: "scrapingfish" },
+    data: { key: "SCRAPING_PROVIDER", value: "scrapingbee" },
   });
   expect(rejected.status()).toBe(409);
   const services = await page.request.get("/api/v1/admin/services");

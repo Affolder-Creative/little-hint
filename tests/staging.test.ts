@@ -194,16 +194,16 @@ describe("staging scraping opt-in", () => {
     vi.stubEnv("STAGING_AI_ENABLED", "false");
     vi.stubEnv("STAGING_OPENAI_API_KEY", "");
     for (const p of scrapingProviders) vi.stubEnv(`STAGING_${p.key}`, "");
-    vi.stubEnv("SCRAPINGFISH_API_KEY", "production-must-not-use");
-    vi.stubEnv("SCRAPING_PROVIDER", "scrapingfish");
+    vi.stubEnv("SCRAPINGBEE_API_KEY", "production-must-not-use");
+    vi.stubEnv("SCRAPING_PROVIDER", "scrapingbee");
     vi.stubEnv("STAGING_SCRAPING_PROVIDER", "auto");
     expect(selectedScrapingProvider(await config())).toBeUndefined();
-    vi.stubEnv("STAGING_SCRAPINGFISH_API_KEY", "fish-key");
     vi.stubEnv("STAGING_SCRAPINGBEE_API_KEY", "bee-key");
+    vi.stubEnv("STAGING_SCRAPINGDOG_API_KEY", "dog-key");
     vi.stubEnv("STAGING_PAID_DAILY_LIMIT", "10");
-    expect(selectedScrapingProvider(await config())).toBe("scrapingfish");
-    vi.stubEnv("STAGING_SCRAPING_PROVIDER", "scrapingbee");
     expect(selectedScrapingProvider(await config())).toBe("scrapingbee");
+    vi.stubEnv("STAGING_SCRAPING_PROVIDER", "scrapingdog");
+    expect(selectedScrapingProvider(await config())).toBe("scrapingdog");
     for (const selection of ["none", "scrapedo"]) {
       vi.stubEnv("STAGING_SCRAPING_PROVIDER", selection);
       expect(selectedScrapingProvider(await config())).toBeUndefined();
