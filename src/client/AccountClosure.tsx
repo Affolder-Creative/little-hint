@@ -1,6 +1,6 @@
 import { ArrowRight } from "lucide-react";
 import "./account-closure.css";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { api, clearPersonalData } from "./api";
@@ -113,6 +113,21 @@ function ClosureReview() {
   const [challenge, setChallenge] = useState("");
   const [confirmation, setConfirmation] = useState(""),
     [code, setCode] = useState("");
+  const warning = useRef<HTMLParagraphElement>(null);
+  const codeField = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    // Returning from code entry must restore focus to the consequences, not
+    // leave it on the removed resend button or jump to a destructive action.
+    const target = challenge ? codeField.current : warning.current;
+    const frame = requestAnimationFrame(() => {
+      target?.focus();
+      // WebKit can retain the old step's footer scroll position on remount.
+      (target?.closest(".field") ?? target)?.scrollIntoView({
+        block: "nearest",
+      });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [challenge, review.isSuccess]);
   if (review.isPending)
     return (
       <p role="status">Checking your responsibilities and gift commitments…</p>
@@ -175,7 +190,7 @@ function ClosureReview() {
         location.assign("/");
       }}
     >
-      <p>
+      <p ref={warning} tabIndex={-1}>
         <strong>This is permanent and cannot be undone.</strong>
       </p>
       {!challenge ? (
@@ -315,7 +330,7 @@ function ClosureReview() {
               pattern="[0-9]{6}"
               maxLength={6}
               required
-              autoFocus
+              ref={codeField}
             />
           </Field>
           <Field label="Type DELETE to confirm">

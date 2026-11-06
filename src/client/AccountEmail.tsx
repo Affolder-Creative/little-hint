@@ -1,5 +1,5 @@
 import "./account-email.css";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { authClient, clearPersonalData } from "./api";
 import { clearPushBinding } from "./Notifications";
@@ -28,6 +28,10 @@ function EmailChange() {
   const client = useQueryClient();
   const [step, setStep] = useState<"address" | "current" | "new">("address");
   const [email, setEmail] = useState("");
+  const activeField = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    activeField.current?.focus();
+  }, [step]);
   const check = (result: {
     error?: { message?: string; code?: string } | null;
   }) => {
@@ -117,6 +121,7 @@ function EmailChange() {
               name="email"
               type="email"
               autoComplete="email"
+              ref={activeField}
               required
               maxLength={254}
               defaultValue={email}
@@ -141,7 +146,7 @@ function EmailChange() {
               pattern="[0-9]{6}"
               maxLength={6}
               required
-              autoFocus
+              ref={activeField}
             />
           </Field>
         </>
