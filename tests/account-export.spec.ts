@@ -109,8 +109,9 @@ test("downloads JSON and lets users retry a failed export on mobile", async ({
         otherHeadingSize: getComputedStyle(signOut).fontSize,
       };
     });
-    expect(layout.helpGap).toBeGreaterThanOrEqual(16);
-    expect(layout.buttonGap).toBeGreaterThanOrEqual(16);
+    // Firefox can report a nominal 16px gap a fraction below 16.
+    expect(layout.helpGap).toBeGreaterThanOrEqual(16 - 0.01);
+    expect(layout.buttonGap).toBeGreaterThanOrEqual(16 - 0.01);
     expect(layout.margin).toBeGreaterThanOrEqual(40);
     expect(layout.padding).toBeGreaterThanOrEqual(24);
     expect(layout.border).toBe(1);

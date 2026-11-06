@@ -39,7 +39,8 @@
     "test:preview-smoke": "node scripts/preview/smoke.mjs",
     "test:images:browser": "npm run build && node tests/image-store.browser.mjs && node --import tsx tests/image-ui.browser.mjs",
     "test:spending:browser": "node --import tsx scripts/check-spending-ui.ts",
-    "test:upgrade": "node scripts/upgrade-check.mjs"
+    "test:upgrade": "node scripts/upgrade-check.mjs",
+    "test:acceptance:ui": "node scripts/acceptance-ui.mjs"
   },
   "dependencies": {
     "@better-auth/passkey": "^1.7.14",
