@@ -102,3 +102,25 @@ it("respects provider-wide limits before price allowances", async () => {
     false,
   );
 });
+
+it("does not call a provider for a queued item whose price was removed", async () => {
+  const { id, i } = fixture();
+  mock.state!.items.find((item) => item.id === i.id)!.priceCents = null;
+  await processPrice(id);
+  expect(mock.lookup).not.toHaveBeenCalled();
+  expect(mock.state!.items[0].priceCents).toBeNull();
+  expect(mock.state!.priceChanges).toHaveLength(0);
+});
+it("discards an in-flight result when the price is removed", async () => {
+  const { id, i } = fixture();
+  mock.lookup.mockImplementation(async () => {
+    mock.state!.items.find((item) => item.id === i.id)!.priceCents = null;
+    return { priceCents: 8000, identity: "same", source: "direct" };
+  });
+  await processPrice(id);
+  expect(mock.state!.items[0].priceCents).toBeNull();
+  expect(mock.state!.priceChanges).toHaveLength(0);
+  expect(
+    mock.state!.notices.filter((notice) => notice.event === "price-drop"),
+  ).toHaveLength(0);
+});

@@ -153,7 +153,11 @@ try {
       ? ["tests/sms.spec.ts", "tests/account-email.spec.ts"]
       : []),
     ...(suite === "polish"
-      ? ["tests/settings-polish.spec.ts", "tests/account-export.spec.ts"]
+      ? [
+          "tests/settings-polish.spec.ts",
+          "tests/account-export.spec.ts",
+          "tests/ui-refinements.spec.ts",
+        ]
       : []),
     ...(suite === "gift-discovery" ? ["tests/friends.spec.ts"] : []),
   ]).done;

@@ -274,7 +274,7 @@ export function UpdateNotice() {
       }
       requested = true;
       setBusy(true);
-      setMessage("Updating…");
+      setMessage("");
       timer = setTimeout(
         () => stop("The update did not finish. Try Update now again."),
         10000,

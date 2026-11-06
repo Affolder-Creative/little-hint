@@ -120,9 +120,15 @@ dialog.dialog[open] {
   border-top: 1px solid var(--border);
   background: var(--paper);
 }
+.gift-form > .form-actions {
+  align-items: start;
+}
 .gift-draft-actions {
   margin-right: auto;
   min-width: 0;
+  display: grid;
+  justify-items: start;
+  align-self: start;
 }
 .gift-draft-actions .text-button {
   min-height: 44px;
@@ -198,9 +204,12 @@ dialog.dialog[open] {
   }
   .gift-draft-actions {
     width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
+    justify-content: start;
   }
+}
+.gift-draft-actions .draft-save-feedback {
+  margin: 2px 0 0;
+  min-height: 18px;
+  font-size: 12px;
+  line-height: 1.5;
 }

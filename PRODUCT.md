@@ -157,7 +157,7 @@ The feature is built in, without an environment or personal enable switch.
 
 ## Price tracking
 
-Deployment-enabled daily price checks cover active linked wishes and gift ideas.
+Deployment-enabled daily price checks cover active linked wishes and gift ideas with an existing price. Missing-price items cannot subscribe or resume tracking, enter scheduled checks, or accept queued/in-flight results after the price is removed. Initial product-detail imports can still fetch a first price.
 The current verified price leads, with the original saved price and verification
 time retained. Failed checks preserve the previous amount. Manual price changes
 pause automatic updates until an editor resumes them. Existing items establish a

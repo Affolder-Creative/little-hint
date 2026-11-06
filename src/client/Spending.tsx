@@ -944,6 +944,33 @@ export function SpendingPage() {
       [...(history.data?.lists ?? []), ...world.lists].map((l) => [l.id, l]),
     ).values(),
   ];
+  const listGroups = new Map<string, { label: string; lists: typeof lists }>();
+  for (const list of lists) {
+    const names =
+      "ownerIds" in list
+        ? list.ownerIds.map(
+            (id) =>
+              recipients.find((person) => person.id === id)?.name ??
+              "Recipient",
+          )
+        : (list.ownerNames ?? []);
+    const owners =
+      "ownerIds" in list
+        ? list.ownerIds
+        : names.map((name) => {
+            const matches = recipients.filter((person) => person.name === name);
+            return matches.length === 1 ? matches[0].id : `saved:${name}`;
+          });
+    const key = [...owners].sort().join("|") || "unavailable";
+    const group = listGroups.get(key) ?? {
+      label:
+        [...names].sort((a, b) => a.localeCompare(b)).join(" & ") ||
+        "Other saved wish lists",
+      lists: [],
+    };
+    group.lists.push(list);
+    listGroups.set(key, group);
+  }
   const events = [
     ...new Map(
       [...(history.data?.events ?? []), ...world.groupEvents].map((e) => [
@@ -1205,19 +1232,20 @@ export function SpendingPage() {
               onChange={(e) => set("list", e.target.value)}
             >
               <option value="">All wish lists</option>
-              {lists.map((l) => (
-                <option value={l.id} key={l.id}>
-                  {l.name} •{" "}
-                  {("ownerIds" in l
-                    ? l.ownerIds.map(
-                        (id) =>
-                          world.people.find((p) => p.id === id)?.name ??
-                          "Recipient",
-                      )
-                    : (l.ownerNames ?? [])
-                  ).join(" & ")}
-                </option>
-              ))}
+              {[...listGroups.entries()]
+                .sort(([, a], [, b]) => a.label.localeCompare(b.label))
+                .map(([key, group]) => (
+                  <optgroup label={group.label} key={key}>
+                    {group.lists
+                      .slice()
+                      .sort((a, b) => a.name.localeCompare(b.name))
+                      .map((list) => (
+                        <option value={list.id} key={list.id}>
+                          {list.name}
+                        </option>
+                      ))}
+                  </optgroup>
+                ))}
             </select>
           </Field>
         </div>

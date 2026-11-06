@@ -1,3 +1,4 @@
+import { InfoHelp } from "./InfoHelp";
 import { useState } from "react";
 import type { GiftView } from "../shared/model";
 import { dollars } from "./api";
@@ -10,7 +11,10 @@ export function Price({
   compact?: boolean;
 }) {
   const p = gift.pricing,
-    changed = p?.baseline != null && p.baseline !== gift.priceCents;
+    changed =
+      gift.priceCents !== null &&
+      p?.baseline != null &&
+      p.baseline !== gift.priceCents;
   const stale =
     !!p?.checkedAt &&
     (p.status !== "verified" ||
@@ -32,7 +36,7 @@ export function Price({
           )}
         </small>
       )}
-      {!compact && (
+      {!compact && gift.priceCents !== null && (
         <>
           {p?.paused ? (
             <small>Manual price · Automatic checks paused</small>
@@ -62,7 +66,13 @@ export function PriceControls({ gift }: { gift: GiftView }) {
   const { world, mutate } = useApp();
   const [busy, setBusy] = useState(false),
     [error, setError] = useState("");
-  if (!gift.url || gift.archived || !world.priceChecksEnabled) return null;
+  if (
+    gift.priceCents === null ||
+    !gift.url ||
+    gift.archived ||
+    !world.priceChecksEnabled
+  )
+    return null;
   async function change(path: string, enabled: boolean) {
     setBusy(true);
     setError("");
@@ -76,19 +86,21 @@ export function PriceControls({ gift }: { gift: GiftView }) {
   }
   return (
     <div className="price-controls">
-      <label className="check">
-        <input
-          type="checkbox"
-          checked={gift.priceWatching ?? false}
-          disabled={busy || (!!gift.pricing?.paused && !gift.priceWatching)}
-          onChange={(e) => change("prices/watch", e.target.checked)}
-        />
-        Notify me of price drops
-      </label>
-      <p className="muted">
-        Alerts for drops of at least 5% and $1 appear in Notifications. Enable
-        Price drops in notification settings for delivery to your devices.
-      </p>
+      <div className="price-watch">
+        <label className="check">
+          <input
+            type="checkbox"
+            checked={gift.priceWatching ?? false}
+            disabled={busy || (!!gift.pricing?.paused && !gift.priceWatching)}
+            onChange={(e) => change("prices/watch", e.target.checked)}
+          />
+          Notify me of price drops
+        </label>
+        <InfoHelp title="Price-drop notifications">
+          Alerts for drops of at least 5% and $1 appear in Notifications. Enable
+          Price drops in notification settings for delivery to your devices.
+        </InfoHelp>
+      </div>
       {gift.canEdit && (
         <button
           className="text-button"

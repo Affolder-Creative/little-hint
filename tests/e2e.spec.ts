@@ -227,12 +227,16 @@ test("real email-code sign-in, gift creation, buyer reservation, and surprise pr
     sp.getByRole("heading", { name: title, exact: true }),
   ).toBeVisible();
   await sp.getByRole("button", { name: "Reserve gift", exact: true }).click();
+  const reservationConfirmation = sp
+    .getByRole("status")
+    .filter({ hasText: "Gift reserved." });
+  await expect(reservationConfirmation).toBeVisible();
   await expect(
-    sp.getByRole("status").filter({
-      hasText:
-        "Gift reserved. Open Buying to mark it as purchased or cancel your reservation.",
+    reservationConfirmation.getByRole("link", {
+      name: "Open Buying",
+      exact: true,
     }),
-  ).toBeVisible();
+  ).toHaveAttribute("href", "/buying");
   await sp
     .getByLabel("Your note", { exact: true })
     .fill("Please keep this private.");

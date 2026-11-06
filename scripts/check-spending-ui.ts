@@ -271,10 +271,46 @@ try {
   await page.screenshot({
     path: out + "/purchase-desktop.png",
   });
+  const amountHelp = page.getByRole("button", {
+    name: "About amount paid in usd, optional",
+    exact: true,
+  });
+  await amountHelp.click();
+  const helpTarget = (await amountHelp.boundingBox())!;
+  const amountAfterHelp = (await paymentFields.nth(0).boundingBox())!;
+  expect(helpTarget.y + helpTarget.height).toBeLessThanOrEqual(
+    amountAfterHelp.y + 1,
+  );
+  await expect(page.locator(".info-help-panel:popover-open")).toContainText(
+    "Include tax and shipping. Leave blank to add later.",
+  );
+  await expect
+    .poll(async () => {
+      const box = await page
+        .locator(".info-help-panel:popover-open")
+        .boundingBox();
+      const trigger = await amountHelp.boundingBox();
+      return Math.abs(box!.x - trigger!.x);
+    })
+    .toBeLessThanOrEqual(1);
+  const helpBox = (await page
+    .locator(".info-help-panel:popover-open")
+    .boundingBox())!;
+  expect(helpBox.y + helpBox.height).toBeLessThan(helpTarget.y);
+  expect(helpBox.width).toBeLessThanOrEqual(320);
+  await page.screenshot({ path: out + "/amount-help-desktop.png" });
+  await page.keyboard.press("Escape");
+  await expect(amountHelp).toBeFocused();
+  await expect(page.locator(".info-help-panel:popover-open")).toHaveCount(0);
   await page.getByLabel("Gift name").fill("Art easel");
   await page.getByRole("combobox", { name: "Search people" }).fill("Emma");
   await page.getByRole("dialog").getByRole("option", { name: /Emma/ }).click();
-  await page.getByLabel("Amount paid in USD, optional").fill("60");
+  await page
+    .getByRole("spinbutton", {
+      name: "Amount paid in USD, optional",
+      exact: true,
+    })
+    .fill("60");
   await page
     .getByRole("button", { name: "Save purchase", exact: true })
     .click();
@@ -350,6 +386,24 @@ try {
   await expect(page.locator(".spending-numbers")).toContainText("$145");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await page.screenshot({ path: out + "/mobile-dark.png", fullPage: true });
+  await page.getByRole("button", { name: "Add purchase", exact: true }).click();
+  await amountHelp.click();
+  const mobileHelp = page.locator(".info-help-panel:popover-open");
+  await expect(mobileHelp).toBeInViewport();
+  const mobileTarget = (await amountHelp.boundingBox())!;
+  const mobileAmount = (await page
+    .getByRole("spinbutton", {
+      name: "Amount paid in USD, optional",
+      exact: true,
+    })
+    .boundingBox())!;
+  expect(mobileTarget.y + mobileTarget.height).toBeLessThanOrEqual(
+    mobileAmount.y + 1,
+  );
+  await page.screenshot({ path: out + "/amount-help-mobile-dark.png" });
+  await mobileHelp.getByRole("button", { name: "Close help" }).click();
+  await expect(amountHelp).toBeFocused();
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
   // Connected state, unknown cost, planning, consent and prospective privacy.
   run("spending.connect", { userId: users[1].id });
   const connection = s.spendingConnections[0];
@@ -389,16 +443,33 @@ try {
   await goto(server.resolvedUrls!.local[0] + "buying/spending?view=shared");
   await expect(page.locator(".spending-numbers")).toContainText("$120");
   await expect(page.locator(".spending-numbers")).toContainText("amount");
+  await page.getByRole("button", { name: /^More filters/ }).click();
+  const wishLists = page.getByLabel("Wish list", { exact: true });
+  await expect(wishLists.locator("optgroup")).toHaveAttribute("label", "Emma");
+  await expect(wishLists.locator("optgroup option")).toHaveText(
+    "Emma’s Christmas",
+  );
+  await page.getByRole("button", { name: /^More filters/ }).click();
   await page.screenshot({ path: out + "/shared-mobile.png" });
   await page
     .getByRole("button", { name: "Mark purchased", exact: true })
     .click();
   await page.getByLabel("Quantity bought").fill("2");
-  await expect(page.getByLabel("Amount paid in USD, optional")).toHaveValue("");
-  await page.getByRole("button", { name: "Use $120", exact: true }).click();
-  await expect(page.getByLabel("Amount paid in USD, optional")).toHaveValue(
-    "120",
-  );
+  await expect(
+    page.getByRole("spinbutton", {
+      name: "Amount paid in USD, optional",
+      exact: true,
+    }),
+  ).toHaveValue("");
+  await page
+    .getByRole("button", { name: "Use listed price", exact: true })
+    .click();
+  await expect(
+    page.getByRole("spinbutton", {
+      name: "Amount paid in USD, optional",
+      exact: true,
+    }),
+  ).toHaveValue("120");
   await expect(
     page.getByRole("dialog").locator(".spending-privacy"),
   ).toContainText("Shared with Jamie");
@@ -438,7 +509,12 @@ try {
     .getByRole("dialog")
     .getByRole("option", { name: /Linked watercolor brushes/ })
     .click();
-  await expect(page.getByLabel("Amount paid in USD, optional")).toHaveValue("");
+  await expect(
+    page.getByRole("spinbutton", {
+      name: "Amount paid in USD, optional",
+      exact: true,
+    }),
+  ).toHaveValue("");
   await page
     .getByRole("button", { name: "Save purchase", exact: true })
     .click();
@@ -618,6 +694,9 @@ try {
   await goto(
     server.resolvedUrls!.local[0] + `people/${s.people[2].id}?tab=ideas`,
   );
+  await page.getByRole("button", { name: /^Sort & filter/ }).click();
+  await page.getByRole("checkbox", { name: "Available to give" }).uncheck();
+  await page.getByRole("button", { name: "Done", exact: true }).click();
   const gridTitle = page
     .locator(".gift-card .gift-title")
     .filter({ hasText: longTitle });
@@ -703,10 +782,16 @@ try {
     page.getByLabel("Quantity purchased", { exact: true }),
   ).toHaveValue("2");
   await expect(
-    page.getByLabel("Amount paid in USD, optional", { exact: true }),
+    page.getByRole("spinbutton", {
+      name: "Amount paid in USD, optional",
+      exact: true,
+    }),
   ).toHaveCount(purchaseCount);
   await page
-    .getByLabel("Amount paid in USD, optional", { exact: true })
+    .getByRole("spinbutton", {
+      name: "Amount paid in USD, optional",
+      exact: true,
+    })
     .first()
     .fill("28.95");
   await expect(

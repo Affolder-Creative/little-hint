@@ -70,6 +70,10 @@ test("activation reloads once, and dirty forms block the request", async ({
   await page.evaluate(() => document.getElementById("dirty-test")!.remove());
   await page.getByRole("button", { name: "Update now" }).click();
   await expect(page.getByRole("button", { name: "Updating…" })).toBeDisabled();
+  await expect(
+    page.getByText("A new version of Little Hint is ready.", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("Updating…", { exact: true })).toHaveCount(1);
   await Promise.all([
     page.waitForEvent("framenavigated"),
     page.evaluate(() => (window as any).activateUpdate()),

@@ -233,3 +233,50 @@ dialog.dialog:has(.spending-purchase) {
 .purchase-record-fields .field {
   margin-top: 16px;
 }
+
+/* The visual chip is compact; its remove control keeps a full touch target. */
+.purchase-chip:has(button) {
+  position: relative;
+  isolation: isolate;
+  padding-block: 0;
+  border: 0;
+  background: transparent;
+}
+.purchase-chip:has(button)::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 6px 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--paper);
+}
+.purchase-chip button:hover {
+  background: transparent;
+}
+.purchase-chip:has(button:hover)::before {
+  background: var(--soft);
+}
+.purchase-amount {
+  min-width: 0;
+}
+.purchase-estimate {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.purchase-estimate strong {
+  font-weight: 550;
+  color: var(--text);
+}
+.purchase-estimate small {
+  display: block;
+  font-size: 12px;
+}
+.purchase-estimate .button {
+  padding: 8px 12px;
+}

@@ -312,6 +312,11 @@ export function GiftForm({
   const savedDraft = useRef(importDraft);
   const [draftSaved, setDraftSaved] = useState("");
   const [saveError, setSaveError] = useState("");
+  const [savedFeedback, setSavedFeedback] = useState(false);
+  const savedFeedbackTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
+  useEffect(() => () => clearTimeout(savedFeedbackTimer.current), []);
   const saveQueue = useRef(Promise.resolve());
   const [slow, setSlow] = useState(false);
   useEffect(() => {
@@ -335,6 +340,12 @@ export function GiftForm({
         savedDraft.current = updated;
         setDraftSaved(captured);
         setSaveError("");
+        clearTimeout(savedFeedbackTimer.current);
+        setSavedFeedback(true);
+        savedFeedbackTimer.current = setTimeout(
+          () => setSavedFeedback(false),
+          3000,
+        );
       });
     saveQueue.current = next;
     return next;
@@ -618,12 +629,14 @@ export function GiftForm({
               {draftSaving ? "Saving draft…" : "Save for later"}
             </button>
             <p
-              className={saveError ? "error" : "muted"}
+              className={`draft-save-feedback ${saveError ? "error" : "muted"}`}
               role={saveError ? "alert" : "status"}
             >
               {saveError ||
                 (snapshot === draftSaved
-                  ? "Private draft saved"
+                  ? savedFeedback
+                    ? "Private draft saved"
+                    : ""
                   : "Saving draft…")}
             </p>
           </div>

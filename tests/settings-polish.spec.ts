@@ -261,9 +261,12 @@ test("service status can recover and failed jobs remain actionable", async ({
     jobs.getByRole("heading", { name: "Background jobs" }),
   ).toBeVisible();
   await expect(jobs.getByText(/Shop lookup failed/)).toHaveCount(1);
-  await expect(jobs).toContainText(
-    "0 shop lookups waiting · 0 updates waiting",
-  );
+  for (const label of ["Shop lookups waiting", "Updates waiting"]) {
+    const fact = jobs.locator("dl > div").filter({
+      has: page.getByRole("term").filter({ hasText: label }),
+    });
+    await expect(fact.getByRole("definition")).toHaveText("0");
+  }
   await jobs.getByText("Failed shop lookups (1)", { exact: true }).click();
   await expect(jobs.locator("time")).toHaveAttribute(
     "datetime",

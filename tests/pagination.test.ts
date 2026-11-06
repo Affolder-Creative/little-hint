@@ -131,3 +131,75 @@ it("omits item and reservation collections in negotiated world, retaining older 
   expect(shell.watches).toEqual([]);
   expect(world(state, actor, true).items).toHaveLength(49);
 });
+
+it("defaults to available gifts, while search, explicit all, and archives recover taken gifts", async () => {
+  const { state, actor, listId } = fixture(3);
+  const taken = state.items[0];
+  state.reservations.push({
+    ...stamp(),
+    itemId: taken.id,
+    titleSnapshot: taken.title,
+    buyerId: actor.id,
+    quantity: taken.quantity,
+    purchased: taken.quantity,
+    former: false,
+  });
+  const scope = { scope: "list", id: listId };
+  expect(
+    (await itemPage(state, actor, scope)).rows.map((item) => item.id),
+  ).not.toContain(taken.id);
+  expect(
+    (await itemPage(state, actor, { ...scope, search: taken.title })).rows[0]
+      .id,
+  ).toBe(taken.id);
+  expect(
+    (await itemPage(state, actor, { ...scope, available: "false" })).total,
+  ).toBe(3);
+  taken.quantity++;
+  expect((await itemPage(state, actor, scope)).total).toBe(3);
+  taken.quantity--;
+  state.lists.find((list) => list.id === listId)!.archived = true;
+  expect((await itemPage(state, actor, scope)).total).toBe(3);
+});
+it("filters wishes and ideas before pagination without losing collection facets", async () => {
+  const { state, actor } = fixture(30);
+  const idea = state.items[29];
+  delete idea.listId;
+  idea.creatorId = actor.id;
+  idea.visibility = "private";
+  const page = await itemPage(state, actor, { type: "idea", page: 2 });
+  expect(page.total).toBe(1);
+  expect(page.page).toBe(1);
+  expect(page.rows[0].id).toBe(idea.id);
+  expect(page.collectionTotal).toBe(30);
+  expect((await itemPage(state, actor, { type: "wish" })).total).toBe(29);
+});
+it("preserves hidden-availability wishes in a collection with transparent wishes", async () => {
+  const { state, listId } = fixture(2);
+  const list = state.lists.find((list) => list.id === listId)!;
+  list.mode = "surprise";
+  const person = state.people.find((person) => person.id === list.ownerIds[0])!;
+  const owner = {
+    id: person.userId!,
+    name: person.name,
+    email: "owner@example.test",
+  };
+  const transparent = { ...list, ...stamp(), mode: "transparent" as const };
+  state.lists.push(transparent);
+  state.items[1].listId = transparent.id;
+  state.reservations.push({
+    ...stamp(),
+    itemId: state.items[0].id,
+    titleSnapshot: state.items[0].title,
+    buyerId: "other",
+    quantity: state.items[0].quantity,
+    purchased: 1,
+    former: false,
+  });
+  const page = await itemPage(state, owner, { scope: "person", id: person.id });
+  expect(page.showAvailability).toBe(true);
+  expect(page.total).toBe(2);
+  expect(
+    page.rows.find((item) => item.id === state.items[0].id)!.available,
+  ).toBeUndefined();
+});
