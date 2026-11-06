@@ -267,11 +267,21 @@ describe.skipIf(!url)("atomic account closure", () => {
         ])
       ).rowCount,
     ).toBe(0);
-    for (const auth of [cookie, otherCookie])
+    for (const auth of [cookie, otherCookie]) {
+      for (const format of ["json", "csv"]) {
+        const exported = await post(
+          "/api/v1/account/export",
+          { format, table: "wishes" },
+          auth,
+        );
+        expect(exported.statusCode, exported.body).toBe(401);
+        expect(exported.body).not.toContain(email);
+      }
       expect(
         (await app.inject({ url: "/api/v1/world", headers: { cookie: auth } }))
           .statusCode,
       ).toBe(401);
+    }
     const state = await storage.readState();
     expect(state.imports).toEqual([]);
     expect(state.media[0].deletedAt).toBeTruthy();

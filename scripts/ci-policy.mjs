@@ -85,11 +85,7 @@ export function classifyPaths(paths) {
       selected.browser = true;
       continue;
     }
-    if (
-      /^tests\/(?:integration|staging-seed\.integration|preview-seed\.integration)\.test\.ts$/.test(
-        file,
-      )
-    ) {
+    if (/^tests\/(?:integration|.+\.integration)\.test\.ts$/.test(file)) {
       selected.integration = true;
       continue;
     }
