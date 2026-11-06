@@ -16,7 +16,8 @@ configuration.
 
 ## First installation
 
-This is an early 0.x release with support as time allows. You need a Linux host
+Use a completed release and its matching instructions. Support is provided as
+time allows; see [support and compatibility](SUPPORT.md). You need a Linux host
 with Docker Engine and the Compose plugin, a domain with HTTPS routing to the
 app, and an SMTP account for sign-in codes. Node.js is not required on the host
 for a container installation. You pay for your infrastructure and optional

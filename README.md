@@ -7,7 +7,7 @@
 
 **Gift ideas, shared thoughtfully.**
 
-A self-hosted, invite-only gift coordination PWA for families and friends. React/Vite frontend, Fastify API, PostgreSQL/Drizzle, Better Auth, and a pg-boss worker. Includes leader-managed group events with individual wish lists, wishes, private ideas, quantities, contributions, secret gift exchanges, URL imports, and optional SMTP/Telegram/US SMS integrations.
+A self-hosted, invite-only gift coordination PWA for families and friends. React/Vite frontend, Fastify API, PostgreSQL/Drizzle, Better Auth, and a pg-boss worker. Includes leader-managed group events with individual wish lists, wishes, private ideas, quantities, contributions, secret gift exchanges, URL imports, SMTP sign-in, and optional Telegram/US SMS integrations.
 
 Use **Your people → Add a friend** to save gift ideas before someone joins. A name
 is enough; no email or account is needed. Friends and their ideas start private.
@@ -45,21 +45,24 @@ The [master plan](MASTER_PLAN.md) is the approved product contract. Read [archit
 
 ## Release status and support
 
-Little Hint is an early 0.x release. It is source-available and free to self-host
-for personal use under [PolyForm Perimeter 1.0.0](LICENSE), which restricts
+Install a completed [GitHub Release](https://github.com/Affolder-Creative/little-hint/releases),
+using its tagged instructions and release notes. The `main` branch can contain
+unreleased changes. Little Hint is source-available and free to self-host for
+personal use under [PolyForm Perimeter 1.0.0](LICENSE), which restricts
 competing products and services. You provide and pay for your own server, email
 service, and any optional providers. See [licensing](docs/LICENSING.md) for details.
 
-Expect changes before 1.0. Back up the database and uploads before upgrading and
-read the release notes, including any migration or rollback instructions. Bug
+Back up the database and uploads before upgrading, verify that you can restore
+them, and read any migration or rollback instructions in the release notes. Bug
 reports are welcome through GitHub Issues; support is provided as time allows,
-with no response-time or uptime guarantee. Security fixes target the latest
-released version. Report vulnerabilities privately as described in
-[SECURITY.md](SECURITY.md).
+with no response-time or uptime guarantee. Fixes target the latest stable
+release, without a promise of backports or long-term support. Report
+vulnerabilities privately as described in [SECURITY.md](SECURITY.md).
 
-The planned 1.0 support and compatibility policy is in [support expectations](docs/SUPPORT.md).
-The [1.0 readiness record](docs/V1_READINESS.md) tracks the remaining acceptance gates;
-these documents do not certify an unreleased version.
+See [support expectations](docs/SUPPORT.md) for deployment requirements, browser
+capabilities, and the compatibility policy for 1.x. The [1.0 readiness record](docs/V1_READINESS.md)
+separates completed stabilization work from pending candidate acceptance. A version
+is available only after its GitHub Release has been published.
 
 Start with the [installation guide](docs/DEPLOYMENT.md). Review the outstanding
 [device, provider, and recovery checks](docs/VALIDATION.md#required-before-broad-production-use)
