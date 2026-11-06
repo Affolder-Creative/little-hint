@@ -80,3 +80,31 @@ changes; six database-only paths failed regression checks before this correction
 Guardian handoff/closure privacy, capture recovery into a repeated event, and
 export access after identity changes are covered without application changes.
 Full CI on the final PR head and final 1.0 candidate acceptance remain required.
+
+## Interface and accessibility polish evidence
+
+The Impeccable pass retained the existing design and reviewed rendered account
+controls, browsing, gift entry, buying, exchanges, and settings in light and dark
+themes. Account export, email change, and closure were checked together at 320,
+393, 768, and 1440 CSS pixels. Existing error, retry, restricted-access, empty,
+draft, and confirmation paths were exercised by the browser polish suites.
+
+Regression tests reproduced lost focus when restarting email verification and
+account closure, plus a clipped code field in short dialogs. Account steps now
+restore focus, and compact form dialogs scroll headings, fields, and actions
+together.
+Closure also positions its focused warning or code field after the new step is
+laid out, including WebKit's retained scroll position. Tests cover a short window,
+a simulated keyboard viewport, doubled text, Escape cancellation, return to the
+keyboard opener, and the unchanged code-plus-DELETE closure safeguards.
+
+Local validation passed the 28-test production polish suite, the account suites
+in Chromium and WebKit, and 12 production offline/reconnect/update checks.
+Account export and email dialogs now also run axe checks across both themes and
+all four widths. The account API fixtures disable service workers; separate PWA
+tests exercise actual workers and cache recovery. Screenshots are emitted by
+the corresponding Playwright specs for visual review.
+
+This is implementation evidence, not final candidate acceptance. Physical mobile
+keyboards, browser zoom, installed-app behavior, real screen-reader use, and the
+full supported desktop-browser matrix still require the acceptance record above.

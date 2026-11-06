@@ -1,7 +1,10 @@
 import { test, expect } from "@playwright/test";
+import AxeBuilder from "@axe-core/playwright";
 import { stagingFixtures } from "../src/server/staging-fixtures";
 import { world } from "../src/server/domain";
 import { expectDialogFieldsToFit } from "./browser-helpers";
+
+test.use({ serviceWorkers: "block" });
 
 test("email change verifies both addresses and keeps failed codes recoverable", async ({
   page,
@@ -35,7 +38,9 @@ test("email change verifies both addresses and keeps failed codes recoverable", 
     });
   });
   await page.goto("/settings?section=security");
-  await page.getByRole("button", { name: "Change email", exact: true }).click();
+  await page.getByRole("button", { name: "Change email", exact: true }).focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByLabel("New email address")).toBeFocused();
   await page.getByLabel("New email address").fill("New@example.test");
   await page.getByRole("button", { name: "Send current email code" }).click();
   expect(calls.at(-1)?.body).toEqual({
@@ -45,6 +50,7 @@ test("email change verifies both addresses and keeps failed codes recoverable", 
   await page.getByLabel("Current email code").fill("123456");
   await page.getByRole("button", { name: "Verify current email" }).click();
   await expect(page.getByRole("alert")).toContainText("Invalid code");
+  await expect(page.getByRole("alert")).toBeFocused();
   fail = false;
   await page.getByRole("button", { name: "Verify current email" }).click();
   await expect(page.getByLabel("New email code")).toBeVisible();
@@ -53,8 +59,16 @@ test("email change verifies both addresses and keeps failed codes recoverable", 
     otp: "123456",
   });
   await expect(page.getByRole("dialog")).toContainText("new@example.test");
-  for (const width of [320, 393, 1440]) {
+  for (const [width, theme] of [
+    [320, "dark"],
+    [393, "light"],
+    [768, "light"],
+    [1440, "dark"],
+  ] as const) {
     await page.setViewportSize({ width, height: 900 });
+    await page.evaluate((theme) => {
+      document.documentElement.dataset.theme = theme;
+    }, theme);
     await expectDialogFieldsToFit(page);
     const confirm = await page
       .getByRole("button", { name: "Confirm new email", exact: true })
@@ -78,6 +92,9 @@ test("email change verifies both addresses and keeps failed codes recoverable", 
     await page.screenshot({
       path: info.outputPath(`email-change-${width}.png`),
     });
+    expect(
+      (await new AxeBuilder({ page }).include("dialog").analyze()).violations,
+    ).toEqual([]);
   }
   await page
     .getByRole("button", { name: "Start over or request a new code" })
@@ -85,4 +102,10 @@ test("email change verifies both addresses and keeps failed codes recoverable", 
   await expect(page.getByLabel("New email address")).toHaveValue(
     "new@example.test",
   );
+  await expect(page.getByLabel("New email address")).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Change email", exact: true }),
+  ).toBeFocused();
 });

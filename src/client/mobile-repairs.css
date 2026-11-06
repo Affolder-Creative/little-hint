@@ -120,6 +120,19 @@ dialog.dialog[open] {
   border-top: 1px solid var(--border);
   background: var(--paper);
 }
+/* Short windows and enlarged text need one scroll area: pinned headings and
+   actions can otherwise leave too little room for a labeled field. */
+dialog.dialog[open][data-compact="true"]:has(.form-dialog) {
+  display: block;
+  overflow-y: auto;
+}
+dialog[data-compact="true"] > .dialog-body:has(> .form-dialog) {
+  display: block;
+  overflow: visible;
+}
+dialog[data-compact="true"] .form-dialog > .form-content {
+  overflow: visible;
+}
 .gift-form > .form-actions {
   align-items: start;
 }

@@ -1,8 +1,11 @@
 import { test, expect } from "@playwright/test";
+import AxeBuilder from "@axe-core/playwright";
 import { readFile } from "node:fs/promises";
 import { stagingFixtures } from "../src/server/staging-fixtures";
 import { accountCsv } from "../src/server/account-csv";
 import { world } from "../src/server/domain";
+
+test.use({ serviceWorkers: "block" });
 test("downloads JSON and lets users retry a failed export on mobile", async ({
   page,
 }, info) => {
@@ -72,8 +75,16 @@ test("downloads JSON and lets users retry a failed export on mobile", async ({
     expect(text.startsWith('\uFEFF"Type"')).toBe(true);
     expect(text).toContain("\r\n");
   }
-  for (const width of [393, 1440]) {
+  for (const [width, theme] of [
+    [320, "dark"],
+    [393, "light"],
+    [768, "light"],
+    [1440, "dark"],
+  ] as const) {
     await page.setViewportSize({ width, height: 900 });
+    await page.evaluate((theme) => {
+      document.documentElement.dataset.theme = theme;
+    }, theme);
     const exportSection = page.getByRole("region", {
       name: "Export your data",
     });
@@ -106,5 +117,9 @@ test("downloads JSON and lets users retry a failed export on mobile", async ({
     expect(layout.headingSize).toBe(layout.otherHeadingSize);
     await exportSection.scrollIntoViewIfNeeded();
     await page.screenshot({ path: info.outputPath(`export-${width}.png`) });
+    expect(
+      (await new AxeBuilder({ page }).include(".settings-content").analyze())
+        .violations,
+    ).toEqual([]);
   }
 });
