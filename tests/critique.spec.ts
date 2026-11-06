@@ -4580,6 +4580,22 @@ for (const [width, theme] of [
     await expect(
       page.getByRole("tab", { name: /^Gift ideas for/ }),
     ).toHaveAttribute("aria-selected", "true");
+    const purchasedCard = page
+      .locator(".gift-card")
+      .filter({ hasText: idea.title });
+    await expect(purchasedCard).toHaveCount(0);
+    const ideaSearch = page.getByRole("searchbox", {
+      name: "Search gift ideas",
+    });
+    await ideaSearch.fill(idea.title);
+    await expect(purchasedCard.locator(".private-idea-badge")).toHaveText(
+      "Only me",
+    );
+    await ideaSearch.fill("");
+    await expect(purchasedCard).toHaveCount(0);
+    await page.getByRole("button", { name: /^Sort & filter/ }).click();
+    await page.getByRole("checkbox", { name: "Available to give" }).uncheck();
+    await page.getByRole("button", { name: "Done", exact: true }).click();
     await expect(
       page
         .locator(".gift-card")
