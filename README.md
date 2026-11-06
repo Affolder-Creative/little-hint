@@ -57,6 +57,10 @@ with no response-time or uptime guarantee. Security fixes target the latest
 released version. Report vulnerabilities privately as described in
 [SECURITY.md](SECURITY.md).
 
+The planned 1.0 support and compatibility policy is in [support expectations](docs/SUPPORT.md).
+The [1.0 readiness record](docs/V1_READINESS.md) tracks the remaining acceptance gates;
+these documents do not certify an unreleased version.
+
 Start with the [installation guide](docs/DEPLOYMENT.md). Review the outstanding
 [device, provider, and recovery checks](docs/VALIDATION.md#required-before-broad-production-use)
 before relying on an installation for real gift plans.
