@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.19.4](https://github.com/Affolder-Creative/little-hint/compare/v0.19.3...v0.19.4) (2026-11-06)
+
+
+### Fixes
+
+* polish gift browsing, drafts, and purchase flows ([#175](https://github.com/Affolder-Creative/little-hint/issues/175)) ([30577fc](https://github.com/Affolder-Creative/little-hint/commit/30577fcc46c0f18bc76d6f3a3f091b603988736c))
+
 ## [0.19.3](https://github.com/Affolder-Creative/little-hint/compare/v0.19.2...v0.19.3) (2026-11-05)
 
 
