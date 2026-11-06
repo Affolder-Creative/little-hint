@@ -40,6 +40,8 @@ default 150-request budget, per-IP isolation, and stricter endpoint limits.
 `E2E_BROWSER_TEST_SERVER=1` only tells browser fixtures to skip the general-limit
 cooldown. Local tests against the normal server retain the cooldown. The launcher
 selects an unused port so a development app cannot satisfy its readiness check.
+Container jobs also run the [published-image upgrade and recovery drill](UPGRADE_VERIFICATION.md) against the pinned 0.19.4 baseline. Release image jobs repeat it against the exact image selected for publication.
+
 Both CI and release container jobs use native runners:
 `ubuntu-24.04` for AMD64 and `ubuntu-24.04-arm` for ARM64, without QEMU.
 

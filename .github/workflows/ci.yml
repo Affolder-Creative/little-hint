@@ -241,15 +241,18 @@ jobs:
         env:
           LITTLE_HINT_IMAGE: little-hint:ci
         run: bash scripts/smoke-image.sh
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+      - name: Published release upgrade and isolated recovery
+        env:
+          LITTLE_HINT_IMAGE: little-hint:ci
+        run: npm run test:upgrade
       - name: Staging stack smoke test
         if: matrix.arch == 'amd64'
         env:
           LITTLE_HINT_STAGING_IMAGE: little-hint:ci
         run: bash scripts/smoke-staging.sh
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        if: matrix.arch == 'amd64'
-        with:
-          node-version: "24"
       - name: Preview launcher and container smoke test without a public tunnel
         if: matrix.arch == 'amd64'
         run: npm run test:preview-smoke

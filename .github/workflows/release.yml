@@ -138,6 +138,13 @@ jobs:
         env:
           LITTLE_HINT_IMAGE: little-hint:release
         run: bash scripts/smoke-image.sh
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+      - name: Published release upgrade and isolated recovery
+        env:
+          LITTLE_HINT_IMAGE: little-hint:release
+        run: npm run test:upgrade
       - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: little-hint:release

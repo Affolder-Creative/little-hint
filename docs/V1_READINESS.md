@@ -54,3 +54,14 @@ verify the final public image digest in staging and promote that same digest to
 production with a fresh verified backup. Publication does not deploy the app.
 Record post-deployment authentication, privacy, existing-data, upload, and worker
 checks privately. Do not mark this record complete merely because a tag exists.
+
+## Upgrade verifier implementation evidence
+
+The [published-image verifier](UPGRADE_VERIFICATION.md) passed locally on ARM64
+against the pinned 0.19.4 baseline and a candidate built from main after PR #177.
+It checked core records and amounts, authenticated privacy views, uploaded bytes,
+repeatable migration, container recreation, queued work, a new gift write, and
+recovery into separate storage with session invalidation. This is tooling
+validation, not acceptance of the eventual 1.0 candidate. Both architecture CI
+results and the final candidate run must still be recorded. Off-host restoration
+and real post-snapshot access reconciliation remain pending.
