@@ -6,6 +6,7 @@ import {
   mkdirSync,
   writeFileSync,
   readFileSync,
+  readdirSync,
   rmSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -331,3 +332,11 @@ test("CLI writes workflow outputs and exits unsuccessfully for a bad gate", () =
     rmSync(directory, { recursive: true, force: true });
   }
 });
+
+for (const file of readdirSync("tests").filter((name) =>
+  name.endsWith(".integration.test.ts"),
+)) {
+  test(`database-only change selects integration checks: ${file}`, () => {
+    assert.deepEqual(classifyPaths([`tests/${file}`]), flags(["integration"]));
+  });
+}

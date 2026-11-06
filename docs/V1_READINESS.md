@@ -65,3 +65,18 @@ recovery into separate storage with session invalidation. This is tooling
 validation, not acceptance of the eventual 1.0 candidate. Both architecture CI
 results and the final candidate run must still be recorded. Off-host restoration
 and real post-snapshot access reconciliation remain pending.
+
+## Critical workflow stabilization evidence
+
+The [critical workflow coverage inventory](CRITICAL_WORKFLOWS.md) records the
+existing suites and new cross-feature regressions. Local validation passed 868
+unit tests and 38 PostgreSQL integration tests. The final account integration
+changes also passed a focused ten-test rerun. All 141 tooling tests, typecheck,
+and production build passed. Database-dependent tests skipped in the ordinary
+unit run are not counted as passing there.
+
+The CI selector now runs the integration job when any integration-test file
+changes; six database-only paths failed regression checks before this correction.
+Guardian handoff/closure privacy, capture recovery into a repeated event, and
+export access after identity changes are covered without application changes.
+Full CI on the final PR head and final 1.0 candidate acceptance remain required.

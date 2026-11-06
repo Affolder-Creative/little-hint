@@ -186,7 +186,17 @@ describe.skipIf(!url)("verified account email change", () => {
       (await storage.readState()).people.find((p) => p.id === "email-person")
         ?.userId,
     ).toBe("email-member");
-    for (const oldCookie of [cookie, otherCookie])
+    for (const oldCookie of [cookie, otherCookie]) {
+      for (const format of ["json", "csv"]) {
+        const exported = await app.inject({
+          method: "POST",
+          url: "/api/v1/account/export",
+          headers: { origin, cookie: oldCookie },
+          payload: { format, table: "wishes" },
+        });
+        expect(exported.statusCode, exported.body).toBe(401);
+        expect(exported.body).not.toContain(nextEmail);
+      }
       expect(
         (
           await app.inject({
@@ -195,7 +205,23 @@ describe.skipIf(!url)("verified account email change", () => {
           })
         ).statusCode,
       ).toBe(401);
+    }
     cookie = await signIn(nextEmail);
+    const exported = await app.inject({
+      method: "POST",
+      url: "/api/v1/account/export",
+      headers: { origin, cookie },
+      payload: { format: "json" },
+    });
+    expect(exported.statusCode, exported.body).toBe(200);
+    expect(exported.headers["cache-control"]).toBe("no-store");
+    expect(exported.json().account).toMatchObject({
+      id: "email-member",
+      email: nextEmail,
+    });
+    expect(exported.json().profiles).toContainEqual(
+      expect.objectContaining({ id: "email-person" }),
+    );
     expect(
       (await app.inject({ url: "/api/v1/world", headers: { cookie } }))
         .statusCode,
