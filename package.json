@@ -38,7 +38,8 @@
     "test:preview-watch": "node scripts/preview/watch-smoke.mjs",
     "test:preview-smoke": "node scripts/preview/smoke.mjs",
     "test:images:browser": "npm run build && node tests/image-store.browser.mjs && node --import tsx tests/image-ui.browser.mjs",
-    "test:spending:browser": "node --import tsx scripts/check-spending-ui.ts"
+    "test:spending:browser": "node --import tsx scripts/check-spending-ui.ts",
+    "test:upgrade": "node scripts/upgrade-check.mjs"
   },
   "dependencies": {
     "@better-auth/passkey": "^1.7.14",
