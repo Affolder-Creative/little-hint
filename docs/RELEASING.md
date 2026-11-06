@@ -63,6 +63,20 @@ the minor version. Use `!` or a `BREAKING CHANGE:` footer for a breaking change.
 Dependency updates use `deps:`; release PRs use Release Please's generated title.
 The initial release is `v0.1.0`. npm publishing is disabled by `private: true`.
 
+## The 1.0 publication decision
+
+Follow the [readiness record](V1_READINESS.md),
+[acceptance worksheet](V1_ACCEPTANCE.md), and
+[draft publication notes](V1_RELEASE_NOTES.md) before requesting 1.0.0.
+Readiness/copy PRs can merge while manual checks remain pending. They do not
+change the release number or authorize publication. Request the major version
+only after the maintainer has accepted the evidence.
+
+Merging Release Please's version PR starts automatic publication after the
+workflow checks pass. The workflow has no separate human approval gate after
+that merge. Complete manual acceptance first; a passing selective PR run is
+not a substitute for full candidate CI, physical devices, or provider checks.
+
 ## Release sequence
 
 1. A merge to main selects the commit and checks that it is still current.

@@ -1,7 +1,10 @@
 # Support and compatibility
 
-This is the policy for the planned 1.0 release. Little Hint remains a 0.x release
-until the [release gates](V1_READINESS.md) pass and 1.0.0 is published.
+Support scope and installation requirements below apply to published releases.
+The 1.x compatibility commitments begin with the published 1.0.0 release. Check
+[GitHub Releases](https://github.com/Affolder-Creative/little-hint/releases) for
+available versions and the [readiness record](V1_READINESS.md) for candidate
+acceptance. The presence of this policy does not certify an unreleased version.
 
 ## Support scope
 

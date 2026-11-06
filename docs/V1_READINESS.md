@@ -1,13 +1,26 @@
 # 1.0 release readiness
 
-Status: not ready for publication. This record starts the stabilization work;
-it does not certify 1.0.0 or authorize deployment.
+Status: stabilization PRs are merged; final candidate acceptance is pending.
+This record does not certify 1.0.0 or authorize publication or deployment.
+The latest published version verified during this preparation is `v0.19.4`.
 
 The starting baseline is published `v0.19.4`, commit
 `fa2487ee96dfd8f62fb709d1f52a3f07a3ca19e7`. Its
 [release workflow](https://github.com/Affolder-Creative/little-hint/actions/runs/42142897868)
 passed all eleven browser suites, integration checks, and both architectures.
 Those results belong to that release, not the eventual 1.0 candidate.
+
+## Completed stabilization work
+
+| Work | Merged PR | Evidence |
+| --- | --- | --- |
+| Support and recovery expectations | [#177](https://github.com/Affolder-Creative/little-hint/pull/177) | [Support policy](SUPPORT.md), operations and release guidance. |
+| Published-image upgrade verification | [#179](https://github.com/Affolder-Creative/little-hint/pull/179) | [Upgrade and recovery drill](UPGRADE_VERIFICATION.md), run in container CI and release-image checks. |
+| Critical workflow stabilization | [#180](https://github.com/Affolder-Creative/little-hint/pull/180) | [Coverage inventory](CRITICAL_WORKFLOWS.md), cross-feature privacy/auth/capture regressions. |
+| Interface and accessibility polish | [#181](https://github.com/Affolder-Creative/little-hint/pull/181) | [CI run](https://github.com/Affolder-Creative/little-hint/actions/runs/42159643626) passed quality, all eleven browser suites, and CI gate on `da8d2fff4a2e2f8990e287dc68233d7aa48d0ac4`. Integration and containers were unselected, not passes. |
+
+These establish the implementation baseline. Candidate-specific and manual gates
+below remain pending; merging these PRs does not complete them.
 
 ## Acceptance record
 
@@ -44,10 +57,30 @@ Resolve privacy failures, data loss, crashes, blocked core workflows, and blocki
 review feedback before approving the release PR. Record smaller known limitations
 with their impact rather than hiding them behind a passing aggregate status.
 
-The final readiness PR will request `Release-As: 1.0.0`. Do not add that override
-or merge an intermediate release PR before acceptance is complete. Keep Release
-Please's generated branch and title. Verify package/lockfile versions, manifest,
-changelog, and checks on the final PR head.
+This copy/readiness PR does not request `Release-As: 1.0.0`, change package
+versions, or certify manual checks. Complete the following sequence:
+
+1. Merge the reviewed copy/readiness PR, then select a full commit SHA on `main`
+   for acceptance. Keep unrelated feature work out of that candidate. Run the
+   full manual CI workflow for the selected revision; selective PR CI is not
+   sufficient evidence for the full-candidate gate.
+2. Build and deploy that revision to isolated staging using synthetic accounts.
+   Record the image digest and complete the pending gates above, including at
+   least 24 hours of candidate staging. Use the
+   [acceptance worksheet](V1_ACCEPTANCE.md) for reproducible checks and evidence.
+   The private staging image is an acceptance aid, not the public release image.
+3. After the maintainer records acceptance and approves moving to 1.0, use a
+   focused follow-up PR to record the decision and request `Release-As: 1.0.0`.
+   Keep the existing Release Please PR open until then. Keep its generated
+   branch and `chore(main): release 1.0.0` title.
+4. Review the generated release PR's package/lockfile versions, manifest,
+   changelog, and exact final head. Run full CI on that head. Compare it with
+   the accepted revision and rerun affected acceptance checks for any behavior
+   or deployment changes. Review the [draft publication notes](V1_RELEASE_NOTES.md)
+   alongside the generated changelog; do not overwrite generated asset links.
+5. Only merge the release PR when all pre-publication evidence is accepted.
+   Its merge starts automatic tagging, full release CI, image verification,
+   and publication. There is no later manual approval stop in that workflow.
 
 The tagged commit must pass the full release workflow before publication. Then
 verify the final public image digest in staging and promote that same digest to
