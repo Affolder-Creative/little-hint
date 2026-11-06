@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-05T19:14:16.768762+00:00",
+  "generatedAt": "2026-11-06T00:44:47.997131+00:00",
   "title": "Design System: Little Hint",
   "extensions": {
     "colorMeta": {
@@ -929,6 +929,11 @@
         "name": "toast-arrival",
         "value": "arrive 0.2s ease-out",
         "purpose": "Opacity .6 to 1 and bottom 17px to 25px; disabled on mobile and with reduced motion."
+      },
+      {
+        "name": "working-dots",
+        "value": "1.5s steps(1, end) infinite",
+        "purpose": "Reveal the second and third dots in a fixed 1em slot; reduced motion shows static dots."
       }
     ],
     "breakpoints": [
@@ -1009,7 +1014,12 @@
       "src/client/Spending.tsx",
       "src/client/SpendingPurchase.tsx",
       "src/client/spending-purchase.css",
-      "src/client/UpdatePurchase.tsx"
+      "src/client/UpdatePurchase.tsx",
+      "src/client/InfoHelp.tsx",
+      "src/client/info-help.css",
+      "src/client/context.tsx",
+      "src/client/SearchSelect.tsx",
+      "src/client/AccountClosure.tsx"
     ],
     "tonalRampNote": "Synthesized OKLCH previews at constant hue/chroma; these ramps are panel metadata, not additional application tokens.",
     "layout": {
@@ -1024,18 +1034,18 @@
       "privateGiftIdeas": "Active wish lists offer Add gift idea to givers. Ideas belong to a person; joint lists require an explicit recipient. The form places Who can see this idea? before product entry and defaults to Only me. Private cards, detail pages, and Buying entries show a lock with Only me. Saved idea links use /people/:id?tab=ideas to preserve the selected tab.",
       "paragraphRhythm": "Metadata uses 4px; headings and related explanations 8px; ordinary prose 12px; controls 16px; sections 32px, reduced to 24px at 650px. Text stacks own spacing and reset child margins. Form groups use 16px; adjacent explanations use 8px. Intentional hero and card compositions retain their own spacing.",
       "profileEditor": "Person pages and Settings open one Edit profile dialog with Profile and Gift preferences tabs. Both drafts stay mounted. Saves are independent and keep the dialog open. Done and Close protect dirty forms in either tab; successful saves clear their confirmation state. Quiet underlined Gift preferences text actions appear in Settings and owned/managed person pages. In Settings the shortcut sits below account details, leaving the outlined Edit profile button as the main action. Interest choices use one column at widths up to 360px.",
-      "giftDetails": "Recipient, title, status, price and quantity use a 12px stack. The phone image gap is 16px, and the back-link gap is 8px. Reservation and detail-section headings match at 22px desktop and 21px phone; explanations use 14px/1.5 with a 65ch maximum.",
+      "giftDetails": "Recipient, title, status, price and quantity use a 12px stack. The phone image gap is 16px, and the back-link gap is 8px. Reservation and detail-section headings match at 22px desktop and 21px phone; explanations use 14px/1.5 with a 65ch maximum. Buying for belongs with reservation controls before quantity, bounded to 32rem, with an exchange-versus-separate-gift explanation. Archived and recipient views retain context access beside gift actions.",
       "administration": "Paper panels use 12px corners, 20px padding, 16px phone padding, and 24px separation. Panel headings use 20px and internal headings 17px. Group creation, automatic product photos, device photo caching and prefetching are editable, with optional ENV locks. Preference groups have a divider with 24px on either side. Service and job rows have top dividers, 16px padding, and no trailing rule or bottom padding on the last row. Service status aligns at the top and stacks below descriptions at 360px. Photo explanations use 8px gaps. Monthly usage uses flat groups with 16px top and 8px bottom padding, 44px disclosure targets, 13px labels, and 18px counts. Final paragraphs do not add trailing space. App settings use independent family-group and product-photo saves with inline status and Discard changes. Photo rows have 16px gaps, 8px label/help spacing, and preloading indented 24px beneath caching. Scope appears once above the groups. Unchanged saves are disabled.",
       "groupActions": "Follow sits outside group navigation with a 32px horizontal gap and wraps independently on narrow screens.",
       "invitationSharing": "Post-create confirmation and pending invitation rows use outlined sign-in-link actions. Native sharing falls back to copying; failures expose a selectable read-only link. The invitation-share container uses a 12px grid gap with wrapping actions.",
-      "productImages": "Preserve photo dimensions and object-fit contain. Load visible thumbnails promptly. Retain the thumbnail until the detail photo decodes. Administration offers separate default-on cache and prefetch controls with environment locks. Preloading appears unchecked and disabled while caching is off, retaining its saved preference for restoration when caching returns. Photo settings save atomically."
+      "productImages": "Preserve photo dimensions and object-fit contain. Load visible thumbnails promptly. Retain the thumbnail until the detail photo decodes. Administration offers separate default-on cache and prefetch controls with environment locks. Preloading appears unchecked and disabled while caching is off, retaining its saved preference for restoration when caching returns. Photo settings save atomically. Real-photo frames use theme paper and 10px padding. Warm tag-derived variations belong only to missing-photo placeholders."
     },
     "management": {
       "sorting": "Search stays beside Sort & filter, wrapping on the narrowest screens. Mixed-recipient gift views offer a People checkbox disclosure; person pages omit it. Selections match any recipient and combine with search, tag and availability. Empty selection means everyone. People counts as one active filter, and selected names remain summarized. Per-history-entry filter state restores through reload and browser navigation. Clear filters preserves search and saved sorting.",
       "priority": "Optional Most wanted, Would love, and Nice to have labels. No implied numeric rank; labels remain attached when sorting changes.",
       "actions": "List, event, exchange and purchase menus have visible action labels; gift-card overflow controls have accessible names. All controls retain 44px targets. Menus stay within viewport edges and close on Escape or focus departure. Confirmation dialogs offer Cancel; reorder dialogs support drag handles and move-up/down buttons with Save and Cancel.",
       "lifecycle": "Active, Archived, and Trash views are distinct. Group events preserve participant lists on removal. Permanent deletion requires an explicit second confirmation.",
-      "footer": "Everyday pages have no attribution footer or bottom divider. Settings \u2192 About contains the approved logo, tagline, version, and readable Created by Affolder Creative credit. The loading screen carries a quieter credit outside the loading status announcement and above mobile safe areas. About includes Kyle\u2019s approved family-origin story at 15px within 62ch and a theme-aware SVG sign-off traced from Kyle\u2019s selected screenshot with a matching dash, 76px wide at its original proportions."
+      "footer": "Everyday pages have no attribution footer or bottom divider. Settings → About contains the approved logo, tagline, version, and readable Created by Affolder Creative credit. The loading screen carries a quieter credit outside the loading status announcement and above mobile safe areas. About includes Kyle’s approved family-origin story at 15px within 62ch and a theme-aware SVG sign-off traced from Kyle’s selected screenshot with a matching dash, 76px wide at its original proportions."
     },
     "roundedMeta": {
       "toast": {
@@ -1056,18 +1066,35 @@
       "draftRows": {
         "paddingBlock": "12px",
         "actionGap": "8px",
-        "phoneLayout": "stacked"
+        "phoneLayout": "stacked",
+        "title": "15px medium external link with inline external-link icon and hover underline",
+        "states": "Green check for Ready to review; accent help for Needs details; fixed-width working dots while fetching. Status meaning never relies on color alone.",
+        "autosave": "Saved feedback lasts three seconds in a reserved 18px slot beneath Save for later, preserving action alignment."
       },
       "jobFailures": "Collapsed categories with counts, queued timestamps and ten-row increments.",
       "phoneManagement": "Separate primary save from number actions and inline removal confirmation.",
-      "eventCollections": "Keep event lists beside their event. With editable event lists in the selected status, label the lower section Other wish lists and use a short empty note. Manage event moves into Event actions; participant-list links remain visible."
+      "eventCollections": "Keep event lists beside their event. With editable event lists in the selected status, label the lower section Other wish lists and use a short empty note. Manage event moves into Event actions; participant-list links remain visible.",
+      "backgroundJobs": "Separate Price checks and Updates and shop lookups groups; 15px headings, 12px fact labels and 14px tabular values. Facts use two columns with 12px by 24px gaps and stack on narrow phones. Provider usage stays in a disclosure.",
+      "accountClosure": "Resolve these first leads subordinate 14px blocker headings, compact copy and 24px task gaps. No row dividers. Destination-specific secondary links identify the next step.",
+      "contextualHelp": {
+        "trigger": "15px info glyph; 44px target; 25px highlight. Purchase label rows reserve 28px so targets do not overlap inputs.",
+        "panel": "13px text, 12px padding, 12px corners, theme paper and control border; max 20rem width with 12px viewport insets. Accessible title is visually hidden.",
+        "placement": "Native nonmodal popover, above when space allows, below otherwise. Reposition on scrolling and viewport changes.",
+        "dismissal": "Close button, Escape, or outside click; restore trigger focus."
+      },
+      "reservationConfirmation": {
+        "action": "Underlined Open Buying link, 44px minimum target, navigates to /buying and dismisses confirmation.",
+        "timing": "Ten seconds; hover or keyboard focus suspends dismissal. Leaving restarts the interval. Other messages default to five seconds."
+      },
+      "gridFilters": "Available gifts by default; typed search includes taken-care-of gifts. Own surprise lists preserve purchase privacy. Explicit Wish/Gift idea labels and type filter; People uses a searchable multi-select."
     },
     "spendingAssignments": {
       "field": "Visible optional wish list for spending; changes totals without publishing gifts.",
       "preview": "Affected unassigned records are shown before saving an idea assignment.",
       "recipientOptions": "Checkbox and avatar beside name and family group text; avatar vertically centered.",
       "mobileGiftSuggestions": "One-line title with ellipsis at 650px; supporting text wraps.",
-      "actionMenus": "Visible viewport collision placement above fixed navigation; flip upward or scroll internally."
+      "actionMenus": "Visible viewport collision placement above fixed navigation; flip upward or scroll internally.",
+      "wishListOptions": "Native optgroups by owner or combined owners; preserve historical options."
     }
   },
   "components": [
@@ -1131,15 +1158,15 @@
       "name": "Gift card",
       "kind": "card",
       "refersTo": "gift-card",
-      "description": "Unboxed gift details without tags; compact aligned price/privacy/status metadata. Mobile titles show at most two lines.",
-      "html": "<a class=\"ds-gift-card\" href=\"#gift\"><div class=\"ds-photo\"><svg aria-hidden=\"true\" width=\"32\" height=\"32\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.1\"><path d=\"M3 8h18v4H3zM5 12v9h14v-9M12 8v13M12 8H7.5A2.5 2.5 0 1 1 10 5.5L12 8Zm0 0h4.5A2.5 2.5 0 1 0 14 5.5L12 8Z\"/></svg><span>No photo yet</span></div><div class=\"ds-card-copy\"><div class=\"ds-recipient\">For Alex</div><h2 class=\"ds-gift-title\">Gift title</h2><span class=\"ds-priority\">Most wanted</span><div class=\"ds-meta\"><span>$25.00</span><span class=\"ds-available\">Available</span></div></div></a>",
+      "description": "Unboxed gift details with explicit Wish/Gift idea and recipient text. Real photos use neutral paper frames; warm variations are reserved for placeholders. Compact price/privacy/availability metadata.",
+      "html": "<a class=\"ds-gift-card\" href=\"#gift\"><div class=\"ds-photo\"><svg aria-hidden=\"true\" width=\"32\" height=\"32\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.1\"><path d=\"M3 8h18v4H3zM5 12v9h14v-9M12 8v13M12 8H7.5A2.5 2.5 0 1 1 10 5.5L12 8Zm0 0h4.5A2.5 2.5 0 1 0 14 5.5L12 8Z\"/></svg><span>No photo yet</span></div><div class=\"ds-card-copy\"><div class=\"ds-recipient\"><strong>Wish</strong> · For Alex</div><h2 class=\"ds-gift-title\">Gift title</h2><span class=\"ds-priority\">Most wanted</span><div class=\"ds-meta\"><span>$25.00</span><span class=\"ds-available\">Available</span></div></div></a>",
       "css": ".ds-gift-card{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;display:block;max-width:300px;text-decoration:none;color:var(--text, #2b201d)}.ds-photo{aspect-ratio:auto;min-height:80px;padding:12px;flex-direction:column;gap:8px;border-radius:var(--radius,14px);background:#efe7dc;color:#8b7164;display:flex;position:relative;align-items:center;justify-content:center;overflow:hidden}.ds-photo span{position:static;font-size:11px;color:var(--muted,#746057)}.ds-card-copy{padding:16px 2px 0}.ds-recipient{font-size:11px;color:var(--muted, #746057);margin-bottom:11px}.ds-gift-card .ds-gift-title{font-size:16px;line-height:1.4;font-weight:550;margin:0 0 9px}.ds-gift-card:hover .ds-gift-title{text-decoration:underline;text-underline-offset:4px}.ds-meta{display:flex;justify-content:flex-start;align-items:center;flex-wrap:wrap;gap:8px 12px;font-size:14px}.ds-available{font-size:11px;line-height:1.4;border-radius:4px;padding:4px 6px;background:#e9eddf;color:#486348}.ds-gift-card:focus-visible{outline:3px solid var(--accent, #aa4d37);outline-offset:3px;}.ds-priority{display:inline-flex;width:fit-content;margin:6px 0;padding:3px 6px;border-radius:4px;font-size:12px;color:var(--text,#2b201d);border:1px solid transparent;background:var(--soft,#f4e4da);font-weight:600}@media(max-width:650px){.ds-gift-card .ds-gift-title{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}.ds-meta>span:first-child{flex-basis:100%}}"
     },
     {
       "name": "Group event entry",
       "kind": "custom",
       "description": "A compact event heading with participant-list links beside Event actions on wide screens; actions wrap beneath the heading on smaller screens.",
-      "html": "<section class=\"ds-event-entry\"><div class=\"ds-event-heading\"><h3><a href=\"#event\">Family celebration</a></h3><p>Shared with: Morgan family \u00b7 2 participants</p><span>Keep it a surprise</span></div><nav><a class=\"ds-event-list\" href=\"#wish-list\">Your wish list \u2192</a><details><summary>\u22ef Event actions</summary><a href=\"#event\">Manage event \u2192</a></details></nav></section>",
+      "html": "<section class=\"ds-event-entry\"><div class=\"ds-event-heading\"><h3><a href=\"#event\">Family celebration</a></h3><p>Shared with: Morgan family · 2 participants</p><span>Keep it a surprise</span></div><nav><a class=\"ds-event-list\" href=\"#wish-list\">Your wish list →</a><details><summary>⋯ Event actions</summary><a href=\"#event\">Manage event →</a></details></nav></section>",
       "css": ".ds-event-entry{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px 24px;font:14px/1.6 system-ui;color:var(--text,#2b201d);padding:16px 0;border-bottom:1px solid var(--border,#e6d9cf)}.ds-event-heading{flex:1;min-width:200px}.ds-event-heading h3{margin:0;font-size:19px}.ds-event-heading h3 a{color:inherit;text-decoration:none}.ds-event-heading p{margin:4px 0;color:var(--muted,#746057);font-size:13px}.ds-event-heading span{color:var(--muted,#746057);font-size:12px}.ds-event-entry nav{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.ds-event-list,.ds-event-entry summary{display:flex;align-items:center;min-height:44px;border:1px solid var(--border,#e6d9cf);border-radius:8px;padding:8px 12px;font-weight:600;text-decoration:none;color:inherit}.ds-event-list{background:var(--paper,#fffdf9)}.ds-event-entry details{position:relative}.ds-event-entry details>a{position:absolute;right:0;min-width:150px;padding:12px;background:var(--paper,#fffdf9);color:var(--text,#2b201d)}.ds-event-entry :focus-visible{outline:3px solid var(--accent,#aa4d37);outline-offset:3px}"
     },
     {
@@ -1175,9 +1202,9 @@
     {
       "name": "Item editor actions",
       "kind": "custom",
-      "description": "Fixed footer below one scrollable item editor. Draft saving is secondary; the primary action fills phone width.",
+      "description": "Fixed footer with stationary Save for later and primary save actions. Autosave feedback appears for three seconds below the secondary action in a reserved slot; errors persist.",
       "html": "<div class=\"ds-item-actions\"><div><button class=\"ds-draft\">Save for later</button><p>Private draft saved</p></div><button class=\"ds-submit\">Add to wish list</button></div>",
-      "css": ".ds-item-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 24px;border-top:1px solid var(--border);background:var(--paper);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif}.ds-item-actions button{font:inherit;min-height:44px;cursor:pointer}.ds-draft{border:0;background:transparent;color:var(--accent);padding:8px 0}.ds-item-actions p{margin:0;color:var(--muted);font-size:13px}.ds-submit{border:0;border-radius:8px;padding:12px 18px;background:var(--accent);color:var(--on-accent);font-size:14px;font-weight:600}.ds-item-actions button:focus-visible{outline:3px solid var(--accent);outline-offset:3px}.ds-item-actions button:hover{filter:brightness(.94)}.ds-item-actions button:disabled{opacity:.55;cursor:not-allowed}@media(max-width:650px){.ds-item-actions{flex-wrap:wrap;padding-inline:18px}.ds-submit{width:100%}}"
+      "css": ".ds-item-actions{display:flex;align-items:start;justify-content:space-between;gap:12px;padding:16px 24px;border-top:1px solid var(--border);background:var(--paper);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif}.ds-item-actions button{font:inherit;min-height:44px;cursor:pointer}.ds-draft{border:0;background:transparent;color:var(--accent);padding:8px 0}.ds-item-actions>div{display:grid;justify-items:start}.ds-item-actions p{margin:2px 0 0;min-height:18px;color:var(--muted);font-size:12px;line-height:1.5}.ds-submit{border:0;border-radius:8px;padding:12px 18px;background:var(--accent);color:var(--on-accent);font-size:14px;font-weight:600}.ds-item-actions button:focus-visible{outline:3px solid var(--accent);outline-offset:3px}.ds-item-actions button:hover{filter:brightness(.94)}.ds-item-actions button:disabled{opacity:.55;cursor:not-allowed}@media(max-width:650px){.ds-item-actions{flex-wrap:wrap;padding-inline:18px}.ds-submit{width:100%}}"
     },
     {
       "name": "Interest category",
@@ -1190,14 +1217,14 @@
       "name": "Private note",
       "kind": "custom",
       "description": "Author metadata and note content with a persistent action disclosure.",
-      "html": "<div class=\"ds-note\"><div><strong>Sam</strong><small>Today \u00b7 Edited</small><p>A helpful gift detail.</p></div><details><summary aria-label=\"Note actions\">Actions</summary><button>Edit note</button><button>Delete note</button></details></div>",
+      "html": "<div class=\"ds-note\"><div><strong>Sam</strong><small>Today · Edited</small><p>A helpful gift detail.</p></div><details><summary aria-label=\"Note actions\">Actions</summary><button>Edit note</button><button>Delete note</button></details></div>",
       "css": ".ds-note { display: flex; gap: 16px; color: var(--text, #2b201d); font: 14px/1.6 system-ui; } .ds-note > div { flex: 1; } .ds-note small { margin-left: 8px; color: var(--muted, #746057); } .ds-note button, .ds-note summary { min-height: 44px; color: inherit; background: var(--paper, #fffdf9); border: 0; } .ds-note summary:hover { color: var(--accent, #aa4d37); } .ds-note :focus-visible { outline: 3px solid var(--accent, #aa4d37); outline-offset: 3px; }"
     },
     {
       "name": "Event wish-list heading",
       "kind": "custom",
       "description": "Recipient title and page actions share the desktop top row. The event name uses 18px medium text and its saved description uses 16px regular text. Privacy opens a popover without moving the management link or items.",
-      "html": "<header class=\"ds-recipient-heading\"><div class=\"ds-title-row\"><h1>Your wish list</h1><button>Add item</button></div><h2>Family celebration</h2><p>Share a few things you would love.</p><div class=\"ds-metadata-row\"><button class=\"ds-privacy-trigger\" aria-label=\"Keep it a surprise Privacy details\">Keep it a surprise <svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"M12 16v-4M12 8h.01\"/></svg></button><a href=\"#event\">Manage event \u2192</a></div><p class=\"ds-context\">You manage the items. Event leaders manage the settings.</p></header>",
+      "html": "<header class=\"ds-recipient-heading\"><div class=\"ds-title-row\"><h1>Your wish list</h1><button>Add item</button></div><h2>Family celebration</h2><p>Share a few things you would love.</p><div class=\"ds-metadata-row\"><button class=\"ds-privacy-trigger\" aria-label=\"Keep it a surprise Privacy details\">Keep it a surprise <svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"M12 16v-4M12 8h.01\"/></svg></button><a href=\"#event\">Manage event →</a></div><p class=\"ds-context\">You manage the items. Event leaders manage the settings.</p></header>",
       "css": ".ds-recipient-heading{font:14px/1.6 system-ui;color:var(--text,#2b201d)}.ds-recipient-heading h1{font-size:34px;line-height:1.15;margin:0 0 12px}.ds-recipient-heading h2{font-size:18px;font-weight:500;line-height:1.4;letter-spacing:normal;margin:0 0 12px}.ds-recipient-heading p{font-size:16px;color:var(--muted,#746057);max-width:65ch}.ds-recipient-heading .ds-context{font-size:13px}.ds-privacy-trigger{font:inherit;min-height:44px;background:transparent;color:var(--muted,#746057);border:0;padding:4px 0;text-align:left;cursor:pointer}.ds-privacy-trigger:focus-visible{outline:3px solid var(--accent,#aa4d37);outline-offset:3px}.ds-title-row,.ds-metadata-row{display:flex;justify-content:space-between;gap:16px;align-items:center;flex-wrap:wrap}.ds-title-row button{min-height:44px;border:0;border-radius:8px;padding:10px 16px;background:var(--accent,#aa4d37);color:var(--on-accent,#fff8f0);font:inherit}.ds-metadata-row a{color:var(--accent,#aa4d37)}"
     },
     {
@@ -1210,16 +1237,24 @@
     {
       "name": "Item price",
       "kind": "custom",
-      "description": "Current verified price, saved baseline and verification timestamp.",
-      "html": "<div class=\"ds-item-price\"><span>$39.99</span><small>$49.99 when added \u00b7 Down $10.00</small><small>Price checked \u00b7 Nov 3, 2026</small></div>",
+      "description": "Current price, saved baseline and verification timestamp when priced. Missing prices show only Price not added; hide tracking and verification controls, preserving normal description spacing.",
+      "html": "<div class=\"ds-item-price\"><span>$39.99</span><small>$49.99 when added · Down $10.00</small><small>Price checked · Nov 3, 2026</small></div>",
       "css": ".ds-item-price {display:flex;flex-direction:column;gap:4px;font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;font-variant-numeric:tabular-nums;color:var(--text)} .ds-item-price span {font-size:24px} .ds-item-price small {color:var(--muted);font-size:13px}"
     },
     {
       "name": "Collection pagination",
       "kind": "nav",
       "description": "Result count with wrapping Previous/Next controls above and below a bounded collection.",
-      "html": "<nav class=\"ds-pages\" aria-label=\"Results pages\"><span>Showing 25\u201348 of 83</span><div><button>Previous</button><span>Page 2 of 4</span><button>Next</button></div></nav>",
+      "html": "<nav class=\"ds-pages\" aria-label=\"Results pages\"><span>Showing 25–48 of 83</span><div><button>Previous</button><span>Page 2 of 4</span><button>Next</button></div></nav>",
       "css": ".ds-pages{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-block:20px;font-size:14px;color:var(--text)}.ds-pages>div{display:flex;align-items:center;flex-wrap:wrap;gap:12px}.ds-pages button{min-height:44px;padding:12px 18px;border:1px solid var(--border);border-radius:8px;background:var(--paper);color:var(--text);font-size:14px;font-weight:600}.ds-pages button:hover{filter:brightness(.97)}.ds-pages button:focus-visible{outline:3px solid var(--accent);outline-offset:3px}.ds-pages button:disabled{opacity:.5;cursor:not-allowed}@media(max-width:650px){.ds-pages>div{width:100%;justify-content:space-between}}"
+    },
+    {
+      "name": "Contextual help",
+      "kind": "custom",
+      "refersTo": "info-help",
+      "description": "Compact explanatory popup above its inline info trigger; same warm paper surface and border in both themes.",
+      "html": "<div class=\"ds-help-sample\"><div class=\"ds-help-panel\"><span>Include tax and shipping. Leave blank to add later.</span><button aria-label=\"Close help\"><svg width=\"17\" height=\"17\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><path d=\"m18 6-12 12M6 6l12 12\"/></svg></button></div><div class=\"ds-help-label\">Amount paid in USD, optional <button aria-label=\"About amount paid\"><svg width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"M12 16v-4M12 8h.01\"/></svg></button></div></div>",
+      "css": ".ds-help-sample{font:13px/1.5 -apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;color:var(--text)}.ds-help-panel{position:relative;max-width:20rem;padding:12px 40px 12px 12px;border:1px solid var(--control-border);border-radius:12px;background:var(--paper);color:var(--muted);margin-bottom:8px}.ds-help-label{display:flex;align-items:center;gap:2px;font-weight:550}.ds-help-sample button{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border:0;background:transparent;color:var(--muted);cursor:pointer}.ds-help-panel button{position:absolute;right:0;top:0;font-size:20px}.ds-help-label svg{padding:5px;box-sizing:content-box;border-radius:6px}.ds-help-label button:hover svg,.ds-help-panel button:hover{background:var(--soft);color:var(--text)}.ds-help-sample button:focus-visible{outline:3px solid var(--accent);outline-offset:3px}"
     }
   ],
   "narrative": {
@@ -1264,7 +1299,7 @@
       },
       {
         "name": "Administration service status",
-        "body": "Administration contains App settings, This month's usage, Service status, and Background jobs. Family-group creation, automatic product photos, device photo caching, and photo prefetching are editable, with optional locking ENV overrides. All service credentials, providers, models, limits, and AI availability are deployment-only. Service status reports configuration presence, not verified connectivity. When AI_ENABLED is false, omit AI service rows, AI usage groups, and AI-specific explanatory copy even when history exists. Retain other disabled services\u2019 current-month usage with Currently off; omit sections with only prior-month or skipped SMS history. Preserve notification retries, failed shop lookups, and the note that backup status is unavailable.",
+        "body": "Administration contains App settings, This month's usage, Service status, and Background jobs. Family-group creation, automatic product photos, device photo caching, and photo prefetching are editable, with optional locking ENV overrides. All service credentials, providers, models, limits, and AI availability are deployment-only. Service status reports configuration presence, not verified connectivity. When AI_ENABLED is false, omit AI service rows, AI usage groups, and AI-specific explanatory copy even when history exists. Retain other disabled services’ current-month usage with Currently off; omit sections with only prior-month or skipped SMS history. Preserve notification retries, failed shop lookups, and the note that backup status is unavailable.",
         "section": "components"
       }
     ],

@@ -276,6 +276,11 @@ try {
     exact: true,
   });
   await amountHelp.click();
+  const helpTarget = (await amountHelp.boundingBox())!;
+  const amountAfterHelp = (await paymentFields.nth(0).boundingBox())!;
+  expect(helpTarget.y + helpTarget.height).toBeLessThanOrEqual(
+    amountAfterHelp.y + 1,
+  );
   await expect(page.locator(".info-help-panel:popover-open")).toContainText(
     "Include tax and shipping. Leave blank to add later.",
   );
@@ -288,6 +293,11 @@ try {
       return Math.abs(box!.x - trigger!.x);
     })
     .toBeLessThanOrEqual(1);
+  const helpBox = (await page
+    .locator(".info-help-panel:popover-open")
+    .boundingBox())!;
+  expect(helpBox.y + helpBox.height).toBeLessThan(helpTarget.y);
+  expect(helpBox.width).toBeLessThanOrEqual(320);
   await page.screenshot({ path: out + "/amount-help-desktop.png" });
   await page.keyboard.press("Escape");
   await expect(amountHelp).toBeFocused();
@@ -376,6 +386,24 @@ try {
   await expect(page.locator(".spending-numbers")).toContainText("$145");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await page.screenshot({ path: out + "/mobile-dark.png", fullPage: true });
+  await page.getByRole("button", { name: "Add purchase", exact: true }).click();
+  await amountHelp.click();
+  const mobileHelp = page.locator(".info-help-panel:popover-open");
+  await expect(mobileHelp).toBeInViewport();
+  const mobileTarget = (await amountHelp.boundingBox())!;
+  const mobileAmount = (await page
+    .getByRole("spinbutton", {
+      name: "Amount paid in USD, optional",
+      exact: true,
+    })
+    .boundingBox())!;
+  expect(mobileTarget.y + mobileTarget.height).toBeLessThanOrEqual(
+    mobileAmount.y + 1,
+  );
+  await page.screenshot({ path: out + "/amount-help-mobile-dark.png" });
+  await mobileHelp.getByRole("button", { name: "Close help" }).click();
+  await expect(amountHelp).toBeFocused();
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
   // Connected state, unknown cost, planning, consent and prospective privacy.
   run("spending.connect", { userId: users[1].id });
   const connection = s.spendingConnections[0];

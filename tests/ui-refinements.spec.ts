@@ -1,5 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
+import { spendingView } from "../src/server/spending";
+import { shoppingChoices } from "../src/client/shopping-context";
 import { stagingFixtures } from "../src/server/staging-fixtures";
 import { command, stamp, world } from "../src/server/domain";
 
@@ -12,6 +14,7 @@ async function setup(page: Page) {
       (view) => view.id === item.id && !view.isRecipient && !view.archived,
     ),
   )!;
+  const originalListId = gift.listId;
   delete gift.listId;
   gift.creatorId = actor.id;
   gift.visibility = "private";
@@ -71,6 +74,19 @@ async function setup(page: Page) {
         ),
       });
     }
+    if (path === "spending")
+      return route.fulfill({ json: spendingView(state, actor) });
+    if (path === "buying/contributions" || path === "buying/cancelled")
+      return route.fulfill({ json: { rows: [], nextCursor: null } });
+    if (path === "reservations")
+      return route.fulfill({
+        json: command(
+          state,
+          actor,
+          "reservations.create",
+          route.request().postDataJSON(),
+        ),
+      });
     if (path === "admin/jobs")
       return route.fulfill({
         json: {
@@ -133,7 +149,7 @@ async function setup(page: Page) {
       return route.fulfill({ json: { publicKey: null, devices: [] } });
     return route.fulfill({ json: [] });
   });
-  return { state, actor, gift };
+  return { state, actor, gift, originalListId };
 }
 
 for (const [width, theme] of [
@@ -297,5 +313,78 @@ for (const [width, theme] of [
     expect(
       (await new AxeBuilder({ page }).include("dialog").analyze()).violations,
     ).toEqual([]);
+  });
+}
+
+for (const [width, kind] of [
+  [393, "idea"],
+  [1440, "wish"],
+] as const) {
+  test(`reservation context and Buying confirmation for ${kind} at ${width}px`, async ({
+    page,
+  }, info) => {
+    const {
+      state,
+      actor,
+      gift: fixtureGift,
+      originalListId,
+    } = await setup(page);
+    if (kind === "wish") {
+      expect(originalListId).toBeDefined();
+      fixtureGift.listId = originalListId;
+    }
+    const gift = world(state, actor).items.find(
+      (item) =>
+        (kind !== "wish" || Boolean(item.listId)) &&
+        !item.isRecipient &&
+        !item.archived &&
+        (item.available ?? 0) > 0 &&
+        shoppingChoices(world(state, actor), item).length > 0,
+    )!;
+    expect(gift).toBeDefined();
+    if (kind === "idea") {
+      const item = state.items.find((item) => item.id === gift.id)!;
+      delete item.listId;
+      item.visibility = "private";
+      item.creatorId = actor.id;
+    }
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto(`/gift/${gift.id}`);
+    const selector = page
+      .locator(".reserve-panel")
+      .getByLabel("Buying for", { exact: true });
+    await expect(selector).toBeVisible();
+    await expect(page.locator(".back-link + .gift-detail")).toBeVisible();
+    await selector.selectOption("ordinary");
+    await selector.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: info.outputPath("reservation-context.png") });
+    await page.clock.install();
+    await page
+      .getByRole("button", { name: "Reserve gift", exact: true })
+      .click();
+    const toast = page.locator(".toast");
+    const link = toast.getByRole("link", { name: "Open Buying", exact: true });
+    await expect(link).toBeVisible();
+    await expect(link).toHaveAttribute("href", "/buying");
+    await page.clock.fastForward(6000);
+    await expect(link).toBeVisible();
+    await link.hover();
+    await page.clock.runFor(100);
+    await page.clock.fastForward(11000);
+    await expect(link).toBeVisible();
+    await link.focus();
+    await page.mouse.move(0, 0);
+    await page.clock.runFor(100);
+    await page.clock.fastForward(11000);
+    await expect(link).toBeVisible();
+    await page.screenshot({
+      path: info.outputPath("reservation-confirmation.png"),
+    });
+    await link.click();
+    await expect(page).toHaveURL(/\/buying$/);
+    await expect(
+      page.getByRole("heading", { name: "Your gift plans", exact: true }),
+    ).toBeVisible();
+    await expect(toast).toHaveCount(0);
   });
 }

@@ -205,6 +205,21 @@ components:
     padding: '20px'
   admin-panel-phone:
     padding: '16px'
+  photo-frame:
+    backgroundColor: '{colors.paper}'
+    rounded: "{rounded.image}"
+    padding: '10px'
+  info-help:
+    backgroundColor: '{colors.paper}'
+    textColor: '{colors.muted}'
+    rounded: '{rounded.panel}'
+    padding: "12px"
+    width: "20rem"
+  toast:
+    backgroundColor: "{colors.text}"
+    textColor: "{colors.bg}"
+    rounded: "{rounded.toast}"
+    padding: "14px 20px"
 ---
 
 # Design System: Little Hint
@@ -276,7 +291,7 @@ Page titles sit 8px above their descriptions. Headers leave 24px before content 
 
 Paragraph spacing follows content roles across app pages and dialogs. Dense title-and-metadata pairs use the metadata step; headings and closely related explanations use compact spacing. Ordinary prose uses the small step, and content before controls uses medium spacing. The corresponding CSS properties are --space-metadata, --space-related, --space-prose, --space-controls, and --space-section. Form groups use the controls step; adjacent explanations use the related step. Explicit text stacks reset child margins and own the gap. Final paragraphs have no trailing space where the container owns separation. Hero copy and card-specific rows retain their established composition.
 
-Gift details group the recipient, title, status, price, and quantity with the prose step. Phones place the photo 16px above the details, and the back link leaves 8px below its touch target. Reservation, Gift plans, and Private notes use matching section headings, reduced to the section-phone role on phones. Reservation explanations and private-note guidance use the supporting role, capped at 65ch. Keep their heading-to-copy and paragraph gaps compact; do not compound the privacy-note margin with the section heading margin.
+Gift details group the recipient, title, status, price, and quantity with the prose step. Phones place the photo 16px above the details, and the back link leaves 8px below its touch target. Reservation, Gift plans, and Private notes use matching section headings, reduced to the section-phone role on phones. When an exchange or privacy-review context is relevant, Buying for sits with reservation controls, below the explanation and above quantity. Its field is bounded to 32rem and explains the exchange-versus-separate-gift choice. Archived and recipient views retain context access beside the gift actions. Reservation explanations and private-note guidance use the supporting role, capped at 65ch. Keep their heading-to-copy and paragraph gaps compact; do not compound the privacy-note margin with the section heading margin.
 
 ### Collection pagination
 
@@ -541,11 +556,20 @@ Purchase entry uses an anchored gift combobox with an explicit manual option, bo
 ### Contextual help and closure review
 
 Amount-paid guidance and price-drop details use the shared InfoHelp popover. Its
-15px info icon has a 44px target; help sits beside the label without becoming part
-of the checkbox or input label. Native top-layer positioning escapes dialog scroll
-containers. Escape, outside click, and a close button dismiss help; keyboard focus
+15px info icon has a 44px target and a compact 25px hover/open highlight; help sits beside the label without becoming part
+of the checkbox or input label. Purchase payment labels reserve 28px so the target
+ends above the input while amount and date fields remain aligned. The compact panel
+uses 13px body text, 12px padding, and at most 20rem width with 12px viewport insets.
+The repeated title stays available to assistive technology without taking visual space.
+Native top-layer positioning escapes dialog scroll containers and prefers above the
+trigger, falling below when needed to stay visible. Escape, outside click, and a close button dismiss help; keyboard focus
 returns to its trigger. Purchase estimates sit directly below the amount field,
 with a separate Use listed price button and a quantity calculation when needed.
+
+Reservation success messages include an underlined Open Buying link with a 44px
+minimum target. They remain for ten seconds; hovering or focusing pauses dismissal,
+and leaving starts a fresh interval. Activating the link dismisses the message and
+opens Buying. Other success messages retain their five-second default.
 
 Account-closure blockers sit under Resolve these first with 14px subordinate
 headings, compact supporting copy and 24px between tasks. They have no row

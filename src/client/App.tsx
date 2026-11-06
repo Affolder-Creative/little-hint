@@ -102,7 +102,7 @@ import {
   dollars,
   setApiAccount,
 } from "./api";
-import { AppContext, useApp } from "./context";
+import { AppContext, useApp, type ToastOptions } from "./context";
 import {
   Logo,
   Avatar,
@@ -157,7 +157,11 @@ export function App() {
   const [modal, setModal] = useState<{ title: string; body: ReactNode } | null>(
       null,
     ),
-    [message, setMessage] = useState("");
+    [message, setMessage] = useState<({ text: string } & ToastOptions) | null>(
+      null,
+    );
+  const [toastHovered, setToastHovered] = useState(false);
+  const [toastFocused, setToastFocused] = useState(false);
   const authenticatedAccount = useRef<string | null | undefined>(undefined);
   const isolateAccount = async (id: string | null) => {
     if (authenticatedAccount.current === id) return;
@@ -166,7 +170,7 @@ export function App() {
     await client.cancelQueries({ predicate: (q) => q.queryKey[0] !== "world" });
     client.removeQueries({ predicate: (q) => q.queryKey[0] !== "world" });
     setModal(null);
-    setMessage("");
+    setMessage(null);
   };
   const query = useQuery({
     queryKey: ["world"],
@@ -221,10 +225,15 @@ export function App() {
     localStorage.setItem("little-hint:theme", theme);
   }, [theme, dark]);
   useEffect(() => {
-    if (!message) return;
-    const timer = setTimeout(() => setMessage(""), 5000);
+    if (!message) {
+      setToastHovered(false);
+      setToastFocused(false);
+      return;
+    }
+    if (toastHovered || toastFocused) return;
+    const timer = setTimeout(() => setMessage(null), message.duration ?? 5000);
     return () => clearTimeout(timer);
-  }, [message]);
+  }, [message, toastHovered, toastFocused]);
   useEffect(() => {
     if (query.data === null) void clearPushBinding().catch(() => {});
     if (query.data)
@@ -333,7 +342,7 @@ export function App() {
         mutate,
         open: (title, body) => setModal({ title, body }),
         close: () => setModal(null),
-        toast: setMessage,
+        toast: (text, options) => setMessage({ text, ...options }),
         dark,
       }}
     >
@@ -564,9 +573,36 @@ export function App() {
           </Modal>
         )}
         {message && (
-          <div className="toast" role="status">
-            <Check size={18} />
-            {message}
+          <div
+            className="toast"
+            role="status"
+            onMouseOver={() => setToastHovered(true)}
+            onMouseLeave={() => setToastHovered(false)}
+            onFocus={() => setToastFocused(true)}
+            onBlur={(event) => {
+              if (!event.currentTarget.contains(event.relatedTarget))
+                setToastFocused(false);
+            }}
+          >
+            <Check size={18} aria-hidden="true" />
+            <span>
+              {message.text}
+              {message.action && (
+                <>
+                  {" "}
+                  <Link
+                    to={message.action.to}
+                    onClick={() => {
+                      setMessage(null);
+                      setToastHovered(false);
+                      setToastFocused(false);
+                    }}
+                  >
+                    {message.action.label}
+                  </Link>
+                </>
+              )}
+            </span>
           </div>
         )}
         <UpdateNotice />
@@ -1149,6 +1185,43 @@ function GiftDetail() {
         recipientId: selectedExchange.recipient,
       }
     : eventSpendingContext(world, gift);
+  const contextSelector = (choices.length > 0 ||
+    exchange ||
+    gift.comments?.some((c) => c.needsPrivacyReview) ||
+    gift.reservations?.some((r) => r.needsPrivacyReview)) && (
+    <div className="shopping-context">
+      <Field label="Buying for">
+        <select
+          value={exchange}
+          onChange={(e) => {
+            const value = e.target.value;
+            setExchange(value);
+            setShoppingParams(
+              (current) => {
+                const next = new URLSearchParams(current);
+                next.set("shopping", value);
+                return next;
+              },
+              { replace: true },
+            );
+          }}
+        >
+          <option value="" disabled>
+            Choose an exchange or separate gift
+          </option>
+          <option value="ordinary">Not part of an exchange</option>
+          {choices.map((c) => (
+            <option key={c.key} value={c.key}>
+              {c.label}
+            </option>
+          ))}
+        </select>
+      </Field>
+      <p className="muted">
+        Link this gift to an exchange, or keep it separate.
+      </p>
+    </div>
+  );
   return (
     <>
       <Link
@@ -1169,43 +1242,6 @@ function GiftDetail() {
             ? "Back to gift ideas"
             : "Back to Home"}
       </Link>
-      {(choices.length > 0 ||
-        exchange ||
-        gift.comments?.some((c) => c.needsPrivacyReview) ||
-        gift.reservations?.some((r) => r.needsPrivacyReview)) && (
-        <div className="shopping-context">
-          <Field label="Buying for">
-            <select
-              value={exchange}
-              onChange={(e) => {
-                const value = e.target.value;
-                setExchange(value);
-                setShoppingParams(
-                  (current) => {
-                    const next = new URLSearchParams(current);
-                    next.set("shopping", value);
-                    return next;
-                  },
-                  { replace: true },
-                );
-              }}
-            >
-              <option value="" disabled>
-                Choose who this gift is for
-              </option>
-              <option value="ordinary">Not part of an exchange</option>
-              {choices.map((c) => (
-                <option key={c.key} value={c.key}>
-                  {c.label}
-                </option>
-              ))}
-            </select>
-          </Field>
-          {selectedExchange && (
-            <p className="muted">{selectedExchange.label}</p>
-          )}
-        </div>
-      )}
       <div className="gift-detail">
         <GiftPhoto gift={gift} size="full" />
         <section className="gift-detail-info">
@@ -1303,6 +1339,7 @@ function GiftDetail() {
               {gift.listId ? "Edit item" : "Edit gift idea"}
             </button>
           )}
+          {(gift.archived || gift.isRecipient) && contextSelector}
           {gift.archived ? (
             <p className="notice">
               {gift.listId
@@ -1331,6 +1368,7 @@ function GiftDetail() {
                     ? `${gift.available} available to reserve. Let your people know you have this one covered.`
                     : "All requested items have been reserved."}
               </p>
+              {contextSelector}
               {!!gift.available && (
                 <>
                   <div className="form-row">
@@ -1370,7 +1408,11 @@ function GiftDetail() {
                         exchangeRecipientId: c?.recipient,
                       });
                       toast(
-                        "Gift reserved. Open Buying to mark it as purchased or cancel your reservation.",
+                        "Gift reserved. Mark it as purchased or cancel your reservation in Buying.",
+                        {
+                          action: { label: "Open Buying", to: "/buying" },
+                          duration: 10000,
+                        },
                       );
                     }}
                   >

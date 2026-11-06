@@ -1633,6 +1633,19 @@ main {
   animation: arrive 0.2s ease-out;
   max-width: 90vw;
 }
+.toast > svg {
+  flex: none;
+}
+.toast a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-block: -12px;
+  color: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
 .update-banner {
   position: fixed;
   bottom: 0;
@@ -4332,10 +4345,13 @@ a.button:is(:hover, :focus, :active),
 }
 
 .shopping-context {
-  max-width: 42rem;
-  margin-bottom: 1.5rem;
+  width: 100%;
+  max-width: 32rem;
+  margin-block: 16px;
 }
 .shopping-context > p {
+  font-size: 13px;
+  line-height: 1.5;
   margin: 0.5rem 0 0;
   overflow-wrap: anywhere;
 }

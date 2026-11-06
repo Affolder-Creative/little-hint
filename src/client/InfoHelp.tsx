@@ -32,7 +32,7 @@ export function InfoHelp({
       const right = left + (viewport?.width ?? innerWidth) - 24;
       const bottom = top + (viewport?.height ?? innerHeight) - 24;
       panel.current.style.left = `${Math.max(left, Math.min(anchor.left, right - bounds.width))}px`;
-      panel.current.style.top = `${anchor.bottom + 8 + bounds.height <= bottom ? anchor.bottom + 8 : Math.max(top, anchor.top - bounds.height - 8)}px`;
+      panel.current.style.top = `${anchor.top - bounds.height - 8 >= top ? anchor.top - bounds.height - 8 : Math.min(bottom - bounds.height, anchor.bottom + 8)}px`;
       panel.current.style.maxHeight = `${bottom - top}px`;
     };
     position();
@@ -75,20 +75,20 @@ export function InfoHelp({
         style={{ visibility: open ? "visible" : "hidden" }}
         onToggle={(event) => setOpen(event.newState === "open")}
       >
-        <div className="info-help-heading">
-          <strong id={`${id}-title`}>{title}</strong>
-          <button
-            type="button"
-            className="icon-button"
-            aria-label="Close help"
-            onClick={() => {
-              panel.current?.hidePopover();
-              trigger.current?.focus({ preventScroll: true });
-            }}
-          >
-            <X size={17} aria-hidden="true" />
-          </button>
-        </div>
+        <span className="sr-only" id={`${id}-title`}>
+          {title}
+        </span>
+        <button
+          type="button"
+          className="icon-button info-help-close"
+          aria-label="Close help"
+          onClick={() => {
+            panel.current?.hidePopover();
+            trigger.current?.focus({ preventScroll: true });
+          }}
+        >
+          <X size={17} aria-hidden="true" />
+        </button>
         <div className="info-help-copy">{children}</div>
       </div>
     </div>
