@@ -23,7 +23,7 @@ The separate `ghcr.io/affolder-creative/little-hint-staging` package starts priv
 
 ## 2. Prepare the staging server
 
-Check available memory, disk, Docker, and proxy status. The Compose limits total 1,280 MiB: app 512, worker 256, PostgreSQL 384, Mailpit 128. Leave room for the OS, proxy, and monitoring. These are runtime limits, not a guarantee that every workload fits. Validate imports and queue processing under load; resize the staging server if necessary instead of moving experiments onto production. No builds should run on the staging host.
+Check available memory, disk, Docker, and proxy status. The Compose limits total 1,280 MiB: app 512, worker 256, PostgreSQL 384, Mailpit 128. Enabling the backup profile adds a 256 MiB limit, for 1,536 MiB total. Leave room for the OS, proxy, and monitoring. These are runtime limits, not a guarantee that every workload fits. Validate imports and queue processing under load; resize the staging server if necessary instead of moving experiments onto production. No builds should run on the staging host.
 
 Create SMTP certificates once on the staging host, using the checked-out script:
 
@@ -82,7 +82,27 @@ Switching branches does not reverse migrations or record formats. For an incompa
 
 Do not automatically roll back an image after a schema or domain-format change. Older writers may not recognize newer records. Use a compatible image and preserved staging data, or reset synthetic data first.
 
-Staging has no production backup sidecar or production backup repository. Its synthetic data is disposable. Capture a separate staging snapshot only when preserving a particular debugging scenario matters.
+### Optional staging backups
+
+Staging supports the same Housewatch Digital backup sidecar as production. It is disabled by default. To preserve staging data, set these Runtime-only variables on the **staging** Coolify resource and redeploy:
+
+```dotenv
+COMPOSE_PROFILES=backup
+BACKUP_NAME=little-hint-staging
+RESTIC_REPOSITORY=s3:https://YOUR-ENDPOINT/YOUR-BUCKET/little-hint/staging
+RESTIC_PASSWORD=YOUR-STAGING-REPOSITORY-ENCRYPTION-PASSWORD
+AWS_ACCESS_KEY_ID=YOUR-STAGING-STORAGE-ACCESS-KEY
+AWS_SECRET_ACCESS_KEY=YOUR-STAGING-STORAGE-SECRET
+AWS_DEFAULT_REGION=YOUR-BUCKET-REGION
+```
+
+These backup variables use the same names as production; they do not take a `STAGING_` prefix. Configure a separate repository path, encryption password, and appropriately scoped storage credentials for staging. Do not point staging at the production repository. For native Backblaze B2, use a `b2:bucket:little-hint/staging` repository and `B2_ACCOUNT_ID`/`B2_ACCOUNT_KEY` instead of the AWS variables.
+
+The sidecar connects to `db` using `STAGING_POSTGRES_PASSWORD`, database/role `little_hint_staging`, and a matching PostgreSQL 18 client. It backs up `staging-uploads` read-only and keeps its cache, temporary dump files, state, and restore files in separate staging volumes. It does not copy Mailpit's live SQLite database, SMTP certificates, or live PostgreSQL files. Recreate the SMTP certificates using the setup steps above when rebuilding staging. Backup credentials are passed only to the sidecar, not app, worker, database, or Mailpit.
+
+The sidecar runs in `idle` mode. Enabling the profile alone does not schedule backups. In the staging resource, create Coolify scheduled tasks targeting its `backup` container: nightly `backup-sidecar run`, weekly `backup-sidecar prune`, and monthly `backup-sidecar check`, as described in [operations](OPERATIONS.md#existing-backup-sidecar). The defaults retain 30 daily snapshots, disable weekly/monthly retention tiers, and report backups stale after 26 hours. Retention can be overridden with the variables in `.env.staging.example`.
+
+Run `backup-sidecar doctor`, then `backup-sidecar run`, `backup-sidecar check`, and `backup-sidecar health` in the staging backup container. Verify a restore into a disposable staging database and uploads volume before relying on it. Follow the [restore procedure](OPERATIONS.md#restore-procedure), substituting the staging database/role, password, and volumes; never restore into production. The sidecar is unhealthy until its first successful backup. Disable its Coolify scheduled tasks before removing `backup` from `COMPOSE_PROFILES`.
 
 ## Acceptance checks
 

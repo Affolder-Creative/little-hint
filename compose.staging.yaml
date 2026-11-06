@@ -157,7 +157,52 @@ services:
       timeout: 5s
       start_period: 30s
       retries: 3
+  backup:
+    image: ghcr.io/housewatch-digital/backup-sidecar:0.3.0-postgres18
+    profiles: [backup]
+    restart: unless-stopped
+    mem_limit: 256m
+    init: true
+    read_only: true
+    command: [idle]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      BACKUP_NAME: ${BACKUP_NAME:-little-hint-staging}
+      SQLITE_DATABASES: ""
+      POSTGRES_DATABASES: little_hint_staging
+      POSTGRES_REQUIRE_MATCHING_MAJOR: "true"
+      PGHOST: db
+      PGPORT: 5432
+      PGUSER: little_hint_staging
+      PGPASSWORD: ${STAGING_POSTGRES_PASSWORD:?Set STAGING_POSTGRES_PASSWORD}
+      RESTIC_REPOSITORY: ${RESTIC_REPOSITORY:-}
+      RESTIC_PASSWORD: ${RESTIC_PASSWORD:-}
+      RESTIC_KEEP_DAILY: ${RESTIC_KEEP_DAILY:-30}
+      RESTIC_KEEP_WEEKLY: ${RESTIC_KEEP_WEEKLY:-0}
+      RESTIC_KEEP_MONTHLY: ${RESTIC_KEEP_MONTHLY:-0}
+      BACKUP_MAX_AGE_SECONDS: ${BACKUP_MAX_AGE_SECONDS:-93600}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-}
+      B2_ACCOUNT_ID: ${B2_ACCOUNT_ID:-}
+      B2_ACCOUNT_KEY: ${B2_ACCOUNT_KEY:-}
+    volumes:
+      - staging-uploads:/source/uploads:ro
+      - staging-backup-cache:/cache
+      - staging-backup-stage:/stage
+      - staging-backup-state:/state
+      - staging-backup-restore:/restore
+    tmpfs:
+      - /tmp:size=128M,noexec,nosuid,nodev
+    security_opt:
+      - no-new-privileges:true
 volumes:
   staging-postgres18:
   staging-uploads:
   staging-mail:
+  staging-backup-cache:
+  staging-backup-stage:
+  staging-backup-state:
+  staging-backup-restore:

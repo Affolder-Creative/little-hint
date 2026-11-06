@@ -341,6 +341,97 @@ console.log(
   "Staging checks passed: dedicated data, fixed mail capture, bounded memory, no build or published ports.",
 );
 
+// Backup opt-in must use staging data even when production credentials exist
+// in the invoking environment. Storage credentials belong only to the sidecar.
+const backupVariables = {
+  RESTIC_REPOSITORY:
+    "s3:https://storage.example.test/backups/little-hint/staging",
+  RESTIC_PASSWORD: "staging-repository-only",
+  AWS_ACCESS_KEY_ID: "staging-access-only",
+  AWS_SECRET_ACCESS_KEY: "staging-storage-secret-only",
+  AWS_DEFAULT_REGION: "us-east-1",
+  B2_ACCOUNT_ID: "staging-b2-id-only",
+  B2_ACCOUNT_KEY: "staging-b2-key-only",
+};
+assert.equal(staging.services.backup, undefined);
+const stagingBackupResult = config("compose.staging.yaml", {
+  ...stagingVars,
+  ...backupVariables,
+  POSTGRES_PASSWORD: "production-must-not-be-used",
+  COMPOSE_PROFILES: "backup",
+});
+assert.equal(stagingBackupResult.status, 0, stagingBackupResult.stderr);
+const stagingWithBackup = JSON.parse(stagingBackupResult.stdout);
+const backup = stagingWithBackup.services.backup;
+assert.equal(backup.environment.BACKUP_NAME, "little-hint-staging");
+assert.equal(backup.environment.PGHOST, "db");
+assert.equal(backup.environment.PGUSER, "little_hint_staging");
+assert.equal(backup.environment.POSTGRES_DATABASES, "little_hint_staging");
+assert.equal(
+  backup.environment.PGPASSWORD,
+  stagingVars.STAGING_POSTGRES_PASSWORD,
+);
+assert.equal(backup.environment.POSTGRES_REQUIRE_MATCHING_MAJOR, "true");
+assert.equal(backup.depends_on.db.condition, "service_healthy");
+assert.equal(backup.build, undefined);
+assert.equal(backup.ports, undefined);
+assert.ok(backup.mem_limit > 0);
+assert.equal(backup.read_only, true);
+assert.deepEqual(backup.command, ["idle"]);
+for (const [key, value] of Object.entries(backupVariables)) {
+  assert.equal(backup.environment[key], value);
+  for (const name of ["app", "worker", "db", "mailpit"])
+    assert.equal(stagingWithBackup.services[name].environment[key], undefined);
+}
+const productionBackupResult = config("compose.production.yaml", {
+  ...productionVars,
+  COMPOSE_PROFILES: "backup",
+});
+assert.equal(productionBackupResult.status, 0, productionBackupResult.stderr);
+const productionWithBackup = JSON.parse(productionBackupResult.stdout);
+assert.equal(backup.image, productionWithBackup.services.backup.image);
+const productionVolumeNames = new Set(
+  Object.values(productionWithBackup.volumes).map((v) => v.name),
+);
+for (const volume of backup.volumes) {
+  assert.equal(
+    volume.type,
+    "volume",
+    "Backup must not mount host paths or sockets.",
+  );
+  assert.ok(volume.source.startsWith("staging-"));
+  assert.ok(
+    !productionVolumeNames.has(stagingWithBackup.volumes[volume.source].name),
+  );
+}
+const sourceVolumes = backup.volumes.filter((v) =>
+  v.target.startsWith("/source/"),
+);
+assert.equal(
+  sourceVolumes.length,
+  1,
+  "Only uploads are copied as ordinary files.",
+);
+assert.equal(sourceVolumes[0].source, "staging-uploads");
+assert.equal(sourceVolumes[0].target, "/source/uploads");
+assert.equal(sourceVolumes[0].read_only, true);
+const customBackupResult = config("compose.staging.yaml", {
+  ...stagingVars,
+  COMPOSE_PROFILES: "backup",
+  BACKUP_NAME: "staging-restore-drill",
+  RESTIC_KEEP_DAILY: "7",
+  BACKUP_MAX_AGE_SECONDS: "172800",
+});
+assert.equal(customBackupResult.status, 0, customBackupResult.stderr);
+const customBackup = JSON.parse(customBackupResult.stdout).services.backup
+  .environment;
+assert.equal(customBackup.BACKUP_NAME, "staging-restore-drill");
+assert.equal(customBackup.RESTIC_KEEP_DAILY, "7");
+assert.equal(customBackup.BACKUP_MAX_AGE_SECONDS, "172800");
+console.log(
+  "Staging backup checks passed: opt-in profile, staging database and volumes, isolated credentials, configurable retention.",
+);
+
 for (const [file, variables] of [
   ["compose.production.yaml", productionVars],
   ["compose.staging.yaml", stagingVars],
