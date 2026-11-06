@@ -4,6 +4,9 @@ Status: template only. No checks are certified by this document. Use it with the
 [readiness gates](V1_READINESS.md#acceptance-record), [support targets](SUPPORT.md),
 and [installation validation](VALIDATION.md#required-before-broad-production-use).
 
+Start with [automated acceptance](ACCEPTANCE_AUTOMATION.md) for full CI,
+three-engine browser reports, and a smaller set of hands-on sessions.
+
 Keep the completed installation record privately, for example in ignored
 `.local/deployment/v1-acceptance.md`. Commit only a sanitized summary of results.
 Never include credentials, real account identities, domains, backup contents, or
