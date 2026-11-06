@@ -8,7 +8,7 @@ PR diff, including deleted files and both paths of a rename:
 | Check                      | PR changes that select it                                                                                                          |
 | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
 | PostgreSQL 18 integration  | Backend/shared code or the integration test                                                                                        |
-| All seven browser suites   | App source, public assets, HTML entrypoint, browser tests/helpers, or Playwright configuration                                     |
+| All eleven browser suites   | App source, public assets, HTML entrypoint, browser tests/helpers, or Playwright configuration                                     |
 | AMD64 and ARM64 containers | Docker/Compose/environment examples, dependencies, build/compliance/release tooling, LICENSE, or server app/worker/CLI entrypoints |
 | Brand tooling audit        | Brand sources, audit tooling, compliance policy, or notice tooling                                                                 |
 | All checks                 | Dependencies, TypeScript/Vite/build configuration, CI tooling/the CI workflow, or an unrecognized path                             |

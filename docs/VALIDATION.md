@@ -1,6 +1,6 @@
 # Validation and release checks
 
-Status on 2026-10-19: implementation and local validation are complete except the checks explicitly pending below. Deployment-specific activation status belongs in each operator's private record. Do not treat automated local checks as physical-device or live-provider certification.
+Historical implementation and validation evidence follows. The current [1.0 readiness record](V1_READINESS.md) tracks outstanding release gates; older passing results do not certify the current candidate. Deployment-specific activation status belongs in each operator's private record. Do not treat automated local checks as physical-device or live-provider certification.
 
 ## Caching and performance checks, 2026-10-27
 
@@ -112,10 +112,10 @@ Use a separate database named `little_hint_test`; integration tests clear its ap
 
 ## Required before broad production use
 
-- Configure and verify Forward Email SMTP and sender DNS. Test successful code delivery and provider failure. Bootstrap the first administrator after SMTP is ready.
+- Configure and verify the installation's SMTP provider and sender DNS. Test successful code delivery and provider failure. Bootstrap the first administrator after SMTP is ready.
 - Configure separate off-host backup repository credentials, enable the sidecar and schedules, and complete a restore drill using that destination. Verify failure alerts and stale-backup health.
-- Configure optional Telegram and Twilio services, verify linking/opt-in/STOP and real delivery, and set usage budgets. Confirm behavior while each provider is unavailable.
-- Exercise live product URLs from all five named retailers, including regional/variant/blocked pages. Document provider limitations and confirm manual entry stays available.
+- For enabled optional Telegram, browser push, and SMS services, verify linking, opt-in, real delivery, and provider budgets where applicable. For SMS, also verify STOP handling. Confirm behavior while each provider is unavailable.
+- Exercise live product URLs from the retailers advertised by the candidate, including regional/variant/blocked pages. Document provider limitations and confirm manual entry stays available.
 - On physical iPhone, iPad, and Android devices: install, launch from the icon, authenticate, follow authorized deep links, close/relaunch, and check session behavior. Confirm icon masking and clear space. Verify Apple instructions and embedded-browser guidance with no native install event.
 - Check keyboard-only operation, a real screen reader, enlarged text, narrow widths, landscape, safe areas, and the on-screen keyboard. Automated axe checks do not replace these.
 - Verify a service-worker update with an active form and purchase request. Confirm the update waits, preserves local drafts, and applies after a safe user action. Test interrupted networks and reconnection on real devices.
