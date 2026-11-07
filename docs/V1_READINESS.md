@@ -1,7 +1,10 @@
 # 1.0 release readiness
 
-Status: stabilization PRs are merged; final candidate acceptance is pending.
-This record does not certify 1.0.0 or authorize publication or deployment.
+Status: the maintainer accepted the candidate with documented exceptions on
+November 6, 2026. The [final sign-off](V1_SIGNOFF.md) identifies the tested
+revisions, evidence, shorter observation, and remaining validation limits.
+The maintainer authorized requesting 1.0.0, with no merge, publication, or
+deployment authorized yet. Final release-head checks remain pending.
 The latest published version verified during this preparation is `v0.19.4`.
 
 The starting baseline is published `v0.19.4`, commit
@@ -12,17 +15,23 @@ Those results belong to that release, not the eventual 1.0 candidate.
 
 ## Completed stabilization work
 
-| Work | Merged PR | Evidence |
-| --- | --- | --- |
-| Support and recovery expectations | [#177](https://github.com/Affolder-Creative/little-hint/pull/177) | [Support policy](SUPPORT.md), operations and release guidance. |
-| Published-image upgrade verification | [#179](https://github.com/Affolder-Creative/little-hint/pull/179) | [Upgrade and recovery drill](UPGRADE_VERIFICATION.md), run in container CI and release-image checks. |
-| Critical workflow stabilization | [#180](https://github.com/Affolder-Creative/little-hint/pull/180) | [Coverage inventory](CRITICAL_WORKFLOWS.md), cross-feature privacy/auth/capture regressions. |
-| Interface and accessibility polish | [#181](https://github.com/Affolder-Creative/little-hint/pull/181) | [CI run](https://github.com/Affolder-Creative/little-hint/actions/runs/42159643626) passed quality, all eleven browser suites, and CI gate on `da8d2fff4a2e2f8990e287dc68233d7aa48d0ac4`. Integration and containers were unselected, not passes. |
+| Work                                 | Merged PR                                                         | Evidence                                                                                                                                                                                                                                          |
+| ------------------------------------ | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Support and recovery expectations    | [#177](https://github.com/Affolder-Creative/little-hint/pull/177) | [Support policy](SUPPORT.md), operations and release guidance.                                                                                                                                                                                    |
+| Published-image upgrade verification | [#179](https://github.com/Affolder-Creative/little-hint/pull/179) | [Upgrade and recovery drill](UPGRADE_VERIFICATION.md), run in container CI and release-image checks.                                                                                                                                              |
+| Critical workflow stabilization      | [#180](https://github.com/Affolder-Creative/little-hint/pull/180) | [Coverage inventory](CRITICAL_WORKFLOWS.md), cross-feature privacy/auth/capture regressions.                                                                                                                                                      |
+| Interface and accessibility polish   | [#181](https://github.com/Affolder-Creative/little-hint/pull/181) | [CI run](https://github.com/Affolder-Creative/little-hint/actions/runs/42159643626) passed quality, all eleven browser suites, and CI gate on `da8d2fff4a2e2f8990e287dc68233d7aa48d0ac4`. Integration and containers were unselected, not passes. |
 
-These establish the implementation baseline. Candidate-specific and manual gates
-below remain pending; merging these PRs does not complete them.
+These establish the implementation baseline. Subsequent acceptance automation
+and staging backup configuration were merged in PRs #183 and #184. The
+[sign-off record](V1_SIGNOFF.md#candidate-and-evidence) separates candidate
+results from implementation evidence and maintainer-reported checks.
 
 ## Acceptance record
+
+The table summarizes the [completed candidate sign-off](V1_SIGNOFF.md).
+"Accepted limitation" records the maintainer's release decision, not a passing
+test. The [worksheet](V1_ACCEPTANCE.md) retains the default gate requirements.
 
 Each gate needs the tested commit or image digest, date, tester, result, and an
 evidence location. Record device/OS/browser versions for device checks. Keep
@@ -31,21 +40,21 @@ locations in the private operator record. Public evidence must be sanitized.
 Use Passed, Failed, Pending, or Not applicable with a reason. A skipped test or
 an unavailable device is not a pass.
 
-| Gate                            | Status  | Required evidence                                                                                                      |
-| ------------------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------- |
-| Full candidate CI               | Pending | Quality, database, all browser suites, both architectures, audits, licensing, source bundles.                          |
-| Published-image upgrade         | Pending | 0.19.4 to candidate; retained records, amounts, files, privacy, auth, repeated migration, worker restart.              |
-| Isolated backup recovery        | Pending | Restored database and upload hashes; invalidated sessions; reconciliation of closures and access changes.              |
-| Off-host recovery               | Pending | Actual off-host destination restored into separate storage, backup health and failure alerts checked.                  |
-| Physical iPhone, iPad, Android  | Pending | Install, sign-in, authorized links, relaunch, keyboard/safe areas, network interruption, update safety.                |
-| Desktop browser matrix          | Pending | Current stable Chrome, Edge, Firefox, Safari with exact versions recorded.                                             |
-| Accessibility                   | Pending | Keyboard, real screen reader, enlarged text, focus, dialog cancellation, light/dark and narrow layouts.                |
-| SMTP                            | Pending | Real sign-in, invitation, email-change and closure messages; delivery failure and retry.                               |
-| Optional providers              | Pending | Enabled channels tested for linking, consent, delivery and outage; disabled channels recorded explicitly.              |
-| Retailer capture                | Pending | Advertised shops, blocked/variant links, editable results, failed lookup and manual entry.                             |
-| Impeccable final pass           | Pending | Combined account controls and critical flows, rendered responsive states and recovery paths.                           |
-| Candidate staging               | Pending | At least 24 hours with synthetic accounts; worker retries, scheduled processing, no unresolved release blockers.       |
-| Private vulnerability reporting | Passed  | GitHub setting enabled and read back as `enabled: true` on 2026-11-05. SECURITY.md links to the private advisory form. |
+| Gate                            | Result                           | Evidence and limits                                                                                                                                                                                   |
+| ------------------------------- | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Full candidate CI               | Passed                           | Full CI 42250751328 on main `906f910`; final version-PR and tagged-release CI remain pending.                                                                                                         |
+| Published-image upgrade         | Passed, automated scope          | 0.19.4 upgrade/recovery checks passed on both architectures in candidate CI.                                                                                                                          |
+| Isolated backup recovery        | Passed, synthetic scope          | 22 application record kinds and 26 uploads restored and compared in separate temporary storage. Live reconciliation remains an operator responsibility.                                               |
+| Off-host recovery               | Passed by maintainer report      | Successful backup/restore and off-host credential custody confirmed. Scheduled-task failure email delivery observed; hourly health tasks enabled and their first manual runs passed.                  |
+| Physical iPhone, iPad, Android  | Accepted limitation              | Normal phone/installed-app use passed by maintainer report; full physical-device matrix and exact versions remain unverified.                                                                         |
+| Desktop browser matrix          | Accepted limitation              | Three-engine fixtures passed; full branded-browser matrix remains unverified.                                                                                                                         |
+| Accessibility                   | Scoped pass; accepted limitation | Guided Mac/Chrome VoiceOver check passed by maintainer report, alongside automated keyboard, layout, and axe coverage. Other screen readers and the complete physical-device scope remain unverified. |
+| SMTP                            | Scoped pass; accepted limitation | Normal real email delivery confirmed; every live message type and failure/retry path was not individually verified.                                                                                   |
+| Optional providers              | Accepted limitation              | Installation-specific linking, consent, delivery/outage, and SMS behavior remain unverified beyond fixtures. No claim that untested providers are disabled.                                           |
+| Retailer capture                | Accepted limitation              | Automated capture/recovery coverage passed; full live retailer/variant matrix remains unverified.                                                                                                     |
+| Impeccable final pass           | Passed, rendered/fixture scope   | Combined controls and critical flows reviewed in PR #181; subsequent three-engine candidate fixtures passed. Physical-device limits remain explicit.                                                  |
+| Candidate staging               | Accepted shorter observation     | About ten hours of clean samples plus healthy checks after the backup rollout; no 24-hour pass claimed. See the sign-off for baseline mismatches and the approved exception.                          |
+| Private vulnerability reporting | Passed                           | GitHub setting enabled and read back as `enabled: true` on 2026-11-05. SECURITY.md links to the private advisory form.                                                                                |
 
 Automated work can proceed while the maintainer completes physical-device and
 provider checks. Use synthetic accounts. Live messages and paid requests require
@@ -57,8 +66,12 @@ Resolve privacy failures, data loss, crashes, blocked core workflows, and blocki
 review feedback before approving the release PR. Record smaller known limitations
 with their impact rather than hiding them behind a passing aggregate status.
 
-This copy/readiness PR does not request `Release-As: 1.0.0`, change package
-versions, or certify manual checks. Complete the following sequence:
+The original copy/readiness PR did not request a version override. The final
+sign-off PR now requests `Release-As: 1.0.0`, with package versions left to
+Release Please. Apply the [accepted candidate-specific exceptions](V1_SIGNOFF.md#accepted-exceptions-and-remaining-validation-limits)
+to the sequence below. They do not waive final version-PR CI, tagged release
+checks, or public-image verification. No merge or publication is authorized by
+preparing the sign-off PR.
 
 1. Merge the reviewed copy/readiness PR, then select a full commit SHA on `main`
    for acceptance. Keep unrelated feature work out of that candidate. Run the

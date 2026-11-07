@@ -47,6 +47,12 @@ and upgrade links in the generated download instructions for this release.
 
 ## Support and limits
 
+The [candidate sign-off](V1_SIGNOFF.md) records a shorter staging observation
+accepted by the maintainer, automated three-engine coverage, and focused
+maintainer phone, email, and VoiceOver checks. The full physical-device,
+branded-browser, live-provider, and retailer matrix was not completed.
+This release does not claim certification of every supported combination.
+
 Support is provided as time allows, with no response-time or uptime guarantee.
 Fixes target the latest stable release; there is no LTS or backport commitment.
 The 1.x policy covers documented deployment configuration and CLI commands.

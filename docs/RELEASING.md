@@ -8,7 +8,7 @@ PR diff, including deleted files and both paths of a rename:
 | Check                      | PR changes that select it                                                                                                          |
 | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
 | PostgreSQL 18 integration  | Backend/shared code or the integration test                                                                                        |
-| All eleven browser suites   | App source, public assets, HTML entrypoint, browser tests/helpers, or Playwright configuration                                     |
+| All eleven browser suites  | App source, public assets, HTML entrypoint, browser tests/helpers, or Playwright configuration                                     |
 | AMD64 and ARM64 containers | Docker/Compose/environment examples, dependencies, build/compliance/release tooling, LICENSE, or server app/worker/CLI entrypoints |
 | Brand tooling audit        | Brand sources, audit tooling, compliance policy, or notice tooling                                                                 |
 | All checks                 | Dependencies, TypeScript/Vite/build configuration, CI tooling/the CI workflow, or an unrecognized path                             |
@@ -71,6 +71,11 @@ Follow the [readiness record](V1_READINESS.md),
 Readiness/copy PRs can merge while manual checks remain pending. They do not
 change the release number or authorize publication. Request the major version
 only after the maintainer has accepted the evidence.
+
+The [November 6 candidate sign-off](V1_SIGNOFF.md) records that acceptance,
+including the shorter observation and explicit validation limits. Its PR
+requests `Release-As: 1.0.0`; preserve that footer in the eventual squash commit.
+Preparing the sign-off does not authorize merging it or the generated version PR.
 
 Merging Release Please's version PR starts automatic publication after the
 workflow checks pass. The workflow has no separate human approval gate after
