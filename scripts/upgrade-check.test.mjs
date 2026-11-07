@@ -53,6 +53,30 @@ test("rejects financial corruption and new privacy leakage", () => {
   assert.throws(() => assertPreserved(leaked, original));
 });
 
+test("upgrade adds explicit shopping eligibility without changing legacy permissions", () => {
+  const baseline = structuredClone(original);
+  baseline.views.recipient.items[0].isRecipient = true;
+  baseline.views.buyer = {
+    buying: [{ item: { title: "Gift", isRecipient: false } }],
+  };
+  const current = structuredClone(baseline);
+  current.views.recipient.items[0].canShop = false;
+  current.views.buyer.buying[0].item.canShop = true;
+  assertPreserved(current, baseline);
+  // Recovery boots the released image, which still omits the explicit flag.
+  assertPreserved(baseline, baseline);
+  for (const item of [
+    current.views.recipient.items[0],
+    current.views.buyer.buying[0].item,
+  ]) {
+    item.canShop = !item.canShop;
+    assert.throws(() => assertPreserved(current, baseline));
+    item.canShop = !item.canShop;
+  }
+  current.views.recipient.items[0].reservations = [{ buyerId: "private" }];
+  assert.throws(() => assertPreserved(current, baseline));
+});
+
 test("failed startup cleans only its two disposable projects and excludes operator credentials", async () => {
   const { mkdtempSync, writeFileSync, readFileSync, rmSync } =
     await import("node:fs");
