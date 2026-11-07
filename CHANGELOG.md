@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.0.0](https://github.com/Affolder-Creative/little-hint/compare/v0.19.4...v1.0.0) (2026-11-07)
+
+
+### Features
+
+* add staging sidecar backups ([#184](https://github.com/Affolder-Creative/little-hint/issues/184)) ([dde760c](https://github.com/Affolder-Creative/little-hint/commit/dde760c6cf0b2263b63f26c063bfb8a7cd9e0710))
+* verify upgrades from published releases ([#179](https://github.com/Affolder-Creative/little-hint/issues/179)) ([04a93e2](https://github.com/Affolder-Creative/little-hint/commit/04a93e2ffc6c79edb838bfd0f1d7211bf87ccb10))
+
+
+### Fixes
+
+* automate candidate acceptance checks ([#183](https://github.com/Affolder-Creative/little-hint/issues/183)) ([906f910](https://github.com/Affolder-Creative/little-hint/commit/906f9106729eb1ed594e355a2d703dfbe1679011))
+* clarify v1 support and recovery expectations ([#177](https://github.com/Affolder-Creative/little-hint/issues/177)) ([ee59284](https://github.com/Affolder-Creative/little-hint/commit/ee5928406c1156c0164ed52b83434370af4f1a38))
+* enforce critical workflow regression checks ([#180](https://github.com/Affolder-Creative/little-hint/issues/180)) ([58993cc](https://github.com/Affolder-Creative/little-hint/commit/58993ccb52f036e442833959db637713c124b7e5))
+* polish account dialogs and accessibility ([#181](https://github.com/Affolder-Creative/little-hint/issues/181)) ([e9ef5b5](https://github.com/Affolder-Creative/little-hint/commit/e9ef5b5e9d6e75bf148d02d4ee38bed0229542b8))
+* prepare v1 release readiness and publication copy ([#182](https://github.com/Affolder-Creative/little-hint/issues/182)) ([76e2e89](https://github.com/Affolder-Creative/little-hint/commit/76e2e89e9c4662f6aa8e5df3fa960514a1bdea3f))
+* record 1.0.0 readiness sign-off ([#185](https://github.com/Affolder-Creative/little-hint/issues/185)) ([a23186d](https://github.com/Affolder-Creative/little-hint/commit/a23186d675fee94125442e1c8c84036bad123a05))
+
 ## [0.19.4](https://github.com/Affolder-Creative/little-hint/compare/v0.19.3...v0.19.4) (2026-11-06)
 
 
