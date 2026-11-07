@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/Affolder-Creative/little-hint/compare/v1.0.0...v1.1.0) (2026-11-07)
+
+
+### Features
+
+* complete managed profiles and account administration ([#186](https://github.com/Affolder-Creative/little-hint/issues/186)) ([f6995a8](https://github.com/Affolder-Creative/little-hint/commit/f6995a8e7c1da7f4c61d3b0a2979609061b3f8b3))
+
 ## [1.0.0](https://github.com/Affolder-Creative/little-hint/compare/v0.19.4...v1.0.0) (2026-11-07)
 
 
