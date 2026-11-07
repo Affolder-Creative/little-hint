@@ -41,3 +41,8 @@ Product photo loading preserves the image area and contains the product. Visible
 Administration groups all photo preferences under one save action, separate from family-group creation. Each form preserves its own draft through query refreshes and section changes. Preloading appears unchecked and disabled while caching is off, with an explanation that its previous choice will return. Save applies changes; Discard changes restores only that form.
 
 Failed jobs are collapsed by category with counts, ten newest rows and Show 10 more. Each row labels its creation timestamp Queued and separates diagnostics. Phone management separates saving consent from replacement/removal, with inline removal confirmation. Manual product entry disables automatic shop-photo controls without clearing their preference.
+
+
+Profile rows place all edit/takeover actions in one wrapping group below identity on phones. Invitation details and action buttons occupy separate rows at 650px and below; no control shrinks into letter-by-letter wrapping. Member removal has a person-minus icon, visible Remove label, and confirmation that the account remains. The profile editor keeps Save first and Done second on one row.
+
+Managed-profile creation/editing offers explicit family-group sharing with searchable checkboxes and explains separate list/idea audiences. Outgoing takeovers show status and cancellation; accepted takeovers offer a separate group invitation or owner-approval request. Administration adds a searchable Users & profiles directory, name editing, and an account-deletion review with accepted handoffs, data retention choice, and typed DELETE confirmation. First activation collects first/last name in a focused, theme-aware form before the normal application shell.

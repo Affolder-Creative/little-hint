@@ -82,6 +82,8 @@ async function setup(
       return r.fulfill({ json: adminUsage(f.state, cfg) });
     if (path === "admin/services")
       return r.fulfill({ json: serviceStatuses(cfg, false) });
+    if (path === "admin/profiles")
+      return r.fulfill({ json: { rows: [], total: 0 } });
     if (path === "notifications")
       return r.fulfill({ json: { entries: [], unreadCount: 0 } });
     return r.fulfill({ json: [] });

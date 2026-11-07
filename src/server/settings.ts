@@ -1,8 +1,8 @@
 import { priceConfig } from "./price-config";
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
-import { readSettings, transact } from "./db";
 import type { Setting, State, Actor } from "../shared/model";
-import { stamp, fail, isAdmin } from "./domain";
+import { stamp, fail } from "./domain-common";
+import { isAdmin } from "./domain-access";
 import {
   imageDeliveryOverride,
   syntheticEnvironment,
@@ -94,6 +94,7 @@ export const imageSettingKeys = [
 export const spendingDefaultKey = "SPENDING_DEFAULT_ENABLED";
 export const applicationSettingKeys = [
   spendingDefaultKey,
+  "FAMILY_GROUP_INVITATIONS",
   productPhotoSettingKey,
   familyGroupCreationKey,
   ...imageSettingKeys,
@@ -163,6 +164,7 @@ function photoSetting(values: Map<string, string>) {
 export async function productPhotoSetting() {
   const override = productPhotoOverride();
   if (override !== undefined) return photoSetting(new Map());
+  const { readSettings } = await import("./db");
   return photoSetting(settingsValues(await readSettings()));
 }
 export async function automaticallyImportProductPhotos(): Promise<boolean> {
@@ -181,8 +183,16 @@ export function spendingDefaultForState(s: State) {
   return spendingDefaultSetting(settingsValues(s.settings)).value === "true";
 }
 export async function settingsSummary() {
+  const { readSettings } = await import("./db");
   const values = settingsValues(await readSettings());
   return [
+    {
+      key: "FAMILY_GROUP_INVITATIONS",
+      configured: values.has("FAMILY_GROUP_INVITATIONS"),
+      source: values.has("FAMILY_GROUP_INVITATIONS") ? "settings" : "default",
+      default: "owners",
+      value: values.get("FAMILY_GROUP_INVITATIONS") ?? "owners",
+    },
     spendingDefaultSetting(values),
     photoSetting(values),
     groupCreationSetting(values),
@@ -194,6 +204,11 @@ function validateSetting(k: string, value: string) {
     if (settingKeys.includes(k as SettingKey))
       fail(409, "This value is set on the server. Change it there instead.");
     fail(400, "Unknown setting.");
+  }
+  if (k === "FAMILY_GROUP_INVITATIONS") {
+    if (!["owners", "members"].includes(value))
+      fail(400, "Choose owners or all members.");
+    return;
   }
   if (k === spendingDefaultKey) {
     if (value !== "true" && value !== "false")
@@ -238,6 +253,7 @@ export async function saveSettings(
   if (new Set(updates.map((update) => update.key)).size !== updates.length)
     fail(400, "Each setting can only appear once.");
   for (const update of updates) validateSetting(update.key, update.value);
+  const { transact } = await import("./db");
   await transact((s) => {
     for (const update of updates) validateSetting(update.key, update.value);
     for (const update of updates) applySetting(s, update.key, update.value);
@@ -251,6 +267,7 @@ export async function spend(
   const cfg = await config();
   const limit = Number(cfg.PAID_DAILY_LIMIT);
   const startedAt = new Date().toISOString();
+  const { transact } = await import("./db");
   await transact((s) => {
     const k = `${startedAt.slice(0, 10)}:${service}`;
     let row = s.usage.find((u) => u.key === k);
@@ -292,4 +309,10 @@ export async function spend(
     row.revision++;
   });
   return startedAt;
+}
+
+export function memberInvitationsEnabled(s: State) {
+  return (
+    settingsValues(s.settings).get("FAMILY_GROUP_INVITATIONS") === "members"
+  );
 }

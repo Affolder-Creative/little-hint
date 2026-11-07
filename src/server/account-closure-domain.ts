@@ -1,11 +1,22 @@
+import { reconcileEventParticipants, reconcileHouseholds } from "./domain";
 import { randomUUID } from "node:crypto";
 import type { Actor, State } from "../shared/model";
-import { controllers, isAdmin, personVisible } from "./domain-access";
+import { noteVisible } from "./activity";
+import {
+  controllers,
+  isAdmin,
+  personVisible,
+  itemVisible,
+} from "./domain-access";
 import { fail, stamp, touch } from "./domain-common";
 
 const active = (e: State["exchanges"][number]) =>
   !e.archived && !e.deletedAt && e.status !== "cancelled";
-export function closurePlan(s: State, a: Actor) {
+export function closurePlan(
+  s: State,
+  a: Actor,
+  options: { removeAuthoredContent?: boolean } = {},
+) {
   const people = s.people.filter((p) => p.userId === a.id);
   const own = new Set(people.map((p) => p.id));
   const privateLists = new Set(
@@ -18,7 +29,8 @@ export function closurePlan(s: State, a: Actor) {
       .filter(
         (i) =>
           (i.listId && privateLists.has(i.listId)) ||
-          (!i.listId && i.creatorId === a.id),
+          (!i.listId && i.creatorId === a.id) ||
+          (options.removeAuthoredContent && i.creatorId === a.id),
       )
       .map((i) => i.id),
   );
@@ -200,13 +212,32 @@ export function acceptHandoff(s: State, a: Actor, id: string) {
       ]),
     ];
   }
+  if (link.kind === "guardian") {
+    if (source.managedGroupIds)
+      source.managedGroupIds = source.managedGroupIds.filter((id) =>
+        s.groups.some(
+          (g) =>
+            g.id === id &&
+            source.guardians.some((u) => g.memberIds.includes(u)),
+        ),
+      );
+    reconcileEventParticipants(s);
+    reconcileHouseholds(s);
+  }
   touch(source);
   link.consumed = true;
   touch(link);
 }
 /** Deletes private records; retains only anonymous links needed by shared history. */
-export function closeAccountData(s: State, a: Actor) {
-  const plan = closurePlan(s, a);
+export function closeAccountData(
+  s: State,
+  a: Actor,
+  options: {
+    keepSharedContent?: boolean;
+    removeAuthoredContent?: boolean;
+  } = {},
+) {
+  const plan = closurePlan(s, a, options);
   if (plan.blockers.length)
     fail(
       409,
@@ -241,8 +272,73 @@ export function closeAccountData(s: State, a: Actor) {
   const soloGroups = new Set(
     s.groups.filter((g) => g.ownerId === a.id).map((g) => g.id),
   );
-  const removedLists = plan.privateLists;
-  const removedItems = plan.removedItems;
+  const remainingAccounts = s.people
+    .filter((p) => p.userId && p.userId !== a.id)
+    .map((p) => ({ id: p.userId!, name: p.name, email: "" }));
+  const hasRemainingGroupAudience = (groupIds: string[]) =>
+    s.groups.some(
+      (g) =>
+        groupIds.includes(g.id) &&
+        !soloGroups.has(g.id) &&
+        g.memberIds.some((id) => remainingAccounts.some((p) => p.id === id)),
+    );
+  const removedLists = options.keepSharedContent
+    ? new Set(
+        [...plan.privateLists].filter(
+          (id) =>
+            !hasRemainingGroupAudience(
+              s.lists.find((l) => l.id === id)?.groupIds ?? [],
+            ),
+        ),
+      )
+    : plan.privateLists;
+  const removedItems = options.keepSharedContent
+    ? new Set(
+        s.items
+          .filter(
+            (i) =>
+              (i.listId && removedLists.has(i.listId)) ||
+              (!i.listId &&
+                i.creatorId === a.id &&
+                !remainingAccounts.some((p) => itemVisible(s, p, i))),
+          )
+          .map((i) => i.id),
+      )
+    : new Set([
+        ...plan.removedItems,
+        ...(options.removeAuthoredContent
+          ? s.items.filter((i) => i.creatorId === a.id).map((i) => i.id)
+          : []),
+      ]);
+  const retainedNotes = new Set(
+    s.comments
+      .filter((c) => {
+        const item = s.items.find((i) => i.id === c.itemId);
+        return (
+          item &&
+          !removedItems.has(item.id) &&
+          remainingAccounts.some((p) => noteVisible(s, p, item, c.giverId, c))
+        );
+      })
+      .map((c) => c.id),
+  );
+  if (options.keepSharedContent) {
+    s.comments = s.comments.filter(
+      (c) => c.authorId !== a.id || retainedNotes.has(c.id),
+    );
+    for (const list of s.lists.filter(
+      (l) => plan.privateLists.has(l.id) && !removedLists.has(l.id),
+    )) {
+      list.archived = true;
+      touch(list);
+    }
+    for (const item of s.items.filter(
+      (i) => !i.listId && i.creatorId === a.id && !removedItems.has(i.id),
+    )) {
+      item.archived = true;
+      touch(item);
+    }
+  }
   const privateItems = new Set(
     s.items
       .filter(
@@ -351,7 +447,7 @@ export function closeAccountData(s: State, a: Actor) {
   for (const c of s.comments) {
     if (c.authorId === a.id) {
       c.authorId = anonymous;
-      c.body = "Comment removed";
+      if (!options.keepSharedContent) c.body = "Comment removed";
       c.mentions = [];
       touch(c);
     } else if (c.mentions?.some((m) => m.userId === a.id)) {
@@ -418,6 +514,12 @@ export function closeAccountData(s: State, a: Actor) {
       )
       .map((i) => i.id),
   );
+  s.groupInviteRequests = s.groupInviteRequests.filter(
+    (r) =>
+      r.requestedBy !== a.id &&
+      !soloGroups.has(r.groupId) &&
+      r.email.toLowerCase() !== a.email.toLowerCase(),
+  );
   s.invitations = s.invitations.filter((i) => !removedInvitations.has(i.id));
   s.links = s.links.filter(
     (l) =>
@@ -480,6 +582,11 @@ export function closeAccountData(s: State, a: Actor) {
   s.usage = s.usage.filter((u) => !u.key.split(":").includes(a.id));
   for (const m of s.media.filter((m) => m.userId === a.id)) {
     m.userId = anonymous;
+    if (
+      options.keepSharedContent &&
+      s.items.some((i) => i.image === `/api/v1/media/${m.id}`)
+    )
+      continue;
     m.deletedAt = new Date().toISOString();
     m.purgeAfterAccountClosure = true;
     const url = `/api/v1/media/${m.id}`;

@@ -124,8 +124,23 @@ export async function login(page: Page, email: string) {
   await expect(
     page
       .getByRole("heading", { name: /Hi,/ })
-      .or(page.getByRole("heading", { name: "What would you love?" })),
+      .or(page.getByRole("heading", { name: "What would you love?" }))
+      .or(page.getByRole("heading", { name: "What should we call you?" })),
   ).toBeVisible();
+  if (
+    await page
+      .getByRole("heading", { name: "What should we call you?" })
+      .isVisible()
+  ) {
+    await page.getByLabel("First name", { exact: true }).fill("Invited");
+    await page.getByLabel("Last name", { exact: true }).fill("Member");
+    await page.getByRole("button", { name: "Save name and continue" }).click();
+    await expect(
+      page
+        .getByRole("heading", { name: /Hi,/ })
+        .or(page.getByRole("heading", { name: "What would you love?" })),
+    ).toBeVisible();
+  }
   if (
     await page
       .getByRole("heading", { name: "What would you love?" })

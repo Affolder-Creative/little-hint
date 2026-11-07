@@ -1,3 +1,4 @@
+import { ManagedProfileSharing } from "./ManagedProfileSharing";
 import { useQuery } from "@tanstack/react-query";
 import { PurchaseListField } from "./SpendingPurchase";
 import { dollars } from "./api";
@@ -65,7 +66,9 @@ export function PersonForm({
   id,
   onSaved,
   onBusyChange,
+  onDone,
 }: {
+  onDone?: () => void;
   id?: string;
   onSaved?: () => void;
   onBusyChange?: (busy: boolean) => void;
@@ -74,12 +77,17 @@ export function PersonForm({
   const person = world.people.find((p) => p.id === id);
   return (
     <Form
+      cancel={onDone}
+      cancelLabel="Done"
       submit={person ? "Save profile" : "Create profile"}
       onBusyChange={onBusyChange}
       onSubmit={async (f) => {
         await mutate(person ? "people/update" : "people", {
           ...(person ? { id: person.id, revision: person.revision } : {}),
           name: value(f, "name"),
+          ...(!person?.userId
+            ? { managedGroupIds: selected(f, "managedGroupIds") }
+            : {}),
         });
         if (onSaved) onSaved();
         else close();
@@ -93,6 +101,7 @@ export function PersonForm({
           ? "This is the name your people see on your profile."
           : "Choose this person’s households under each family group in Settings after saving their profile."}
       </p>
+      {!person?.userId && <ManagedProfileSharing person={person} />}
       {!person && (
         <p className="muted">
           You will manage this person’s wish lists. They can take over later by
@@ -102,7 +111,15 @@ export function PersonForm({
     </Form>
   );
 }
-export function ListForm({ list }: { list?: List }) {
+export function ListForm({
+  list,
+  personId,
+  onCreated,
+}: {
+  list?: List;
+  personId?: string;
+  onCreated?: (list: List) => void;
+}) {
   const { world, mutate, close } = useApp();
   const mine = world.people.filter(
     (p) => p.userId === world.me.id || p.guardians.includes(world.me.id),
@@ -123,7 +140,7 @@ export function ListForm({ list }: { list?: List }) {
         ) : null
       }
       onSubmit={async (f) => {
-        await mutate(list ? "lists/update" : "lists", {
+        const saved = await mutate<List>(list ? "lists/update" : "lists", {
           ...(list
             ? {
                 id: list.id,
@@ -136,7 +153,8 @@ export function ListForm({ list }: { list?: List }) {
           groupIds: selected(f, "groupIds"),
           ...listPolicyValues(f, list),
         });
-        close();
+        if (!list && onCreated) onCreated(saved);
+        else close();
       }}
     >
       <Field label="List name">
@@ -166,7 +184,7 @@ export function ListForm({ list }: { list?: List }) {
                   type="checkbox"
                   name="ownerIds"
                   value={p.id}
-                  defaultChecked={p.id === mine[0]?.id}
+                  defaultChecked={p.id === (personId ?? mine[0]?.id)}
                 />
                 {p.name}
                 {!mine.includes(p) && <small>Invite to share ownership</small>}
@@ -187,7 +205,13 @@ export function ListForm({ list }: { list?: List }) {
                   type="checkbox"
                   name="groupIds"
                   value={g.id}
-                  defaultChecked={list?.groupIds.includes(g.id)}
+                  defaultChecked={
+                    list
+                      ? list.groupIds.includes(g.id)
+                      : !!world.people
+                          .find((p) => p.id === personId)
+                          ?.managedGroupIds?.includes(g.id)
+                  }
                 />
                 {familyGroupLabel(g, world)}
               </label>
@@ -354,9 +378,7 @@ export function GiftForm({
   const applied = useRef("");
   const recipients = world.people.filter(
     (person) =>
-      recipientOptions?.includes(person.id) &&
-      person.userId !== world.me.id &&
-      !person.guardians.includes(world.me.id),
+      recipientOptions?.includes(person.id) && person.userId !== world.me.id,
   );
   const [recipientId, setRecipientId] = useState(
     importDraft?.draft?.recipientId ??
@@ -766,11 +788,7 @@ export function GiftForm({
           >
             <option value="">Choose a person</option>
             {world.people
-              .filter(
-                (p) =>
-                  p.userId !== world.me.id &&
-                  !p.guardians.includes(world.me.id),
-              )
+              .filter((p) => p.userId !== world.me.id)
               .map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}

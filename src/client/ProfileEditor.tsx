@@ -69,6 +69,7 @@ export function ProfileEditor({
         tabIndex={0}
       >
         <PersonForm
+          onDone={() => dismiss?.()}
           id={personId}
           onBusyChange={setProfileBusy}
           onSaved={() => toast("Profile saved.")}
@@ -82,19 +83,11 @@ export function ProfileEditor({
         tabIndex={0}
       >
         <GiftPreferencesForm
+          onDone={() => dismiss?.()}
           personId={personId}
           onBusyChange={setPreferencesBusy}
           onSaved={() => {}}
         />
-      </div>
-      <div className="profile-editor-done">
-        <button
-          className="button secondary"
-          disabled={busy}
-          onClick={() => dismiss?.()}
-        >
-          Done
-        </button>
       </div>
     </div>
   );

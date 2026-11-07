@@ -95,11 +95,13 @@ export function InterestFields({
 export function GiftPreferencesForm({
   personId,
   onboarding = false,
+  onDone,
   onSaved,
   onBusyChange,
 }: {
   personId: string;
   onboarding?: boolean;
+  onDone?: () => void;
   onSaved?: () => void;
   onBusyChange?: (busy: boolean) => void;
 }) {
@@ -132,6 +134,8 @@ export function GiftPreferencesForm({
   return (
     <>
       <Form
+        cancel={onDone}
+        cancelLabel="Done"
         submit="Save gift preferences"
         onBusyChange={onBusyChange}
         disabled={skipping}

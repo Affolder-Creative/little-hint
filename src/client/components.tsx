@@ -652,7 +652,7 @@ export function GiftCard({
           <Price gift={gift} compact />
           <span className="gift-badges">
             <PrivateIdeaBadge gift={gift} />
-            {gift.isRecipient ? (
+            {gift.isRecipient && !gift.canShop ? (
               <span className="status quiet">On your list</span>
             ) : gift.available === 0 ? (
               <span className="status">Taken care of</span>

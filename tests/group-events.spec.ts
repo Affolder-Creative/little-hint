@@ -24,7 +24,10 @@ test("leaders manage an occasion while recipients add wishes and unselected memb
     const familyGroup = (await readWorld(page)).groups.find(
       (group) => group.name === "The Morgan circle",
     )!;
-    const child = await post(leader, "people", { name: "Avery Morgan" });
+    const child = await post(leader, "people", {
+      name: "Avery Morgan",
+      managedGroupIds: [familyGroup.id],
+    });
     await page.goto(
       `/settings?section=groups&view=events&group=${familyGroup.id}`,
     );
@@ -213,7 +216,7 @@ test("leaders manage an occasion while recipients add wishes and unselected memb
       .toBe(true);
     expect(
       (await readWorld(leader)).items.find((item) => item.id === gift.id),
-    ).toEqual(before);
+    ).toEqual({ ...before, available: 0, reserved: 1, reservations: [] });
     const denied = await leader.request.post("/api/v1/lists/update", {
       headers: {
         Origin: new URL(leader.url()).origin,
@@ -353,7 +356,10 @@ test("family-group households support duplicate names and member-controlled sele
       email: "sam@example.test",
     });
     await post(member, "invitations/accept", { id: invitation.id });
-    const child = await post(member, "people", { name: "Household child" });
+    const child = await post(member, "people", {
+      name: "Household child",
+      managedGroupIds: [group.id],
+    });
     await page.goto(
       `/settings?section=groups&view=households&group=${group.id}`,
     );

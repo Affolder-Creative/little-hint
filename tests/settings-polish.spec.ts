@@ -77,6 +77,8 @@ async function setup(
       "/api/v1/",
       "",
     );
+    if (path === "admin/profiles")
+      return route.fulfill({ json: { rows: [], total: 0 } });
     if (path === "world")
       return route.fulfill({
         json: {

@@ -33,7 +33,11 @@ describe.skipIf(!url)("atomic account closure", () => {
     app.inject({
       method: "POST",
       url: path,
-      headers: { origin: requestOrigin, cookie: auth },
+      headers: {
+        origin: requestOrigin,
+        cookie: auth,
+        "idempotency-key": stamp().id,
+      },
       payload: body as any,
     });
   async function signIn() {
@@ -111,6 +115,265 @@ describe.skipIf(!url)("atomic account closure", () => {
     await app?.close();
     await storage?.pool.end();
     vi.unstubAllEnvs();
+  });
+  it("completes first-sign-in names once and synchronizes later profile edits", async () => {
+    await storage.transact((s) => {
+      s.people.find((p) => p.id === personId)!.nameSetupRequired = true;
+    });
+    expect(
+      (await post("/api/v1/account/name", { firstName: " ", lastName: "Last" }))
+        .statusCode,
+    ).toBe(400);
+    const saved = await post("/api/v1/account/name", {
+      firstName: "  First ",
+      lastName: " Last  ",
+    });
+    expect(saved.statusCode, saved.body).toBe(200);
+    const profile = (await storage.readState()).people.find(
+      (p) => p.id === personId,
+    )!;
+    expect(profile.name).toBe("First Last");
+    expect(profile.nameSetupRequired).toBe(false);
+    expect(
+      (
+        await post("/api/v1/account/name", {
+          firstName: "Again",
+          lastName: "Last",
+        })
+      ).statusCode,
+    ).toBe(409);
+    expect(
+      (
+        await post("/api/v1/people/update", {
+          id: personId,
+          revision: profile.revision,
+          name: "Updated Name",
+        })
+      ).statusCode,
+    ).toBe(200);
+    expect(
+      (await storage.pool.query('SELECT name FROM "user" WHERE id=$1', [id]))
+        .rows[0].name,
+    ).toBe("Updated Name");
+  });
+  it("backfills existing managed sharing while preserving explicit private profiles", async () => {
+    const groupId = stamp().id,
+      legacyId = stamp().id,
+      privateId = stamp().id;
+    await storage.transact((s) => {
+      s.groups.push({
+        ...stamp(),
+        id: groupId,
+        name: "Existing family",
+        ownerId: id,
+        memberIds: [id],
+      });
+      s.people.push(
+        { ...stamp(), id: legacyId, name: "Legacy managed", guardians: [id] },
+        {
+          ...stamp(),
+          id: privateId,
+          name: "Private managed",
+          guardians: [id],
+          managedGroupIds: [],
+        },
+      );
+    });
+    await storage.pool.query("DELETE FROM schema_migration WHERE version=7");
+    await storage.migrate();
+    const people = (await storage.readState()).people;
+    expect(people.find((p) => p.id === legacyId)?.managedGroupIds).toEqual([
+      groupId,
+    ]);
+    expect(people.find((p) => p.id === privateId)?.managedGroupIds).toEqual([]);
+    expect(people.find((p) => p.id === personId)?.nameSetupRequired).not.toBe(
+      true,
+    );
+  });
+  async function adminSession() {
+    const adminId = `admin-${n}`;
+    const adminEmail = `admin-${n}@example.test`;
+    await storage.pool.query(
+      'INSERT INTO "user" (id,name,email,email_verified) VALUES ($1,$2,$3,true)',
+      [adminId, "Administrator", adminEmail],
+    );
+    await storage.transact((s) =>
+      s.people.push({
+        ...stamp(),
+        name: "Administrator",
+        userId: adminId,
+        guardians: [],
+        admin: true,
+      }),
+    );
+    const targetEmail = email;
+    email = adminEmail;
+    const auth = await signIn();
+    email = targetEmail;
+    return { auth, adminId };
+  }
+  async function review(auth: string) {
+    return app.inject({
+      method: "GET",
+      url: `/api/v1/admin/accounts/${id}/deletion`,
+      headers: { cookie: auth },
+    });
+  }
+  it("limits administrator profile edits and atomically synchronizes the account name", async () => {
+    const { auth } = await adminSession();
+    const profile = (await storage.readState()).people.find(
+      (p) => p.id === personId,
+    )!;
+    const body = {
+      id: personId,
+      revision: profile.revision,
+      name: "First Last",
+    };
+    expect((await post("/api/v1/admin/profiles/update", body)).statusCode).toBe(
+      403,
+    );
+    expect(
+      (await post("/api/v1/admin/profiles/update", body, auth)).statusCode,
+    ).toBe(200);
+    expect(
+      (await storage.pool.query('SELECT name FROM "user" WHERE id=$1', [id]))
+        .rows[0].name,
+    ).toBe("First Last");
+    expect(
+      (await storage.readState()).people.find((p) => p.id === personId)?.name,
+    ).toBe("First Last");
+    expect(
+      (
+        await post(
+          "/api/v1/admin/profiles/update",
+          { ...body, name: "Stale" },
+          auth,
+        )
+      ).statusCode,
+    ).toBe(409);
+  });
+  it.each(["keep-shared", "remove-content"])(
+    "requires an exact confirmation and data choice, revokes sessions, and audits %s deletion",
+    async (mode) => {
+      const { auth, adminId } = await adminSession();
+      expect((await review(cookie)).statusCode).toBe(403);
+      const reviewed = await review(auth);
+      expect(reviewed.statusCode, reviewed.body).toBe(200);
+      const token = reviewed.json().token;
+      const route = `/api/v1/admin/accounts/${id}/delete`;
+      expect(
+        (await post(route, { token, mode, confirmation: "delete" }, auth))
+          .statusCode,
+      ).toBe(400);
+      expect(
+        (await post(route, { token, confirmation: "DELETE" }, auth)).statusCode,
+      ).toBe(400);
+      expect(
+        (await post(route, { token, mode, confirmation: "DELETE" }, cookie))
+          .statusCode,
+      ).toBe(403);
+      expect(await exists()).toBe(1);
+      const response = await post(
+        route,
+        { token, mode, confirmation: "DELETE" },
+        auth,
+      );
+      expect(response.statusCode, response.body).toBe(200);
+      expect(await exists()).toBe(0);
+      expect(
+        (
+          await storage.pool.query("SELECT id FROM session WHERE user_id=$1", [
+            id,
+          ])
+        ).rowCount,
+      ).toBe(0);
+      expect(
+        (
+          await app.inject({
+            method: "GET",
+            url: "/api/v1/world",
+            headers: { cookie: otherCookie },
+          })
+        ).statusCode,
+      ).toBe(401);
+      const audit = (
+        await storage.pool.query(
+          "SELECT actor_hash,target_hash,action FROM admin_account_audit ORDER BY id DESC LIMIT 1",
+        )
+      ).rows[0];
+      expect(audit.action).toBe(`delete:${mode}`);
+      expect(audit.actor_hash).not.toBe(adminId);
+      expect(audit.target_hash).not.toBe(id);
+    },
+  );
+  it("rejects a stale administrator review and resolves only unpurchased commitments", async () => {
+    const { auth } = await adminSession();
+    const token = (await review(auth)).json().token;
+    await storage.transact((s) =>
+      s.reservations.push({
+        ...stamp(),
+        itemId: stamp().id,
+        buyerId: id,
+        quantity: 2,
+        purchased: 1,
+        former: false,
+        titleSnapshot: "Gift plan",
+      }),
+    );
+    const route = `/api/v1/admin/accounts/${id}`;
+    expect(
+      (
+        await post(
+          `${route}/delete`,
+          { token, mode: "remove-content", confirmation: "DELETE" },
+          auth,
+        )
+      ).statusCode,
+    ).toBe(409);
+    const blocked = (await review(auth)).json();
+    expect(blocked.blockers.some((b: any) => b.kind === "commitments")).toBe(
+      true,
+    );
+    expect(
+      (
+        await post(
+          `${route}/delete`,
+          {
+            token: blocked.token,
+            mode: "remove-content",
+            confirmation: "DELETE",
+          },
+          auth,
+        )
+      ).statusCode,
+    ).toBe(409);
+    expect(
+      (
+        await post(
+          `${route}/resolve`,
+          { kind: "commitments", confirmation: "RESOLVE" },
+          auth,
+        )
+      ).statusCode,
+    ).toBe(200);
+    const reservation = (await storage.readState()).reservations[0];
+    expect(reservation.quantity).toBe(1);
+    expect(reservation.purchased).toBe(1);
+    const fresh = (await review(auth)).json();
+    expect(fresh.blockers).toEqual([]);
+    expect(
+      (
+        await post(
+          `${route}/delete`,
+          {
+            token: fresh.token,
+            mode: "remove-content",
+            confirmation: "DELETE",
+          },
+          auth,
+        )
+      ).statusCode,
+    ).toBe(200);
   });
   it("requires authentication, same origin, and the exact destructive confirmation", async () => {
     expect(

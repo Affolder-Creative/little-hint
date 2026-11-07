@@ -167,3 +167,18 @@ alerts respect current access; external channels require explicit topic opt-in.
 Recorded spending remains separate from changing listed-price estimates.
 
 Gift idea creators can choose a private default wish list for spending. Their new plans inherit the choice; saving a changed assignment previews and updates their existing unassigned plans and purchases, including related refunds. Already assigned records and other buyers' records retain their context. Clearing the default affects future plans only. Assignment never publishes the idea or changes its audience. The Purchased view offers a combined status and recorded-spending editor. Occasion and wish-list filters count explicitly linked or assigned gifts; guided review helps organize unassigned entries.
+
+
+## Managed profiles and account administration
+
+Managed profiles start private. Their manager can enable family-group sharing, then select specific groups from their current memberships. Those groups can discover the profile and enroll it in group events. New wish lists created from the managed profile start with those groups selected and retain the normal sharing review. Existing list audiences stay independent, and gift ideas stay private until explicitly shared. Existing managed profiles retain their previous group visibility during migration.
+
+Managers can create wish lists and add wishes or gift ideas directly from a managed person's page. They can reserve and purchase gifts for an unsigned managed recipient, with aggregate availability and their own reservation details. This does not reveal other shoppers' private ideas, identities, notes, or spending. The signed-in person's own wishlist hides Your spending, including lists created for group events.
+
+Profile takeover uses a seven-day email invitation that permits signup, followed by explicit acceptance. It preserves list and gift identities, merges references into the recipient's existing account profile, and redirects old profile links. The recipient keeps their account name and chooses which gift preferences to retain when needed. Conflicting event or active exchange participation must be resolved first. Group membership still requires a separate invitation and acceptance.
+
+Family-group invitations have a separate administrator policy from group creation. Group owners can always invite. When member invitations are enabled, other current members can invite too. Otherwise, members can request an invitation for the owner to approve or decline. Sending or approving an invitation never adds a member before acceptance.
+
+New account activations require first and last name before entering the app. Existing accounts are not forced through setup. Profile names and authentication account names stay synchronized. Administrators can search accounts and managed profiles and edit their display names without opening private gift preferences or changing their email addresses.
+
+Administrators can review and delete another account with exact DELETE confirmation and an explicit data choice. Keep shared content removes private data and preserves shared content anonymously for its remaining audience. Remove their content deletes sole-owned lists and authored gifts, removes authored note bodies, and retains other people's completed buying history anonymously. Both choices revoke sign-in sessions. Ownership and sole-guardian responsibilities require accepted handoffs. Unpurchased reservations and unsent pledges can be cancelled from the review; sent contributions and active exchanges must be settled first. Reviews are invalidated by relevant intervening changes, and administrative resolutions/deletions leave an audit record without contact details.

@@ -1,3 +1,6 @@
+import { sql } from "drizzle-orm";
+import { registerAdminAccounts } from "./admin-accounts";
+import { registerProfileAccounts } from "./profile-accounts";
 import { collectionWorld, registerCollections } from "./collections";
 import { readCollectionState } from "./db";
 import { priceConfig } from "./price-config";
@@ -286,6 +289,8 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
   }
   registerGiftDiscovery(app, actor);
   registerAccountExport(app, actor);
+  registerProfileAccounts(app, actor);
+  registerAdminAccounts(app, actor);
   registerCollections(app, actor);
   registerAccountClosure(app, async (req) => {
     const a = await actor(req);
@@ -506,6 +511,8 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
     "group-events/update": "group-events.update",
     "group-events/repeat": "group-events.repeat",
     "groups/invite": "groups.invite",
+    "groups/request-invitation": "groups.request-invitation",
+    "groups/respond-invitation": "groups.respond-invitation",
     invitations: "invitations.create",
     "groups/remove": "groups.remove",
     "groups/transfer": "groups.transfer",
@@ -520,6 +527,7 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
     people: "people.create",
     "people/update": "people.update",
     "people/link": "people.link",
+    "people/cancel-link": "people.cancel-link",
     lists: "lists.create",
     "lists/accept": "lists.accept",
     "lists/update": "lists.update",
@@ -569,7 +577,7 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
               )
             ).rows[0]?.id
           : undefined;
-      return transact((s) => {
+      return transact(async (s, tx) => {
         if (action === "groups.create" && !canCreateGroups(s, a))
           fail(
             403,
@@ -597,6 +605,15 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
             actorId: a.id,
             status: "sent",
           });
+        if (action === "people.update") {
+          const p = s.people.find(
+            (p) => p.id === (req.body as { id: string }).id,
+          );
+          if (p?.userId)
+            await tx.execute(
+              sql`UPDATE "user" SET name=${p.name}, updated_at=now() WHERE id=${p.userId}`,
+            );
+        }
         syncSpending(s, a);
         const contributionSource =
           action === "contributions.create"

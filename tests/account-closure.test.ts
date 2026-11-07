@@ -77,6 +77,81 @@ function fixture() {
   return { s, a, b, person, other, group, list, item };
 }
 describe("account closure policy", () => {
+  it("keeps only shared content anonymous when requested", () => {
+    const f = fixture();
+    const privateList = {
+      ...f.list,
+      ...stamp(),
+      name: "Private",
+      groupIds: [],
+    };
+    f.s.lists.push(privateList);
+    f.s.items.push({
+      ...f.item,
+      ...stamp(),
+      title: "Private item",
+      listId: privateList.id,
+    });
+    closeAccountData(f.s, f.a, { keepSharedContent: true });
+    expect(f.s.lists.find((l) => l.id === f.list.id)?.archived).toBe(true);
+    expect(f.s.items.some((i) => i.id === f.item.id)).toBe(true);
+    expect(f.s.lists.some((l) => l.id === privateList.id)).toBe(false);
+    expect(f.s.items.some((i) => i.listId === privateList.id)).toBe(false);
+    expect(f.s.items[0].creatorId).not.toBe(f.a.id);
+  });
+  it("never retains author-only notes or content with no surviving audience", () => {
+    const f = fixture();
+    f.group.ownerId = f.a.id;
+    f.group.memberIds = [f.a.id];
+    const otherGift = {
+      ...f.item,
+      ...stamp(),
+      listId: undefined,
+      recipientIds: [f.person.id],
+      creatorId: f.b.id,
+      visibility: "private" as const,
+    };
+    f.s.items.push(otherGift);
+    f.s.comments.push({
+      ...stamp(),
+      itemId: otherGift.id,
+      authorId: f.a.id,
+      body: "Secret note",
+      authorOnly: true,
+    });
+    closeAccountData(f.s, f.a, { keepSharedContent: true });
+    expect(f.s.comments).toHaveLength(0);
+    expect(f.s.lists.some((l) => l.id === f.list.id)).toBe(false);
+    expect(f.s.items.some((i) => i.id === f.item.id)).toBe(false);
+    expect(f.s.items.some((i) => i.id === otherGift.id)).toBe(true);
+  });
+  it("blocks deletion of authored gifts on another person's list until their buyer settles", () => {
+    const f = fixture();
+    f.list.ownerIds = [f.other.id];
+    f.s.reservations.push({
+      ...stamp(),
+      itemId: f.item.id,
+      buyerId: f.b.id,
+      quantity: 1,
+      purchased: 0,
+      former: false,
+      titleSnapshot: f.item.title,
+    });
+    expect(
+      closurePlan(f.s, f.a, { removeAuthoredContent: true }).blockers.some(
+        (b) => b.kind === "shared-activity",
+      ),
+    ).toBe(true);
+    expect(() =>
+      closeAccountData(f.s, f.a, { removeAuthoredContent: true }),
+    ).toThrow();
+    f.s.reservations[0].purchased = 1;
+    closeAccountData(f.s, f.a, { removeAuthoredContent: true });
+    expect(f.s.items).toHaveLength(0);
+    expect(f.s.reservations[0].purchased).toBe(1);
+    expect(f.s.lists).toHaveLength(1);
+  });
+
   it("requires accepted administration, group ownership, and managed-profile handoffs", () => {
     const f = fixture();
     const { s, a, b, person, group } = f;

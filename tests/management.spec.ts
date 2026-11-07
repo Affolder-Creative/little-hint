@@ -108,7 +108,10 @@ test("priorities, shared ordering, Trash, and event preservation", async ({
   await row.getByRole("button", { name: "Restore", exact: true }).click();
   await expect(row).toHaveCount(0);
   world = await readWorld(page);
-  const child = await post(page, "people", { name: "Managed recipient" });
+  const child = await post(page, "people", {
+    name: "Managed recipient",
+    managedGroupIds: [group.id],
+  });
   const eventName = `Family celebration ${Date.now()}`;
   const event = await post(page, "group-events", {
     groupId: group.id,

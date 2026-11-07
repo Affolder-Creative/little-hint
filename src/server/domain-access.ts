@@ -21,34 +21,50 @@ export const ownedGroup = (s: State, a: Actor, id: string) =>
   s.groups.find((g) => g.id === id && g.ownerId === a.id) ??
   fail(404, "Family group not found.");
 export const personVisible = (s: State, a: Actor, p: Person) =>
-  s.imports.some(
+  !p.mergedIntoId &&
+  (s.imports.some(
     (j) =>
       j.userId === a.id &&
       !!j.draft?.friendEntryId &&
       j.draft?.recipientId === p.id,
   ) ||
-  s.spendingRecords.some(
-    (r) =>
-      r.ownerId === a.id &&
-      r.recipientIds.includes(p.id) &&
-      s.friendEntries.some((f) => f.personId === p.id),
-  ) ||
-  s.friendEntries.some(
-    (f) =>
-      f.personId === p.id &&
-      (f.creatorId === a.id ||
-        (!f.archived && f.groupIds.some((g) => groupAccess(s, a, g)))),
-  ) ||
-  s.items.some(
-    (i) =>
-      !!i.friendEntryId &&
-      i.recipientIds.includes(p.id) &&
-      i.creatorId === a.id,
-  ) ||
-  controllers(p).includes(a.id) ||
-  s.groups.some(
-    (g) => member(g, a) && controllers(p).some((u) => g.memberIds.includes(u)),
-  );
+    s.spendingRecords.some(
+      (r) =>
+        r.ownerId === a.id &&
+        r.recipientIds.includes(p.id) &&
+        s.friendEntries.some((f) => f.personId === p.id),
+    ) ||
+    s.friendEntries.some(
+      (f) =>
+        f.personId === p.id &&
+        (f.creatorId === a.id ||
+          (!f.archived && f.groupIds.some((g) => groupAccess(s, a, g)))),
+    ) ||
+    s.items.some(
+      (i) =>
+        !!i.friendEntryId &&
+        i.recipientIds.includes(p.id) &&
+        i.creatorId === a.id,
+    ) ||
+    controllers(p).includes(a.id) ||
+    s.groups.some(
+      (g) =>
+        member(g, a) &&
+        (p.userId ||
+          p.managedGroupIds === undefined ||
+          p.managedGroupIds.includes(g.id)) &&
+        controllers(p).some((u) => g.memberIds.includes(u)),
+    ) ||
+    s.lists.some(
+      (l) =>
+        !l.deletedAt &&
+        l.ownerIds.includes(p.id) &&
+        l.groupIds.some((g) => groupAccess(s, a, g)),
+    ) ||
+    s.items.some(
+      (i) => !i.listId && i.recipientIds.includes(p.id) && itemVisible(s, a, i),
+    ));
+
 export const checkRecipients = (s: State, a: Actor, rs: string[]) => {
   if (
     !rs.length ||
@@ -124,3 +140,14 @@ export function reconcileAccess(s: State) {
     }
   }
 }
+
+/** Editing a dependent's wishes does not make the guardian the gift recipient. */
+export const selfRecipient = (s: State, a: Actor, ids: string[]) =>
+  ids.some((id) => s.people.some((p) => p.id === id && p.userId === a.id));
+export const canShop = (s: State, a: Actor, i: Item) =>
+  !selfRecipient(s, a, i.recipientIds) &&
+  !s.people.some(
+    (p) =>
+      !!p.userId && p.guardians.includes(a.id) && i.recipientIds.includes(p.id),
+  ) &&
+  itemVisible(s, a, i);

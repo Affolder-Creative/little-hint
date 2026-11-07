@@ -300,24 +300,26 @@ export function FriendManagement({ personId }: { personId: string }) {
               {world.invitations
                 .filter((i) => i.friendEntryId === entry.id)
                 .map((i) => (
-                  <div className="setting-row" key={i.id}>
+                  <div className="invitation-row" key={i.id}>
                     <div>
                       <strong>Connection invitation pending</strong>
                       <p>
                         {i.email} · Expires{" "}
                         {new Date(i.expiresAt).toLocaleDateString()}
                       </p>
-                      <InvitationShare invitationId={i.id} />
                     </div>
-                    <Action
-                      secondary
-                      onClick={async () => {
-                        await mutate("invitations/revoke", { id: i.id });
-                        toast("Connection invitation cancelled.");
-                      }}
-                    >
-                      Cancel invitation
-                    </Action>
+                    <div className="invitation-actions">
+                      <InvitationShare invitationId={i.id} />
+                      <Action
+                        secondary
+                        onClick={async () => {
+                          await mutate("invitations/revoke", { id: i.id });
+                          toast("Connection invitation cancelled.");
+                        }}
+                      >
+                        Cancel invitation
+                      </Action>
+                    </div>
                   </div>
                 ))}
             </>

@@ -1,3 +1,4 @@
+import { NameSetup } from "./NameSetup";
 import {
   shoppingChoices,
   shoppingLink,
@@ -335,6 +336,8 @@ export function App() {
       </div>
     );
   const world = query.data;
+  if (world.people.some((p) => p.userId === world.me.id && p.nameSetupRequired))
+    return <NameSetup dark={dark} />;
   return (
     <AppContext.Provider
       value={{
@@ -939,6 +942,36 @@ function PersonPage() {
       (list.canEdit ||
         world.groups.some((group) => list.groupIds.includes(group.id))),
   );
+  const editableLists = lists.filter((l) => l.canEdit);
+  const addWish = () =>
+    editableLists.length === 1
+      ? open("Add item", <GiftForm listId={editableLists[0].id} />)
+      : editableLists.length > 1
+        ? open(
+            "Choose a wish list",
+            <div className="managed-list-choices">
+              {editableLists.map((list) => (
+                <button
+                  className="button secondary"
+                  key={list.id}
+                  onClick={() =>
+                    open("Add item", <GiftForm listId={list.id} />)
+                  }
+                >
+                  {list.name}
+                </button>
+              ))}
+            </div>,
+          )
+        : open(
+            "Create wish list",
+            <ListForm
+              personId={person.id}
+              onCreated={(list) =>
+                open("Add item", <GiftForm listId={list.id} />)
+              }
+            />,
+          );
   return (
     <>
       <Link className="back-link" to="/people">
@@ -957,6 +990,26 @@ function PersonPage() {
               : `A few hints about what ${person.name} would love.`
         }
       >
+        {own && tab === "wishes" && (
+          <button className="button" onClick={addWish}>
+            <Plus size={17} />
+            {editableLists.length ? "Add item" : "Create wish list"}
+          </button>
+        )}
+        {own && person.userId !== world.me.id && tab === "ideas" && (
+          <button
+            className="button"
+            onClick={() =>
+              open(
+                `Gift idea for ${person.name}`,
+                <GiftForm recipientId={person.id} />,
+              )
+            }
+          >
+            <Plus size={17} />
+            Add gift idea
+          </button>
+        )}
         <DiscoveryLink personId={person.id} />
         {person.userId && <FollowButton target="person" targetId={person.id} />}
         {own ? (
@@ -986,8 +1039,20 @@ function PersonPage() {
           </button>
         ) : null}
       </Header>
+      {!person.userId && own && (
+        <p className="muted">
+          {person.managedGroupIds?.length
+            ? `Profile shared with ${world.groups
+                .filter((g) => person.managedGroupIds?.includes(g.id))
+                .map((g) => g.name)
+                .join(
+                  ", ",
+                )}. Each wish list and gift idea has its own audience.`
+            : "Profile sharing is off. Lists and ideas you share separately keep their audience."}
+        </p>
+      )}
       <FriendManagement personId={person.id} />
-      <SpendingSummary person={person.id} />
+      {person.userId !== world.me.id && <SpendingSummary person={person.id} />}
       <PreferenceSummary personId={person.id} />
       <div
         className="tabs"
@@ -1105,7 +1170,9 @@ function PersonPage() {
                     : "Ask them to share a wish list with your family group."
           }
           emptyAction={
-            tab === "ideas" && !own && !archivedFriend ? (
+            tab === "ideas" &&
+            person.userId !== world.me.id &&
+            !archivedFriend ? (
               <button
                 className="button"
                 onClick={() =>
@@ -1262,7 +1329,7 @@ function GiftDetail() {
           <p className="status">
             {gift.archived
               ? "Archived"
-              : gift.isRecipient
+              : gift.isRecipient && !gift.canShop
                 ? gift.mode === "surprise"
                   ? "On your list · Buying plans stay a surprise"
                   : "On your list · You can see the gift plans"
@@ -1339,14 +1406,18 @@ function GiftDetail() {
               {gift.listId ? "Edit item" : "Edit gift idea"}
             </button>
           )}
-          {(gift.archived || gift.isRecipient) && contextSelector}
+          {(gift.archived ||
+            gift.canShop === false ||
+            (gift.canShop === undefined && gift.isRecipient)) &&
+            contextSelector}
           {gift.archived ? (
             <p className="notice">
               {gift.listId
                 ? "This item is archived."
                 : "This gift idea is archived."}
             </p>
-          ) : gift.isRecipient ? (
+          ) : gift.canShop === false ||
+            (gift.canShop === undefined && gift.isRecipient) ? (
             <p className="privacy-note">
               <LockKeyhole size={18} />
               {gift.mode === "surprise"

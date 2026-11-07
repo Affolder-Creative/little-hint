@@ -207,7 +207,9 @@ export function Lists() {
             <FollowButton target="list" targetId={list.id} />
           ) : null}
         </Header>
-        <SpendingSummary list={list.id} />
+        {!list.ownerIds.some((id) =>
+          world.people.some((p) => p.id === id && p.userId === world.me.id),
+        ) && <SpendingSummary list={list.id} />}
         {list.archived && (
           <p className="notice">
             This list is archived. Existing purchase history is preserved.

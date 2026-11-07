@@ -36,36 +36,40 @@ export function AccountInvitations() {
       <h3>Pending invitations</h3>
       {pending.length ? (
         pending.map((invitation) => (
-          <div className="setting-row" key={invitation.id}>
+          <div className="invitation-row" key={invitation.id}>
             <div>
               <strong>{invitation.email}</strong>
               <p className="muted">
                 Expires {new Date(invitation.expiresAt).toLocaleDateString()}
               </p>
             </div>
-            <InvitationShare />
-            <button
-              className="button secondary small"
-              aria-label={`Cancel invitation to ${invitation.email}`}
-              onClick={() =>
-                open(
-                  "Cancel this invitation?",
-                  <Confirm
-                    label="Cancel invitation"
-                    onConfirm={async () => {
-                      await mutate("invitations/revoke", { id: invitation.id });
-                      toast("Invitation cancelled.");
-                    }}
-                  >
-                    This invitation will no longer let {invitation.email} create
-                    an account. If they already have an account, they can keep
-                    using it.
-                  </Confirm>,
-                )
-              }
-            >
-              Cancel invitation
-            </button>
+            <div className="invitation-actions">
+              <InvitationShare />
+              <button
+                className="button secondary small"
+                aria-label={`Cancel invitation to ${invitation.email}`}
+                onClick={() =>
+                  open(
+                    "Cancel this invitation?",
+                    <Confirm
+                      label="Cancel invitation"
+                      onConfirm={async () => {
+                        await mutate("invitations/revoke", {
+                          id: invitation.id,
+                        });
+                        toast("Invitation cancelled.");
+                      }}
+                    >
+                      This invitation will no longer let {invitation.email}{" "}
+                      create an account. If they already have an account, they
+                      can keep using it.
+                    </Confirm>,
+                  )
+                }
+              >
+                Cancel invitation
+              </button>
+            </div>
           </div>
         ))
       ) : (

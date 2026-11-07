@@ -90,6 +90,7 @@ describe("structured households", () => {
       a = f.household(),
       b = f.household();
     const child = command(f.s, f.actors[1], "people.create", {
+      managedGroupIds: [f.group.id, f.other.id],
       name: "Avery",
     }) as Person;
     f.set(f.people[1], [a], f.actors[1]);
@@ -150,9 +151,11 @@ describe("structured households", () => {
       a = f.household(),
       b = f.household("Other", f.other.id);
     const child = command(f.s, f.actors[1], "people.create", {
+      managedGroupIds: [f.group.id, f.other.id],
       name: "Avery",
     }) as Person;
     const sharedChild = command(f.s, f.actors[1], "people.create", {
+      managedGroupIds: [f.group.id, f.other.id],
       name: "Casey",
     }) as Person;
     sharedChild.guardians.push(f.actors[2].id);
@@ -176,6 +179,7 @@ describe("structured households", () => {
     const f = fixture(),
       a = f.household();
     const child = command(f.s, f.actors[1], "people.create", {
+      managedGroupIds: [f.group.id, f.other.id],
       name: "Avery",
     }) as Person;
     f.set(child, [a]);
@@ -210,6 +214,7 @@ describe("household exchange exclusions", () => {
     f.set(f.people[1], [a]);
     f.set(f.people[2], [b]);
     const child = command(f.s, f.actors[3], "people.create", {
+      managedGroupIds: [f.group.id],
       name: "Child",
     }) as Person;
     const e = f.exchange();

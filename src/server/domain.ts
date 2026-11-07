@@ -1,3 +1,6 @@
+import { takeOverProfile } from "./profile-takeover";
+import { memberInvitationsEnabled } from "./settings";
+import { selfRecipient, canShop } from "./domain-access";
 import {
   reservationNeedsReview,
   noteNeedsReview,
@@ -196,7 +199,7 @@ export function syncEventLists(s: State, event: GroupEvent) {
     }
   }
 }
-function reconcileEventParticipants(s: State) {
+export function reconcileEventParticipants(s: State) {
   for (const event of s.groupEvents) {
     const group = s.groups.find((g) => g.id === event.groupId)!;
     const eligible = new Set(peopleForGroup(s.people, group).map((p) => p.id));
@@ -211,7 +214,7 @@ function reconcileEventParticipants(s: State) {
   }
 }
 
-function reconcileHouseholds(s: State) {
+export function reconcileHouseholds(s: State) {
   const eligible = new Map(
     s.groups.map((g) => [
       g.id,
@@ -308,6 +311,7 @@ export function giftView(s: State, a: Actor, i: Item): GiftView {
     ),
     canEdit: canEdit(s, a, i),
     isRecipient: own,
+    canShop: canShop(s, a, i),
     mode: mode(s, i),
   };
   if (!i.listId && creatorId === a.id) view.spendingListId = spendingListId;
@@ -359,6 +363,31 @@ export function giftView(s: State, a: Actor, i: Item): GiftView {
           }
         : {}),
     }));
+  }
+  if (own && canShop(s, a, i) && view.mode === "surprise") {
+    const reservations = s.reservations.filter(
+      (r) => r.itemId === i.id && r.quantity > 0,
+    );
+    view.reserved = reservations.reduce((n, r) => n + r.quantity, 0);
+    view.available = Math.max(0, i.quantity - view.reserved);
+    view.reservations = reservations
+      .filter((r) => r.buyerId === a.id)
+      .map((r) => ({
+        id: r.id,
+        revision: r.revision,
+        buyerName: name(s, a.id),
+        mine: true,
+        quantity: r.quantity,
+        purchased: r.purchased,
+        reservedAt: r.createdAt,
+        purchasedAt: r.purchasedAt,
+        exchange: !!r.exchangeId,
+        needsPrivacyReview: reservationNeedsReview(s, r),
+      }));
+    view.purchased = view.reservations.reduce(
+      (n, r) => n + (r.purchased ?? 0),
+      0,
+    );
   }
   if (!own)
     view.comments = s.comments
@@ -496,18 +525,29 @@ export function world(
             : f.groupIds.filter((g) => groupAccess(s, a, g)),
         canManage: f.creatorId === a.id,
       })),
-    personRedirects: Object.fromEntries(
-      s.friendEntries
-        .filter(
-          (f) =>
-            f.connectedAt &&
-            (friendVisible(s, a, f) ||
-              s.items.some(
-                (i) => i.friendEntryId === f.id && i.creatorId === a.id,
-              )),
-        )
-        .map((f) => [f.originalPersonId, f.personId]),
-    ),
+    personRedirects: {
+      ...Object.fromEntries(
+        s.people
+          .filter(
+            (p) =>
+              p.mergedIntoId &&
+              people.some((target) => target.id === p.mergedIntoId),
+          )
+          .map((p) => [p.id, p.mergedIntoId!]),
+      ),
+      ...Object.fromEntries(
+        s.friendEntries
+          .filter(
+            (f) =>
+              f.connectedAt &&
+              (friendVisible(s, a, f) ||
+                s.items.some(
+                  (i) => i.friendEntryId === f.id && i.creatorId === a.id,
+                )),
+          )
+          .map((f) => [f.originalPersonId, f.personId]),
+      ),
+    },
     spendingAvailable: spendingAvailable(),
     spendingInvitation:
       spendingAvailable() &&
@@ -525,6 +565,32 @@ export function world(
       admin: isAdmin(s, a),
     },
     people,
+    profileTakeovers: s.links
+      .filter((l) => l.kind === "profile" && l.userId === a.id)
+      .filter(
+        (l, index, links) =>
+          !links.slice(index + 1).some((next) => next.targetId === l.targetId),
+      )
+      .map((l) => ({
+        id: l.id,
+        personId: l.targetId!,
+        name: s.people.find((p) => p.id === l.targetId)?.name ?? "Profile",
+        email: l.email!,
+        invitationId: l.invitationId,
+        status: l.cancelled
+          ? ("cancelled" as const)
+          : l.consumed
+            ? ("accepted" as const)
+            : Date.parse(l.expiresAt) <= Date.now()
+              ? ("expired" as const)
+              : ("pending" as const),
+      })),
+    memberInvitationsEnabled: memberInvitationsEnabled(s),
+    groupInviteRequests: s.groupInviteRequests.filter(
+      (r) =>
+        r.requestedBy === a.id ||
+        s.groups.some((g) => g.id === r.groupId && g.ownerId === a.id),
+    ),
     groups: s.groups.filter((g) => member(g, a)),
     households: s.households.filter((h) => groupAccess(s, a, h.groupId)),
     householdMemberships: s.householdMemberships.filter((m) =>
@@ -549,7 +615,12 @@ export function world(
           (normalizedEmail(i.email) === normalizedEmail(a.email) ||
             ((isAccountInvitation(i) || !!i.friendEntryId) &&
               i.invitedById === a.id) ||
-            !!s.groups.find((g) => g.id === i.groupId && g.ownerId === a.id)),
+            !!s.groups.find(
+              (g) =>
+                g.id === i.groupId &&
+                (g.ownerId === a.id ||
+                  (member(g, a) && i.invitedById === a.id)),
+            )),
       )
       .map((i) => ({
         ...i,
@@ -691,7 +762,12 @@ export function world(
       })),
   };
 }
-export function activateAccount(s: State, a: Actor, spendingDefault = false) {
+export function activateAccount(
+  s: State,
+  a: Actor,
+  spendingDefault = false,
+  requireName = false,
+) {
   let p = s.people.find((p) => p.userId === a.id);
   const grants = s.invitations.filter(
     (i) =>
@@ -707,6 +783,7 @@ export function activateAccount(s: State, a: Actor, spendingDefault = false) {
       userId: a.id,
       guardians: [],
       admin: !!grant.bootstrap,
+      nameSetupRequired: requireName,
     };
     s.people.push(p);
     s.giftPreferences.push(newPreference(p.id));
@@ -1066,6 +1143,70 @@ function commandCore(
         });
       return { id: event.id };
     }
+    case "groups.request-invitation": {
+      const p = z
+        .object({ groupId: id, email: z.string().trim().pipe(z.email()) })
+        .parse(b);
+      const group =
+        s.groups.find((g) => g.id === p.groupId && member(g, a)) ??
+        fail(404, "Family group not found.");
+      const email = normalizedEmail(p.email);
+      if (
+        s.groupInviteRequests.some(
+          (r) =>
+            r.groupId === group.id &&
+            r.email === email &&
+            r.status === "pending",
+        )
+      )
+        fail(409, "An invitation request is already pending for this email.");
+      const request = {
+        ...stamp(),
+        groupId: group.id,
+        email,
+        requestedBy: a.id,
+        status: "pending" as const,
+      };
+      s.groupInviteRequests.push(request);
+      emitActivity(s, "invitation", [group.ownerId], {
+        actorId: a.id,
+        action: "group-invitation-request",
+      });
+      return request;
+    }
+    case "groups.respond-invitation": {
+      const p = z
+        .object({ id, decision: z.enum(["approve", "decline", "withdraw"]) })
+        .parse(b);
+      const request =
+        s.groupInviteRequests.find(
+          (r) => r.id === p.id && r.status === "pending",
+        ) ?? fail(404, "Request is no longer pending.");
+      const group =
+        s.groups.find((g) => g.id === request.groupId) ??
+        fail(404, "Family group not found.");
+      if (p.decision === "withdraw") {
+        if (request.requestedBy !== a.id)
+          fail(403, "Only the requester can withdraw this request.");
+        request.status = "withdrawn";
+      } else {
+        ownedGroup(s, a, group.id);
+        if (!group.memberIds.includes(request.requestedBy))
+          fail(409, "The requester has left this family group.");
+        if (p.decision === "approve")
+          command(s, a, "groups.invite", {
+            groupId: group.id,
+            email: request.email,
+          });
+        request.status = p.decision === "approve" ? "approved" : "declined";
+        emitActivity(s, "invitation", [request.requestedBy], {
+          actorId: a.id,
+          action: "group-invitation-response",
+        });
+      }
+      touch(request);
+      return { ok: true };
+    }
     case "invitations.create":
     case "groups.invite": {
       const p: { email: string; groupId?: string } = (
@@ -1074,8 +1215,22 @@ function commandCore(
           : z.object({ email: z.string().trim().pipe(z.email()) }).strict()
       ).parse(b);
       const groupId = p.groupId;
-      if (groupId) ownedGroup(s, a, groupId);
-      else {
+      if (groupId) {
+        const group =
+          s.groups.find((g) => g.id === groupId && member(g, a)) ??
+          fail(404, "Family group not found.");
+        if (group.ownerId !== a.id && !memberInvitationsEnabled(s))
+          fail(403, "Ask the group owner to approve an invitation.");
+        if (
+          s.invitations.some(
+            (i) =>
+              i.groupId === groupId &&
+              i.email === normalizedEmail(p.email) &&
+              invitationIsPending(i),
+          )
+        )
+          fail(409, "An invitation is already pending for this email.");
+      } else {
         if (!s.people.some((person) => person.userId === a.id))
           fail(403, "Sign in to invite someone.");
         if (
@@ -1153,8 +1308,24 @@ function commandCore(
         if (inv.invitedById !== a.id) fail(404, "Invitation not found.");
         if (!invitationIsPending(inv))
           fail(409, "This invitation is no longer pending.");
-      } else ownedGroup(s, a, inv.groupId!);
+      } else {
+        const group =
+          s.groups.find((g) => g.id === inv.groupId && member(g, a)) ??
+          fail(404, "Invitation not found.");
+        if (group.ownerId !== a.id && inv.invitedById !== a.id)
+          fail(
+            403,
+            "Only the owner or authorized sender can cancel this invitation.",
+          );
+      }
       inv.revoked = true;
+      for (const link of s.links.filter(
+        (l) => l.kind === "profile" && l.invitationId === inv.id && !l.consumed,
+      )) {
+        link.consumed = true;
+        link.cancelled = true;
+        touch(link);
+      }
       touch(inv);
       return { ok: true };
     }
@@ -1200,7 +1371,12 @@ function commandCore(
       return { ok: true };
     }
     case "links.accept": {
-      const p = z.object({ id }).parse(b);
+      const p = z
+        .object({
+          id,
+          preferenceSource: z.enum(["account", "managed"]).default("account"),
+        })
+        .parse(b);
       const l =
         s.links.find(
           (l) =>
@@ -1230,9 +1406,12 @@ function commandCore(
               !p.userId &&
               p.guardians.includes(l.userId),
           ) ?? fail(404, "Profile not found.");
-        p.userId = a.id;
-        p.guardians = [];
-        touch(p);
+        takeOverProfile(
+          s,
+          a,
+          p,
+          b.preferenceSource === "managed" ? "managed" : "account",
+        );
       } else fail(400, "Use Telegram to link this account.");
       l.consumed = true;
       touch(l);
@@ -1241,20 +1420,64 @@ function commandCore(
       return { ok: true };
     }
     case "people.create": {
-      const p = z.object({ name: text }).parse(b);
+      const p = z
+        .object({ name: text, managedGroupIds: ids.default([]) })
+        .parse(b);
+      checkGroups(s, a, p.managedGroupIds);
       const person: Person = { ...stamp(), ...p, guardians: [a.id] };
       s.people.push(person);
       return person;
     }
     case "people.update": {
-      const p = z.object({ id, revision, name: text }).parse(b);
+      const p = z
+        .object({ id, revision, name: text, managedGroupIds: ids.optional() })
+        .parse(b);
       const person =
         s.people.find((q) => q.id === p.id && controls(s, a, q.id)) ??
         fail(404, "Profile not found.");
       checkRevision(person, p.revision);
       person.name = p.name;
+      if (!person.userId && p.managedGroupIds) {
+        checkGroups(s, a, p.managedGroupIds);
+        person.managedGroupIds = [
+          ...new Set([
+            ...(person.managedGroupIds ?? []).filter(
+              (id) =>
+                !groupAccess(s, a, id) &&
+                s.groups.some(
+                  (g) =>
+                    g.id === id &&
+                    person.guardians.some((u) => g.memberIds.includes(u)),
+                ),
+            ),
+            ...p.managedGroupIds,
+          ]),
+        ];
+        reconcileEventParticipants(s);
+        reconcileHouseholds(s);
+      }
       touch(person);
       return person;
+    }
+    case "people.cancel-link": {
+      const { id: linkId } = z.object({ id }).parse(b);
+      const link =
+        s.links.find(
+          (l) =>
+            l.id === linkId &&
+            l.kind === "profile" &&
+            l.userId === a.id &&
+            !l.consumed,
+        ) ?? fail(404, "Takeover request not found.");
+      link.consumed = true;
+      link.cancelled = true;
+      touch(link);
+      const invitation = s.invitations.find((i) => i.id === link.invitationId);
+      if (invitation && !invitation.acceptedBy) {
+        invitation.revoked = true;
+        touch(invitation);
+      }
+      return { ok: true };
     }
     case "people.link": {
       const p = z.object({ id, email: z.email() }).parse(b);
@@ -1262,9 +1485,42 @@ function commandCore(
         s.people.find(
           (q) => q.id === p.id && !q.userId && q.guardians.includes(a.id),
         ) ?? fail(404, "Managed profile not found.");
+      for (const link of s.links.filter(
+        (l) => l.kind === "profile" && l.targetId === person.id && !l.consumed,
+      )) {
+        link.consumed = true;
+        link.cancelled = true;
+        touch(link);
+        const oldInvitation = s.invitations.find(
+          (i) => i.id === link.invitationId,
+        );
+        if (oldInvitation && !oldInvitation.acceptedBy) {
+          oldInvitation.revoked = true;
+          touch(oldInvitation);
+        }
+      }
+      // Each takeover owns its signup grant. Cancelling it must not revoke a
+      // separate account invitation or another profile's takeover invitation.
+      const invitation: State["invitations"][number] = {
+        ...stamp(),
+        email: normalizedEmail(p.email),
+        invitedById: a.id,
+        expiresAt: new Date(Date.now() + 7 * 86400000).toISOString(),
+      };
+      s.invitations.push(invitation);
+      s.notices.push({
+        ...stamp(),
+        userId: `invitation:${invitation.id}`,
+        event: "invitation",
+        invitationId: invitation.id,
+        status: "pending",
+        attempts: 0,
+        delivered: [],
+      });
       s.links.push({
         ...stamp(),
         kind: "profile",
+        invitationId: invitation.id,
         userId: a.id,
         targetId: person.id,
         email: normalizedEmail(p.email),
@@ -1314,7 +1570,7 @@ function commandCore(
         const context = friendContext(s, a, recipients[0], p.friendEntryId);
         p.friendEntryId = context?.id;
         checkFriendAudience(s, a, context, p.visibility, p.groupIds);
-        if (recipients.some((id) => controls(s, a, id)))
+        if (selfRecipient(s, a, recipients))
           fail(400, "Add items for yourself to a wish list.");
         checkGroups(s, a, p.groupIds);
         if (p.visibility !== "private" && !p.groupIds.length)
@@ -1821,7 +2077,8 @@ function commandCore(
       if (j.draft!.kind === "idea") {
         const recipientId = p.recipientId ?? j.draft!.recipientId!;
         checkRecipients(s, a, [recipientId]);
-        if (controls(s, a, recipientId)) fail(400, "Choose another recipient.");
+        if (selfRecipient(s, a, [recipientId]))
+          fail(400, "Choose another recipient.");
         checkGroups(s, a, p.groupIds ?? j.draft!.groupIds ?? []);
         const context = friendContext(
           s,
@@ -1914,7 +2171,7 @@ function commandCore(
           p.draft.visibility ?? "private",
           p.draft.groupIds ?? [],
         );
-        if (controls(s, a, p.draft.recipientId))
+        if (selfRecipient(s, a, [p.draft.recipientId]))
           fail(400, "Choose another recipient.");
         checkGroups(s, a, p.draft.groupIds ?? []);
         if (p.draft.spendingListId)
