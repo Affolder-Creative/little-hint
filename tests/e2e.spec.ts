@@ -408,20 +408,22 @@ test("invitation verification, explicit profile linking, joint ownership, and ow
   });
   await post(op, "people/link", { id: managed.id, email });
   gw = await (await gp.request.get("/api/v1/world")).json();
-  expect(
-    gw.people.find((p: any) => p.id === managed.id).userId,
-  ).toBeUndefined();
+  expect(gw.links.find((l: any) => l.kind === "profile").targetName).toBe(
+    "Managed recipient",
+  );
   await post(gp, "links/accept", {
     id: gw.links.find((l: any) => l.kind === "profile").id,
   });
   gw = await (await gp.request.get("/api/v1/world")).json();
-  expect(gw.people.find((p: any) => p.id === managed.id).userId).toBe(gw.me.id);
+  const canonical = gw.people.find((p: any) => p.userId === gw.me.id);
+  expect(gw.people.filter((p: any) => p.userId === gw.me.id)).toHaveLength(1);
+  expect(gw.personRedirects[managed.id]).toBe(canonical.id);
   const ow = await (await op.request.get("/api/v1/world")).json();
   const list = await post(op, "lists", {
     name: "A joint wish list",
     ownerIds: [
       ow.people.find((p: any) => p.userId === ow.me.id).id,
-      managed.id,
+      canonical.id,
     ],
     groupIds: [],
     mode: "surprise",

@@ -262,7 +262,13 @@ describe("event lists and permissions", () => {
         itemId: gift.id,
         body: "Hidden planning",
       });
-      expect(giftView(f.state, f.actors[2], stored)).toEqual(before);
+      const after = giftView(f.state, f.actors[2], stored);
+      if (before.canShop) {
+        expect(after.available).toBe(0);
+        expect(after.reservations).toEqual([]);
+        expect(after.purchased).toBe(0);
+        expect(after.comments).toBeUndefined();
+      } else expect(after).toEqual(before);
       expect(JSON.stringify(world(f.state, f.actors[2]))).not.toContain(
         "Hidden planning",
       );
@@ -344,9 +350,8 @@ describe("event lists and permissions", () => {
           "List not found",
         );
       const stored = f.state.items.find((item) => item.id === gift.id)!;
-      expect(
-        giftView(f.state, f.actors[2], stored).reservations,
-      ).toBeUndefined();
+      const view = giftView(f.state, f.actors[2], stored);
+      expect(view.reservations).toEqual(view.canShop ? [] : undefined);
     }
   });
   it("rejects stale event and leadership edits and creates no duplicate lists on retry", () => {
@@ -509,7 +514,7 @@ describe("event lifecycle", () => {
     expect(event.participantIds).not.toContain(f.child.id);
     expect(
       world(f.state, f.actors[4]).lists.find((list) =>
-        list.ownerIds.includes(f.child.id),
+        list.ownerIds.includes(f.people[4].id),
       )?.archived,
     ).toBe(true);
     expect(f.lists(event)).toHaveLength(2);

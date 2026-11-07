@@ -57,9 +57,11 @@ export function InvitationShare({ invitationId }: { invitationId?: string }) {
 export function InviteDialog({
   groupId,
   explanation,
+  initialEmail,
 }: {
   groupId?: string;
   explanation?: string;
+  initialEmail?: string;
 }) {
   const { mutate, close } = useApp();
   const [created, setCreated] = useState<{ id: string; email: string } | null>(
@@ -92,7 +94,13 @@ export function InviteDialog({
       }}
     >
       <Field label="Email address">
-        <input type="email" name="email" autoComplete="email" required />
+        <input
+          type="email"
+          name="email"
+          autoComplete="email"
+          defaultValue={initialEmail}
+          required
+        />
       </Field>
       {explanation && <p>{explanation}</p>}
       <p>The invitation is tied to this address and expires in seven days.</p>

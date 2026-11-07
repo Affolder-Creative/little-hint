@@ -8,10 +8,15 @@ export function canManageGroupEvents(group: Group, userId: string): boolean {
 }
 
 export function peopleForGroup(people: Person[], group: Group): Person[] {
-  return people.filter((person) =>
-    [person.userId, ...person.guardians].some(
-      (userId) => !!userId && group.memberIds.includes(userId),
-    ),
+  return people.filter(
+    (person) =>
+      !person.mergedIntoId &&
+      (person.userId ||
+        person.managedGroupIds === undefined ||
+        person.managedGroupIds.includes(group.id)) &&
+      [person.userId, ...person.guardians].some(
+        (userId) => !!userId && group.memberIds.includes(userId),
+      ),
   );
 }
 

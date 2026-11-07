@@ -118,6 +118,31 @@ export function AdminPreferences({ settings }: { settings: Setting[] }) {
   return (
     <>
       <PreferenceGroup
+        settings={settings.filter((s) => s.key === "FAMILY_GROUP_INVITATIONS")}
+        title="Family-group invitations"
+        submit="Save invitation setting"
+      >
+        {(value, change) => (
+          <>
+            <Field label="Who can invite family-group members?">
+              <select
+                value={value("FAMILY_GROUP_INVITATIONS")}
+                onChange={(e) =>
+                  change("FAMILY_GROUP_INVITATIONS", e.target.value)
+                }
+              >
+                <option value="owners">Group owners only</option>
+                <option value="members">All group members</option>
+              </select>
+            </Field>
+            <p>
+              When invitations are restricted, members can ask the owner to send
+              one. This does not change who can create groups.
+            </p>
+          </>
+        )}
+      </PreferenceGroup>
+      <PreferenceGroup
         settings={settings.filter((s) => s.key === "SPENDING_DEFAULT_ENABLED")}
         title="Spending"
         submit="Save spending default"

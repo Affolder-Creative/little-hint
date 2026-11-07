@@ -393,6 +393,18 @@ requests show the email, expiry, share-link control, and cancellation action.
 Archive and restore use the existing confirmation dialog; restoration copy says
 that the entry starts private.
 
+### Profiles and invitation rows
+
+Profile settings keep the avatar fixed, the name and account status together, and related actions in one wrapping group. On screens up to 650px, actions move beneath the name. Family-group member actions follow the same pattern. Removal uses the person-minus icon with a visible Remove label; its confirmation distinguishes group access from account deletion.
+
+Invitation rows place email, status, and expiration together, followed by Share sign-in link and Cancel invitation in a separate action group. Use a flexible text column and an intrinsic action column on wider screens. At 650px and below, the action group moves below the details, with controls sharing available width or stacking at their normal word boundaries. Emails may wrap anywhere; button labels must not break letter by letter. Rows use 20px vertical padding and a 16px gap; action groups use a 12px gap.
+
+The profile editor uses one action row per tab, with the primary Save action first and outlined Done immediately after it. Keep both drafts mounted, retain independent save states, and protect unsaved changes when dismissing either tab.
+
+Managed-profile sharing reuses a labeled checkbox, searchable group checkboxes, and existing form spacing. Explain profile discovery, event eligibility, and new-list defaults beside the control. Existing list audiences and private gift ideas require their own explicit sharing actions.
+
+First-sign-in name setup uses the approved logo, one heading, given-name and family-name fields, and one primary continue action. Its content is capped at 440px with 20px side insets. The administrator directory uses the same divided rows and grouped actions; account deletion opens a separate review with responsibilities, data choices, and exact typed confirmation.
+
 ### Administration
 
 The new-account spending default reuses the existing checkbox and independent

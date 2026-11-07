@@ -135,7 +135,7 @@ describe("settings read and decryption reuse", () => {
       createdAt: "",
     });
     expect((await config()).SMTP_HOST).toBe("");
-    expect(await settingsSummary()).toHaveLength(5);
+    expect(await settingsSummary()).toHaveLength(6);
     expect(createDecipheriv).not.toHaveBeenCalled();
     expect(readSettings).toHaveBeenCalledTimes(1);
   });

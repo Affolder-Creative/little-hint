@@ -44,6 +44,9 @@ export interface TrashEntry extends Base {
   deletedAt: string;
 }
 export interface Person extends Base {
+  managedGroupIds?: string[];
+  nameSetupRequired?: boolean;
+  mergedIntoId?: string;
   name: string;
   userId?: string;
   guardians: string[];
@@ -71,6 +74,12 @@ export interface Household extends Base {
 export interface HouseholdMembership extends Base {
   householdId: string;
   personId: string;
+}
+export interface GroupInviteRequest extends Base {
+  groupId: string;
+  requestedBy: string;
+  email: string;
+  status: "pending" | "approved" | "declined" | "withdrawn";
 }
 export interface Invitation extends Base {
   friendEntryId?: string;
@@ -428,6 +437,8 @@ export interface Setting extends Base {
   encrypted: string;
 }
 export interface Link extends Base {
+  invitationId?: string;
+  cancelled?: boolean;
   requestedBy?: string;
   userId: string;
   kind: "telegram" | "profile" | "ownership" | "guardian" | "admin";
@@ -527,6 +538,7 @@ export interface Records {
   householdMemberships: HouseholdMembership;
   groupEvents: GroupEvent;
   invitations: Invitation;
+  groupInviteRequests: GroupInviteRequest;
   lists: List;
   items: Item;
   reservations: Reservation;
@@ -572,6 +584,7 @@ export const kinds: Kind[] = [
   "householdMemberships",
   "groupEvents",
   "invitations",
+  "groupInviteRequests",
   "lists",
   "items",
   "reservations",
@@ -605,6 +618,7 @@ export interface GiftView extends Omit<Item, "creatorId"> {
   creatorName?: string;
   canEdit: boolean;
   isRecipient: boolean;
+  canShop?: boolean;
   mode: Mode;
   available?: number;
   reserved?: number;
@@ -652,6 +666,16 @@ export interface World {
   telegram?: { available: boolean };
   sms?: import("./sms").SmsInfo;
   canCreateGroups?: boolean;
+  memberInvitationsEnabled?: boolean;
+  groupInviteRequests?: GroupInviteRequest[];
+  profileTakeovers?: Array<{
+    id: string;
+    personId: string;
+    name: string;
+    email: string;
+    invitationId?: string;
+    status: "pending" | "accepted" | "cancelled" | "expired";
+  }>;
   giftPreferences?: GiftPreferenceView[];
   giftDiscovery?: DiscoveryConfig;
   organization?: Organization[];

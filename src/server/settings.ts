@@ -94,6 +94,7 @@ export const imageSettingKeys = [
 export const spendingDefaultKey = "SPENDING_DEFAULT_ENABLED";
 export const applicationSettingKeys = [
   spendingDefaultKey,
+  "FAMILY_GROUP_INVITATIONS",
   productPhotoSettingKey,
   familyGroupCreationKey,
   ...imageSettingKeys,
@@ -183,6 +184,13 @@ export function spendingDefaultForState(s: State) {
 export async function settingsSummary() {
   const values = settingsValues(await readSettings());
   return [
+    {
+      key: "FAMILY_GROUP_INVITATIONS",
+      configured: values.has("FAMILY_GROUP_INVITATIONS"),
+      source: values.has("FAMILY_GROUP_INVITATIONS") ? "settings" : "default",
+      default: "owners",
+      value: values.get("FAMILY_GROUP_INVITATIONS") ?? "owners",
+    },
     spendingDefaultSetting(values),
     photoSetting(values),
     groupCreationSetting(values),
@@ -194,6 +202,11 @@ function validateSetting(k: string, value: string) {
     if (settingKeys.includes(k as SettingKey))
       fail(409, "This value is set on the server. Change it there instead.");
     fail(400, "Unknown setting.");
+  }
+  if (k === "FAMILY_GROUP_INVITATIONS") {
+    if (!["owners", "members"].includes(value))
+      fail(400, "Choose owners or all members.");
+    return;
   }
   if (k === spendingDefaultKey) {
     if (value !== "true" && value !== "false")
@@ -292,4 +305,10 @@ export async function spend(
     row.revision++;
   });
   return startedAt;
+}
+
+export function memberInvitationsEnabled(s: State) {
+  return (
+    settingsValues(s.settings).get("FAMILY_GROUP_INVITATIONS") === "members"
+  );
 }

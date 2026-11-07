@@ -1,3 +1,4 @@
+import { canShop } from "./domain-access";
 import { resolveShoppingContext } from "./shopping-context";
 import { z } from "zod";
 import type { State, Actor, Reservation, Exchange } from "../shared/model";
@@ -49,7 +50,7 @@ export function buyingCommand(
         })
         .parse(b);
       const i = getItem(s, a, p.itemId);
-      if (recipient(s, a, i))
+      if (!canShop(s, a, i))
         fail(403, "You cannot reserve a gift for yourself.");
       if (archived(s, i)) fail(409, "This gift is archived.");
       resolveShoppingContext(s, a, i, p);
@@ -135,10 +136,7 @@ export function buyingCommand(
           "Make a new reservation to buy more. The quantity purchased cannot be higher than the quantity reserved.",
         );
       const i = s.items.find((i) => i.id === r.itemId);
-      if (
-        p.purchased > r.purchased &&
-        (!i || !itemVisible(s, a, i) || recipient(s, a, i))
-      )
+      if (p.purchased > r.purchased && (!i || !canShop(s, a, i)))
         fail(403, "This gift is no longer available for new purchases.");
       if (
         p.poolTargetCents &&

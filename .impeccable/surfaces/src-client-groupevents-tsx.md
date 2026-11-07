@@ -22,3 +22,6 @@ related_targets: ["src/client/ListPolicyFields.tsx", "src/client/ListIndex.tsx",
 
 - Event-created lists lead with recipient identity, with primary actions beside the title, followed by calendar/event name, description, a shared privacy/management row, and compact management guidance. Event pages keep the event name as their heading and use a single Event actions menu.
 - Event index rows separate outlined participant-list destinations from header-level event management. Person-page list navigation uses divided rows. Gift-idea creation and browsing share a distinct supporting section below the item collection.
+
+
+Managed people appear in event selectors only when explicitly shared with that group and backed by a manager who belongs to it. Selection creates their normal event wishlist. Removing profile sharing reconciles event eligibility and archives the removed participant's list; choosing them again restores the same list. Own-recipient event lists omit Your spending.

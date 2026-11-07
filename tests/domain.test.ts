@@ -124,7 +124,7 @@ describe("surprise privacy", () => {
       f.s.items.filter((i) => itemVisible(f.s, f.actors[0], i)),
     ).toHaveLength(2);
   });
-  it("applies the same recipient policy to guardians and joint owners", () => {
+  it("shows guardians availability while protecting actual joint recipients", () => {
     const f = fixture();
     const child = {
       ...stamp(),
@@ -134,8 +134,11 @@ describe("surprise privacy", () => {
     f.s.people.push(child as any);
     f.item.recipientIds = [child.id, f.people[2].id];
     reserve(f);
-    for (const a of [f.actors[0], f.actors[2]])
-      expect(giftView(f.s, a, f.item)).not.toHaveProperty("available");
+    expect(giftView(f.s, f.actors[2], f.item)).not.toHaveProperty("available");
+    const guardian = giftView(f.s, f.actors[0], f.item);
+    expect(guardian.available).toBe(1);
+    expect(guardian.reservations).toEqual([]);
+    expect(guardian.comments).toBeUndefined();
   });
   it("keeps privacy mode locked after unsharing", () => {
     const f = fixture();

@@ -64,9 +64,7 @@ describe("critical workflow transitions", () => {
       acceptHandoff(f.state, nextGuardian, f.state.links.at(-1)!.id);
       if (closePrior) closeAccountData(f.state, prior);
       expect(child.guardians).toEqual([nextGuardian.id]);
-      expect(
-        giftView(f.state, nextGuardian, item).reservations,
-      ).toBeUndefined();
+      expect(giftView(f.state, nextGuardian, item).reservations).toEqual([]);
       expect(spendingView(f.state, nextGuardian).records).toEqual([]);
       const exported = accountExport(f.state, nextGuardian);
       expect(exported.profiles).toContainEqual(

@@ -4508,3 +4508,105 @@ a.button:is(:hover, :focus, :active),
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Identity and invitation controls wrap as groups, never squeezed columns. */
+.settings-content .profile-setting-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+}
+.profile-setting-actions,
+.invitation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 12px;
+}
+.profile-setting-actions > *,
+.invitation-actions > * {
+  flex: 0 1 auto;
+}
+.profile-setting-actions button,
+.invitation-actions button {
+  overflow-wrap: normal;
+  word-break: normal;
+}
+.invitation-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 16px;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--border);
+}
+.invitation-row > div {
+  min-width: 0;
+}
+.invitation-row p,
+.invitation-info,
+.invitation-row strong {
+  overflow-wrap: anywhere;
+}
+.invitation-actions .invitation-share {
+  min-width: 0;
+}
+.profile-editor .form-actions {
+  justify-content: flex-start;
+}
+@media (max-width: 650px) {
+  .settings-content .profile-setting-row {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .profile-setting-row .profile-setting-actions {
+    grid-column: 2;
+  }
+  .invitation-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .invitation-actions {
+    width: 100%;
+  }
+  .invitation-actions > * {
+    flex: 1 1 150px;
+  }
+  .invitation-actions button {
+    width: 100%;
+  }
+  .profile-editor .form-actions > button {
+    flex: 0 1 auto;
+    width: auto;
+  }
+}
+
+.name-setup {
+  width: min(100% - 40px, 440px);
+  margin: 48px auto;
+}
+.name-setup img {
+  max-width: 240px;
+}
+.managed-list-choices {
+  display: grid;
+  gap: 12px;
+}
+
+.member-list > div {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+}
+.member-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+@media (max-width: 650px) {
+  .member-list > div {
+    grid-template-columns: auto minmax(0, 1fr);
+    padding: 12px 0;
+  }
+  .member-actions {
+    grid-column: 2;
+  }
+}

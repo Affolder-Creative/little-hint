@@ -1,3 +1,6 @@
+import { ProfileTakeovers } from "./ProfileTakeovers";
+import { GroupInvitationRequests } from "./GroupInvitationRequests";
+import { AdminProfiles } from "./AdminProfiles";
 import { SpendingSettingsPanel } from "./Spending";
 import type { AdminJobs } from "../shared/admin-jobs";
 import { AdminJobFailures } from "./AdminJobFailures";
@@ -35,6 +38,7 @@ import {
   LogOut,
   KeyRound,
   Trash2,
+  UserRoundMinus,
   Mail,
 } from "lucide-react";
 import type { World } from "../shared/model";
@@ -154,54 +158,56 @@ export default function SettingsPage({
                   <p>{p.userId ? "Your account" : "Managed profile"}</p>
                   <GiftPreferencesShortcut personId={p.id} name={p.name} />
                 </div>
-                <button
-                  className="button secondary"
-                  aria-label={`Edit profile for ${p.name}`}
-                  onClick={() =>
-                    open("Edit profile", <ProfileEditor personId={p.id} />)
-                  }
-                >
-                  Edit profile
-                </button>
-                {!p.userId && (
+                <div className="profile-setting-actions">
                   <button
-                    className="text-button"
+                    className="button secondary"
+                    aria-label={`Edit profile for ${p.name}`}
                     onClick={() =>
-                      open(
-                        "Let them manage their profile",
-                        <Form
-                          submit="Invite to take over"
-                          onSubmit={async (f) => {
-                            await mutate("people/link", {
-                              id: p.id,
-                              email: value(f, "email"),
-                            });
-                            close();
-                            toast(
-                              "Invitation ready. They can accept it in Settings after signing in.",
-                            );
-                          }}
-                        >
-                          <Field label="Email they use to sign in">
-                            <input type="email" name="email" required />
-                          </Field>
-                          <p>
-                            They must verify this email and accept in Settings.
-                            You will stop managing their profile when they
-                            accept. Invite them to the family group separately
-                            if needed.
-                          </p>
-                        </Form>,
-                      )
+                      open("Edit profile", <ProfileEditor personId={p.id} />)
                     }
                   >
-                    Invite to take over
+                    Edit profile
                   </button>
-                )}
+                  {!p.userId && (
+                    <button
+                      className="text-button"
+                      onClick={() =>
+                        open(
+                          "Let them manage their profile",
+                          <Form
+                            submit="Invite to take over"
+                            onSubmit={async (f) => {
+                              await mutate("people/link", {
+                                id: p.id,
+                                email: value(f, "email"),
+                              });
+                              close();
+                              toast(
+                                "Invitation ready. They can accept it in Settings after signing in.",
+                              );
+                            }}
+                          >
+                            <Field label="Email they use to sign in">
+                              <input type="email" name="email" required />
+                            </Field>
+                            <p>
+                              They must verify this email and accept in
+                              Settings. You will stop managing their profile
+                              when they accept. Invite them to the family group
+                              separately if needed.
+                            </p>
+                          </Form>,
+                        )
+                      }
+                    >
+                      Invite to take over
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
             {world.links
-              .filter((l) => l.kind === "profile")
+              .filter((l) => l.kind === "profile" && l.email === world.me.email)
               .map((l) => (
                 <div className="notice" key={l.id}>
                   <p>
@@ -215,14 +221,38 @@ export default function SettingsPage({
                     {new Date(l.expiresAt).toLocaleDateString()}.
                   </p>
                   {l.email === world.me.email && (
-                    <Action
-                      onClick={() => mutate("links/accept", { id: l.id })}
+                    <Form
+                      submit="Accept and take over"
+                      onSubmit={async (data) => {
+                        await mutate("links/accept", {
+                          id: l.id,
+                          preferenceSource: data.get("preferenceSource"),
+                        });
+                        toast(
+                          "Profile taken over. Family-group invitations are separate.",
+                        );
+                      }}
                     >
-                      Accept request
-                    </Action>
+                      <p>
+                        Your account name stays unchanged. Existing wish lists
+                        and gift history move to your account. The current
+                        guardian will stop managing this profile.
+                      </p>
+                      <Field label="Gift preferences to keep if both profiles have details">
+                        <select name="preferenceSource" defaultValue="account">
+                          <option value="account">
+                            My account's preferences
+                          </option>
+                          <option value="managed">
+                            The managed profile's preferences
+                          </option>
+                        </select>
+                      </Field>
+                    </Form>
                   )}
                 </div>
               ))}
+            <ProfileTakeovers />
             <Field label="Appearance">
               <select value={theme} onChange={(e) => setTheme(e.target.value)}>
                 <option value="system">Follow this device</option>
@@ -287,7 +317,7 @@ export default function SettingsPage({
                     <Action
                       onClick={() => mutate("links/accept", { id: l.id })}
                     >
-                      Accept request
+                      Accept ownership
                     </Action>
                   )}
                 </div>
@@ -365,6 +395,7 @@ export default function SettingsPage({
                   <p className="muted">
                     Members can access lists shared with this family group.
                   </p>
+                  <GroupInvitationRequests group={g} />
                   <div className="member-list">
                     {g.memberIds.map((uid) => {
                       const person = world.people.find((p) => p.userId === uid);
@@ -380,7 +411,7 @@ export default function SettingsPage({
                                 : ""}
                           </span>
                           {g.ownerId === world.me.id && uid !== world.me.id && (
-                            <>
+                            <div className="member-actions">
                               <button
                                 className="text-button"
                                 aria-label={`Transfer ownership to ${person?.name ?? "member"}`}
@@ -423,8 +454,8 @@ export default function SettingsPage({
                                 Transfer ownership
                               </button>
                               <button
-                                className="icon-button"
-                                aria-label={`Remove ${person?.name ?? "member"}`}
+                                className="button secondary small"
+                                aria-label={`Remove ${person?.name ?? "member"} from family group`}
                                 onClick={() =>
                                   open(
                                     "Remove this member?",
@@ -437,17 +468,19 @@ export default function SettingsPage({
                                         })
                                       }
                                     >
-                                      They will lose access through this family
-                                      group. If they can no longer see an item,
-                                      any unpurchased quantity they reserved
-                                      will become available to others.
+                                      Their account will remain. They will lose
+                                      access through this family group. If they
+                                      can no longer see an item, any unpurchased
+                                      quantity they reserved will become
+                                      available to others.
                                     </Confirm>,
                                   )
                                 }
                               >
-                                <Trash2 size={15} />
+                                <UserRoundMinus size={16} aria-hidden="true" />
+                                Remove
                               </button>
-                            </>
+                            </div>
                           )}
                         </div>
                       );
@@ -470,17 +503,21 @@ export default function SettingsPage({
                       {world.invitations
                         .filter((i) => i.groupId === g.id)
                         .map((i) => (
-                          <div className="setting-row" key={i.id}>
-                            <span>{i.email} · Pending</span>
-                            <InvitationShare invitationId={i.id} />
-                            <Action
-                              secondary
-                              onClick={() =>
-                                mutate("invitations/revoke", { id: i.id })
-                              }
-                            >
-                              Cancel invitation
-                            </Action>
+                          <div className="invitation-row" key={i.id}>
+                            <div className="invitation-info">
+                              {i.email} · Pending
+                            </div>
+                            <div className="invitation-actions">
+                              <InvitationShare invitationId={i.id} />
+                              <Action
+                                secondary
+                                onClick={() =>
+                                  mutate("invitations/revoke", { id: i.id })
+                                }
+                              >
+                                Cancel invitation
+                              </Action>
+                            </div>
                           </div>
                         ))}
                     </>
@@ -1176,6 +1213,7 @@ function Admin() {
   return (
     <section className="settings-section admin-page">
       <h2>Administration</h2>
+      <AdminProfiles />
       <section className="admin-panel" aria-label="App settings">
         <h3>App settings</h3>
         <p className="muted">

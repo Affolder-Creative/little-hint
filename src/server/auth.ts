@@ -71,6 +71,7 @@ export function makeAuth() {
                 s,
                 { id: u.id, email: u.email, name: u.name },
                 spendingDefaultForState(s),
+                true,
               ),
             );
             return { data: session };

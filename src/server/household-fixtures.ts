@@ -26,6 +26,7 @@ export function addHouseholdScenario(s: State, actors: Actor[]) {
   const people = members.map((a) => s.people.find((p) => p.userId === a!.id)!);
   const child = command(s, sam, "people.create", {
     name: "Avery Smith (synthetic)",
+    managedGroupIds: [group.id, other.id],
   }) as Person;
   const homes = ["The Smiths", "The Smiths", "Weekend home"].map(
     (name) =>

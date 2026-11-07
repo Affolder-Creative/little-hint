@@ -1,3 +1,4 @@
+import { canShop } from "./domain-access";
 import { z } from "zod";
 import type { Actor, State, Reservation } from "../shared/model";
 import { ordered } from "../shared/organization";
@@ -92,7 +93,7 @@ export async function itemPage(
     if (r.quantity > 0)
       quantities.set(r.itemId, (quantities.get(r.itemId) ?? 0) + r.quantity);
   const availability = (i: State["items"][number]) =>
-    !recipient(s, a, i) || mode(s, i) === "transparent"
+    canShop(s, a, i) || mode(s, i) === "transparent"
       ? Math.max(0, i.quantity - (quantities.get(i.id) ?? 0))
       : undefined;
   const names = new Map(s.people.map((p) => [p.id, p.name]));
@@ -255,7 +256,7 @@ export function registerCollections(
     const gifts = s.items.filter(
       (i) =>
         itemVisible(s, a, i) &&
-        !recipient(s, a, i) &&
+        canShop(s, a, i) &&
         !archived(s, i) &&
         `${i.title} ${i.recipientIds.map((id) => s.people.find((p) => p.id === id)?.name).join(" ")} ${s.lists.find((l) => l.id === i.listId)?.name ?? ""}`
           .toLowerCase()

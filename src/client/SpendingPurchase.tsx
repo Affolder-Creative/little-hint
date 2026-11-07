@@ -168,7 +168,7 @@ export function PurchaseForm({
         ].some((rule) => c.rules[world.me.id]?.includes(rule)));
   const matches = world.items.filter(
     (gift) =>
-      !gift.isRecipient &&
+      (gift.canShop ?? !gift.isRecipient) &&
       !gift.archived &&
       !gift.deletedAt &&
       (!gift.listId ||

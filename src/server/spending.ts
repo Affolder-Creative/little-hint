@@ -1,3 +1,4 @@
+import { canShop } from "./domain-access";
 import { protectedSpending } from "./spending-privacy";
 import { createHash } from "node:crypto";
 import { spendingAvailable } from "./deployment";
@@ -704,7 +705,7 @@ export function spendingCommand(
       ? s.items.find((i) => i.id === p.itemId && itemVisible(s, a, i))
       : undefined;
     if (p.itemId) {
-      if (!sourceItem || recipient(s, a, sourceItem))
+      if (!sourceItem || !canShop(s, a, sourceItem))
         fail(404, "This gift is not available for purchase.");
       revision(sourceItem, { revision: p.itemRevision });
       if (
@@ -804,7 +805,7 @@ export function spendingCommand(
     }
     if (reservation) {
       const item = s.items.find((i) => i.id === reservation.itemId);
-      if (!item || !itemVisible(s, a, item) || recipient(s, a, item))
+      if (!item || !itemVisible(s, a, item) || !canShop(s, a, item))
         fail(403, "This gift is not available for purchase.");
       // The delegated operation retains source authorization; only buyer identity changes for this command.
       command(s, { ...a, id: reservation.buyerId }, "reservations.update", {

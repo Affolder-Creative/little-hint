@@ -15,7 +15,7 @@ import {
   type Setting,
   type ImportJob,
 } from "../shared/model";
-const supportedSchemaVersion = 6;
+const supportedSchemaVersion = 7;
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   max: 10,
@@ -188,6 +188,18 @@ INSERT INTO schema_migration(version) VALUES (2);`);
     await client.query(
       "INSERT INTO schema_migration(version) VALUES (6) ON CONFLICT DO NOTHING",
     );
+    await client.query(
+      "CREATE TABLE IF NOT EXISTS admin_account_audit (id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY, actor_hash text NOT NULL, target_hash text NOT NULL, action text NOT NULL, created_at timestamptz NOT NULL DEFAULT now())",
+    );
+    const profileMigration = await client.query(
+      "SELECT 1 FROM schema_migration WHERE version=7",
+    );
+    if (!profileMigration.rowCount) {
+      await client.query(
+        `UPDATE app_record p SET data = jsonb_set(p.data, '{managedGroupIds}', COALESCE((SELECT jsonb_agg(g.id) FROM app_record g WHERE g.kind='groups' AND EXISTS (SELECT 1 FROM jsonb_array_elements_text(p.data->'guardians') guardian WHERE g.data->'memberIds' ? guardian)), '[]'::jsonb)) WHERE p.kind='people' AND p.data->>'userId' IS NULL AND NOT (p.data ? 'managedGroupIds')`,
+      );
+      await client.query("INSERT INTO schema_migration(version) VALUES (7)");
+    }
     await client.query("COMMIT");
   } catch (e) {
     await client.query("ROLLBACK");
