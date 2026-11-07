@@ -155,6 +155,7 @@ try {
     ...(suite === "polish"
       ? [
           "tests/settings-polish.spec.ts",
+          "tests/managed-profiles.spec.ts",
           "tests/account-export.spec.ts",
           "tests/ui-refinements.spec.ts",
         ]

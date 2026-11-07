@@ -1,8 +1,8 @@
 import { priceConfig } from "./price-config";
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
-import { readSettings, transact } from "./db";
 import type { Setting, State, Actor } from "../shared/model";
-import { stamp, fail, isAdmin } from "./domain";
+import { stamp, fail } from "./domain-common";
+import { isAdmin } from "./domain-access";
 import {
   imageDeliveryOverride,
   syntheticEnvironment,
@@ -164,6 +164,7 @@ function photoSetting(values: Map<string, string>) {
 export async function productPhotoSetting() {
   const override = productPhotoOverride();
   if (override !== undefined) return photoSetting(new Map());
+  const { readSettings } = await import("./db");
   return photoSetting(settingsValues(await readSettings()));
 }
 export async function automaticallyImportProductPhotos(): Promise<boolean> {
@@ -182,6 +183,7 @@ export function spendingDefaultForState(s: State) {
   return spendingDefaultSetting(settingsValues(s.settings)).value === "true";
 }
 export async function settingsSummary() {
+  const { readSettings } = await import("./db");
   const values = settingsValues(await readSettings());
   return [
     {
@@ -251,6 +253,7 @@ export async function saveSettings(
   if (new Set(updates.map((update) => update.key)).size !== updates.length)
     fail(400, "Each setting can only appear once.");
   for (const update of updates) validateSetting(update.key, update.value);
+  const { transact } = await import("./db");
   await transact((s) => {
     for (const update of updates) validateSetting(update.key, update.value);
     for (const update of updates) applySetting(s, update.key, update.value);
@@ -264,6 +267,7 @@ export async function spend(
   const cfg = await config();
   const limit = Number(cfg.PAID_DAILY_LIMIT);
   const startedAt = new Date().toISOString();
+  const { transact } = await import("./db");
   await transact((s) => {
     const k = `${startedAt.slice(0, 10)}:${service}`;
     let row = s.usage.find((u) => u.key === k);

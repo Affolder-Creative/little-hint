@@ -705,6 +705,7 @@ test("provider configuration is deployment-only and service status is read-only"
   expect(settings.map((s: { key: string }) => s.key).sort()).toEqual([
     "AUTO_IMPORT_PRODUCT_PHOTOS",
     "FAMILY_GROUP_CREATION",
+    "FAMILY_GROUP_INVITATIONS",
     "PRODUCT_IMAGE_CACHE_ENABLED",
     "PRODUCT_IMAGE_PREFETCH_ENABLED",
     "SPENDING_DEFAULT_ENABLED",

@@ -2114,7 +2114,7 @@ test("single-group members retain requests and first-time group guidance", async
     page.getByRole("button", { name: "Accept invitation", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Accept request", exact: true }),
+    page.getByRole("button", { name: "Accept ownership", exact: true }),
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Create family group", exact: true }),
