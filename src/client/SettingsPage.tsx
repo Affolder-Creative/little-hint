@@ -168,41 +168,42 @@ export default function SettingsPage({
                   >
                     Edit profile
                   </button>
-                  {!p.userId && (
-                    <button
-                      className="text-button"
-                      onClick={() =>
-                        open(
-                          "Let them manage their profile",
-                          <Form
-                            submit="Invite to take over"
-                            onSubmit={async (f) => {
-                              await mutate("people/link", {
-                                id: p.id,
-                                email: value(f, "email"),
-                              });
-                              close();
-                              toast(
-                                "Invitation ready. They can accept it in Settings after signing in.",
-                              );
-                            }}
-                          >
-                            <Field label="Email they use to sign in">
-                              <input type="email" name="email" required />
-                            </Field>
-                            <p>
-                              They must verify this email and accept in
-                              Settings. You will stop managing their profile
-                              when they accept. Invite them to the family group
-                              separately if needed.
-                            </p>
-                          </Form>,
-                        )
-                      }
-                    >
-                      Invite to take over
-                    </button>
-                  )}
+                  {!p.userId &&
+                    (p.managedOwnerId ?? p.guardians[0]) === world.me.id && (
+                      <button
+                        className="text-button"
+                        onClick={() =>
+                          open(
+                            "Let them manage their profile",
+                            <Form
+                              submit="Invite to take over"
+                              onSubmit={async (f) => {
+                                await mutate("people/link", {
+                                  id: p.id,
+                                  email: value(f, "email"),
+                                });
+                                close();
+                                toast(
+                                  "Invitation ready. They can accept it in Settings after signing in.",
+                                );
+                              }}
+                            >
+                              <Field label="Email they use to sign in">
+                                <input type="email" name="email" required />
+                              </Field>
+                              <p>
+                                They must verify this email and accept in
+                                Settings. You will stop managing their profile
+                                when they accept. Invite them to the family
+                                group separately if needed.
+                              </p>
+                            </Form>,
+                          )
+                        }
+                      >
+                        Invite to take over
+                      </button>
+                    )}
                 </div>
               </div>
             ))}

@@ -22,6 +22,7 @@ type Review = {
   requests: {
     id: string;
     kind: string;
+    keepPreviousOwner?: boolean;
     name: string;
     from: string;
     to: string;
@@ -77,7 +78,7 @@ export function AccountClosure() {
                   >
                     {r.kind === "admin"
                       ? "You will become an app administrator. This allows you to manage application settings."
-                      : `You will manage ${r.name}'s profile and wish lists.`}{" "}
+                      : `You will own ${r.name}'s profile and control who manages it. ${r.keepPreviousOwner ? "The previous owner will remain a co-manager." : "The previous owner will stop managing it."}`}{" "}
                     {r.from} will no longer hold this responsibility.
                   </Confirm>,
                 )

@@ -4610,3 +4610,12 @@ a.button:is(:hover, :focus, :active),
     grid-column: 2;
   }
 }
+
+.profile-managers .manager-role {
+  display: block;
+  color: var(--muted);
+}
+.profile-managers .check {
+  min-height: 44px;
+  overflow-wrap: anywhere;
+}

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-07T03:41:29.122603+00:00",
+  "generatedAt": "2026-11-08T14:35:44.148843+00:00",
   "title": "Design System: Little Hint",
   "extensions": {
     "colorMeta": {
@@ -1025,7 +1025,9 @@
       "src/client/ProfileTakeovers.tsx",
       "src/client/GroupInvitationRequests.tsx",
       "src/client/AdminProfiles.tsx",
-      "src/client/AdminAccountDeletion.tsx"
+      "src/client/AdminAccountDeletion.tsx",
+      "src/client/ManagedProfileManagers.tsx",
+      "src/client/Action.tsx"
     ],
     "tonalRampNote": "Synthesized OKLCH previews at constant hue/chroma; these ramps are panel metadata, not additional application tokens.",
     "layout": {
@@ -1103,6 +1105,18 @@
       "mobileGiftSuggestions": "One-line title with ellipsis at 650px; supporting text wraps.",
       "actionMenus": "Visible viewport collision placement above fixed navigation; flip upward or scroll internally.",
       "wishListOptions": "Native optgroups by owner or combined owners; preserve historical options."
+    },
+    "profileManagement": {
+      "sourceFiles": [
+        "src/client/ManagedProfileManagers.tsx",
+        "src/client/ProfileEditor.tsx",
+        "src/client/forms.tsx",
+        "src/client/style.css"
+      ],
+      "layout": "Flat fieldset; current managers precede searchable connected-account choices. Names and muted roles share one text column; names wrap within the dialog.",
+      "selection": "Shared 44px checkbox rows; the owner is checked and disabled. Co-manager views retain the names and role text without selection controls.",
+      "transfer": "Secondary text disclosure with native select and checkbox, followed by an outlined request action. Pending requests retain a separate cancellation action.",
+      "states": "Inline loading, failed-read retry, empty search results, and action errors reuse shared form and Action patterns."
     }
   },
   "components": [
@@ -1277,11 +1291,18 @@
       "description": "Primary Save followed by outlined Done in one wrapping action row.",
       "html": "<div class=\"profile-editor\"><div class=\"form-actions\"><button class=\"button\">Save profile</button><button class=\"button secondary\">Done</button></div></div>",
       "css": ":host{--bg:#fff8f0;--paper:#fffdf9;--text:#2b201d;--muted:#746057;--accent:#aa4d37;--border:#e6d9cf;font:14px/1.5 -apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;color:var(--text)}*{box-sizing:border-box}p{margin:4px 0 0}button{font:inherit;cursor:pointer}.button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:10px 16px;border:1px solid var(--accent);border-radius:8px;background:var(--accent);color:#fff8f0;font-weight:600}.button.secondary{background:var(--paper);border-color:var(--border);color:var(--text)}button:focus-visible{outline:3px solid var(--accent);outline-offset:3px}.text-button{background:none;border:0;min-height:44px;color:var(--accent);font-weight:600}.form-actions{display:flex;flex-wrap:wrap;gap:12px}/* Identity and invitation controls wrap as groups, never squeezed columns. */\n.settings-content .profile-setting-row {\n  display: grid;\n  grid-template-columns: auto minmax(0, 1fr) auto;\n  align-items: start;\n}\n.profile-setting-actions,\n.invitation-actions {\n  display: flex;\n  flex-wrap: wrap;\n  align-items: flex-start;\n  gap: 12px;\n}\n.profile-setting-actions > *,\n.invitation-actions > * {\n  flex: 0 1 auto;\n}\n.profile-setting-actions button,\n.invitation-actions button {\n  overflow-wrap: normal;\n  word-break: normal;\n}\n.invitation-row {\n  display: grid;\n  grid-template-columns: minmax(0, 1fr) auto;\n  align-items: start;\n  gap: 16px;\n  padding: 20px 0;\n  border-bottom: 1px solid var(--border);\n}\n.invitation-row > div {\n  min-width: 0;\n}\n.invitation-row p,\n.invitation-info,\n.invitation-row strong {\n  overflow-wrap: anywhere;\n}\n.invitation-actions .invitation-share {\n  min-width: 0;\n}\n.profile-editor .form-actions {\n  justify-content: flex-start;\n}\n@media (max-width: 650px) {\n  .settings-content .profile-setting-row {\n    grid-template-columns: auto minmax(0, 1fr);\n  }\n  .profile-setting-row .profile-setting-actions {\n    grid-column: 2;\n  }\n  .invitation-row {\n    grid-template-columns: minmax(0, 1fr);\n  }\n  .invitation-actions {\n    width: 100%;\n  }\n  .invitation-actions > * {\n    flex: 1 1 150px;\n  }\n  .invitation-actions button {\n    width: 100%;\n  }\n  .profile-editor .form-actions > button {\n    flex: 0 1 auto;\n    width: auto;\n  }\n}\n\n.name-setup {\n  width: min(100% - 40px, 440px);\n  margin: 48px auto;\n}\n.name-setup img {\n  max-width: 240px;\n}\n.managed-list-choices {\n  display: grid;\n  gap: 12px;\n}\n\n.member-list > div {\n  display: grid;\n  grid-template-columns: auto minmax(0, 1fr) auto;\n  align-items: center;\n}\n.member-actions {\n  display: flex;\n  align-items: center;\n  flex-wrap: wrap;\n  gap: 12px;\n}\n@media (max-width: 650px) {\n  .member-list > div {\n    grid-template-columns: auto minmax(0, 1fr);\n    padding: 12px 0;\n  }\n  .member-actions {\n    grid-column: 2;\n  }\n}\n"
+    },
+    {
+      "name": "Profile manager choices",
+      "kind": "custom",
+      "description": "Current managers remain above searchable account choices, with muted role text and the owner fixed in place.",
+      "html": "<fieldset class=\"ds-managers\"><legend>Managers</legend><label class=\"ds-manager\"><input type=\"checkbox\" checked disabled><span>Alex Morgan · You<small>Owner</small></span></label><label class=\"ds-manager\"><input type=\"checkbox\" checked><span>Sam Morgan<small>Co-manager</small></span></label><label class=\"ds-find\">Find users<input type=\"search\" placeholder=\"Search connected people\"></label></fieldset>",
+      "css": ".ds-managers{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;border:0;margin:0;padding:0;color:var(--text,#2b201d);font-family:inherit}.ds-managers legend{font-size:13px;font-weight:550;margin-bottom:13px}.ds-manager{display:flex;align-items:center;gap:9px;min-height:44px;font-size:14px;line-height:1.5;overflow-wrap:anywhere;cursor:pointer}.ds-manager input{width:17px;height:17px;flex:0 0 auto;margin:0;accent-color:var(--accent,#aa4d37)}.ds-manager small{display:block;color:var(--muted,#746057)}.ds-manager:has(input:disabled){color:var(--muted,#746057);cursor:not-allowed}.ds-manager input:disabled{opacity:.5;cursor:not-allowed}.ds-find{display:grid;gap:8px;font-size:13px;font-weight:550}.ds-find input{width:100%;min-width:0;max-width:100%;min-height:44px;border:1px solid var(--control-border,#93796c);border-radius:8px;background:var(--paper,#fffdf9);color:var(--text,#2b201d);padding:11px 12px;font:inherit;font-size:16px}.ds-find input::placeholder{color:var(--muted,#746057);opacity:1}.ds-managers input:focus-visible{outline:3px solid var(--accent,#aa4d37);outline-offset:3px}"
     }
   ],
   "narrative": {
     "northStar": "A little thought. A lovely surprise.",
-    "overview": "**Creative North Star: \"A little thought. A lovely surprise.\"**\n\nLittle Hint is a calm place to coordinate gifts for people you know. Recipient names, gift details, prices, and availability lead. Warm paper backgrounds, quiet dividers, and open rows give those details room.\n\nThe approved heart-tag artwork carries the brand. Its outlined Fraunces lettering remains an image asset; the interface uses the established system sans stack. Light and dark themes share the same hierarchy and shapes.\n\n**Key Characteristics:**\n\n- Approved heart-tag artwork and outlined lettering.\n- Ivory and umber neutrals with sienna actions and blush selection fills.\n- Flat gift cards with recipient details directly below the image.\n- Desktop sidebar and mobile bottom navigation.",
+    "overview": "Little Hint is a calm place to coordinate gifts for people you know. Recipient names, gift details, prices, and availability lead. Warm paper backgrounds, quiet dividers, and open rows give those details room.\n\nThe approved heart-tag artwork carries the brand. Its outlined Fraunces lettering remains an image asset; the interface uses the established system sans stack. Light and dark themes share the same hierarchy and shapes.",
     "keyCharacteristics": [
       "Approved heart-tag artwork and outlined lettering.",
       "Ivory and umber neutrals with sienna actions and blush selection fills.",
@@ -1303,26 +1324,6 @@
         "name": "The flat content rule",
         "body": "Gift cards and ordinary list rows have no shadow. Reserve elevation for dialogs and transient messages.",
         "section": "elevation"
-      },
-      {
-        "name": "Available notification channels",
-        "body": "Omit deployment-unavailable SMS and Telegram controls and summaries without placeholders. Preserve hidden choices when saving visible settings. Keep administrator configuration diagnostics visible.",
-        "section": "components"
-      },
-      {
-        "name": "Master AI availability",
-        "body": "When AI_ENABLED is false, omit discovery entry points, AI service rows, AI usage sections, and AI-specific report copy. Preserve stored history and saved gifts. Other service diagnostics and usage remain independent. Direct discovery links show a generic unavailable page.",
-        "section": "components"
-      },
-      {
-        "name": "Connection fallback",
-        "body": "Connection screens use approved horizontal artwork, the existing headline and body typography, and the current light or dark palette. Center a narrow text group with generous space after the logo, then a primary retry action. Supporting text uses the muted foreground. Personal draft controls follow as a separate, quieter group. Center the standalone clear-device action beneath this group. Preserve mobile safe-area padding, visible focus, and a stable layout during retries. A playful headline may introduce the problem; the explanation and recovery action stay plain.",
-        "section": "components"
-      },
-      {
-        "name": "Administration service status",
-        "body": "Administration contains App settings, This month's usage, Service status, and Background jobs. Family-group creation, automatic product photos, device photo caching, and photo prefetching are editable, with optional locking ENV overrides. All service credentials, providers, models, limits, and AI availability are deployment-only. Service status reports configuration presence, not verified connectivity. When AI_ENABLED is false, omit AI service rows, AI usage groups, and AI-specific explanatory copy even when history exists. Retain other disabled services’ current-month usage with Currently off; omit sections with only prior-month or skipped SMS history. Preserve notification retries, failed shop lookups, and the note that backup status is unavailable.",
-        "section": "components"
       }
     ],
     "dos": [

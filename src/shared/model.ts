@@ -44,6 +44,7 @@ export interface TrashEntry extends Base {
   deletedAt: string;
 }
 export interface Person extends Base {
+  managedOwnerId?: string;
   managedGroupIds?: string[];
   nameSetupRequired?: boolean;
   mergedIntoId?: string;
@@ -437,6 +438,7 @@ export interface Setting extends Base {
   encrypted: string;
 }
 export interface Link extends Base {
+  keepPreviousOwner?: boolean;
   invitationId?: string;
   cancelled?: boolean;
   requestedBy?: string;

@@ -7,6 +7,7 @@ import {
   reconcilePrivacyReview,
 } from "./privacy-review";
 import { resolveShoppingContext } from "./shopping-context";
+import { profileOwner, validateManagers } from "./profile-management";
 import { reconcileSpendingPrivacy } from "./spending-privacy";
 import { priceBaseline, priceCommand } from "./prices";
 import { priceConfig } from "./price-config";
@@ -1402,9 +1403,7 @@ function commandCore(
         const p =
           s.people.find(
             (p) =>
-              p.id === l.targetId &&
-              !p.userId &&
-              p.guardians.includes(l.userId),
+              p.id === l.targetId && !p.userId && profileOwner(p) === l.userId,
           ) ?? fail(404, "Profile not found.");
         takeOverProfile(
           s,
@@ -1424,21 +1423,43 @@ function commandCore(
         .object({ name: text, managedGroupIds: ids.default([]) })
         .parse(b);
       checkGroups(s, a, p.managedGroupIds);
-      const person: Person = { ...stamp(), ...p, guardians: [a.id] };
+      const person: Person = {
+        ...stamp(),
+        ...p,
+        guardians: [a.id],
+        managedOwnerId: a.id,
+      };
       s.people.push(person);
       return person;
     }
     case "people.update": {
       const p = z
-        .object({ id, revision, name: text, managedGroupIds: ids.optional() })
+        .object({
+          id,
+          revision,
+          name: text,
+          managedGroupIds: ids.optional(),
+          managerUserIds: z
+            .array(z.string().min(1).max(255))
+            .min(1)
+            .max(100)
+            .refine((v) => new Set(v).size === v.length, "Duplicate managers.")
+            .optional(),
+        })
         .parse(b);
       const person =
         s.people.find((q) => q.id === p.id && controls(s, a, q.id)) ??
         fail(404, "Profile not found.");
       checkRevision(person, p.revision);
-      person.name = p.name;
-      if (!person.userId && p.managedGroupIds) {
+      if (p.managerUserIds) validateManagers(s, a, person, p.managerUserIds);
+      if (!person.userId && p.managedGroupIds)
         checkGroups(s, a, p.managedGroupIds);
+      person.name = p.name;
+      if (p.managerUserIds) {
+        person.guardians = p.managerUserIds;
+        person.managedOwnerId = a.id;
+      }
+      if (!person.userId && p.managedGroupIds) {
         person.managedGroupIds = [
           ...new Set([
             ...(person.managedGroupIds ?? []).filter(
@@ -1453,8 +1474,20 @@ function commandCore(
             ...p.managedGroupIds,
           ]),
         ];
+      }
+      if (p.managerUserIds) {
+        person.managedGroupIds = person.managedGroupIds?.filter((id) =>
+          s.groups.some(
+            (g) =>
+              g.id === id &&
+              person.guardians.some((u) => g.memberIds.includes(u)),
+          ),
+        );
+      }
+      if (p.managerUserIds || (!person.userId && p.managedGroupIds)) {
         reconcileEventParticipants(s);
         reconcileHouseholds(s);
+        reconcileAccess(s);
       }
       touch(person);
       return person;
@@ -1483,7 +1516,7 @@ function commandCore(
       const p = z.object({ id, email: z.email() }).parse(b);
       const person =
         s.people.find(
-          (q) => q.id === p.id && !q.userId && q.guardians.includes(a.id),
+          (q) => q.id === p.id && !q.userId && profileOwner(q) === a.id,
         ) ?? fail(404, "Managed profile not found.");
       for (const link of s.links.filter(
         (l) => l.kind === "profile" && l.targetId === person.id && !l.consumed,

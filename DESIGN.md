@@ -486,6 +486,24 @@ Use searchable, labeled checkbox categories with visible selection and 44px targ
 
 Discovery uses existing typography, colors and open gift rows, with three result columns on desktop and one on narrow phones. Six results appear at a time; Show different ideas changes only the current batch. Keep new-search allowance text beside the explicit paid-search action. Product cards show checked shop prices and linked evidence. Selection editing and final confirmation are separate steps, with focus moved to the confirmation heading. Name destination lists, recipients and visibility before Confirm and add gifts. Prices exclude tax/shipping. Missing or rejected evidence produces an honest empty result, never a fabricated product card.
 
+### Managed-profile managers
+
+The profile editor keeps manager choices in a flat fieldset alongside family-group
+sharing. Use the shared labeled search input and checkbox rows, with a visible
+name and a quieter role on the next line. Current selections stay above the
+search results so the owner remains easy to find. The owner's checked control
+is disabled; co-managers see the same names and roles without editable controls.
+Long names wrap within the dialog, and selectable rows keep the shared 44px
+minimum target. Role labels use the muted foreground rather than a new badge or
+color.
+
+Transfer ownership is a secondary text action that reveals the existing select,
+checkbox, explanatory copy, and outlined request button. Pending requests use
+plain status copy and a separate cancellation action. Loading, failure with
+retry, and empty search results occupy the manager section without replacing the
+rest of the editor. Preserve the shared profile dialog, tabs, and Save profile /
+Done footer; this section introduces no new palette, typography, or elevation.
+
 ### Touch dialogs and list rows
 
 Touch-device editing fields use at least 16px text in either orientation. Dialogs
