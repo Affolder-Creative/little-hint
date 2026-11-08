@@ -15,7 +15,68 @@ function currentViewContract(value) {
     view.canShop = !view.isRecipient;
   return view;
 }
+// Schema 9 adds a baseline only: derive its exact expected fields from the
+// released snapshot, never from candidate output. All prior evidence stays strict.
+function lifecycleMigrationContract(evidence) {
+  const migrated = structuredClone(evidence);
+  const reservations = new Map();
+  for (const row of migrated.records) {
+    if (row.kind !== "reservations") continue;
+    const r = row.data;
+    const item = migrated.records.find(
+      (v) => v.kind === "items" && v.id === r.itemId,
+    )?.data;
+    const list = migrated.records.find(
+      (v) => v.kind === "lists" && v.id === item?.listId,
+    )?.data;
+    const visible = Object.values(migrated.views)
+      .flatMap((v) => v.buying ?? [])
+      .find((v) => v.id === r.id)?.item;
+    r.sourceState ??=
+      item?.deletedAt || list?.deletedAt
+        ? "removed"
+        : !visible
+          ? "unavailable"
+          : visible.archived
+            ? "archived"
+            : "active";
+    r.sourceVersion ??= 1;
+    if (visible) r.sourceRecipientIds ??= item.recipientIds;
+    reservations.set(r.id, r);
+  }
+  for (const view of Object.values(migrated.views)) {
+    for (const buying of view.buying ?? []) {
+      const r = reservations.get(buying.id);
+      assert.ok(r, "Buying record must have retained reservation evidence");
+      const requiresReview = r.sourceState !== "active";
+      buying.sourceState = r.sourceState;
+      buying.sourceVersion = r.sourceVersion;
+      if (r.sourceRecipientIds)
+        buying.sourceRecipientIds = r.sourceRecipientIds;
+      buying.sourceReviewedBy = {};
+      buying.planActions = {
+        canRecordPurchase:
+          !!buying.item &&
+          (buying.item.canShop ?? !buying.item.isRecipient) &&
+          !requiresReview,
+        canRelease: buying.quantity > buying.purchased,
+        requiresReview,
+      };
+    }
+    for (const entry of view.contributionHistory ?? []) {
+      const r = reservations.get(entry.contribution.reservationId);
+      assert.ok(
+        r,
+        "Contribution history must have retained reservation evidence",
+      );
+      entry.sourceState = r.sourceState;
+    }
+  }
+  return migrated;
+}
 export function assertPreserved(actual, expected) {
+  if (actual.schemaVersion >= 9 && (expected.schemaVersion ?? 0) < 9)
+    expected = lifecycleMigrationContract(expected);
   for (const field of ["records", "users", "barrier", "uploadHash", "views"]) {
     assert.ok(Object.hasOwn(actual, field), `Missing ${field} evidence`);
     assert.ok(

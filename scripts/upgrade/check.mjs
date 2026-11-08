@@ -23,6 +23,11 @@ const kinds = [
 ];
 const hash = (bytes) => createHash("sha256").update(bytes).digest("hex");
 const query = async (sql, args) => (await db.query(sql, args)).rows;
+const schemaVersion = async () =>
+  Number(
+    (await query("SELECT max(version) AS version FROM schema_migration"))[0]
+      .version,
+  );
 const records = () =>
   query(
     "SELECT id,kind,data FROM app_record WHERE kind = ANY($1) ORDER BY kind,id",
@@ -126,6 +131,7 @@ try {
       }
       saved.views = await views(saved.sessions);
       saved.records = await records();
+      saved.schemaVersion = await schemaVersion();
       for (const kind of kinds)
         assert.ok(
           saved.records.some((r) => r.kind === kind),
@@ -194,6 +200,7 @@ try {
         {
           views: await views(saved.sessions),
           records: await records(),
+          schemaVersion: await schemaVersion(),
           users: await users(),
           barrier: await barrier(),
           uploadHash: hash(await readFile("/data/uploads/upgrade-fixture.txt")),
