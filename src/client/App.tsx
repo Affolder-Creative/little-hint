@@ -1328,15 +1328,17 @@ function GiftDetail() {
             </span>
           )}
           <p className="status">
-            {gift.archived
-              ? "Archived"
-              : gift.isRecipient && !gift.canShop
-                ? gift.mode === "surprise"
-                  ? "On your list · Buying plans stay a surprise"
-                  : "On your list · You can see the gift plans"
-                : gift.available
-                  ? `${gift.available} available to reserve`
-                  : "Taken care of"}
+            {gift.publicationState === "draft"
+              ? "Draft · Not yet published"
+              : gift.archived
+                ? "Archived"
+                : gift.isRecipient && !gift.canShop
+                  ? gift.mode === "surprise"
+                    ? "On your list · Buying plans stay a surprise"
+                    : "On your list · You can see the gift plans"
+                  : gift.available
+                    ? `${gift.available} available to reserve`
+                    : "Taken care of"}
             {myReserved > 0 &&
               ` · You reserved ${myReserved} · ${myPurchased} purchased`}
           </p>
@@ -1421,9 +1423,11 @@ function GiftDetail() {
             (gift.canShop === undefined && gift.isRecipient) ? (
             <p className="privacy-note">
               <LockKeyhole size={18} />
-              {gift.mode === "surprise"
-                ? "The rest is a surprise. Your people will take it from here."
-                : "You can see who is reserving and buying this gift below."}
+              {gift.publicationState === "draft"
+                ? "Publish this draft when you’re ready to share it with your wish-list viewers."
+                : gift.mode === "surprise"
+                  ? "The rest is a surprise. Your people will take it from here."
+                  : "You can see who is reserving and buying this gift below."}
             </p>
           ) : (
             <div className="reserve-panel">

@@ -18,6 +18,7 @@ export function priceBaseline(
 }
 export function priceEligible(s: State, i: Item) {
   return (
+    i.publicationState !== "draft" &&
     i.priceCents !== null &&
     !!i.url &&
     !itemTrashed(s, i) &&

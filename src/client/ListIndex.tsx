@@ -1,3 +1,4 @@
+import { WishlistDrafts } from "./WishlistDrafts";
 import { Pencil, Archive, ArchiveRestore } from "lucide-react";
 import { ImportDrafts } from "./ImportDrafts";
 import { useNavigationState } from "./NavigationScroll";
@@ -75,6 +76,7 @@ export function ListIndex() {
           Capture a product
         </Link>
       </p>
+      <WishlistDrafts />
       <ImportDrafts />
       <div className="tabs" role="group" aria-label="List status">
         {["active", "archived", "trash"].map((value) => (

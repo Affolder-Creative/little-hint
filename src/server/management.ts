@@ -1,3 +1,4 @@
+import { draftAccess } from "./domain-access";
 import { z } from "zod";
 import type {
   Actor,
@@ -51,6 +52,7 @@ function manages(s: State, a: Actor, kind: TrashKind, id: string): boolean {
     const i = s.items.find((i) => i.id === id);
     return (
       !!i &&
+      draftAccess(s, a, i) &&
       (i.listId
         ? !!s.lists.find(
             (l) =>
@@ -183,7 +185,11 @@ export function managementCommand(
       ) ?? fail(404, "Active wish list not found.");
     current(list, p.revision);
     const active = s.items.filter(
-      (i) => i.listId === list.id && !i.archived && !i.deletedAt,
+      (i) =>
+        i.listId === list.id &&
+        !i.archived &&
+        !i.deletedAt &&
+        i.publicationState !== "draft",
     );
     if (
       input.order.length !== active.length ||

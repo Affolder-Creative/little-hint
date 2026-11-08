@@ -307,7 +307,7 @@ export function giftSummary(s: State, a: Actor, listId: string): GiftSummary {
   };
 }
 export function giftView(s: State, a: Actor, i: Item): GiftView {
-  const { creatorId, spendingListId, ...fields } = i;
+  const { creatorId, spendingListId, draftOwnerId, ...fields } = i;
   const own = recipient(s, a, i);
   const view: GiftView = {
     ...fields,
@@ -655,6 +655,9 @@ export function world(
       )
       .map((l) => ({
         ...l,
+        itemOrder: l.itemOrder?.filter((id) =>
+          s.items.some((i) => i.id === id && itemVisible(s, a, i)),
+        ),
         archived: listIsArchived(l),
         canEdit: l.ownerIds.some((p) => ps.includes(p)),
         hasOtherItemEditors: s.people.some(
@@ -669,7 +672,7 @@ export function world(
     items: paged
       ? []
       : s.items
-          .filter((i) => itemVisible(s, a, i))
+          .filter((i) => itemVisible(s, a, i) && i.publicationState !== "draft")
           .map((i) => giftView(s, a, i)),
     contributionHistory: compact
       ? []
@@ -1586,6 +1589,7 @@ function commandCore(
     case "items.create": {
       const p = itemInput
         .extend({
+          publicationState: z.enum(["draft", "published"]).default("published"),
           listId: id.optional(),
           friendEntryId: id.optional(),
           recipientIds: ids.default([]),
@@ -1599,6 +1603,8 @@ function commandCore(
         })
         .parse(b);
       checkImage(s, a, p.image);
+      if (!p.listId && p.publicationState === "draft")
+        fail(400, "Drafts belong to a wish list.");
       if (!p.listId && p.priority)
         fail(400, "Only wish-list items have a recipient priority.");
       let recipients = p.recipientIds;
@@ -1664,6 +1670,7 @@ function commandCore(
         ...fields,
         recipientIds: [...recipients],
         creatorId: a.id,
+        ...(p.publicationState === "draft" ? { draftOwnerId: a.id } : {}),
         archived: false,
         currency: "USD",
         ...(imported
@@ -1703,13 +1710,33 @@ function commandCore(
       }
       priceBaseline(i, "when added");
       s.items.push(i);
-      if (i.listId)
+      if (i.listId && i.publicationState !== "draft")
         emitActivity(
           s,
           "wishlist",
           accountIds(s).filter((userId) => followsItem(s, userId, i)),
           { itemId: i.id, listId: i.listId, actorId: a.id },
         );
+      return giftView(s, a, i);
+    }
+    case "items.publish": {
+      const p = z.object({ id, revision }).passthrough().parse(b);
+      const i = getItem(s, a, p.id);
+      if (!canEdit(s, a, i)) fail(404, "Item not found.");
+      checkRevision(i, p.revision);
+      if (!i.listId || i.publicationState !== "draft" || archived(s, i))
+        fail(409, "Only active drafts can be published.");
+      commandCore(s, a, "items.update", { ...b, archived: false });
+      i.publicationState = "published";
+      delete i.draftOwnerId;
+      touch(i);
+      priceBaseline(i, "when added");
+      emitActivity(
+        s,
+        "wishlist",
+        accountIds(s).filter((userId) => followsItem(s, userId, i)),
+        { itemId: i.id, listId: i.listId, actorId: a.id },
+      );
       return giftView(s, a, i);
     }
     case "items.update": {

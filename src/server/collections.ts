@@ -36,6 +36,7 @@ export function collectionWorld(s: State, a: Actor): PagedWorld {
 const page = z.coerce.number().int().min(1).max(1000000).default(1);
 export const browseQuery = z.object({
   scope: z.enum(["home", "person", "list"]).default("home"),
+  publicationState: z.enum(["draft", "published"]).default("published"),
   id: z.string().uuid().optional(),
   tab: z.enum(["wishes", "ideas"]).default("wishes"),
   page,
@@ -65,13 +66,17 @@ export async function itemPage(
   hydrate = hydrateCollectionItems,
 ): Promise<ItemPage> {
   const q = browseQuery.parse(raw);
-  let items = s.items.filter((i) => itemVisible(s, a, i));
+  let items = s.items.filter(
+    (i) =>
+      itemVisible(s, a, i) &&
+      (i.publicationState ?? "published") === q.publicationState,
+  );
   const list =
     q.scope === "list"
       ? s.lists.find((l) => l.id === q.id && listVisible(s, a, l))
       : undefined;
   if (q.scope === "list" && !list) fail(404, "Wish list not found.");
-  if (q.scope === "home") {
+  if (q.scope === "home" && q.publicationState !== "draft") {
     items = items.filter((i) => !archived(s, i));
     const others = items.filter((i) => !recipient(s, a, i));
     if (others.length) items = others;
@@ -105,7 +110,8 @@ export async function itemPage(
     items.filter((i) => {
       const available = availability(i);
       return (
-        ((!!list && listIsArchived(list)) ||
+        (q.publicationState === "draft" ||
+          (!!list && listIsArchived(list)) ||
           archived(s, i) === (canManage && q.status === "archived")) &&
         `${i.title} ${i.recipientIds.map((id) => names.get(id) ?? "Recipient").join(" ")} ${i.tags.join(" ")}`
           .toLowerCase()
@@ -305,7 +311,14 @@ export function registerCollections(
     );
     if (!l) fail(404, "Wish list not found.");
     return ordered(
-      s.items.filter((i) => i.listId === l.id && !i.archived && !i.deletedAt),
+      s.items.filter(
+        (i) =>
+          i.listId === l.id &&
+          !i.archived &&
+          !i.deletedAt &&
+          i.publicationState !== "draft" &&
+          itemVisible(s, a, i),
+      ),
       "manual",
       l.itemOrder,
     ).map((i) => ({ id: i.id, name: i.title }));

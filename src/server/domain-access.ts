@@ -84,8 +84,20 @@ export const listVisible = (s: State, a: Actor, l: List) =>
   !l.deletedAt &&
   (l.ownerIds.some((p) => controls(s, a, p)) ||
     l.groupIds.some((g) => groupAccess(s, a, g)));
+/** Draft access also applies to Trash and exports, independently of deletion. */
+export function draftAccess(s: State, a: Actor, i: Item): boolean {
+  if (i.publicationState !== "draft") return true;
+  const list = s.lists.find((l) => l.id === i.listId);
+  if (!list || !list.ownerIds.some((id) => controls(s, a, id))) return false;
+  return (
+    (i.draftOwnerId ?? i.creatorId) === a.id ||
+    s.people.some(
+      (p) => list.ownerIds.includes(p.id) && p.guardians.includes(a.id),
+    )
+  );
+}
 export function itemVisible(s: State, a: Actor, i: Item): boolean {
-  if (itemTrashed(s, i)) return false;
+  if (itemTrashed(s, i) || !draftAccess(s, a, i)) return false;
   if (i.listId) {
     const l = s.lists.find((l) => l.id === i.listId);
     return !!l && listVisible(s, a, l);
@@ -104,11 +116,12 @@ export function itemVisible(s: State, a: Actor, i: Item): boolean {
   );
 }
 export const canEdit = (s: State, a: Actor, i: Item) =>
-  i.listId
+  draftAccess(s, a, i) &&
+  (i.listId
     ? !!s.lists.find(
         (l) => l.id === i.listId && l.ownerIds.some((p) => controls(s, a, p)),
       )
-    : i.creatorId === a.id;
+    : i.creatorId === a.id);
 export const getItem = (s: State, a: Actor, id: string) =>
   s.items.find((i) => i.id === id && itemVisible(s, a, i)) ??
   fail(404, "Item not found.");
@@ -145,6 +158,7 @@ export function reconcileAccess(s: State) {
 export const selfRecipient = (s: State, a: Actor, ids: string[]) =>
   ids.some((id) => s.people.some((p) => p.id === id && p.userId === a.id));
 export const canShop = (s: State, a: Actor, i: Item) =>
+  i.publicationState !== "draft" &&
   !selfRecipient(s, a, i.recipientIds) &&
   !s.people.some(
     (p) =>

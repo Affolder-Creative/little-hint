@@ -359,7 +359,9 @@ export function Form({
     const form = e.currentTarget;
     if (busy || submitting.current || disabled || (!online && !allowOffline))
       return;
-    const data = pending?.data ?? new FormData(form);
+    const data =
+      pending?.data ??
+      new FormData(form, (e.nativeEvent as SubmitEvent).submitter);
     if (!pending && review) {
       const content = review(data);
       if (content) {

@@ -337,6 +337,21 @@ Availability labels use text as well as color. Available gifts use a muted green
 
 Gift cards are unboxed links. A contained image or labeled fallback leads, followed by the explicit Wish or Gift idea type with the recipient, then title, price, privacy, and availability. Real photos share the theme paper background and 10px internal padding. Only missing-photo placeholders retain the tag-based warm color variations. Grid cards omit tags. Mobile titles clamp to two lines; full titles remain accessible and appear on gift details. Price sits above a wrapping badge group on phones; desktop metadata aligns in one compact group. The title underlines on hover. Actual images use a 1.13 aspect ratio on desktop and become square on narrow screens. Missing or failed photos use a compact 32px icon and in-flow label with an 80px minimum area that grows for enlarged text. Desktop gift details give the no-photo area a narrow 144px column beside the gift information; phones stack it above the information with a 96px minimum height. Actual photos retain their full detail layout. Replacing a failed image URL restores the photo. People, lists, purchases, and settings use open rows with bottom dividers. Invitations and installation prompts use soft rounded panels.
 
+### Saved wish-list drafts
+
+Saved drafts use the existing compact divided draft rows, 15px medium titles,
+muted destination labels, and wrapping 44px action targets. Keep them in a
+separate Saved drafts section in My lists and the destination list. Loading and
+failure states retain a retry path; empty sections disappear. Unfinished product
+lookups retain their own heading and creator-only explanation.
+
+The item form places its primary Add to wish list or Save changes action before
+the secondary Save draft or Publish action in both reading and keyboard order.
+Enter saves edits without publishing. Audience copy sits beneath the secondary
+action and states guardian access where applicable. The fixed dialog footer and
+existing mobile stacking remain intact. Archived drafts disable Publish.
+No new color, typography, spacing, or elevation token is introduced.
+
 ### Collection actions
 
 List and event management menus have visible List actions and Event actions labels.
@@ -464,7 +479,7 @@ The dialog heading and action footer stay fixed around one scrollable content
 area. Content uses 24px padding, reduced to 20px vertically and 18px horizontally
 on phones. The footer has a top divider, 16px vertical padding, and safe-area
 clearance. The primary action aligns right on desktop and spans the phone width.
-Save for later is a secondary text action only for persistent import drafts;
+Save for later is a secondary text action for gift-idea import drafts; wish-list forms use Save draft or Publish;
 status distinguishes saving, saved, and failed changes. Save for later aligns with the primary button; its fixed feedback slot below the action shows successful saves for three seconds. Saving feedback and errors remain until the operation finishes or the error is resolved. Photo controls, preview,
 and upload feedback share one compact group. Saving waits for photo uploads.
 

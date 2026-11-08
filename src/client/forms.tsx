@@ -633,8 +633,35 @@ export function GiftForm({
       className="gift-form"
       dialogLayout
       externalBusy={draftSaving}
+      secondaryActionsPosition="after"
       secondaryActions={(busy) =>
-        savedDraft.current?.draft ? (
+        !idea && (!gift || gift.publicationState === "draft") ? (
+          <div className="gift-draft-actions">
+            <button
+              type="submit"
+              name="draftAction"
+              value={gift ? "publish" : "save"}
+              className="text-button"
+              disabled={
+                busy || uploading || !!gift?.archived || !navigator.onLine
+              }
+            >
+              {gift ? "Publish" : "Save draft"}
+            </button>
+            <p className="muted">
+              {world.people.some(
+                (p) =>
+                  (
+                    gift?.recipientIds ??
+                    world.lists.find((l) => l.id === destination)?.ownerIds ??
+                    []
+                  ).includes(p.id) && p.guardians.length,
+              )
+                ? "Drafts are visible to their owner and this profile’s guardians until published."
+                : "Only you can see this draft until you publish."}
+            </p>
+          </div>
+        ) : savedDraft.current?.draft ? (
           <div className="gift-draft-actions">
             <button
               type="button"
@@ -696,8 +723,11 @@ export function GiftForm({
         !!localStorage.getItem(`little-hint:draft-optin:${world.me.id}`)
       }
       onSubmit={async (f) => {
+        const saveAsDraft = f.get("draftAction") === "save";
+        const publishDraft = f.get("draftAction") === "publish";
         if (savedDraft.current?.draft) await flushDraft();
         const payload = {
+          publicationState: saveAsDraft ? "draft" : undefined,
           importDraftRevision: savedDraft.current?.draft?.revision,
           ...data,
           ...(!idea ? { priority } : {}),
@@ -752,7 +782,10 @@ export function GiftForm({
           return;
         }
         await saveQueue.current.catch(() => {});
-        const result = await mutate(gift ? "items/update" : "items", payload);
+        const result = await mutate(
+          publishDraft ? "items/publish" : gift ? "items/update" : "items",
+          payload,
+        );
         if (result.duplicate) {
           setDuplicate(result.duplicate);
           return;
@@ -767,13 +800,17 @@ export function GiftForm({
           );
         window.dispatchEvent(new Event("little-hint:drafts-changed"));
         toast(
-          gift
-            ? idea
-              ? "Gift idea updated."
-              : "Item updated."
-            : idea
-              ? "Gift idea saved."
-              : "A little hint, saved.",
+          saveAsDraft
+            ? "Draft saved."
+            : publishDraft
+              ? "Item published."
+              : gift
+                ? idea
+                  ? "Gift idea updated."
+                  : "Item updated."
+                : idea
+                  ? "Gift idea saved."
+                  : "A little hint, saved.",
         );
         close();
         onSaved?.(result);

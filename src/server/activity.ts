@@ -59,6 +59,7 @@ export const noteVisible = (
   giverId?: string,
   comment?: Comment,
 ) =>
+  item.publicationState !== "draft" &&
   itemVisible(s, a, item) &&
   !recipient(s, a, item) &&
   (!giverId || controls(s, a, giverId)) &&
@@ -395,7 +396,7 @@ export function activityAllowed(s: State, n: Notice): boolean {
     if (!item || !itemVisible(s, a, item)) return false;
     if (n.event === "price-drop")
       return priceAlertAllowed(s, n.userId, item.id);
-    if (n.event === "wishlist") return !!item.listId;
+    if (n.event === "wishlist") return !!item.listId && item.publicationState !== "draft";
     if (n.commentId) {
       const comment = s.comments.find(
         (c) => c.id === n.commentId && c.itemId === item.id,

@@ -180,6 +180,8 @@ export interface PriceChange extends Base {
   source: string;
 }
 export interface Item extends Base {
+  publicationState?: "draft" | "published";
+  draftOwnerId?: string;
   /** Creator-private spending default; never changes wish-list membership. */
   spendingListId?: string | null;
   pricing?: PriceTracking;
@@ -634,7 +636,7 @@ export interface Actor {
   email: string;
   name: string;
 }
-export interface GiftView extends Omit<Item, "creatorId"> {
+export interface GiftView extends Omit<Item, "creatorId" | "draftOwnerId"> {
   watchingNotes?: boolean;
   priceWatching?: boolean;
   recipientNames: string[];

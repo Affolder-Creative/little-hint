@@ -264,3 +264,10 @@ Back up the database before migration. Deploy app and worker from the same build
 The normal notification failure reporting covers lifecycle and settlement delivery. Queue metrics include aggregate lifecycle-update, pending-return, and confirmed-return counts without participant names or amounts. Scheduled archive eligibility is enforced on reads and commands; delivery resumes when the worker runs.
 
 Run `node --import tsx scripts/check-gift-lifecycle-ui.ts` with Chromium installed for the synthetic desktop/tablet/phone and light/dark acceptance journey. It does not access account data or send external notifications.
+
+### Wish-list draft compatibility
+
+Draft state is stored in existing item JSON records; missing state means published.
+Deploy the app and worker from the same draft-aware release. Older versions ignore
+item draft state and can expose unpublished items. Roll back only to a build that
+retains draft authorization, or restore the pre-upgrade database and uploads backup.

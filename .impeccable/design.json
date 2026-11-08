@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-08T15:18:53.099615+00:00",
+  "generatedAt": "2026-11-08T17:17:24.675160+00:00",
   "title": "Design System: Little Hint",
   "extensions": {
     "colorMeta": {
@@ -1305,6 +1305,13 @@
       "description": "Private availability and settlement context using open Buying rows.",
       "html": "<section class=\"ds-gift-plan\"><h2>Gift plan</h2><p>Wish removed</p><p>Your buying and payment records remain here.</p><button>Review change</button></section>",
       "css": ".ds-gift-plan { display:grid; gap:var(--space-prose,12px); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif; } .ds-gift-plan p { margin:0; max-width:65ch; } .ds-gift-plan h2 { font-size:22px; margin:0; } .ds-gift-plan button { justify-self:start; min-height:44px; padding:12px 18px; border:1px solid var(--border); border-radius:8px; background:var(--paper); color:var(--text); } .ds-gift-plan button:hover { background:var(--soft); } .ds-gift-plan button:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }"
+    },
+    {
+      "name": "Saved draft actions",
+      "kind": "custom",
+      "description": "Primary save precedes secondary draft action; audience guidance remains visible. Reuses existing button and muted text tokens.",
+      "html": "<div class=\"ds-draft-actions\"><button class=\"ds-draft-primary\">Save changes</button><div><button class=\"ds-draft-secondary\">Publish</button><p>Only you can see this draft until you publish.</p></div></div>",
+      "css": ".ds-draft-actions { display:flex; flex-wrap:wrap; gap:12px; align-items:start; } .ds-draft-actions button { min-height:44px; font-size:14px; font-weight:600; cursor:pointer; } .ds-draft-primary { background:var(--accent); color:var(--on-accent); border:0; border-radius:8px; padding:12px 18px; } .ds-draft-secondary { background:transparent; color:var(--accent); border:0; padding:8px 0; } .ds-draft-actions p { color:var(--muted); font-size:13px; } .ds-draft-actions button:hover { opacity:.9; } .ds-draft-actions button:focus-visible { outline:3px solid var(--accent); outline-offset:3px; }"
     }
   ],
   "narrative": {

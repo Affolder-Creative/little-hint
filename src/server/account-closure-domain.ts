@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import type { Actor, State } from "../shared/model";
 import { noteVisible } from "./activity";
 import {
+  draftAccess,
   controllers,
   isAdmin,
   personVisible,
@@ -345,6 +346,14 @@ export function closeAccountData(
           ? s.items.filter((i) => i.creatorId === a.id).map((i) => i.id)
           : []),
       ]);
+  for (const item of s.items) {
+    if (
+      item.publicationState === "draft" &&
+      (item.draftOwnerId ?? item.creatorId) === a.id &&
+      !remainingAccounts.some((p) => draftAccess(s, p, item))
+    )
+      removedItems.add(item.id);
+  }
   const retainedNotes = new Set(
     s.comments
       .filter((c) => {
@@ -436,6 +445,7 @@ export function closeAccountData(
   for (const i of s.items) {
     i.groupIds = i.groupIds.filter((id) => !soloGroups.has(id));
     if (i.creatorId === a.id) i.creatorId = anonymous;
+    if (i.draftOwnerId === a.id) i.draftOwnerId = anonymous;
   }
   for (const p of s.people) {
     if (plan.own.has(p.id)) {
