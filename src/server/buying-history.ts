@@ -1,3 +1,4 @@
+import { sourceState } from "./gift-lifecycle";
 import { z } from "zod";
 import type { Actor, Base, State, World } from "../shared/model";
 import type { HistoryPage } from "../shared/world";
@@ -78,6 +79,7 @@ export function contributionHistory(
       const r = reservations.get(c.reservationId)!;
       return {
         contribution: { ...c },
+        sourceState: sourceState(s, r),
         title: r.titleSnapshot,
         purchaser: r.buyerId === a.id,
         contributorName: names.get(c.userId) ?? "Former member",

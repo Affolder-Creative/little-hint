@@ -1,3 +1,5 @@
+import { netContribution } from "../shared/contribution-money";
+import { reviewSource } from "./gift-lifecycle";
 import { canShop } from "./domain-access";
 import { resolveShoppingContext } from "./shopping-context";
 import { z } from "zod";
@@ -25,6 +27,9 @@ import {
 } from "./domain-access";
 
 export const buyingActions = [
+  "reservations.review",
+  "contributions.return",
+  "contributions.return-update",
   "reservations.create",
   "reservations.update",
   "contributions.create",
@@ -38,6 +43,97 @@ export function buyingCommand(
 ): unknown {
   const b = raw as Record<string, unknown>;
   switch (action) {
+    case "reservations.review": {
+      const p = z.object({ id, sourceVersion: z.number().int() }).parse(b);
+      const r =
+        s.reservations.find(
+          (r) =>
+            r.id === p.id &&
+            (r.buyerId === a.id ||
+              s.contributions.some(
+                (c) => c.reservationId === r.id && c.userId === a.id,
+              )),
+        ) ?? fail(404, "Gift plan not found.");
+      if (p.sourceVersion !== r.sourceVersion)
+        fail(409, "This wish changed again. Refresh and review it.");
+      r.sourceReviewedBy = { ...r.sourceReviewedBy, [a.id]: p.sourceVersion };
+      touch(r);
+      return { ok: true };
+    }
+    case "contributions.return":
+    case "contributions.return-update": {
+      const p = z
+        .object({
+          id,
+          revision,
+          amountCents: z.number().int().positive().optional(),
+          date: z.iso.date().optional(),
+          returnId: id.optional(),
+          status: z.enum(["received", "voided"]).optional(),
+        })
+        .parse(b);
+      const c =
+        s.contributions.find((c) => c.id === p.id) ??
+        fail(404, "Contribution not found.");
+      const r = s.reservations.find((r) => r.id === c.reservationId)!;
+      if (!r || (r.buyerId !== a.id && c.userId !== a.id))
+        fail(404, "Contribution not found.");
+      checkRevision(c, p.revision);
+      c.returns ??= [];
+      let event = "return-sent";
+      if (action === "contributions.return") {
+        if (r.buyerId !== a.id || c.status !== "received")
+          fail(
+            409,
+            "Confirm the contribution received before recording a return.",
+          );
+        const used = c.returns
+          .filter((v) => v.status !== "voided")
+          .reduce((n, v) => n + v.amountCents, 0);
+        if (!p.amountCents || !p.date || p.amountCents > c.amountCents - used)
+          fail(
+            400,
+            "Enter a return within the remaining contribution amount and its transfer date.",
+          );
+        c.returns.push({
+          ...stamp(),
+          amountCents: p.amountCents,
+          recordedBy: a.id,
+          date: p.date,
+          status: "sent",
+        });
+      } else {
+        const entry =
+          c.returns.find((v) => v.id === p.returnId) ??
+          fail(404, "Return not found.");
+        if (entry.status !== "sent")
+          fail(409, "This return is already settled.");
+        if (p.status === "received") {
+          if (c.userId !== a.id || !p.date || p.date < entry.date)
+            fail(
+              400,
+              "Only the contributor can confirm receipt with a valid date.",
+            );
+          entry.status = "received";
+          entry.receivedDate = p.date;
+          entry.confirmedAt = new Date().toISOString();
+        } else if (p.status === "voided" && r.buyerId === a.id) {
+          entry.status = "voided";
+          entry.voidedAt = new Date().toISOString();
+        } else fail(403, "You cannot change this return.");
+        entry.revision++;
+        event = "return-" + entry.status;
+      }
+      touch(c);
+      emitActivity(s, "contribution", [r.buyerId, c.userId], {
+        reservationId: r.id,
+        contributionId: c.id,
+        actorId: a.id,
+        action: event,
+      });
+      return { ok: true };
+    }
+
     case "reservations.create": {
       const p = z
         .object({
@@ -146,13 +242,14 @@ export function buyingCommand(
         fail(400, "Contributions are not available for this reservation.");
       const pledged = s.contributions
         .filter((c) => c.reservationId === r.id && c.status !== "cancelled")
-        .reduce((n, c) => n + c.amountCents, 0);
+        .reduce((n, c) => n + netContribution(c), 0);
       if (p.poolTargetCents && p.poolTargetCents < pledged)
         fail(
           409,
           "The contribution goal must cover the contributions already promised.",
         );
       const wasFunded = !!r.poolTargetCents && pledged >= r.poolTargetCents;
+      if (p.purchased > r.purchased) reviewSource(s, a, r);
       const increased = p.purchased > r.purchased;
       if (increased) r.purchasedAt = new Date().toISOString();
       Object.assign(r, p);
@@ -229,7 +326,7 @@ export function buyingCommand(
         fail(403, "You cannot contribute to this gift.");
       const total = s.contributions
         .filter((c) => c.reservationId === r.id && c.status !== "cancelled")
-        .reduce((n, c) => n + c.amountCents, 0);
+        .reduce((n, c) => n + netContribution(c), 0);
       if (total + p.amountCents > r.poolTargetCents!)
         fail(
           409,
@@ -284,6 +381,7 @@ export function buyingCommand(
           409,
           "This contribution can no longer be changed that way. Refresh to see its current status.",
         );
+      if (p.status === "sent") reviewSource(s, a, r);
       c.status = p.status;
       if (p.status === "sent") c.sentAt = new Date().toISOString();
       if (p.status === "received") c.receivedAt = new Date().toISOString();

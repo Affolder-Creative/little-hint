@@ -107,7 +107,11 @@ function PurchaseEditor({
           name="purchased"
           type="number"
           min="0"
-          max={r.quantity}
+          max={
+            r.planActions?.canRecordPurchase === false
+              ? r.purchased
+              : r.quantity
+          }
           defaultValue={r.purchased}
           required
         />

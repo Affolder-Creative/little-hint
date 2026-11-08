@@ -280,6 +280,8 @@ function purge(s: State, kind: TrashKind, id: string) {
     s.items.filter((i) => i.listId === id).forEach((i) => removed.add(i.id));
     s.lists = s.lists.filter((l) => l.id !== id);
   }
+  for (const r of s.reservations)
+    if (removed.has(r.itemId)) r.sourceState = "removed";
   const images = s.items.filter((i) => removed.has(i.id)).map((i) => i.image);
   s.items = s.items.filter((i) => !removed.has(i.id));
   if (kind === "exchanges") {
@@ -298,6 +300,8 @@ function purge(s: State, kind: TrashKind, id: string) {
   );
   s.notices = s.notices.filter(
     (n) =>
+      !!n.lifecycle ||
+      (n.event === "contribution" && !!n.reservationId) ||
       ![n.itemId, n.listId, n.exchangeId, n.groupEventId].some(
         (ref) => ref && removed.has(ref),
       ),

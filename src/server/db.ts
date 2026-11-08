@@ -1,3 +1,4 @@
+import { lifecycleBaseline } from "./gift-lifecycle";
 import { reconcilePrivacyReview } from "./privacy-review";
 import { reconcileSpendingPrivacy } from "./spending-privacy";
 import { rejectClosedAccountReferences } from "./closed-accounts";
@@ -15,7 +16,7 @@ import {
   type Setting,
   type ImportJob,
 } from "../shared/model";
-const supportedSchemaVersion = 8;
+const supportedSchemaVersion = 9;
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   max: 10,
@@ -228,6 +229,23 @@ INSERT INTO schema_migration(version) VALUES (2);`);
       }
       await client.query("INSERT INTO schema_migration(version) VALUES (8)");
     }
+    const lifecycleMigration = await client.query(
+      "SELECT 1 FROM schema_migration WHERE version=9",
+    );
+    if (!lifecycleMigration.rowCount) {
+      const result = await client.query("SELECT kind,data FROM app_record");
+      const state = emptyState();
+      for (const row of result.rows)
+        if (kinds.includes(row.kind))
+          (state[row.kind as Kind] as unknown[]).push(row.data);
+      lifecycleBaseline(state);
+      for (const r of state.reservations)
+        await client.query("UPDATE app_record SET data=$1 WHERE id=$2", [
+          JSON.stringify(r),
+          r.id,
+        ]);
+      await client.query("INSERT INTO schema_migration(version) VALUES (9)");
+    }
     await client.query("COMMIT");
   } catch (e) {
     await client.query("ROLLBACK");
@@ -257,6 +275,14 @@ export async function readBuyingState(userId: string): Promise<State> {
       ))
     UNION ALL
     SELECT 'people', data FROM app_record WHERE kind = 'people'
+    UNION ALL
+    SELECT 'groups', data FROM app_record WHERE kind='groups'
+    UNION ALL
+    SELECT 'friendEntries', data FROM app_record WHERE kind='friendEntries'
+    UNION ALL
+    SELECT 'items', data FROM app_record WHERE kind='items' AND id IN (SELECT data->>'itemId' FROM relevant_reservations)
+    UNION ALL
+    SELECT 'lists', data FROM app_record WHERE kind='lists' AND id IN (SELECT data->>'listId' FROM app_record WHERE kind='items' AND id IN (SELECT data->>'itemId' FROM relevant_reservations))
   `,
     [userId],
   );

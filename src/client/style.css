@@ -4619,3 +4619,19 @@ a.button:is(:hover, :focus, :active),
   min-height: 44px;
   overflow-wrap: anywhere;
 }
+
+/* Retained financial context uses the same open rows as Buying. */
+.gift-plan-detail {
+  display: grid;
+  gap: var(--space-prose);
+}
+.gift-plan-detail > p {
+  max-width: 65ch;
+  margin: 0;
+}
+.gift-plan-detail > h2 {
+  margin: 0;
+}
+.gift-plan-detail > .text-button {
+  justify-self: start;
+}

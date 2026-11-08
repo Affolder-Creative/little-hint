@@ -80,6 +80,19 @@ export function queueMetrics(s: State, now = Date.now()) {
       : 0,
   });
   return {
+    giftPlans: {
+      lifecycleUpdates: s.notices.filter((n) => n.lifecycle).length,
+      pendingReturns: s.contributions.reduce(
+        (n, c) =>
+          n + (c.returns ?? []).filter((r) => r.status === "sent").length,
+        0,
+      ),
+      confirmedReturns: s.contributions.reduce(
+        (n, c) =>
+          n + (c.returns ?? []).filter((r) => r.status === "received").length,
+        0,
+      ),
+    },
     imports: summarize(
       s.imports.filter(
         (j) =>

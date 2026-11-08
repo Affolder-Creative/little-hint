@@ -66,7 +66,13 @@ export function accountExport(s: State, a: Actor) {
         createdAt: i.createdAt,
       })),
     reservations: s.reservations.filter((r) => r.buyerId === a.id),
-    contributions: s.contributions.filter((c) => c.userId === a.id),
+    contributions: s.contributions.filter(
+      (c) =>
+        c.userId === a.id ||
+        s.reservations.some(
+          (r) => r.id === c.reservationId && r.buyerId === a.id,
+        ),
+    ),
     comments: s.comments.filter((c) => c.authorId === a.id),
     friends: s.friendEntries.filter((f) => f.creatorId === a.id),
     spending: {

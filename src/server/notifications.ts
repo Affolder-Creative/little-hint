@@ -1,3 +1,4 @@
+import { buyingDestination } from "./gift-lifecycle";
 import { telegramInfo, unavailableChannels } from "./channel-availability";
 import { sendActivitySms } from "./sms";
 import { wishlistEligible, topicEnabled } from "./activity";
@@ -139,17 +140,20 @@ export async function deliverNotice(id: string) {
   }
   const accountInvitation = inv && isAccountInvitation(inv);
   const friendInvitation = !!inv?.friendEntryId;
-  const actionPath = inv
-    ? accountInvitation
-      ? "/"
-      : `/invite/${inv.id}`
-    : n.groupEventId
-      ? `/events/${n.groupEventId}`
-      : n.exchangeId
-        ? "/exchanges"
-        : n.itemId
-          ? `/gift/${n.itemId}`
-          : "/settings";
+  const actionPath =
+    n.lifecycle || (n.event === "contribution" && n.reservationId)
+      ? buyingDestination(s, n)
+      : inv
+        ? accountInvitation
+          ? "/"
+          : `/invite/${inv.id}`
+        : n.groupEventId
+          ? `/events/${n.groupEventId}`
+          : n.exchangeId
+            ? "/exchanges"
+            : n.itemId
+              ? `/gift/${n.itemId}`
+              : "/settings";
   const link = new URL(actionPath, origin()).href;
   const message = inv
     ? `A little hint: you're invited. Sign in to Little Hint with this email address to accept: ${link}`

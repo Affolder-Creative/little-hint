@@ -206,7 +206,17 @@ export interface Item extends Base {
   importedAt?: string;
   source?: string;
 }
+export type GiftSourceState = "active" | "archived" | "removed" | "unavailable";
 export interface Reservation extends Base {
+  planActions?: {
+    canRecordPurchase: boolean;
+    canRelease: boolean;
+    requiresReview: boolean;
+  };
+  sourceState?: GiftSourceState;
+  sourceVersion?: number;
+  sourceRecipientIds?: string[];
+  sourceReviewedBy?: Record<string, number>;
   privacyReview?: boolean;
   ordinary?: boolean;
   itemId: string;
@@ -221,7 +231,17 @@ export interface Reservation extends Base {
   titleSnapshot: string;
   purchasedAt?: string;
 }
+export interface ContributionReturn extends Base {
+  recordedBy: string;
+  confirmedAt?: string;
+  voidedAt?: string;
+  amountCents: number;
+  date: string;
+  receivedDate?: string;
+  status: "sent" | "received" | "voided";
+}
 export interface Contribution extends Base {
+  returns?: ContributionReturn[];
   sentAt?: string;
   receivedAt?: string;
   reservationId: string;
@@ -264,6 +284,7 @@ export interface Exchange extends Base {
   drawnAt?: string;
 }
 export interface Notice extends Base {
+  lifecycle?: { reservationIds: string[]; state: GiftSourceState };
   importId?: string;
   suppressedChannels?: Array<"sms" | "telegram">;
   batchId?: string;
@@ -685,6 +706,7 @@ export interface World {
   me: Actor & { admin: boolean };
   contributionHistory: Array<{
     contribution: Contribution;
+    sourceState?: GiftSourceState;
     title: string;
     purchaser: boolean;
     contributorName: string;

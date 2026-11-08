@@ -448,7 +448,15 @@ describe("privacy and reconciliation edge cases", () => {
         poolTargetCents: 500,
       }),
     ).toThrow("contributions already promised");
-    f.item.archived = true;
+    command(f.s, f.actors[0], "items.archive", {
+      id: f.item.id,
+      revision: f.item.revision,
+      archived: true,
+    });
+    command(f.s, f.actors[1], "reservations.review", {
+      id: r.id,
+      sourceVersion: r.sourceVersion,
+    });
     command(f.s, f.actors[1], "reservations.update", {
       id: r.id,
       revision: r.revision,

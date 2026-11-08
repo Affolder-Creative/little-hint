@@ -109,7 +109,11 @@ describe("archive and restoration", () => {
         poolTargetCents: 1000,
       }),
     ).toThrow();
-    // Existing buyers can still correct their purchase record after archiving.
+    // Existing buyers can continue after reviewing the archive.
+    command(f.s, f.actors[1], "reservations.review", {
+      id: r.id,
+      sourceVersion: r.sourceVersion,
+    });
     command(f.s, f.actors[1], "reservations.update", { ...r, purchased: 1 });
     expect(r.purchased).toBe(1);
     f.update({ archived: false });

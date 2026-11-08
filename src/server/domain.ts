@@ -1,3 +1,10 @@
+import { netContribution } from "../shared/contribution-money";
+import {
+  lifecycleBaseline,
+  reconcileGiftLifecycle,
+  sourceState,
+  sourceView,
+} from "./gift-lifecycle";
 import { takeOverProfile } from "./profile-takeover";
 import { memberInvitationsEnabled } from "./settings";
 import { selfRecipient, canShop } from "./domain-access";
@@ -233,6 +240,7 @@ export function reconcileHouseholds(s: State) {
 }
 
 export function archiveDueLists(s: State) {
+  lifecycleBaseline(s);
   for (const event of s.groupEvents) {
     if (!event.archived && listIsArchived(event)) {
       event.archived = true;
@@ -246,6 +254,7 @@ export function archiveDueLists(s: State) {
       touch(list);
     }
   }
+  reconcileGiftLifecycle(s);
 }
 
 export function giftSummary(s: State, a: Actor, listId: string): GiftSummary {
@@ -360,7 +369,15 @@ export function giftView(s: State, a: Actor, i: Item): GiftView {
             poolTargetCents: r.poolTargetCents,
             contributions: s.contributions
               .filter((c) => c.reservationId === r.id)
-              .map((c) => ({ ...c })),
+              .map((c) =>
+                r.buyerId === a.id || c.userId === a.id
+                  ? { ...c }
+                  : {
+                      ...c,
+                      amountCents: netContribution(c),
+                      returns: undefined,
+                    },
+              ),
           }
         : {}),
     }));
@@ -665,6 +682,7 @@ export function world(
           return [
             {
               contribution: { ...contribution },
+              sourceState: sourceState(s, r),
               title: r.titleSnapshot,
               purchaser: r.buyerId === a.id,
               contributorName:
@@ -681,7 +699,7 @@ export function world(
       : s.reservations
           .filter((r) => r.buyerId === a.id && (!compact || r.quantity > 0))
           .map((r) => ({
-            ...r,
+            ...sourceView(s, r, a),
             item:
               !compact &&
               s.items.some((i) => i.id === r.itemId && itemVisible(s, a, i))
@@ -863,7 +881,10 @@ export function command(
 ): unknown {
   reconcilePrivacyReview(s);
   reconcileSpendingPrivacy(s);
+  lifecycleBaseline(s);
+  reconcileGiftLifecycle(s);
   const result = commandCore(s, a, action, raw);
+  reconcileGiftLifecycle(s);
   reconcilePrivacyReview(s);
   reconcileSpendingPrivacy(s);
   return result;
