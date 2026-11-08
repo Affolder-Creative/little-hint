@@ -1,3 +1,4 @@
+import { ManagedProfileManagers } from "./ManagedProfileManagers";
 import { ManagedProfileSharing } from "./ManagedProfileSharing";
 import { useQuery } from "@tanstack/react-query";
 import { PurchaseListField } from "./SpendingPurchase";
@@ -75,6 +76,7 @@ export function PersonForm({
 }) {
   const { world, mutate, close } = useApp();
   const person = world.people.find((p) => p.id === id);
+  const [loadedRevision, setLoadedRevision] = useState(person?.revision);
   return (
     <Form
       cancel={onDone}
@@ -82,13 +84,22 @@ export function PersonForm({
       submit={person ? "Save profile" : "Create profile"}
       onBusyChange={onBusyChange}
       onSubmit={async (f) => {
-        await mutate(person ? "people/update" : "people", {
-          ...(person ? { id: person.id, revision: person.revision } : {}),
-          name: value(f, "name"),
-          ...(!person?.userId
-            ? { managedGroupIds: selected(f, "managedGroupIds") }
-            : {}),
-        });
+        const saved = await mutate<{ revision: number }>(
+          person ? "people/update" : "people",
+          {
+            ...(person ? { id: person.id, revision: loadedRevision } : {}),
+            ...(person &&
+            !person.userId &&
+            (person.managedOwnerId ?? person.guardians[0]) === world.me.id
+              ? { managerUserIds: selected(f, "managerUserIds") }
+              : {}),
+            name: value(f, "name"),
+            ...(!person?.userId
+              ? { managedGroupIds: selected(f, "managedGroupIds") }
+              : {}),
+          },
+        );
+        setLoadedRevision(saved.revision);
         if (onSaved) onSaved();
         else close();
       }}
@@ -101,6 +112,9 @@ export function PersonForm({
           ? "This is the name your people see on your profile."
           : "Choose this person’s households under each family group in Settings after saving their profile."}
       </p>
+      {person && !person.userId && (
+        <ManagedProfileManagers key={person.id} person={person} />
+      )}
       {!person?.userId && <ManagedProfileSharing person={person} />}
       {!person && (
         <p className="muted">

@@ -1,5 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
+import { requestHandoff } from "../src/server/account-closure-domain";
+import { managementDetails } from "../src/server/profile-management";
 import { command, world } from "../src/server/domain";
 import { stagingFixtures } from "../src/server/staging-fixtures";
 import { spendingView } from "../src/server/spending";
@@ -36,6 +38,22 @@ async function setup(page: Page) {
       "",
     );
     try {
+      if (path === "account/handoff") {
+        const b = route.request().postDataJSON();
+        requestHandoff(
+          state,
+          actor,
+          b.kind,
+          b.personId,
+          b.userId,
+          b.keepPreviousOwner,
+        );
+        return route.fulfill({ json: { ok: true } });
+      }
+      if (path === `people/${child.id}/management`)
+        return route.fulfill({
+          json: managementDetails(state, actor, child.id),
+        });
       if (path === "world")
         return route.fulfill({
           json: { ...world(state, actor), environment: "test" },
@@ -300,4 +318,101 @@ test("a manager creates the first shared wish list and adds an item", async ({
   const list = f.state.lists.find((l) => l.id === item.listId)!;
   expect(list.ownerIds).toEqual([f.child.id]);
   expect(list.groupIds).toEqual([f.state.groups[0].id]);
+});
+
+for (const width of [320, 768, 1440])
+  test(`co-manager editor at ${width}px`, async ({ page }, info) => {
+    const f = await setup(page);
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto(`/people/${f.child.id}`);
+    await page
+      .getByRole("button", { name: "Edit profile", exact: true })
+      .click();
+    const dialog = page.getByRole("dialog", {
+      name: "Edit profile",
+      exact: true,
+    });
+    await expect(dialog.getByText("Owner", { exact: true })).toBeVisible();
+    const candidates = managementDetails(
+      f.state,
+      f.actor,
+      f.child.id,
+    ).candidates.filter((m) => m.id !== f.actor.id);
+    const next = candidates[0];
+    await dialog.getByRole("searchbox", { name: "Find users" }).fill(next.name);
+    await dialog
+      .getByRole("checkbox", { name: next.name, exact: true })
+      .click();
+    await dialog
+      .getByRole("button", { name: "Save profile", exact: true })
+      .click();
+    await expect.poll(() => f.child.guardians.includes(next.id)).toBe(true);
+    await expect(dialog.getByText("Co-manager", { exact: true })).toBeVisible();
+    await dialog
+      .getByRole("button", { name: "Transfer ownership", exact: true })
+      .click();
+    await expect(
+      dialog.getByRole("checkbox", { name: "Keep me as a co-manager" }),
+    ).toBeChecked();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    await page.screenshot({
+      path: info.outputPath("co-managers.png"),
+      fullPage: true,
+    });
+    await dialog
+      .getByRole("combobox", { name: "New owner" })
+      .selectOption(next.id);
+    await dialog
+      .getByRole("button", { name: "Request ownership transfer" })
+      .click();
+    await expect(
+      dialog.getByText(new RegExp(`Waiting for ${next.name}`)),
+    ).toBeVisible();
+    await dialog
+      .getByRole("textbox", { name: "Name", exact: true })
+      .scrollIntoViewIfNeeded();
+    await page.screenshot({
+      path: info.outputPath("managers-top.png"),
+      fullPage: true,
+    });
+    const accessibility = await new AxeBuilder({ page }).analyze();
+    expect(accessibility.violations).toEqual([]);
+  });
+
+test("co-managers see a read-only manager list", async ({ page }) => {
+  const f = await setup(page);
+  const next = managementDetails(f.state, f.actor, f.child.id).candidates.find(
+    (m) => m.id !== f.actor.id,
+  )!;
+  command(f.state, f.actor, "people.update", {
+    id: f.child.id,
+    revision: f.child.revision,
+    name: f.child.name,
+    managerUserIds: [f.actor.id, next.id],
+  });
+  const actor = {
+    id: next.id,
+    name: next.name,
+    email: "co-manager@example.test",
+  };
+  await page.route("**/api/v1/world", (route) =>
+    route.fulfill({ json: { ...world(f.state, actor), environment: "test" } }),
+  );
+  await page.route(`**/api/v1/people/${f.child.id}/management`, (route) =>
+    route.fulfill({ json: managementDetails(f.state, actor, f.child.id) }),
+  );
+  await page.goto(`/people/${f.child.id}`);
+  await page.getByRole("button", { name: "Edit profile", exact: true }).click();
+  const managers = page.getByRole("group", { name: "Managers", exact: true });
+  await expect(managers.getByText("Owner", { exact: true })).toBeVisible();
+  await expect(managers.getByText("Co-manager", { exact: true })).toBeVisible();
+  await expect(managers.getByRole("checkbox")).toHaveCount(0);
+  await expect(managers.getByRole("searchbox")).toHaveCount(0);
+  await expect(
+    managers.getByRole("button", { name: "Transfer ownership", exact: true }),
+  ).toHaveCount(0);
 });

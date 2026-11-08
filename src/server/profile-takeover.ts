@@ -54,6 +54,13 @@ export function takeOverProfile(
       409,
       "Resolve active exchange participation first. Join its family group and ask the organizer to remove any duplicate profile, or finish the exchange before taking over.",
     );
+  for (const link of s.links.filter(
+    (l) =>
+      l.targetId === managed.id && ["guardian", "profile"].includes(l.kind),
+  )) {
+    link.consumed = true;
+    touch(link);
+  }
   const existing = s.giftPreferences.find((p) => p.personId === account.id);
   const incoming = s.giftPreferences.find((p) => p.personId === old);
   const existingHasDetails =
@@ -141,6 +148,7 @@ export function takeOverProfile(
     touch(record);
   }
   managed.guardians = [];
+  delete managed.managedOwnerId;
   delete managed.userId;
   managed.mergedIntoId = account.id;
   touch(managed);

@@ -58,6 +58,7 @@ export function registerAccountClosure(
         .map((l) => ({
           id: l.id,
           kind: l.kind,
+          keepPreviousOwner: !!l.keepPreviousOwner,
           name:
             l.kind === "admin"
               ? "App administration"
@@ -80,11 +81,19 @@ export function registerAccountClosure(
         kind: z.enum(["admin", "guardian"]),
         personId: z.string().uuid(),
         userId: z.string().min(1).max(255),
+        keepPreviousOwner: z.boolean().default(false),
       })
       .parse(req.body);
     await transact(async (s, tx) => {
       await assertIdentity(tx, who);
-      requestHandoff(s, who.a, b.kind, b.personId, b.userId);
+      requestHandoff(
+        s,
+        who.a,
+        b.kind,
+        b.personId,
+        b.userId,
+        b.keepPreviousOwner,
+      );
     });
     return { ok: true };
   });

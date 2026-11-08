@@ -26,3 +26,9 @@ This change introduces schema version 4 and the `closed_account` table. It store
 Upgrade app and worker together. The app runs the migration before becoming healthy; the worker waits for app health. Older guarded binaries reject schema version 4. Rolling back requires stopping both services and restoring a matching pre-upgrade database and uploads backup, rather than running old binaries against the migrated database. A restored backup can also restore accounts closed after that backup; operators must account for those closures before reopening access.
 
 Regression coverage includes domain handoffs and privacy, PostgreSQL rollback/concurrency and late writes, invalid/expired/reused codes, session binding and credential cascades, upload cleanup, and browser confirmation/cancellation at phone and desktop widths.
+
+## Managed-profile owners and co-managers
+
+Every managed profile has an owner, included among its managers. Only the owner can add or remove co-managers or request a recipient takeover. Co-manager access starts on Save profile. Edit profile offers a separate ownership transfer to a connected account or existing co-manager; the recipient reviews it under Sign-in & security within 24 hours. Keep me as a co-manager defaults on there. Deletion handoffs default it off, and neither self-service nor administrative deletion can bypass an owner’s outstanding responsibility. Co-manager deletion removes management access without transferring ownership.
+
+Schema 8 assigns each existing managed profile to its first active current manager, preserving previous handoffs. It leaves friend placeholders and merged profiles alone and refuses migration when a managed profile has no valid owner. Upgrade app and worker together.

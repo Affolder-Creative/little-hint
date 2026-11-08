@@ -42,7 +42,9 @@ export function deletionReview(s: State, target: Actor) {
     .update(
       JSON.stringify({
         target: { id: target.id, email: target.email },
-        profiles: s.people.filter((p) => p.userId === target.id),
+        profiles: s.people.filter(
+          (p) => p.userId === target.id || p.guardians.includes(target.id),
+        ),
         blockers: plan.blockers,
         lists: owned,
         gifts: authored,

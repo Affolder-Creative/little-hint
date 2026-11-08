@@ -15,7 +15,7 @@ import {
   type Setting,
   type ImportJob,
 } from "../shared/model";
-const supportedSchemaVersion = 7;
+const supportedSchemaVersion = 8;
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   max: 10,
@@ -199,6 +199,34 @@ INSERT INTO schema_migration(version) VALUES (2);`);
         `UPDATE app_record p SET data = jsonb_set(p.data, '{managedGroupIds}', COALESCE((SELECT jsonb_agg(g.id) FROM app_record g WHERE g.kind='groups' AND EXISTS (SELECT 1 FROM jsonb_array_elements_text(p.data->'guardians') guardian WHERE g.data->'memberIds' ? guardian)), '[]'::jsonb)) WHERE p.kind='people' AND p.data->>'userId' IS NULL AND NOT (p.data ? 'managedGroupIds')`,
       );
       await client.query("INSERT INTO schema_migration(version) VALUES (7)");
+    }
+    const ownershipMigration = await client.query(
+      "SELECT 1 FROM schema_migration WHERE version=8",
+    );
+    if (!ownershipMigration.rowCount) {
+      const rows = await client.query(
+        "SELECT id,data FROM app_record WHERE kind='people'",
+      );
+      const active = new Set(
+        rows.rows
+          .filter((r) => r.data.userId && !r.data.mergedIntoId)
+          .map((r) => r.data.userId),
+      );
+      for (const row of rows.rows) {
+        const p = row.data;
+        if (p.userId || p.mergedIntoId || !p.guardians?.length) continue;
+        const owner =
+          p.managedOwnerId ?? p.guardians.find((id: string) => active.has(id));
+        if (!owner || !active.has(owner) || !p.guardians.includes(owner))
+          throw new Error(
+            `Managed profile ${row.id} has no valid owner. Repair its manager references before migrating.`,
+          );
+        await client.query(
+          "UPDATE app_record SET data=jsonb_set(data,'{managedOwnerId}',to_jsonb($2::text)) WHERE id=$1",
+          [row.id, owner],
+        );
+      }
+      await client.query("INSERT INTO schema_migration(version) VALUES (8)");
     }
     await client.query("COMMIT");
   } catch (e) {

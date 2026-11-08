@@ -1,4 +1,5 @@
 import { reconcileEventParticipants, reconcileHouseholds } from "./domain";
+import { profileOwner, managerCandidates } from "./profile-management";
 import { randomUUID } from "node:crypto";
 import type { Actor, State } from "../shared/model";
 import { noteVisible } from "./activity";
@@ -7,6 +8,7 @@ import {
   isAdmin,
   personVisible,
   itemVisible,
+  reconcileAccess,
 } from "./domain-access";
 import { fail, stamp, touch } from "./domain-common";
 
@@ -64,10 +66,7 @@ export function closurePlan(
       href: `/settings?section=groups&group=${g.id}`,
     });
   for (const p of s.people.filter(
-    (p) =>
-      !p.userId &&
-      p.guardians.includes(a.id) &&
-      p.guardians.every((id) => id === a.id),
+    (p) => !p.userId && p.guardians.includes(a.id) && profileOwner(p) === a.id,
   ))
     blockers.push({
       kind: "guardian",
@@ -144,22 +143,28 @@ export function requestHandoff(
   kind: "admin" | "guardian",
   personId: string,
   userId: string,
+  keepPreviousOwner = false,
 ) {
-  if (!handoffCandidates(s, a).some((p) => p.id === userId))
+  const source = s.people.find((p) => p.id === personId);
+  const candidates =
+    kind === "guardian" && source
+      ? managerCandidates(s, a, source)
+      : handoffCandidates(s, a);
+  if (userId === a.id || !candidates.some((p) => p.id === userId))
     fail(404, "Choose another trusted member.");
   const person = s.people.find((p) => p.id === personId);
   if (
     !person ||
     (kind === "admin"
       ? person.userId !== a.id || !person.admin
-      : !!person.userId || !person.guardians.includes(a.id))
+      : !!person.userId || profileOwner(person) !== a.id)
   )
     fail(403, "You cannot transfer this responsibility.");
   s.links = s.links.filter(
     (l) =>
       l.kind !== kind ||
       l.targetId !== personId ||
-      l.requestedBy !== a.id ||
+      (kind !== "guardian" && l.requestedBy !== a.id) ||
       l.consumed,
   );
   s.links.push({
@@ -167,6 +172,7 @@ export function requestHandoff(
     kind,
     userId,
     requestedBy: a.id,
+    keepPreviousOwner,
     targetId: personId,
     consumed: false,
     expiresAt: new Date(Date.now() + 86400000).toISOString(),
@@ -189,11 +195,19 @@ export function acceptHandoff(s: State, a: Actor, id: string) {
     !source ||
     !from ||
     !target ||
-    !handoffCandidates(s, {
-      id: from.userId!,
-      name: from.name,
-      email: "",
-    }).some((p) => p.id === a.id)
+    !(
+      link.kind === "guardian"
+        ? managerCandidates(
+            s,
+            { id: from.userId!, name: from.name, email: "" },
+            source,
+          )
+        : handoffCandidates(s, {
+            id: from.userId!,
+            name: from.name,
+            email: "",
+          })
+    ).some((p) => p.id === a.id)
   )
     fail(409, "This handoff is no longer available.");
   if (link.kind === "admin") {
@@ -203,16 +217,35 @@ export function acceptHandoff(s: State, a: Actor, id: string) {
     source.admin = false;
     touch(target);
   } else {
-    if (source.userId || !source.guardians.includes(link.requestedBy!))
+    if (source.userId || profileOwner(source) !== link.requestedBy)
       fail(409, "This profile already changed.");
     source.guardians = [
       ...new Set([
-        ...source.guardians.filter((id) => id !== link.requestedBy),
+        ...source.guardians.filter(
+          (id) => link.keepPreviousOwner || id !== link.requestedBy,
+        ),
         a.id,
       ]),
     ];
   }
   if (link.kind === "guardian") {
+    source.managedOwnerId = a.id;
+    for (const old of s.links.filter(
+      (l) =>
+        l.targetId === source.id &&
+        ["guardian", "profile"].includes(l.kind) &&
+        l.id !== link.id &&
+        !l.consumed,
+    )) {
+      old.consumed = true;
+      old.cancelled = true;
+      touch(old);
+      const invitation = s.invitations.find((i) => i.id === old.invitationId);
+      if (invitation && !invitation.acceptedBy) {
+        invitation.revoked = true;
+        touch(invitation);
+      }
+    }
     if (source.managedGroupIds)
       source.managedGroupIds = source.managedGroupIds.filter((id) =>
         s.groups.some(
@@ -223,6 +256,7 @@ export function acceptHandoff(s: State, a: Actor, id: string) {
       );
     reconcileEventParticipants(s);
     reconcileHouseholds(s);
+    reconcileAccess(s);
   }
   touch(source);
   link.consumed = true;
@@ -408,8 +442,20 @@ export function closeAccountData(
       p.name = "Former member";
       p.admin = false;
     }
-    p.guardians = p.guardians.filter((id) => id !== a.id);
+    if (p.guardians.includes(a.id)) {
+      p.guardians = p.guardians.filter((id) => id !== a.id);
+      p.managedGroupIds = p.managedGroupIds?.filter((id) =>
+        s.groups.some(
+          (g) =>
+            g.id === id && p.guardians.some((u) => g.memberIds.includes(u)),
+        ),
+      );
+      touch(p);
+    }
   }
+  reconcileEventParticipants(s);
+  reconcileHouseholds(s);
+  reconcileAccess(s);
   s.giftPreferences = s.giftPreferences.filter(
     (p) => !plan.own.has(p.personId) && !orphanFriends.has(p.personId),
   );

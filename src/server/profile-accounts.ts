@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { managementDetails } from "./profile-management";
 import { sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Actor } from "../shared/model";
@@ -17,6 +18,17 @@ export function registerProfileAccounts(
   app: FastifyInstance,
   actor: (req: any) => Promise<Actor>,
 ) {
+  app.get<{ Params: { id: string } }>(
+    "/api/v1/people/:id/management",
+    async (req, reply) => {
+      reply.header("Cache-Control", "no-store");
+      return managementDetails(
+        await readState(),
+        await actor(req),
+        req.params.id,
+      );
+    },
+  );
   app.post("/api/v1/account/name", async (req) => {
     const a = await actor(req);
     const b = z.object({ firstName: text, lastName: text }).parse(req.body);

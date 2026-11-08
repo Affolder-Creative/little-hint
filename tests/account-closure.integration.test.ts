@@ -156,6 +156,151 @@ describe.skipIf(!url)("atomic account closure", () => {
         .rows[0].name,
     ).toBe("Updated Name");
   });
+  it("migrates ownership idempotently and refuses orphaned manager references", async () => {
+    const childId = stamp().id;
+    await storage.transact((s) =>
+      s.people.push({
+        ...stamp(),
+        id: childId,
+        name: "Legacy child",
+        guardians: [id],
+      }),
+    );
+    await storage.pool.query("DELETE FROM schema_migration WHERE version=8");
+    await storage.migrate();
+    await storage.migrate();
+    expect(
+      (await storage.readState()).people.find((p) => p.id === childId)
+        ?.managedOwnerId,
+    ).toBe(id);
+    const orphanId = stamp().id;
+    await storage.transact((s) =>
+      s.people.push({
+        ...stamp(),
+        id: orphanId,
+        name: "Orphan",
+        guardians: ["missing-account"],
+      }),
+    );
+    await storage.pool.query("DELETE FROM schema_migration WHERE version=8");
+    await expect(storage.migrate()).rejects.toThrow(orphanId);
+    await storage.pool.query("DELETE FROM app_record WHERE id=$1", [orphanId]);
+    await storage.migrate();
+  });
+  it("rejects stale concurrent manager edits without partial profile writes", async () => {
+    const created = await post("/api/v1/people", { name: "Child" });
+    const child = created.json();
+    const results = await Promise.all(
+      ["First", "Second"].map((name) =>
+        post("/api/v1/people/update", {
+          id: child.id,
+          revision: child.revision,
+          name,
+          managerUserIds: [id],
+        }),
+      ),
+    );
+    expect(results.map((r) => r.statusCode).sort()).toEqual([200, 409]);
+    const saved = (await storage.readState()).people.find(
+      (p) => p.id === child.id,
+    )!;
+    expect(saved.managedOwnerId).toBe(id);
+    expect(saved.guardians).toEqual([id]);
+    expect((await post("/api/v1/account/closure/start")).statusCode).toBe(409);
+  });
+  it("enforces co-manager permissions through HTTP and transfers ownership on acceptance", async () => {
+    const nextId = `co-manager-${n}`,
+      nextEmail = `co-manager-${n}@example.test`;
+    await storage.pool.query(
+      'INSERT INTO "user" (id,name,email,email_verified) VALUES ($1,$2,$3,true)',
+      [nextId, "Co-manager", nextEmail],
+    );
+    await storage.transact((s) => {
+      s.people.push({
+        ...stamp(),
+        userId: nextId,
+        name: "Co-manager",
+        guardians: [],
+      });
+      s.groups.push({
+        ...stamp(),
+        name: "Family",
+        ownerId: id,
+        memberIds: [id, nextId],
+      });
+    });
+    const originalEmail = email;
+    email = nextEmail;
+    const nextCookie = await signIn();
+    email = originalEmail;
+    const child = (await post("/api/v1/people", { name: "Child" })).json();
+    const added = await post("/api/v1/people/update", {
+      id: child.id,
+      revision: child.revision,
+      name: child.name,
+      managerUserIds: [id, nextId],
+    });
+    expect(added.statusCode, added.body).toBe(200);
+    const details = await app.inject({
+      url: `/api/v1/people/${child.id}/management`,
+      headers: { cookie: nextCookie },
+    });
+    expect(details.statusCode).toBe(200);
+    expect(details.json().candidates).toEqual([]);
+    const denied = await post(
+      "/api/v1/people/update",
+      {
+        id: child.id,
+        revision: added.json().revision,
+        name: "Unauthorized",
+        managerUserIds: [nextId],
+      },
+      nextCookie,
+    );
+    expect(denied.statusCode).toBe(403);
+    const renamed = await post(
+      "/api/v1/people/update",
+      { id: child.id, revision: added.json().revision, name: "Renamed" },
+      nextCookie,
+    );
+    expect(renamed.statusCode, renamed.body).toBe(200);
+    expect(
+      (
+        await post(
+          "/api/v1/people/link",
+          { id: child.id, email: "recipient@example.test" },
+          nextCookie,
+        )
+      ).statusCode,
+    ).toBe(404);
+    expect(
+      (
+        await post("/api/v1/account/handoff", {
+          kind: "guardian",
+          personId: child.id,
+          userId: nextId,
+          keepPreviousOwner: true,
+        })
+      ).statusCode,
+    ).toBe(200);
+    const link = (await storage.readState()).links.find(
+      (l) => l.kind === "guardian" && l.targetId === child.id,
+    )!;
+    expect(
+      (
+        await post(
+          "/api/v1/account/handoff/respond",
+          { id: link.id, accept: true },
+          nextCookie,
+        )
+      ).statusCode,
+    ).toBe(200);
+    const saved = (await storage.readState()).people.find(
+      (p) => p.id === child.id,
+    )!;
+    expect(saved.managedOwnerId).toBe(nextId);
+    expect(saved.guardians).toEqual([id, nextId]);
+  });
   it("backfills existing managed sharing while preserving explicit private profiles", async () => {
     const groupId = stamp().id,
       legacyId = stamp().id,
