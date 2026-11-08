@@ -1,3 +1,4 @@
+import { netContribution } from "../shared/contribution-money";
 import { NameSetup } from "./NameSetup";
 import {
   shoppingChoices,
@@ -1546,7 +1547,7 @@ function GiftDetail() {
                     {dollars(
                       (r.contributions ?? [])
                         .filter((c) => c.status !== "cancelled")
-                        .reduce((n, c) => n + c.amountCents, 0),
+                        .reduce((n, c) => n + netContribution(c), 0),
                     )}{" "}
                     pledged
                   </p>

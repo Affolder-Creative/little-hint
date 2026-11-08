@@ -123,7 +123,10 @@ export function registerAdminAccounts(
           for (const r of s.reservations.filter((r) => r.buyerId === user.id)) {
             if (
               s.contributions.some(
-                (c) => c.reservationId === r.id && c.status === "sent",
+                (c) =>
+                  c.reservationId === r.id &&
+                  (c.status === "sent" ||
+                    c.returns?.some((r) => r.status === "sent")),
               )
             )
               continue;

@@ -1,3 +1,5 @@
+import { selfRecipient } from "./domain-access";
+import { buyingDestination } from "./gift-lifecycle";
 import { noteNeedsReview, reservationNeedsReview } from "./privacy-review";
 import type { Comment } from "../shared/model";
 import {
@@ -296,6 +298,34 @@ export function watchesItem(s: State, userId: string, itemId: string) {
 export function activityAllowed(s: State, n: Notice): boolean {
   const a = actor(s, n.userId);
   if (!accountIds(s).includes(a.id)) return false;
+  if (n.lifecycle)
+    return (
+      n.lifecycle.reservationIds.length > 0 &&
+      n.lifecycle.reservationIds.every((id) => {
+        const r = s.reservations.find((r) => r.id === id);
+        return (
+          !!r &&
+          !selfRecipient(s, a, r.sourceRecipientIds ?? []) &&
+          (r.buyerId === a.id ||
+            s.contributions.some(
+              (c) => c.reservationId === id && c.userId === a.id,
+            ))
+        );
+      })
+    );
+  if (n.event === "contribution" && n.reservationId) {
+    const r = s.reservations.find((r) => r.id === n.reservationId);
+    return (
+      !!r &&
+      (r.buyerId === a.id ||
+        s.contributions.some(
+          (c) =>
+            c.reservationId === r.id &&
+            c.userId === a.id &&
+            (!n.contributionId || c.id === n.contributionId),
+        ))
+    );
+  }
   if (n.importId)
     return s.imports.some(
       (j) =>
@@ -494,6 +524,9 @@ function renderActivity(s: State, n: Notice): NotificationView {
   };
   const actions: Record<string, string> = {
     "spending-guideline-updated": "The spending guideline has changed",
+    "return-sent": `${who} recorded money returned`,
+    "return-received": `${who} confirmed a return received`,
+    "return-voided": `${who} corrected a return record`,
     pledged: `${who} offered to help pay for a gift`,
     sent: `${who} marked a contribution as sent`,
     received: `${who} marked a contribution as received`,
@@ -510,11 +543,28 @@ function renderActivity(s: State, n: Notice): NotificationView {
     id: n.id,
     event: n.event,
     message:
+      (n.lifecycle
+        ? {
+            active: "A wish is available again",
+            archived: "A wish in your gift plans is archived",
+            removed: "A wish in your gift plans was removed",
+            unavailable: "Your gift plans have changed",
+          }[n.lifecycle.state]
+        : undefined) ??
       (n.event === "price-drop" ? n.action : undefined) ??
       actions[n.action ?? ""] ??
       messages[n.event] ??
       "You have a gift update",
     context:
+      (n.lifecycle
+        ? n.lifecycle.reservationIds
+            .map((id) => s.reservations.find((r) => r.id === id)?.titleSnapshot)
+            .filter(Boolean)
+            .join(", ")
+        : undefined) ??
+      (n.reservationId
+        ? s.reservations.find((r) => r.id === n.reservationId)?.titleSnapshot
+        : undefined) ??
       item?.title ??
       list?.name ??
       (n.groupEventId
@@ -523,31 +573,34 @@ function renderActivity(s: State, n: Notice): NotificationView {
       (n.exchangeId
         ? s.exchanges.find((e) => e.id === n.exchangeId)?.name
         : undefined),
-    href: n.importId
-      ? (() => {
-          const j = s.imports.find((j) => j.id === n.importId);
-          return j?.draft?.kind === "idea" &&
-            s.people.some(
-              (p) =>
-                p.id === j.draft?.recipientId &&
-                personVisible(s, actor(s, n.userId), p),
-            )
-            ? `/people/${j.draft.recipientId}?tab=ideas&draft=${n.importId}`
-            : `/lists?draft=${n.importId}`;
-        })()
-      : n.invitationId
-        ? `/invite/${n.invitationId}`
-        : n.event === "invitation" && n.listId
-          ? "/lists"
-          : n.event === "invitation"
-            ? "/settings?section=groups"
-            : n.groupEventId
-              ? `/events/${n.groupEventId}`
-              : n.exchangeId
-                ? `/exchanges#exchange-${n.exchangeId}`
-                : item
-                  ? `/gift/${item.id}${n.commentId ? `#note-${n.commentId}` : ""}`
-                  : "/buying",
+    href:
+      n.lifecycle || (n.event === "contribution" && n.reservationId)
+        ? buyingDestination(s, n)
+        : n.importId
+          ? (() => {
+              const j = s.imports.find((j) => j.id === n.importId);
+              return j?.draft?.kind === "idea" &&
+                s.people.some(
+                  (p) =>
+                    p.id === j.draft?.recipientId &&
+                    personVisible(s, actor(s, n.userId), p),
+                )
+                ? `/people/${j.draft.recipientId}?tab=ideas&draft=${n.importId}`
+                : `/lists?draft=${n.importId}`;
+            })()
+          : n.invitationId
+            ? `/invite/${n.invitationId}`
+            : n.event === "invitation" && n.listId
+              ? "/lists"
+              : n.event === "invitation"
+                ? "/settings?section=groups"
+                : n.groupEventId
+                  ? `/events/${n.groupEventId}`
+                  : n.exchangeId
+                    ? `/exchanges#exchange-${n.exchangeId}`
+                    : item
+                      ? `/gift/${item.id}${n.commentId ? `#note-${n.commentId}` : ""}`
+                      : "/buying",
     createdAt: n.createdAt,
     readAt: n.readAt,
   };

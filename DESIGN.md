@@ -299,6 +299,10 @@ Item grids and active gift plans show 24 entries per page. A quiet result count 
 
 Search and filter controls stay mounted while results refresh. Changing a filter starts on page one. Explicit page navigation focuses the results region and brings it below the sticky header; background updates preserve focus and position. Back, Forward, and reload retain the page and existing browse choices. Loading and failed reads remain distinct from empty results, with a Retry action for failures.
 
+### Retained gift plans
+
+Buying keeps wish availability separate from purchase status. Private detail sections use open rows, existing text actions and a 65ch prose measure. Review controls have the standard prose spacing before payment information. Return rows distinguish money sent from confirmed receipt in text; they reuse existing forms, action menus, and light/dark tokens.
+
 ### Spending views
 
 Buying contains the optional spending view. Personal and partner views use the established tabs. Person and occasion selectors lead; less frequent wishlist and period filters sit in More filters. Spent and Still planning use tabular figures, with estimates and missing amounts labeled in text. Budgets appear only after creation and distinguish the balance after purchases from the balance after planned gifts. The progress meter uses the existing accent and soft colors, with text carrying every amount.

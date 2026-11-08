@@ -167,6 +167,10 @@ describe("recoverable and permanent deletion", () => {
       { quantity: 2, purchased: 0 },
       f.actors[1],
     );
+    command(f.s, f.actors[2], "reservations.review", {
+      id: reservation.id,
+      sourceVersion: reservation.sourceVersion,
+    });
     f.run(
       "contributions.update",
       contribution,

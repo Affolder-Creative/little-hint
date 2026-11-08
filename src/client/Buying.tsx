@@ -1,3 +1,4 @@
+import { GiftPlanDetail, sourceLabels } from "./GiftPlanDetail";
 import {
   CollectionStatus,
   Pagination,
@@ -92,6 +93,7 @@ export function Buying() {
         title="Your gift plans"
         description="Keep track of gifts you’re buying and helping pay for."
       />
+      <GiftPlanDetail />
       <SpendingSummary />
       {allCount > 0 && (
         <div
@@ -220,6 +222,14 @@ export function Buying() {
                   )}
                   <div>
                     <h2>{r.titleSnapshot}</h2>
+                    {r.sourceState && r.sourceState !== "active" && (
+                      <p>
+                        {sourceLabels[r.sourceState]} ·{" "}
+                        <Link to={`/buying?reservation=${r.id}`}>
+                          Review gift plan
+                        </Link>
+                      </p>
+                    )}
                     <PrivateIdeaBadge gift={r.item} />
                     <p>
                       {r.item
@@ -470,10 +480,19 @@ export function Buying() {
               title,
               contributorName,
               purchaserName,
+              sourceState,
             }) => (
               <div className="reservation-row" key={c.id}>
                 <div>
                   <strong>{title}</strong>
+                  {sourceState && sourceState !== "active" && (
+                    <p>{sourceLabels[sourceState]}</p>
+                  )}
+                  <p>
+                    <Link to={`/buying?contribution=${c.id}`}>
+                      Review contribution and returns
+                    </Link>
+                  </p>
                   <p>
                     {contributorName} contributing to {purchaserName}'s purchase
                   </p>
@@ -487,33 +506,35 @@ export function Buying() {
                     />
                   )}
                 </div>
-                {c.status === "pledged" && c.userId === world.me.id && (
-                  <>
-                    <Action
-                      onClick={() =>
-                        mutate("contributions/update", {
-                          id: c.id,
-                          revision: c.revision,
-                          status: "sent",
-                        })
-                      }
-                    >
-                      Mark as sent
-                    </Action>
-                    <Action
-                      secondary
-                      onClick={() =>
-                        mutate("contributions/update", {
-                          id: c.id,
-                          revision: c.revision,
-                          status: "cancelled",
-                        })
-                      }
-                    >
-                      Cancel contribution
-                    </Action>
-                  </>
-                )}
+                {c.status === "pledged" &&
+                  c.userId === world.me.id &&
+                  (!sourceState || sourceState === "active") && (
+                    <>
+                      <Action
+                        onClick={() =>
+                          mutate("contributions/update", {
+                            id: c.id,
+                            revision: c.revision,
+                            status: "sent",
+                          })
+                        }
+                      >
+                        Mark as sent
+                      </Action>
+                      <Action
+                        secondary
+                        onClick={() =>
+                          mutate("contributions/update", {
+                            id: c.id,
+                            revision: c.revision,
+                            status: "cancelled",
+                          })
+                        }
+                      >
+                        Cancel contribution
+                      </Action>
+                    </>
+                  )}
                 {c.status === "sent" && purchaser && (
                   <Action
                     onClick={() =>

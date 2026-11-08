@@ -136,14 +136,20 @@ export function accountCsv(s: State, a: Actor, table: ExportTable) {
         r.id,
       ]);
     }
-    for (const c of s.contributions.filter((c) => c.userId === a.id)) {
+    for (const c of s.contributions.filter(
+      (c) =>
+        c.userId === a.id ||
+        s.reservations.some(
+          (r) => r.id === c.reservationId && r.buyerId === a.id,
+        ),
+    )) {
       const r = s.reservations.find((r) => r.id === c.reservationId);
       const item = s.items.find(
         (i) => i.id === r?.itemId && itemVisible(s, a, i),
       );
       rows.push([
         "Contribution",
-        item?.title ?? "Unavailable gift",
+        item?.title ?? r?.titleSnapshot ?? "Unavailable gift",
         item ? names(item.recipientIds) : "",
         item ? listName(item.listId) : "",
         null,
@@ -154,6 +160,20 @@ export function accountCsv(s: State, a: Actor, table: ExportTable) {
         c.createdAt,
         c.id,
       ]);
+      for (const ret of c.returns ?? [])
+        rows.push([
+          "Contribution return",
+          r?.titleSnapshot ?? "Unavailable gift",
+          "",
+          "",
+          null,
+          null,
+          money(ret.amountCents),
+          ret.status,
+          ret.receivedDate ?? ret.date,
+          ret.createdAt,
+          ret.id,
+        ]);
     }
   } else {
     rows = [

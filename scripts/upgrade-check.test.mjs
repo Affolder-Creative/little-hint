@@ -116,3 +116,74 @@ test("failed startup cleans only its two disposable projects and excludes operat
     rmSync(directory, { recursive: true, force: true });
   }
 });
+
+test("schema 9 accepts only the exact lifecycle baseline and preserves legacy evidence", () => {
+  const baseline = structuredClone(original);
+  baseline.schemaVersion = 8;
+  const item = { id: "gift", recipientIds: ["recipient"], archived: true };
+  const reservation = {
+    id: "plan",
+    itemId: "gift",
+    buyerId: "giver",
+    quantity: 2,
+    purchased: 1,
+    titleSnapshot: "Gift",
+  };
+  baseline.records = [
+    { id: "gift", kind: "items", data: item },
+    { id: "plan", kind: "reservations", data: reservation },
+  ];
+  baseline.views.buyer = {
+    buying: [{ ...reservation, item: { ...item, isRecipient: false } }],
+    contributionHistory: [
+      { contribution: { reservationId: "plan", amountCents: 1200 } },
+    ],
+  };
+  const candidate = structuredClone(baseline);
+  candidate.schemaVersion = 9;
+  const added = {
+    sourceState: "archived",
+    sourceVersion: 1,
+    sourceRecipientIds: ["recipient"],
+  };
+  Object.assign(candidate.records[1].data, added);
+  Object.assign(candidate.views.buyer.buying[0], added, {
+    sourceReviewedBy: {},
+    planActions: {
+      canRecordPurchase: false,
+      canRelease: true,
+      requiresReview: true,
+    },
+  });
+  candidate.views.buyer.contributionHistory[0].sourceState = "archived";
+  assertPreserved(candidate, baseline);
+  assertPreserved(baseline, baseline); // Restoring the pre-upgrade backup.
+  assertPreserved(candidate, candidate); // Candidate recreation is exact.
+  for (const corrupt of [
+    (v) => {
+      v.records[1].data.sourceState = "active";
+    },
+    (v) => {
+      v.records[1].data.sourceVersion = 2;
+    },
+    (v) => {
+      delete v.records[1].data.sourceRecipientIds;
+    },
+    (v) => {
+      v.records[1].data.purchased = 0;
+    },
+    (v) => {
+      v.views.buyer.buying[0].planActions.canRecordPurchase = true;
+    },
+    (v) => {
+      v.views.recipient.items[0].sourceRecipientIds = ["private"];
+    },
+    (v) => {
+      v.views.buyer.contributionHistory[0].contribution.amountCents++;
+    },
+  ]) {
+    const changed = structuredClone(candidate);
+    corrupt(changed);
+    assert.throws(() => assertPreserved(changed, baseline));
+  }
+});

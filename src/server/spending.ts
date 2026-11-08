@@ -1,3 +1,4 @@
+import { netContribution } from "../shared/contribution-money";
 import { canShop } from "./domain-access";
 import { protectedSpending } from "./spending-privacy";
 import { createHash } from "node:crypto";
@@ -354,6 +355,29 @@ export function syncContributions(
       entry.date = (receiving ? c.receivedAt : c.sentAt)?.slice(0, 10) ?? null;
       entry.amountCents = c.amountCents;
       entry.voided = c.status === "cancelled";
+      for (const ret of c.returns ?? []) {
+        const relevant = receiving || ret.status === "received";
+        let refund = s.spendingRecords.find(
+          (v) => v.contributionReturnId === ret.id && v.ownerId === owner,
+        );
+        if (!relevant && !refund) continue;
+        if (!refund) {
+          refund = {
+            ...entry,
+            ...stamp(),
+            sourceId: ret.id,
+            contributionId: c.id,
+            contributionReturnId: ret.id,
+            history: [],
+            quantity: 0,
+          };
+          s.spendingRecords.push(refund);
+        }
+        refund.kind = receiving ? "contribution" : "refund";
+        refund.amountCents = ret.amountCents;
+        refund.date = receiving ? ret.date : (ret.receivedDate ?? null);
+        refund.voided = ret.status === "voided" || !relevant;
+      }
     }
   }
 }
@@ -390,10 +414,12 @@ export function spendingView(s: State, a: Actor): SpendingView {
               (c) =>
                 c.reservationId === r.reservationId && c.status !== "cancelled",
             )
-            .reduce((n, c) => n + c.amountCents, 0)
+            .reduce((n, c) => n + netContribution(c), 0)
         : undefined,
     canEdit:
-      !s.contributions.some((c) => c.id === r.sourceId) && editable(s, a, r),
+      !r.contributionReturnId &&
+      !s.contributions.some((c) => c.id === r.sourceId) &&
+      editable(s, a, r),
     canShare: r.ownerId === a.id && active(s, c) && !protectedRecord(s, r, c),
     protected: protectedRecord(s, r, c),
     canAssignList: canAssignList(s, r),
@@ -869,7 +895,10 @@ export function spendingCommand(
   if (!r || !editable(s, a, r)) fail(404, "Spending record not found.");
   revision(r, b);
   if (action === "spending.record") {
-    if (s.contributions.some((c) => c.id === r.sourceId))
+    if (
+      r.contributionReturnId ||
+      s.contributions.some((c) => c.id === r.sourceId)
+    )
       fail(400, "Update contributions from Buying.");
     const p = z
       .object({

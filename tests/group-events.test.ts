@@ -417,6 +417,11 @@ describe("event lifecycle", () => {
         quantity: 1,
       }),
     ).toThrow("archived");
+    command(f.state, f.actors[3], "reservations.review", {
+      id: reservation.id,
+      sourceVersion: f.state.reservations.find((r) => r.id === reservation.id)!
+        .sourceVersion,
+    });
     command(f.state, f.actors[3], "reservations.update", {
       ...f.state.reservations.find((r) => r.id === reservation.id)!,
       purchased: 1,

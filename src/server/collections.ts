@@ -1,3 +1,4 @@
+import { sourceView } from "./gift-lifecycle";
 import { canShop } from "./domain-access";
 import { z } from "zod";
 import type { Actor, State, Reservation } from "../shared/model";
@@ -185,7 +186,7 @@ export async function buyingPage(
   return {
     ...result,
     rows: result.rows.map((r) => ({
-      ...r,
+      ...sourceView(s, r, a),
       item: s.items.some((i) => i.id === r.itemId && itemVisible(s, a, i))
         ? giftView(s, a, getItem(s, a, r.itemId))
         : undefined,
@@ -313,6 +314,19 @@ export function registerCollections(
     const a = await actor(req);
     return buyingPage(await readCollectionState(), a, req.query);
   });
+  app.get("/api/v1/buying/contribution/:id", async (req: any) => {
+    const a = await actor(req),
+      s = await readCollectionState();
+    const c = s.contributions.find((c) => c.id === req.params.id);
+    const r = s.reservations.find((r) => r.id === c?.reservationId);
+    if (!c || !r || (c.userId !== a.id && r.buyerId !== a.id))
+      fail(404, "Contribution not found.");
+    return {
+      contribution: c,
+      reservation: sourceView(s, r, a),
+      purchaser: r.buyerId === a.id,
+    };
+  });
   app.get("/api/v1/buying/reservations/:id", async (req: any) => {
     const a = await actor(req),
       s = await readCollectionState();
@@ -322,7 +336,7 @@ export function registerCollections(
     if (!r) fail(404, "Reservation not found.");
     await hydrateCollectionItems(s, [r.itemId]);
     return {
-      ...r,
+      ...sourceView(s, r, a),
       item: s.items.some((i) => i.id === r.itemId && itemVisible(s, a, i))
         ? giftView(s, a, getItem(s, a, r.itemId))
         : undefined,

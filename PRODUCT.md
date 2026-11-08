@@ -186,3 +186,11 @@ Administrators can review and delete another account with exact DELETE confirmat
 ## Managed-profile ownership
 
 Managed profiles have one owner and may have multiple co-managers. The owner adds connected account holders in Edit profile; saving grants access immediately. Co-managers edit profile details, wishes, preferences and sharing, while only the owner changes managers or invites the recipient to take over. Ownership transfers require acceptance within 24 hours, with an option to keep the previous owner as a co-manager. Owner account deletion requires an accepted transfer even when co-managers remain. Deleting a co-manager removes their access.
+
+## Gift-plan lifecycle and settlement
+
+Archiving, removing, or restoring wishes privately updates affected buyers and contributors through Changes affecting my gift plans. List operations group affected plans per account. Wish availability and purchase status remain separate. Archive/delete confirmations never reveal hidden commitments. Existing purchases and financial records survive source removal; permanent deletion after Trash sends no duplicate removal alert.
+
+Existing buyers review archived wishes before continuing. Removed sources cannot accept new purchases. Existing pledges may be cancelled or marked sent after reviewing the changed source. Restoration never revives cancelled commitments. Cost-sharing updates remain available to the buyer and relevant contributor after removal. External messages stay generic.
+
+Buyers may record full or partial contribution returns after confirming the original payment received. Contributors confirm return receipt separately. Unconfirmed mistakes may be voided; confirmed returns are immutable. These records do not transfer money. Optional Spending preserves original payments, records return dates independently, and excludes internal partner transfers from combined totals. Pending return receipts must be settled before a financial participant closes their account.

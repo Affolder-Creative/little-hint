@@ -1,3 +1,4 @@
+import { netContribution } from "./contribution-money";
 import type { GiftView, World } from "./model";
 
 export interface SpendingContext {
@@ -123,7 +124,7 @@ export function spendingSummary(
       [];
     const promised = contributions
       .filter((c) => c.status !== "cancelled" && c.userId !== world.me.id)
-      .reduce((total, c) => total + c.amountCents, 0);
+      .reduce((total, c) => total + netContribution(c), 0);
     cents += Math.max(0, estimate.cents - promised);
     if (estimate.unknown) unknown++;
   }
@@ -134,7 +135,7 @@ export function spendingSummary(
         if (r.exchange || r.mine || r.quantity <= 0) continue;
         cents += (r.contributions ?? [])
           .filter((c) => c.userId === world.me.id && c.status !== "cancelled")
-          .reduce((total, c) => total + c.amountCents, 0);
+          .reduce((total, c) => total + netContribution(c), 0);
         if (preview.contributionReservationId === r.id)
           cents += preview.amountCents ?? 0;
       }

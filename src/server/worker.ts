@@ -1,3 +1,4 @@
+import { reconcileGiftLifecycle } from "./gift-lifecycle";
 import { schedulePrices } from "./prices";
 import { processPrice } from "./price-worker";
 import { priceConfig } from "./price-config";
@@ -198,6 +199,7 @@ async function dispatch() {
     await transact((s) => {
       pruneDiscovery(s, discoveryConfigForState(s));
       archiveDueLists(s);
+      reconcileGiftLifecycle(s);
       if (effectiveConfig().SCRAPING_PROVIDER !== "none") schedulePrices(s);
       let row = s.usage.find((u) => u.key === "worker-heartbeat");
       if (!row) {

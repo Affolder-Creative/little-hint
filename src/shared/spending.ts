@@ -18,6 +18,8 @@ export interface SpendingOccasion extends Base {
   connectionId?: string;
 }
 export interface SpendingRecord extends Base {
+  contributionReturnId?: string;
+  contributionId?: string;
   ownerId: string;
   title: string;
   recipientIds: string[];
@@ -133,6 +135,7 @@ export function spendingTotals(
   const internal = shared
     ? authorizedRecords.filter(
         (r) =>
+          !r.contributionReturnId &&
           (r.kind === "contribution" || (r.kind === "plan" && r.sourceId)) &&
           authorizedRecords.some(
             (p) =>
@@ -144,13 +147,35 @@ export function spendingTotals(
     : [];
   for (const r of rows) {
     if (
+      shared &&
+      r.contributionReturnId &&
+      internal.some((c) => c.sourceId === r.contributionId)
+    )
+      continue;
+    if (
       internal.includes(r) ||
       (r.kind === "refund" && internal.some((c) => c.sourceId === r.sourceId))
     )
       continue;
     const restored = internal
       .filter((c) => c.reservationId === r.reservationId)
-      .reduce((n, c) => n + (c.amountCents ?? 0), 0);
+      .reduce((n, c) => {
+        const returns = new Map(
+          authorizedRecords
+            .filter(
+              (v) =>
+                v.contributionId === c.sourceId &&
+                v.contributionReturnId &&
+                !v.voided,
+            )
+            .map((v) => [v.contributionReturnId, v.amountCents ?? 0]),
+        );
+        return (
+          n +
+          (c.amountCents ?? 0) -
+          [...returns.values()].reduce((sum, value) => sum + value, 0)
+        );
+      }, 0);
     const estimate =
       r.kind === "plan" && !r.sourceId && r.amountCents !== null
         ? {

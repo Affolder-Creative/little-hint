@@ -117,7 +117,14 @@ describe.skipIf(!url)("PostgreSQL transaction integrity", () => {
       expect((await storage.readBuyingState("unrelated")).reservations).toEqual(
         [],
       );
-      expect(buyer.items).toEqual([]);
+      // Source rows support current availability; financial rows remain scoped.
+      expect(buyer.items.map((i) => i.id)).toEqual([itemId]);
+      expect(buyer.lists.map((l) => l.id)).toEqual([listId]);
+      expect(contributor.items.map((i) => i.id)).toEqual([itemId]);
+      const unrelated = await storage.readBuyingState("unrelated");
+      expect(unrelated.items).toEqual([]);
+      expect(unrelated.lists).toEqual([]);
+      expect(unrelated.contributions).toEqual([]);
       expect(databaseMetrics.transactions.snapshot().count).toBe(before + 1);
       const waits = databaseMetrics.lockWait.snapshot().count;
       await expect(

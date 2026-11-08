@@ -256,3 +256,11 @@ Set `AI_ENABLED=true` to enable AI with the configured API key. Missing, blank, 
 Gift discovery still requires an enabled audience mode; product enrichment still respects shop-lookup settings and spending limits. Disabled AI bypasses cached enrichment too. Ordinary shop lookups, photos, manual entry, preferences, saved gifts, and stored usage history remain available or preserved. Unsaved discovery batches follow existing cancellation and cleanup rules. Re-enabling restores historical reporting, not cancelled batches.
 
 Recreate both app and worker after changing the flag. Clients update on normal refresh; previously dispatched requests may still be billed. Staging uses only `STAGING_AI_ENABLED`; preview always disables AI.
+
+### Gift-plan lifecycle release (schema 9)
+
+Back up the database before migration. Deploy app and worker from the same build. Migration establishes existing reservation source states without retroactive notifications; missing historical sources remain unavailable. Older writers reject schema 9. Rollback requires a compatible build that preserves contribution returns and lifecycle metadata. Never remove return entries to downgrade.
+
+The normal notification failure reporting covers lifecycle and settlement delivery. Queue metrics include aggregate lifecycle-update, pending-return, and confirmed-return counts without participant names or amounts. Scheduled archive eligibility is enforced on reads and commands; delivery resumes when the worker runs.
+
+Run `node --import tsx scripts/check-gift-lifecycle-ui.ts` with Chromium installed for the synthetic desktop/tablet/phone and light/dark acceptance journey. It does not access account data or send external notifications.

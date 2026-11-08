@@ -95,7 +95,8 @@ export function closurePlan(
     ) ||
     s.contributions.some(
       (c) =>
-        ["pledged", "sent"].includes(c.status) &&
+        (["pledged", "sent"].includes(c.status) ||
+          c.returns?.some((r) => r.status === "sent")) &&
         (c.userId === a.id ||
           s.reservations.some(
             (r) => r.id === c.reservationId && r.buyerId === a.id,
@@ -107,7 +108,7 @@ export function closurePlan(
       id: "buying",
       title: "Settle your gift commitments",
       detail:
-        "Resolve unpurchased reservations and pledged or sent contributions. Account closure does not cancel them.",
+        "Resolve unpurchased reservations, pledged or sent contributions, and returns awaiting receipt. Account closure does not cancel them.",
       href: "/buying",
     });
   if (
@@ -479,6 +480,11 @@ export function closeAccountData(
   s.contributions = s.contributions.filter(
     (c) => !privateReservations.has(c.reservationId),
   );
+  for (const r of s.reservations)
+    if (r.sourceReviewedBy) delete r.sourceReviewedBy[a.id];
+  for (const c of s.contributions)
+    for (const ret of c.returns ?? [])
+      if (ret.recordedBy === a.id) ret.recordedBy = anonymous;
   for (const r of s.reservations)
     if (r.buyerId === a.id) {
       r.buyerId = anonymous;
