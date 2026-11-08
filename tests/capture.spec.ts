@@ -94,7 +94,7 @@ for (const width of [393, 1440])
     ).toBeVisible();
     expect(imports).toBe(1);
     await expect(
-      dialog.getByRole("button", { name: "Save for later", exact: true }),
+      dialog.getByRole("button", { name: "Close dialog", exact: true }),
     ).toBeVisible();
     await expect(
       dialog.getByRole("button", { name: "Save draft", exact: true }),
@@ -308,7 +308,7 @@ test("successful lookup fills details and preserves the user's title", async ({
     "My chosen name",
   );
   await expect(
-    dialog.getByRole("button", { name: "Save for later", exact: true }),
+    dialog.getByRole("button", { name: "Close dialog", exact: true }),
   ).toBeVisible();
   await expect(
     dialog.getByRole("button", { name: "Save draft", exact: true }),

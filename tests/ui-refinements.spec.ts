@@ -282,13 +282,13 @@ for (const [width, theme] of [
       "Private draft saved",
     );
     const before = await page
-      .getByRole("button", { name: "Save for later" })
+      .getByRole("button", { name: "Save draft" })
       .boundingBox();
     await expect(page.locator(".draft-save-feedback")).toHaveText("", {
       timeout: 5000,
     });
     const after = await page
-      .getByRole("button", { name: "Save for later" })
+      .getByRole("button", { name: "Save draft" })
       .boundingBox();
     expect(after).toEqual(before);
     await capture("draft-editor");

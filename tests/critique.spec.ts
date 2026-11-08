@@ -5085,7 +5085,7 @@ for (const engine of ["chromium", "webkit"] as const) {
         .getByRole("button", { name: "Get details", exact: true })
         .click();
       await expect(
-        page.getByRole("button", { name: "Save for later" }),
+        page.getByRole("button", { name: "Save draft" }),
       ).toBeVisible();
       await page
         .getByLabel("Item name", { exact: true })
@@ -5147,7 +5147,7 @@ for (const width of [320, 393, 768, 1440]) {
       .getByRole("button", { name: "Get details", exact: true })
       .click();
     await expect(
-      dialog.getByRole("button", { name: "Save for later", exact: true }),
+      dialog.getByRole("button", { name: "Close dialog", exact: true }),
     ).toBeVisible();
     await dialog.getByLabel("Item name", { exact: true }).fill("My own title");
     state.imports[0].status = "complete";
@@ -5192,7 +5192,7 @@ for (const width of [320, 393, 768, 1440]) {
     await expect(submit).toBeInViewport();
     await dialog.getByLabel("Quantity wanted").fill("2");
     await dialog
-      .getByRole("button", { name: "Save for later", exact: true })
+      .getByRole("button", { name: "Close dialog", exact: true })
       .click();
     await expect(dialog).not.toBeVisible();
     expect(state.imports[0].draft?.fields.title).toBe("My own title");
@@ -5214,7 +5214,7 @@ test("item editor keeps failed lookup and draft-save recovery separate", async (
     .getByRole("button", { name: "Get details", exact: true })
     .click();
   await expect(
-    dialog.getByRole("button", { name: "Save for later", exact: true }),
+    dialog.getByRole("button", { name: "Close dialog", exact: true }),
   ).toBeVisible();
   state.imports[0].status = "failed";
   state.imports[0].error =
@@ -5227,12 +5227,10 @@ test("item editor keeps failed lookup and draft-save recovery separate", async (
   );
   await dialog.getByLabel("Item name", { exact: true }).fill("Keep my item");
   await dialog
-    .getByRole("button", { name: "Save for later", exact: true })
+    .getByRole("button", { name: "Close dialog", exact: true })
     .click();
   await expect(dialog).toBeVisible();
-  await expect(dialog.locator(".gift-draft-actions")).toContainText(
-    "Your draft could not be saved.",
-  );
+  await expect(dialog).toContainText("Temporarily unavailable");
   await expect(dialog.getByLabel("Item name", { exact: true })).toHaveValue(
     "Keep my item",
   );
@@ -5241,7 +5239,7 @@ test("item editor keeps failed lookup and draft-save recovery separate", async (
   ).toHaveCount(0);
   await page.unroute("**/api/v1/imports/update");
   await dialog
-    .getByRole("button", { name: "Save for later", exact: true })
+    .getByRole("button", { name: "Close dialog", exact: true })
     .click();
   await expect(dialog).not.toBeVisible();
   expect(state.imports[0].draft?.fields.title).toBe("Keep my item");

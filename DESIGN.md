@@ -347,10 +347,14 @@ lookups retain their own heading and creator-only explanation.
 
 The item form places its primary Add to wish list or Save changes action before
 the secondary Save draft or Publish action in both reading and keyboard order.
-Enter saves edits without publishing. Audience copy sits beneath the secondary
-action and states guardian access where applicable. The fixed dialog footer and
-existing mobile stacking remain intact. Archived drafts disable Publish.
-Import forms retain Save for later and its save/error feedback beside the saved-draft action. Both action groups reserve their width so feedback appearing or disappearing does not shift buttons.
+Enter saves edits without publishing. A full-width audience note sits above the
+paired actions and states guardian access where applicable. Save draft and Publish
+use the existing outlined secondary button. Actions align right on desktop and
+stack at full width on phones. The fixed dialog footer remains intact. Archived
+drafts disable Publish. Wish-list imports show automatic-save guidance and a
+reserved save/error status slot in the form content; closing saves unfinished
+lookup progress. Their footer contains only the primary action and Save draft.
+Gift-idea imports retain Save for later and its reserved feedback slot.
 No new color, typography, spacing, or elevation token is introduced.
 
 ### Collection actions
@@ -480,8 +484,7 @@ The dialog heading and action footer stay fixed around one scrollable content
 area. Content uses 24px padding, reduced to 20px vertically and 18px horizontally
 on phones. The footer has a top divider, 16px vertical padding, and safe-area
 clearance. The primary action aligns right on desktop and spans the phone width.
-Save for later remains available for unfinished imports, including wish-list imports, alongside Save draft. It saves lookup progress without requiring a complete item or converting it into a saved wish-list draft. Saved items use Publish;
-status distinguishes saving, saved, and failed changes. Save for later aligns with the primary button; its fixed feedback slot below the action shows successful saves for three seconds. Saving feedback and errors remain until the operation finishes or the error is resolved. Photo controls, preview,
+Wish-list imports save lookup progress automatically and when closing without requiring a complete item or converting it into a saved wish-list draft. Guidance and a fixed status slot sit in the form content, leaving two clear footer actions: Add to wish list and Save draft. Existing saved drafts use Save changes and Publish. Gift-idea imports retain Save for later beside the primary action. Status distinguishes saving, saved, and failed changes; successful feedback appears for three seconds. Saving feedback and errors remain until the operation finishes or the error is resolved. Photo controls, preview,
 and upload feedback share one compact group. Saving waits for photo uploads.
 
 Notification delivery setup leads the page, with channel connection status and setup beside its checkbox. Push setup, topic customization, and preview privacy use native disclosures with summaries of their current choices. Collapsed controls remain mounted so saving preserves every selection, including disconnected channels. Deployment-unavailable SMS and Telegram controls, counters, setup actions, and explanatory copy are omitted without placeholders. Remaining controls reflow in the existing wrapping layout. Saving visible controls preserves hidden choices. Preview summaries and follow summaries name only available channels; SMS never offers detailed previews. Notification and follow checkbox rows have 44px targets. Save feedback appears beside the form. Inherited follows name their source choices; person follows explain that the source depends on each wish list. Administration services use labeled status rows. Session rows identify this device where available, with readable browser names and expandable details. Loading and failure states never stand in for empty data.
