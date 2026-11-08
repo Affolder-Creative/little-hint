@@ -96,6 +96,9 @@ for (const width of [393, 1440])
     await expect(
       dialog.getByRole("button", { name: "Save for later", exact: true }),
     ).toBeVisible();
+    await expect(
+      dialog.getByRole("button", { name: "Save draft", exact: true }),
+    ).toBeVisible();
     await page.screenshot({
       path: info.outputPath(`capture-review-${width}.png`),
       fullPage: true,
@@ -306,5 +309,8 @@ test("successful lookup fills details and preserves the user's title", async ({
   );
   await expect(
     dialog.getByRole("button", { name: "Save for later", exact: true }),
+  ).toBeVisible();
+  await expect(
+    dialog.getByRole("button", { name: "Save draft", exact: true }),
   ).toBeVisible();
 });

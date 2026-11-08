@@ -634,77 +634,80 @@ export function GiftForm({
       dialogLayout
       externalBusy={draftSaving}
       secondaryActionsPosition="after"
-      secondaryActions={(busy) =>
-        !idea && (!gift || gift.publicationState === "draft") ? (
-          <div className="gift-draft-actions">
-            <button
-              type="submit"
-              name="draftAction"
-              value={gift ? "publish" : "save"}
-              className="text-button"
-              disabled={
-                busy || uploading || !!gift?.archived || !navigator.onLine
-              }
-            >
-              {gift ? "Publish" : "Save draft"}
-            </button>
-            <p className="muted">
-              {world.people.some(
-                (p) =>
-                  (
-                    gift?.recipientIds ??
-                    world.lists.find((l) => l.id === destination)?.ownerIds ??
-                    []
-                  ).includes(p.id) && p.guardians.length,
-              )
-                ? "Drafts are visible to their owner and this profile’s guardians until published."
-                : "Only you can see this draft until you publish."}
-            </p>
-          </div>
-        ) : savedDraft.current?.draft ? (
-          <div className="gift-draft-actions">
-            <button
-              type="button"
-              className="text-button"
-              disabled={busy || uploading}
-              onClick={async () => {
-                if (draftSavingRef.current || busy || uploading) return;
-                draftSavingRef.current = true;
-                setDraftSaving(true);
-                try {
-                  await flushDraft();
-                  toast(
-                    idea
-                      ? `Private draft saved. Find it in Gift ideas for ${recipientName ?? "this person"}.`
-                      : "Private draft saved. Find it in My lists.",
-                  );
-                  close();
-                } catch {
-                  setSaveError(
-                    "Your draft could not be saved. Please try again.",
-                  );
-                } finally {
-                  draftSavingRef.current = false;
-                  setDraftSaving(false);
+      secondaryActions={(busy) => (
+        <>
+          {!idea && (!gift || gift.publicationState === "draft") ? (
+            <div className="wishlist-draft-actions">
+              <button
+                type="submit"
+                name="draftAction"
+                value={gift ? "publish" : "save"}
+                className="text-button"
+                disabled={
+                  busy || uploading || !!gift?.archived || !navigator.onLine
                 }
-              }}
-            >
-              {draftSaving ? "Saving draft…" : "Save for later"}
-            </button>
-            <p
-              className={`draft-save-feedback ${saveError ? "error" : "muted"}`}
-              role={saveError ? "alert" : "status"}
-            >
-              {saveError ||
-                (snapshot === draftSaved
-                  ? savedFeedback
-                    ? "Private draft saved"
-                    : ""
-                  : "Saving draft…")}
-            </p>
-          </div>
-        ) : null
-      }
+              >
+                {gift ? "Publish" : "Save draft"}
+              </button>
+              <p className="muted">
+                {world.people.some(
+                  (p) =>
+                    (
+                      gift?.recipientIds ??
+                      world.lists.find((l) => l.id === destination)?.ownerIds ??
+                      []
+                    ).includes(p.id) && p.guardians.length,
+                )
+                  ? "Drafts are visible to their owner and this profile’s guardians until published."
+                  : "Only you can see this draft until you publish."}
+              </p>
+            </div>
+          ) : null}
+          {savedDraft.current?.draft ? (
+            <div className="gift-draft-actions">
+              <button
+                type="button"
+                className="text-button"
+                disabled={busy || uploading}
+                onClick={async () => {
+                  if (draftSavingRef.current || busy || uploading) return;
+                  draftSavingRef.current = true;
+                  setDraftSaving(true);
+                  try {
+                    await flushDraft();
+                    toast(
+                      idea
+                        ? `Private draft saved. Find it in Gift ideas for ${recipientName ?? "this person"}.`
+                        : "Private draft saved. Find it in My lists.",
+                    );
+                    close();
+                  } catch {
+                    setSaveError(
+                      "Your draft could not be saved. Please try again.",
+                    );
+                  } finally {
+                    draftSavingRef.current = false;
+                    setDraftSaving(false);
+                  }
+                }}
+              >
+                {draftSaving ? "Saving draft…" : "Save for later"}
+              </button>
+              <p
+                className={`draft-save-feedback ${saveError ? "error" : "muted"}`}
+                role={saveError ? "alert" : "status"}
+              >
+                {saveError ||
+                  (snapshot === draftSaved
+                    ? savedFeedback
+                      ? "Private draft saved"
+                      : ""
+                    : "Saving draft…")}
+              </p>
+            </div>
+          ) : null}
+        </>
+      )}
       dirty={savedDraft.current?.draft ? snapshot !== draftSaved : undefined}
       onBeforeClose={savedDraft.current?.draft ? flushDraft : undefined}
       submit={

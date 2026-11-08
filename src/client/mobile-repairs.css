@@ -136,6 +136,7 @@ dialog[data-compact="true"] .form-dialog > .form-content {
 .gift-form > .form-actions {
   align-items: start;
 }
+.wishlist-draft-actions,
 .gift-draft-actions {
   margin-right: auto;
   min-width: 0;
@@ -143,6 +144,13 @@ dialog[data-compact="true"] .form-dialog > .form-content {
   justify-items: start;
   align-self: start;
 }
+.wishlist-draft-actions {
+  flex: 1 1 15rem;
+}
+.gift-draft-actions {
+  flex: 1 1 9rem;
+}
+.wishlist-draft-actions .text-button,
 .gift-draft-actions .text-button {
   min-height: 44px;
 }
@@ -215,6 +223,7 @@ dialog[data-compact="true"] .form-dialog > .form-content {
   .form-dialog > .form-actions > .button[type="submit"] {
     width: 100%;
   }
+  .wishlist-draft-actions,
   .gift-draft-actions {
     width: 100%;
     justify-content: start;
