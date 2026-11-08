@@ -144,6 +144,7 @@ try {
           "tests/update-lifecycle.spec.ts",
           "tests/pwa-fallback.spec.ts",
           "tests/capture.spec.ts",
+          "tests/item-drafts.spec.ts",
         ]
       : []),
     ...(suite === "notifications"

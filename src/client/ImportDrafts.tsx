@@ -36,7 +36,7 @@ export function ImportDrafts({
   if (!rows.length) return null;
   return (
     <section className="import-drafts" aria-label="Your drafts">
-      <h2>Your drafts</h2>
+      <h2>Unfinished product lookups</h2>
       <p>Only you can see these. Review the details before saving.</p>
       {rows.map((j) => (
         <DraftRow key={j.id} initial={j} />

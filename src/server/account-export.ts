@@ -1,3 +1,4 @@
+import { draftAccess } from "./domain-access";
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { Actor, State } from "../shared/model";
 import { z } from "zod";
@@ -44,7 +45,9 @@ export function accountExport(s: State, a: Actor) {
     })),
     items: s.items
       .filter(
-        (i) => i.creatorId === a.id || (!!i.listId && listIds.has(i.listId)),
+        (i) =>
+          draftAccess(s, a, i) &&
+          (i.creatorId === a.id || (!!i.listId && listIds.has(i.listId))),
       )
       .map((i) => ({
         id: i.id,
@@ -59,6 +62,7 @@ export function accountExport(s: State, a: Actor) {
         priority: i.priority,
         listId: i.listId,
         recipientIds: i.recipientIds,
+        publicationState: i.publicationState ?? "published",
         visibility: i.visibility,
         groupIds: i.groupIds,
         archived: i.archived,

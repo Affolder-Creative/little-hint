@@ -266,8 +266,10 @@ export function Form({
   dialogLayout = false,
   externalBusy = false,
   secondaryActions,
+  actionHint,
   secondaryActionsPosition = "before",
 }: {
+  actionHint?: ReactNode;
   dialogLayout?: boolean;
   externalBusy?: boolean;
   secondaryActions?: (busy: boolean) => ReactNode;
@@ -359,7 +361,9 @@ export function Form({
     const form = e.currentTarget;
     if (busy || submitting.current || disabled || (!online && !allowOffline))
       return;
-    const data = pending?.data ?? new FormData(form);
+    const data =
+      pending?.data ??
+      new FormData(form, (e.nativeEvent as SubmitEvent).submitter);
     if (!pending && review) {
       const content = review(data);
       if (content) {
@@ -442,6 +446,7 @@ export function Form({
     >
       {dialogLayout ? <div className="form-content">{content}</div> : content}
       <div className="form-actions">
+        {actionHint && <p className="form-action-hint muted">{actionHint}</p>}
         {secondaryActionsPosition === "before" && secondaryActions?.(busy)}
         <button
           disabled={busy || disabled || (!online && !allowOffline)}

@@ -533,6 +533,7 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
     "lists/update": "lists.update",
     items: "items.create",
     "items/update": "items.update",
+    "items/publish": "items.publish",
     "privacy/review": "privacy.review",
     "reservations/review": "reservations.review",
     "contributions/return": "contributions.return",

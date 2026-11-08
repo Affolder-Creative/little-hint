@@ -277,7 +277,7 @@ The desktop shell has a fixed 242px sidebar and matching main offset. Content is
 
 The shell reserves the measured navigation height plus 16px below the footer. A border-box ResizeObserver keeps this clearance accurate when safe areas, viewport width, or text size change. Toasts sit 16px above navigation; update notices sit directly above it. Document scroll padding keeps focused content clear of the sticky header and bottom navigation. Desktop navigation needs no bottom reservation.
 
-New route and settings-section navigation starts at the top, including taps on the fixed mobile navigation. Back and Forward restore the position saved for that history entry. Note and exchange links scroll to and focus their targets. Restoration waits for delayed content for up to ten seconds, then stops; pointer, touch, wheel or scroll-key input cancels a pending restoration. Positions are scoped to the signed-in account and browser tab, retained for at most 100 entries, and cleared with personal device data. Reloads restore the saved entry after content becomes available.
+New route and settings-section navigation starts at the top, including taps on the fixed mobile navigation. Back and Forward restore the position saved for that history entry. Note and exchange links scroll to and focus their targets. Restoration waits for delayed content, including busy draft and item collections even when the page is already tall enough, for up to ten seconds, then stops; pointer, touch, wheel or scroll-key input cancels a pending restoration. Positions are scoped to the signed-in account and browser tab, retained for at most 100 entries, and cleared with personal device data. Reloads restore the saved entry after content becomes available.
 
 Buying opens on Needs buying, including partially purchased reservations. Purchased contains gifts whose reserved quantities are fully purchased; All combines both. Status controls show gift counts and wrap on narrow screens. Contributions and cancelled history remain outside these filters. When an update removes a row from the current view, keyboard focus returns to the selected status control, or main content if no active reservations remain.
 
@@ -336,6 +336,26 @@ Availability labels use text as well as color. Available gifts use a muted green
 ### Cards / Containers
 
 Gift cards are unboxed links. A contained image or labeled fallback leads, followed by the explicit Wish or Gift idea type with the recipient, then title, price, privacy, and availability. Real photos share the theme paper background and 10px internal padding. Only missing-photo placeholders retain the tag-based warm color variations. Grid cards omit tags. Mobile titles clamp to two lines; full titles remain accessible and appear on gift details. Price sits above a wrapping badge group on phones; desktop metadata aligns in one compact group. The title underlines on hover. Actual images use a 1.13 aspect ratio on desktop and become square on narrow screens. Missing or failed photos use a compact 32px icon and in-flow label with an 80px minimum area that grows for enlarged text. Desktop gift details give the no-photo area a narrow 144px column beside the gift information; phones stack it above the information with a 96px minimum height. Actual photos retain their full detail layout. Replacing a failed image URL restores the photo. People, lists, purchases, and settings use open rows with bottom dividers. Invitations and installation prompts use soft rounded panels.
+
+### Saved wish-list drafts
+
+Saved drafts use the existing compact divided draft rows, 15px medium titles,
+muted destination labels, and wrapping 44px action targets. Keep them in a
+separate Saved drafts section in My lists and the destination list. Loading and
+failure states retain a retry path; empty sections disappear. Unfinished product
+lookups retain their own heading and creator-only explanation.
+
+The item form places its primary Add to wish list or Save changes action before
+the secondary Save draft or Publish action in both reading and keyboard order.
+Enter saves edits without publishing. A full-width audience note sits above the
+paired actions and states guardian access where applicable. Save draft and Publish
+use the existing outlined secondary button. Actions align right on desktop and
+stack at full width on phones. The fixed dialog footer remains intact. Archived
+drafts disable Publish. Wish-list imports show automatic-save guidance and a
+reserved save/error status slot in the form content; closing saves unfinished
+lookup progress. Their footer contains only the primary action and Save draft.
+Gift-idea imports retain Save for later and its reserved feedback slot.
+No new color, typography, spacing, or elevation token is introduced.
 
 ### Collection actions
 
@@ -464,8 +484,7 @@ The dialog heading and action footer stay fixed around one scrollable content
 area. Content uses 24px padding, reduced to 20px vertically and 18px horizontally
 on phones. The footer has a top divider, 16px vertical padding, and safe-area
 clearance. The primary action aligns right on desktop and spans the phone width.
-Save for later is a secondary text action only for persistent import drafts;
-status distinguishes saving, saved, and failed changes. Save for later aligns with the primary button; its fixed feedback slot below the action shows successful saves for three seconds. Saving feedback and errors remain until the operation finishes or the error is resolved. Photo controls, preview,
+Wish-list imports save lookup progress automatically and when closing without requiring a complete item or converting it into a saved wish-list draft. Guidance and a fixed status slot sit in the form content, leaving two clear footer actions: Add to wish list and Save draft. Existing saved drafts use Save changes and Publish. Gift-idea imports retain Save for later beside the primary action. Status distinguishes saving, saved, and failed changes; successful feedback appears for three seconds. Saving feedback and errors remain until the operation finishes or the error is resolved. Photo controls, preview,
 and upload feedback share one compact group. Saving waits for photo uploads.
 
 Notification delivery setup leads the page, with channel connection status and setup beside its checkbox. Push setup, topic customization, and preview privacy use native disclosures with summaries of their current choices. Collapsed controls remain mounted so saving preserves every selection, including disconnected channels. Deployment-unavailable SMS and Telegram controls, counters, setup actions, and explanatory copy are omitted without placeholders. Remaining controls reflow in the existing wrapping layout. Saving visible controls preserves hidden choices. Preview summaries and follow summaries name only available channels; SMS never offers detailed previews. Notification and follow checkbox rows have 44px targets. Save feedback appears beside the form. Inherited follows name their source choices; person follows explain that the source depends on each wish list. Administration services use labeled status rows. Session rows identify this device where available, with readable browser names and expandable details. Loading and failure states never stand in for empty data.

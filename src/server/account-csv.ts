@@ -1,3 +1,4 @@
+import { draftAccess } from "./domain-access";
 import type { Actor, State } from "../shared/model";
 import { itemVisible, personVisible, listVisible } from "./domain-access";
 
@@ -73,7 +74,9 @@ export function accountCsv(s: State, a: Actor, table: ExportTable) {
       ],
       ...s.items
         .filter(
-          (i) => i.creatorId === a.id || (!!i.listId && ownLists.has(i.listId)),
+          (i) =>
+            draftAccess(s, a, i) &&
+            (i.creatorId === a.id || (!!i.listId && ownLists.has(i.listId))),
         )
         .map((i) => [
           i.listId ? "Wish" : "Idea",
@@ -86,11 +89,13 @@ export function accountCsv(s: State, a: Actor, table: ExportTable) {
           i.priority,
           i.tags.join("; "),
           i.visibility,
-          i.deletedAt
-            ? "Deleted"
-            : i.archived || s.lists.find((l) => l.id === i.listId)?.archived
-              ? "Archived"
-              : "Active",
+          i.publicationState === "draft"
+            ? "Draft"
+            : i.deletedAt
+              ? "Deleted"
+              : i.archived || s.lists.find((l) => l.id === i.listId)?.archived
+                ? "Archived"
+                : "Active",
           i.url,
           i.createdAt,
           i.id,

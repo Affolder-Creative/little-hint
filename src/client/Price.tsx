@@ -67,6 +67,7 @@ export function PriceControls({ gift }: { gift: GiftView }) {
   const [busy, setBusy] = useState(false),
     [error, setError] = useState("");
   if (
+    gift.publicationState === "draft" ||
     gift.priceCents === null ||
     !gift.url ||
     gift.archived ||

@@ -1,3 +1,4 @@
+import { WishlistDrafts } from "./WishlistDrafts";
 import { Browser } from "./Browser";
 import { SpendingSummary } from "./Spending";
 import { Pencil, Archive, ArchiveRestore, CalendarDays } from "lucide-react";
@@ -219,7 +220,12 @@ export function Lists() {
         {list.groupEventId && (
           <h2 className="event-wish-items-heading">On this wish list</h2>
         )}
-        {list.canEdit && <ImportDrafts listId={list.id} />}
+        {list.canEdit && (
+          <>
+            <WishlistDrafts listId={list.id} />
+            <ImportDrafts listId={list.id} />
+          </>
+        )}
         {list.canEdit && list.revealAvailable && (
           <div className="tabs" role="group" aria-label="List view">
             <button

@@ -143,3 +143,15 @@ Offer safe updates; do not interrupt open forms or pending writes. Respect keybo
 Use Vitest, real PostgreSQL tests, Playwright, and physical device checks. Release requires privacy coverage for recipients/guardians/joint owners/removed members/overlapping groups; simultaneous buying and drawing; quantity reduction/archive/reconciliation; exchange balance/exclusions/anonymity; successful/failed/malicious imports and provider outages without AI; correct brand/theme/icons; physical iPhone/iPad/Android installation/authentication/deep links/relaunch; install dismissal/fallback/standalone behavior; offline draft isolation/sign-out/update safety; keyboard/screen-reader/enlarged-text/narrow-layout checks; clean deployment/migrations/retries and backup restoration.
 
 Nightly encrypted backups through `ghcr.io/housewatch-digital/backup-sidecar:0.3.0-postgres18`, 30 daily snapshots with weekly/monthly retention disabled, and an off-host destination. Coolify schedules `backup-sidecar run`; Little Hint has no backup job or backup CLI. Document restore, invalidate sessions/invitations, reconcile post-snapshot access changes before reopening. Production activation needs DNS/TLS, SMTP, channel credentials, encryption/auth/database secrets, and initialized backup destination. The original name change had no legacy deployment/data migration requirement.
+
+## Saved wish-list drafts
+
+Every user can save an item as a server-backed draft with an item name and a
+destination wish list. Drafts are visible only to their owner while they retain
+list-editing access, and to current guardians of managed recipients on that list.
+Joint ownership alone grants no draft access. Published items retain the list's
+normal audience. Drafts cannot be bought, discussed, or automatically price-checked.
+Publishing is explicit and one-way, and emits the usual new-item notification once.
+Profile takeover transfers guardian-created drafts to the incoming account holder.
+Unfinished product lookups remain creator-private until explicitly saved; offline
+drafts remain device-only. Saved drafts are available in My lists and the destination list.

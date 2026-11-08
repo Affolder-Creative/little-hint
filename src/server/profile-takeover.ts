@@ -13,6 +13,18 @@ export function takeOverProfile(
   if (managed.guardians.includes(a.id))
     fail(409, "You cannot take over a profile you manage yourself.");
   const old = managed.id;
+  // Transfer draft control without changing the historical author.
+  const inheritedDrafts = s.items.filter(
+    (i) =>
+      i.publicationState === "draft" &&
+      i.recipientIds.includes(old) &&
+      !s.people.some(
+        (p) =>
+          p.userId === (i.draftOwnerId ?? i.creatorId) &&
+          s.lists.some((l) => l.id === i.listId && l.ownerIds.includes(p.id)),
+      ),
+  );
+
   if (
     s.items.some(
       (i) =>
@@ -146,6 +158,10 @@ export function takeOverProfile(
     record.recipientIds = unique;
     record.splits = sums;
     touch(record);
+  }
+  for (const item of inheritedDrafts) {
+    item.draftOwnerId = a.id;
+    touch(item);
   }
   managed.guardians = [];
   delete managed.managedOwnerId;

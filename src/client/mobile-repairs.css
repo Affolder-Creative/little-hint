@@ -143,6 +143,22 @@ dialog[data-compact="true"] .form-dialog > .form-content {
   justify-items: start;
   align-self: start;
 }
+.form-action-hint {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.wishlist-draft-actions {
+  flex: 0 0 auto;
+}
+.lookup-draft-status > p {
+  margin: 0;
+  font-size: 13px;
+}
+.gift-draft-actions {
+  flex: 1 1 9rem;
+}
 .gift-draft-actions .text-button {
   min-height: 44px;
 }
@@ -215,11 +231,16 @@ dialog[data-compact="true"] .form-dialog > .form-content {
   .form-dialog > .form-actions > .button[type="submit"] {
     width: 100%;
   }
+  .wishlist-draft-actions,
   .gift-draft-actions {
     width: 100%;
     justify-content: start;
   }
+  .wishlist-draft-actions .button {
+    width: 100%;
+  }
 }
+.lookup-draft-status .draft-save-feedback,
 .gift-draft-actions .draft-save-feedback {
   margin: 2px 0 0;
   min-height: 18px;

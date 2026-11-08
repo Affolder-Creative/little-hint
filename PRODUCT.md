@@ -194,3 +194,15 @@ Archiving, removing, or restoring wishes privately updates affected buyers and c
 Existing buyers review archived wishes before continuing. Removed sources cannot accept new purchases. Existing pledges may be cancelled or marked sent after reviewing the changed source. Restoration never revives cancelled commitments. Cost-sharing updates remain available to the buyer and relevant contributor after removal. External messages stay generic.
 
 Buyers may record full or partial contribution returns after confirming the original payment received. Contributors confirm return receipt separately. Unconfirmed mistakes may be voided; confirmed returns are immutable. These records do not transfer money. Optional Spending preserves original payments, records return dates independently, and excludes internal partner transfers from combined totals. Pending return receipts must be settled before a financial participant closes their account.
+
+## Saved wish-list drafts
+
+Every user can save an item as a server-backed draft with an item name and a
+destination wish list. Drafts are visible only to their owner while they retain
+list-editing access, and to current guardians of managed recipients on that list.
+Joint ownership alone grants no draft access. Published items retain the list's
+normal audience. Drafts cannot be bought, discussed, or automatically price-checked.
+Publishing is explicit and one-way, and emits the usual new-item notification once.
+Profile takeover transfers guardian-created drafts to the incoming account holder.
+Unfinished product lookups remain creator-private until explicitly saved; offline
+drafts remain device-only. Saved drafts are available in My lists and the destination list.

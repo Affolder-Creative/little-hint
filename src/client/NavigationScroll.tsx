@@ -201,6 +201,9 @@ function RestoreNavigation({ account }: { account: string }) {
     };
     const attempt = () => {
       if (!pending) return;
+      // Content above the saved position can still change height even when the
+      // page is already tall enough. Restore after its loading state settles.
+      if (main?.querySelector('[aria-busy="true"]')) return;
       if (!restore && fragment) {
         const element = document.getElementById(fragment);
         if (!element || !main?.contains(element)) return;
@@ -237,7 +240,13 @@ function RestoreNavigation({ account }: { account: string }) {
     const resize = new ResizeObserver(schedule);
     const changes = new MutationObserver(schedule);
     resize.observe(document.body);
-    if (main) changes.observe(main, { childList: true, subtree: true });
+    if (main)
+      changes.observe(main, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ["aria-busy"],
+      });
     const onScroll = () => {
       if (!pending) current.current = read();
     };

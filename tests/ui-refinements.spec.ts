@@ -1,6 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { spendingView } from "../src/server/spending";
+import { itemPage } from "../src/server/collections";
 import { shoppingChoices } from "../src/client/shopping-context";
 import { stagingFixtures } from "../src/server/staging-fixtures";
 import { command, stamp, world } from "../src/server/domain";
@@ -42,10 +43,17 @@ async function setup(page: Page) {
     localStorage.setItem("little-hint:install", "never"),
   );
   await page.route("**/api/**", async (route) => {
-    const path = new URL(route.request().url()).pathname.replace(
-      "/api/v1/",
-      "",
-    );
+    const url = new URL(route.request().url());
+    const path = url.pathname.replace("/api/v1/", "");
+    if (path === "items" && route.request().method() === "GET")
+      return route.fulfill({
+        json: await itemPage(
+          state,
+          actor,
+          Object.fromEntries(url.searchParams),
+          async () => {},
+        ),
+      });
     if (path === "admin/profiles")
       return route.fulfill({ json: { rows: [], total: 0 } });
     if (path === "world")
@@ -282,13 +290,13 @@ for (const [width, theme] of [
       "Private draft saved",
     );
     const before = await page
-      .getByRole("button", { name: "Save for later" })
+      .getByRole("button", { name: "Save draft" })
       .boundingBox();
     await expect(page.locator(".draft-save-feedback")).toHaveText("", {
       timeout: 5000,
     });
     const after = await page
-      .getByRole("button", { name: "Save for later" })
+      .getByRole("button", { name: "Save draft" })
       .boundingBox();
     expect(after).toEqual(before);
     await capture("draft-editor");
