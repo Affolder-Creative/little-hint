@@ -1,4 +1,5 @@
 import { notificationTopics } from "../src/shared/notifications";
+import { itemPage } from "../src/server/collections";
 import {
   cancelledBuying,
   contributionHistory,
@@ -195,6 +196,10 @@ async function preview(
     const url = new URL(route.request().url());
     const path = url.pathname;
     const query = Object.fromEntries(url.searchParams);
+    if (path === "/api/v1/items" && route.request().method() === "GET")
+      return route.fulfill({
+        json: await itemPage(fixture.state, actor, query, async () => {}),
+      });
     if (path === "/api/v1/buying/cancelled")
       return route.fulfill({
         json: cancelledBuying(fixture.state, actor, query),
@@ -4234,42 +4239,79 @@ test.describe("navigation scroll restoration", () => {
     await expectScroll(page, 250);
   });
 
-  test("reload waits for delayed content and leaves later manual scrolling alone", async ({
-    page,
-  }) => {
-    const { list } = await longList(page);
-    await page.goto(`/lists/${list.id}`);
-    await expect(page.locator(".gift-card")).toHaveCount(46);
-    await scroll(page, 1100);
-    let release!: () => void;
-    const waiting = new Promise<void>((resolve) => {
-      release = resolve;
-    });
-    await page.route("**/api/v1/world", async (route) => {
-      await waiting;
-      await route.fallback();
-    });
-    try {
-      await page.reload({ waitUntil: "domcontentloaded" });
-      await expect(
-        page.getByRole("status", { name: "Loading Little Hint" }),
-      ).toBeVisible();
-      release();
+  for (const drafts of ["empty", "saved", "error"] as const)
+    test(`reload waits for delayed content with ${drafts} drafts and leaves later manual scrolling alone`, async ({
+      page,
+    }) => {
+      const { list, state, actor } = await longList(page);
+      if (drafts === "saved")
+        command(state, actor, "items.create", {
+          listId: list.id,
+          title: "An unpublished wish",
+          publicationState: "draft",
+        });
+      if (drafts === "error")
+        await page.route("**/api/v1/items?**", (route) =>
+          route.fulfill({ status: 404, json: { error: "Unavailable" } }),
+        );
+      await page.goto(`/lists/${list.id}`);
       await expect(page.locator(".gift-card")).toHaveCount(46);
-      await expectScroll(page, 1100);
-      await page.mouse.wheel(0, 300);
-      await expect
-        .poll(() => page.evaluate(() => scrollY))
-        .toBeGreaterThan(1100);
-      const manual = await page.evaluate(() => scrollY);
-      await page
-        .locator("main")
-        .evaluate((main) => main.append(document.createElement("p")));
-      await expectScroll(page, manual);
-    } finally {
-      release();
-    }
-  });
+      await expect(
+        page.getByText("Loading drafts…", { exact: true }),
+      ).toHaveCount(0);
+      await scroll(page, 1100);
+      let release!: () => void, releaseDrafts!: () => void;
+      const waiting = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const waitingDrafts = new Promise<void>((resolve) => {
+        releaseDrafts = resolve;
+      });
+      await page.route("**/api/v1/world", async (route) => {
+        await waiting;
+        await route.fallback();
+      });
+      await page.route("**/api/v1/items?**", async (route) => {
+        await waitingDrafts;
+        await route.fallback();
+      });
+      try {
+        await page.reload({ waitUntil: "domcontentloaded" });
+        await expect(
+          page.getByRole("status", { name: "Loading Little Hint" }),
+        ).toBeVisible();
+        release();
+        await expect(page.locator(".gift-card")).toHaveCount(46);
+        await expect(
+          page.getByText("Loading drafts…", { exact: true }),
+        ).toBeVisible();
+        releaseDrafts();
+        await expect(
+          page.getByText("Loading drafts…", { exact: true }),
+        ).toHaveCount(0);
+        if (drafts === "saved")
+          await expect(
+            page.getByRole("region", { name: "Saved wish-list drafts" }),
+          ).toContainText("An unpublished wish");
+        else if (drafts === "error")
+          await expect(page.getByRole("alert")).toContainText(
+            "Could not load drafts.",
+          );
+        await expectScroll(page, 1100);
+        await page.mouse.wheel(0, 300);
+        await expect
+          .poll(() => page.evaluate(() => scrollY))
+          .toBeGreaterThan(1100);
+        const manual = await page.evaluate(() => scrollY);
+        await page
+          .locator("main")
+          .evaluate((main) => main.append(document.createElement("p")));
+        await expectScroll(page, manual);
+      } finally {
+        release();
+        releaseDrafts();
+      }
+    });
 
   test("fragment navigation focuses its target and missing targets allow manual scrolling", async ({
     page,

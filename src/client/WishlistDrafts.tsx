@@ -18,7 +18,12 @@ export function WishlistDrafts({ listId }: { listId?: string }) {
         `items?publicationState=draft&scope=${listId ? "list" : "home"}&${listId ? `id=${listId}&` : ""}page=${page}&available=false`,
       ),
   });
-  if (query.isPending) return <p role="status">Loading drafts…</p>;
+  if (query.isPending)
+    return (
+      <p role="status" aria-busy="true">
+        Loading drafts…
+      </p>
+    );
   if (query.isError)
     return (
       <p role="alert">

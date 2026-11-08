@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-08T17:37:02.324184+00:00",
+  "generatedAt": "2026-11-08T17:55:10.087792+00:00",
   "title": "Design System: Little Hint",
   "extensions": {
     "colorMeta": {
@@ -1036,7 +1036,7 @@
       "bottomClearance": "At 900px and below, shell padding-bottom and toast offset are measured navigation height + 16px; update banner offset equals navigation height. Desktop reserves no navigation space.",
       "forms": "minmax(0, 1fr) grid tracks, min-width: 0 fields, and controls constrained to available width. Shared submit and optional Cancel actions wrap together. Checkboxes have 44px label targets. Errors retain edits and receive focus; busy forms disable controls and guard duplicate submission.",
       "settingsNavigation": "Local rail above 1100px; labeled selector at 1100px and below. Hidden sections stay mounted to preserve unsaved fields.",
-      "navigationScroll": "New history entries start at the top. POP restores per-entry coordinates; new fragment destinations scroll to and focus the target. Resize/mutation observation waits up to ten seconds for content, with cancellation on user input. Account-scoped tab session storage retains at most 100 entries across reloads; clearing personal data removes it.",
+      "navigationScroll": "New history entries start at the top. POP restores per-entry coordinates; new fragment destinations scroll to and focus the target. Resize/mutation observation waits up to ten seconds for content, including aria-busy collections whose height is not final, with cancellation on user input. Account-scoped tab session storage retains at most 100 entries across reloads; clearing personal data removes it.",
       "dialogs": "Native modal follows the visual viewport with 20px gaps, reduced to 12px at widths up to 650px or heights up to 500px. The heading stays fixed above one scrollable body; the page behind cannot scroll. Touch fields use at least 16px type. Dismissal protects unsaved edits and restores opener focus.",
       "pageHeadings": "Page headings and actions wrap with a 280px text basis. List detail headings stack title and actions without a fixed text height. Long names and labels wrap within their columns.",
       "privateGiftIdeas": "Active wish lists offer Add gift idea to givers. Ideas belong to a person; joint lists require an explicit recipient. The form places Who can see this idea? before product entry and defaults to Only me. Private cards, detail pages, and Buying entries show a lock with Only me. Saved idea links use /people/:id?tab=ideas to preserve the selected tab.",
