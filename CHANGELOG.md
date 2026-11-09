@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.3.0](https://github.com/Affolder-Creative/little-hint/compare/v1.2.1...v1.3.0) (2026-11-09)
+
+
+### Features
+
+* add photo galleries to wishes and gift ideas ([#205](https://github.com/Affolder-Creative/little-hint/issues/205)) ([5d16567](https://github.com/Affolder-Creative/little-hint/commit/5d1656749ac46bef101092ba738b4b795d36ffc5))
+* add rich-text helpful notes ([#206](https://github.com/Affolder-Creative/little-hint/issues/206)) ([cd199db](https://github.com/Affolder-Creative/little-hint/commit/cd199db3989fc3b2e9ef143cc552645d96b418cd))
+
+
+### Fixes
+
+* clarify archived items are for reference ([#203](https://github.com/Affolder-Creative/little-hint/issues/203)) ([ae38c01](https://github.com/Affolder-Creative/little-hint/commit/ae38c01c31082bde6d9e87e8c34cd39fc81cc717))
+
 ## [1.2.1](https://github.com/Affolder-Creative/little-hint/compare/v1.2.0...v1.2.1) (2026-11-09)
 
 
