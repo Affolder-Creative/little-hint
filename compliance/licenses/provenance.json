@@ -28,8 +28,13 @@
   "docker-node": {
     "url": "https://github.com/nodejs/docker-node/blob/02641286c1f5041d9025d3cf6d38a64b84cd72e5/LICENSE"
   },
+  "proxy-agent-negotiate": {
+    "url": "https://github.com/TooTallNate/proxy-agents/blob/b7e5f7ccce1a3ac5b339cc4c587974e8989cbc16/packages/negotiate/package.json",
+    "evidence": "proxy-agent-negotiate 1.1.0 declares MIT and names Nathan Rajlich as author, but omits a standalone license in both npm and the source package. npm's published SLSA provenance and the version tag identify this exact source revision. The notice reproduces the standard MIT grant with that named holder and no inferred year; it is not represented as an upstream license-file transcription.",
+    "license_template_source": "https://github.com/TooTallNate/proxy-agents/blob/b7e5f7ccce1a3ac5b339cc4c587974e8989cbc16/packages/https-proxy-agent/LICENSE"
+  },
   "http-ece": {
-    "url": "https://github.com/martinthomson/encrypted-content-encoding/blob/0562510a30819f52424724a6fd5504becacd98a1/LICENSE",
-    "evidence": "MIT license from the exact gitHead published as http_ece 1.2.0; its npm archive omits the root license."
+    "url": "https://github.com/martinthomson/encrypted-content-encoding/blob/676b0096206abc8b7689ea714c920a3c9a1d32dc/LICENSE",
+    "evidence": "MIT license from the exact gitHead published as http_ece 1.2.1; its npm archive omits the root license. The license text is unchanged from 1.2.0."
   }
 }

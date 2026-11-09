@@ -3952,11 +3952,11 @@
       ]
     },
     {
-      "file": "web-push-3.6.7-sources.tar.gz",
+      "file": "web-push-4.0.0-sources.tar.gz",
       "covers": [
-        "npm:web-push@3.6.7"
+        "npm:web-push@4.0.0"
       ],
-      "review": "Exact npm gitHead for web-push 3.6.7. Unmodified JavaScript source, MPL-2.0 license, package manifest, tests and build instructions. Library stays external to the app bundle and retains its own license.",
+      "review": "Exact npm gitHead for web-push 4.0.0. Unmodified ESM JavaScript source, MPL-2.0 license, package manifest, CLI, tests and build instructions. Library stays external to the app bundle and retains its own license.",
       "localFiles": [
         {
           "file": "README.md",
@@ -3965,10 +3965,10 @@
       ],
       "inputs": [
         {
-          "file": "web-push-8d9ba1b33bfe0d73ccf3606c59ead4287f50e3b8.tar.gz",
-          "url": "https://codeload.github.com/web-push-libs/web-push/tar.gz/8d9ba1b33bfe0d73ccf3606c59ead4287f50e3b8",
-          "sha256": "b90221dcec9b57b6337733d073f8bf5a1497439bfd73d6c4debea9ba163598d3",
-          "size": 148382
+          "file": "web-push-2af7b70552d0e2ef99abd69de0f662c88a5aa1f0.tar.gz",
+          "url": "https://codeload.github.com/web-push-libs/web-push/tar.gz/2af7b70552d0e2ef99abd69de0f662c88a5aa1f0",
+          "sha256": "91138a8eab1590b1aa1d77a03e3cabd46ff62a3b3132f3dab1830cc77e2ca9b6",
+          "size": 47902
         }
       ]
     }

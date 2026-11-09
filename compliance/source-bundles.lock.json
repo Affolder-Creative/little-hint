@@ -68,11 +68,11 @@
     ]
   },
   {
-    "file": "web-push-3.6.7-sources.tar.gz",
-    "sha256": "5fa1b50f1731e09bc51d8e9d55cd2e250d39561f28b46268004c365cba75b13c",
-    "size": 153633,
+    "file": "web-push-4.0.0-sources.tar.gz",
+    "sha256": "809e9e52d0f64e4566af1beaefefbfbd2399853e131fa7c32a68f42802c1e4c8",
+    "size": 61463,
     "covers": [
-      "npm:web-push@3.6.7"
+      "npm:web-push@4.0.0"
     ]
   }
 ]
