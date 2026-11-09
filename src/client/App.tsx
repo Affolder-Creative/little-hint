@@ -738,6 +738,7 @@ function Home() {
   );
   const others = world.items.filter((i) => !i.archived && !i.isRecipient);
   const items = others.length ? others : world.items.filter((i) => !i.archived);
+  const feedMode = world.homeFeedMode ?? (others.length ? "gifting" : "own");
   const solo = !world.groups.length;
   const hasLists = world.lists.some((list) => list.canEdit && !list.archived);
   return (
@@ -745,29 +746,18 @@ function Home() {
       <Header
         title={`Hi, ${world.me.name.split(" ")[0]}.`}
         description={
-          solo
-            ? "A place for the things you would love."
-            : "A few hints from your favorite people."
+          feedMode === "gifting"
+            ? "A few hints for your favorite people."
+            : "A little hint about what you would love."
         }
-      />
-      <GiftPreferencePrompt />
-      <Install />
-      {incoming && <Invitations />}
-      <div className="home-intro">
-        <div>
-          <h2>{others.length ? "From your people" : "Your wish lists"}</h2>
-          <p>
-            {solo
-              ? "Save your wishes here. Choose who to share them with when you're ready."
-              : others.length
-                ? "A few things they’ve been wishing for."
-                : "A little hint about what you would love."}
-          </p>
-        </div>
+      >
         <Link className="text-button" to={solo ? "/lists" : "/people"}>
           {solo ? "My lists" : "View your people"} <ArrowRight size={16} />
         </Link>
-      </div>
+      </Header>
+      <GiftPreferencePrompt />
+      <Install />
+      {incoming && <Invitations />}
       {solo && !(world.hasActiveItems ?? !!items.length) ? (
         <Empty
           title={
@@ -793,7 +783,7 @@ function Home() {
           family group.
         </Empty>
       ) : (
-        <Browser items={items} headingLevel={3} />
+        <Browser items={items} headingLevel={2} />
       )}
       {solo && (
         <p>
@@ -824,7 +814,7 @@ function People() {
     <>
       <Header
         title="Your people"
-        description="Take a hint from their wish lists, or save an idea for them."
+        description="Find your people, browse their wish lists, and keep gift ideas for them."
       >
         <button
           className="button"
