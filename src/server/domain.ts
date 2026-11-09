@@ -524,6 +524,15 @@ export function world(
   return {
     compact,
     paged,
+    homeFeedMode: s.items.some(
+      (i) =>
+        itemVisible(s, a, i) &&
+        (i.publicationState ?? "published") === "published" &&
+        !archived(s, i) &&
+        !recipient(s, a, i),
+    )
+      ? "gifting"
+      : "own",
     ...(paged
       ? {
           hasActiveItems: s.items.some(

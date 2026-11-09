@@ -461,7 +461,6 @@ main {
   margin: 0;
   max-width: 65ch;
 }
-.home-intro,
 .section-heading {
   display: flex;
   align-items: center;
@@ -475,20 +474,7 @@ main {
 .section-heading:has(+ p) {
   margin-bottom: var(--space-related);
 }
-.home-intro {
-  margin-top: 0;
-}
-.home-intro > .text-button {
-  flex-shrink: 0;
-}
-.home-intro h2 {
-  font-size: 22px;
-}
-.home-intro p {
-  font-size: 13px;
-  color: var(--muted);
-  margin: 0;
-}
+
 .filters {
   display: flex;
   flex-wrap: wrap;
@@ -2130,23 +2116,7 @@ main {
     font-size: 13px;
     max-width: 40ch;
   }
-  .home-intro {
-    margin: 0 0 16px;
-    align-items: flex-start;
-    gap: 15px;
-  }
-  .home-intro h2 {
-    font-size: 20px;
-  }
-  .home-intro p {
-    font-size: 12px;
-  }
-  .home-intro > .text-button {
-    font-size: 13px;
-    max-width: 110px;
-    line-height: 1.5;
-    text-align: right;
-  }
+
   .filters {
     gap: 9px;
     flex-wrap: wrap;
@@ -4595,19 +4565,10 @@ a.button:is(:hover, :focus, :active),
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
 }
-.member-actions {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
-}
 @media (max-width: 650px) {
   .member-list > div {
-    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-columns: auto minmax(0, 1fr) auto;
     padding: 12px 0;
-  }
-  .member-actions {
-    grid-column: 2;
   }
 }
 
@@ -4634,4 +4595,163 @@ a.button:is(:hover, :focus, :active),
 }
 .gift-plan-detail > .text-button {
   justify-self: start;
+}
+
+/* Shared search selections and profile sections preserve the editor hierarchy. */
+.selection-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+.selection-tags:empty {
+  display: none;
+}
+.selection-tags .purchase-chip {
+  max-width: 100%;
+}
+.selection-tags .purchase-chip > span {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+:is(.profile-managers, .profile-sharing) {
+  border-top: 1px solid var(--border);
+  padding-top: 24px;
+  margin-top: 24px;
+}
+:is(.profile-managers, .profile-sharing) > legend {
+  float: left;
+  width: 100%;
+  margin: 0 0 12px;
+  font-size: 17px;
+  font-weight: 600;
+}
+:is(.profile-managers, .profile-sharing) > legend + * {
+  clear: both;
+}
+:is(.profile-managers, .profile-sharing) .field > label {
+  font-size: 13px;
+  font-weight: 550;
+}
+.profile-owner {
+  margin-block: 16px;
+}
+.ownership-fields {
+  display: grid;
+  gap: 20px;
+  margin-block: 20px 8px;
+}
+.ownership-fields > p {
+  margin: 0;
+}
+.ownership-fields > .button {
+  justify-self: start;
+}
+.transfer-disclosure {
+  margin-top: 16px;
+}
+.transfer-disclosure[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+.idea-privacy {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.idea-privacy:empty {
+  display: none;
+}
+.buying-row h2 a {
+  color: inherit;
+  text-decoration: none;
+}
+.buying-row h2 a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.entry-actions-content .menu-destructive {
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+  padding-top: 12px;
+}
+.member-list > div > span {
+  overflow-wrap: anywhere;
+}
+.passkeys-section {
+  padding-block: 24px;
+}
+.passkeys-intro {
+  display: grid;
+  gap: 12px;
+  padding-bottom: 24px;
+}
+.passkeys-intro > h3,
+.passkeys-intro > p {
+  margin: 0;
+}
+.passkeys-intro > .button {
+  justify-self: start;
+}
+.passkey-row {
+  border-top: 1px solid var(--border);
+  padding-block: 16px;
+  gap: 12px;
+}
+.passkey-row .actions {
+  gap: 8px;
+}
+.admin-profile-matches {
+  margin-top: 16px;
+}
+.admin-profile-match {
+  width: 100%;
+  display: grid;
+  text-align: left;
+  gap: 4px;
+  padding: 12px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+.admin-profile-match small {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.admin-profile-match:hover,
+.admin-profile-match[aria-pressed="true"] {
+  background: var(--soft);
+}
+.admin-profile-detail {
+  border-top: 1px solid var(--border);
+  padding-top: 24px;
+  margin-top: 24px;
+}
+.admin-profile-detail p {
+  overflow-wrap: anywhere;
+}
+.admin-profile-detail .invitation-actions {
+  margin-top: 16px;
+}
+
+@media (max-width: 650px) {
+  .passkey-row {
+    align-items: start;
+    flex-direction: column;
+  }
+}
+
+.purchase-search input {
+  font-weight: 400;
+}
+.passkey-row > .actions {
+  flex: 0 0 auto;
+}
+
+.passkeys-intro > p {
+  font-size: 14px;
+  color: var(--muted);
+  max-width: 65ch;
 }
