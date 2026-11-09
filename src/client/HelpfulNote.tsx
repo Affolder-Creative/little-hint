@@ -125,7 +125,8 @@ export function HelpfulNoteEditor({
     };
   }, [editor]);
   useEffect(() => {
-    editor?.setEditable(!disabled);
+    // A busy-state change is not a user edit and must not mark imports touched.
+    editor?.setEditable(!disabled, false);
   }, [editor, disabled]);
   useEffect(() => {
     if (

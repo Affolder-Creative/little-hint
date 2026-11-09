@@ -391,7 +391,8 @@ Link editing expands inside the field with a labeled address, Apply link, Remove
 link and Cancel actions. Escape returns focus to the note. Saved links open a new
 tab; editing never navigates away. Formatting changes participate in the existing
 dirty-state and draft-save workflow. Disabled submission state covers the editor
-and toolbar. Existing plain notes retain literal text and line breaks.
+and toolbar without marking the note edited. Imported notes remain eligible to
+fill untouched fields. Existing plain notes retain literal text and line breaks.
 
 ### Navigation
 
