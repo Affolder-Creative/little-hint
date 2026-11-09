@@ -29,7 +29,7 @@
     "boolbase@1.0.0": ["compliance/licenses/boolbase.txt"],
     "drizzle-orm@0.45.4": ["compliance/licenses/drizzle-orm.txt"],
     "@esbuild/*@0.28.2": ["node_modules/esbuild/LICENSE.md"],
-    "@rolldown/binding-*@1.2.14": [
+    "@rolldown/binding-*@1.2.16": [
       "node_modules/rolldown/LICENSE",
       "node_modules/rolldown/THIRD-PARTY-LICENSE"
     ],
