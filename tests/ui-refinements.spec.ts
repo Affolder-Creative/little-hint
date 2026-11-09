@@ -520,8 +520,22 @@ for (const engine of ["chromium", "webkit"] as const)
       hasTouch: true,
       viewport: { width: 393, height: 700 },
       baseURL,
+      serviceWorkers: "block",
     });
     const page = await context.newPage();
+    if (safari)
+      await page.route("**/*", async (route) => {
+        if (route.request().resourceType() !== "document")
+          return route.continue();
+        const response = await route.fetch();
+        const headers = response.headers();
+        // CI serves HTTP. WebKit otherwise upgrades built assets to HTTPS.
+        if (headers["content-security-policy"])
+          headers["content-security-policy"] = headers[
+            "content-security-policy"
+          ].replace(/upgrade-insecure-requests;?/g, "");
+        await route.fulfill({ response, headers });
+      });
     try {
       const { state, gift } = await setup(page);
       const person = state.people.find((p) => p.id === gift.recipientIds[0])!;
