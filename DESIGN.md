@@ -293,6 +293,10 @@ Paragraph spacing follows content roles across app pages and dialogs. Dense titl
 
 Gift details group the recipient, title, status, price, and quantity with the prose step. Phones place the photo 16px above the details, and the back link leaves 8px below its touch target. Reservation, Gift plans, and Private notes use matching section headings, reduced to the section-phone role on phones. When an exchange or privacy-review context is relevant, Buying for sits with reservation controls, below the explanation and above quantity. Its field is bounded to 32rem and explains the exchange-versus-separate-gift choice. Archived and recipient views retain context access beside the gift actions. Reservation explanations and private-note guidance use the supporting role, capped at 65ch. Keep their heading-to-copy and paragraph gaps compact; do not compound the privacy-note margin with the section heading margin.
 
+### Archived item guidance
+
+Archived item tabs show a persistent soft notice directly below the tabs and above search. The notice explains that items are kept for reference and directs gift selection to Active items. Reuse the existing notice typography, padding and theme colors; text wraps naturally on phones. Keep the notice visible through filtered-empty results and hide it in active views.
+
 ### Collection pagination
 
 Item grids and active gift plans show 24 entries per page. A quiet result count and Previous/Next controls sit above and below the collection. The count uses 14px text; controls reuse secondary buttons and their 44px minimum touch targets. Controls wrap on narrow screens, with the button group spanning the available width. A single page retains its result count without navigation buttons.

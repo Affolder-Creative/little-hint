@@ -159,6 +159,16 @@ export function Browser({
           ))}
         </div>
       )}
+      {canManage &&
+        collectionTotal > 0 &&
+        !parentList?.archived &&
+        itemStatus === "archived" && (
+          <p className="notice">
+            These items are archived and kept for reference. Please don't
+            reserve or buy them. When choosing a gift, take a look at Active
+            items instead.
+          </p>
+        )}
       {collectionTotal > 0 && (
         <>
           <BrowseTools
