@@ -4683,7 +4683,7 @@ a.button:is(:hover, :focus, :active),
 .passkeys-intro {
   display: grid;
   gap: 12px;
-  padding-bottom: 24px;
+  padding-bottom: 16px;
 }
 .passkeys-intro > h3,
 .passkeys-intro > p {
@@ -4692,13 +4692,20 @@ a.button:is(:hover, :focus, :active),
 .passkeys-intro > .button {
   justify-self: start;
 }
+.passkey-list {
+  display: grid;
+  gap: 8px;
+}
 .passkey-row {
-  border-top: 1px solid var(--border);
-  padding-block: 16px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  border: 0;
+  padding: 0;
   gap: 12px;
 }
-.passkey-row .actions {
-  gap: 8px;
+.passkey-label {
+  overflow-wrap: anywhere;
 }
 .admin-profile-matches {
   margin-top: 16px;
@@ -4736,18 +4743,8 @@ a.button:is(:hover, :focus, :active),
   margin-top: 16px;
 }
 
-@media (max-width: 650px) {
-  .passkey-row {
-    align-items: start;
-    flex-direction: column;
-  }
-}
-
 .purchase-search input {
   font-weight: 400;
-}
-.passkey-row > .actions {
-  flex: 0 0 auto;
 }
 
 .passkeys-intro > p {
@@ -4760,4 +4757,26 @@ a.button:is(:hover, :focus, :active),
   margin: 20px 0 12px;
   font-size: 14px;
   font-weight: 600;
+}
+
+/* Sharing owns its spacing instead of stacking fieldset and legend gaps. */
+.profile-sharing {
+  display: block;
+  border: 0;
+  padding: 0;
+  margin-top: 8px;
+}
+.profile-sharing > legend {
+  float: none;
+  padding: 0;
+  margin: 0 0 12px;
+  line-height: 1.35;
+}
+.profile-sharing-content {
+  display: grid;
+  gap: 8px;
+}
+
+.passkey-row .button.danger {
+  color: var(--error);
 }

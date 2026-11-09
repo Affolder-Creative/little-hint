@@ -252,7 +252,7 @@ for (const [width, theme] of [
       name: "About price-drop notifications",
     });
     const check = page.getByLabel("Notify me of price drops", { exact: true });
-    await help.click();
+    await help.locator(".private-idea-badge").click();
     await expect(check).not.toBeChecked();
     await expect(
       page.getByRole("dialog", { name: "Price-drop notifications" }),
@@ -566,6 +566,7 @@ for (const engine of ["chromium", "webkit"] as const)
 for (const [width, theme] of [
   [320, "light"],
   [393, "dark"],
+  [768, "light"],
   [1440, "light"],
 ] as const) {
   test(`polished Buying, security and member menus at ${width}px ${theme}`, async ({
@@ -601,7 +602,7 @@ for (const [width, theme] of [
       `/gift/${gift.id}`,
     );
     const help = row.getByRole("button", { name: "About only me" });
-    await help.click();
+    await help.locator(".private-idea-badge").click();
     await expect(
       page.getByRole("dialog", { name: "Only me", exact: true }),
     ).toContainText(
@@ -611,6 +612,15 @@ for (const [width, theme] of [
       path: info.outputPath("buying-help.png"),
       fullPage: true,
     });
+    await page.keyboard.press("Escape");
+    await expect(help).toBeFocused();
+    await help.locator(".info-help-icon").click();
+    await page.getByRole("button", { name: "Close help" }).click();
+    await expect(help).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(
+      page.getByRole("dialog", { name: "Only me", exact: true }),
+    ).toBeVisible();
     await page.keyboard.press("Escape");
     await row.locator("summary").click();
     await expect(
@@ -627,6 +637,40 @@ for (const [width, theme] of [
     await expect(page.locator(".passkey-label")).toHaveText(
       "1Password on my personal phone",
     );
+    const keyRow = page.locator(".passkey-row");
+    const keyMenu = keyRow.locator("summary");
+    const nameBounds = await keyRow.locator(".passkey-label").boundingBox();
+    const menuBounds = await keyMenu.boundingBox();
+    expect(menuBounds!.x).toBeGreaterThan(nameBounds!.x + nameBounds!.width);
+    expect(menuBounds!.height).toBeGreaterThanOrEqual(44);
+    await expect(keyRow).toHaveCSS("border-top-width", "0px");
+    await keyMenu.click();
+    await expect(keyRow.getByRole("button", { name: /^Rename/ })).toBeVisible();
+    await expect(
+      keyRow.getByRole("button", { name: /^Remove passkey/ }),
+    ).toHaveClass(/danger/);
+    await expect(
+      keyRow.getByRole("button", { name: /^Remove passkey/ }),
+    ).toHaveCSS(
+      "color",
+      theme === "dark" ? "rgb(255, 177, 162)" : "rgb(159, 51, 39)",
+    );
+    const separators = await keyRow
+      .locator(".entry-actions-content")
+      .evaluate(
+        (menu) =>
+          Array.from(menu.querySelectorAll("*")).filter(
+            (element) =>
+              parseFloat(getComputedStyle(element).borderTopWidth) > 0,
+          ).length,
+      );
+    expect(separators).toBe(1);
+    await page.screenshot({
+      path: info.outputPath("security-menu.png"),
+      fullPage: true,
+    });
+    await page.keyboard.press("Escape");
+    await expect(keyMenu).toBeFocused();
     await page.screenshot({
       path: info.outputPath("security.png"),
       fullPage: true,
@@ -721,4 +765,85 @@ test("administration searches on demand and keeps the selected profile current a
   await expect(directory.locator(".admin-profile-detail")).toContainText(
     "Renamed Again",
   );
+});
+
+test("passkey menus rename, recover from failure, and restore focus after removal", async ({
+  page,
+}) => {
+  await setup(page);
+  let keys = [
+    { id: "first", name: "Phone" },
+    { id: "second", name: "Laptop" },
+  ];
+  let fail = true;
+  await page.route("**/*list-user-passkeys*", (route) =>
+    route.fulfill({ json: keys }),
+  );
+  await page.route("**/*update-passkey", (route) => {
+    const data = route.request().postDataJSON();
+    keys = keys.map((key) =>
+      key.id === data.id ? { ...key, name: data.name } : key,
+    );
+    return route.fulfill({ json: { status: true } });
+  });
+  await page.route("**/*delete-passkey", (route) => {
+    if (fail)
+      return route.fulfill({ status: 500, json: { message: "Try again" } });
+    keys = keys.filter((key) => key.id !== route.request().postDataJSON().id);
+    return route.fulfill({ json: { status: true } });
+  });
+  await page.goto("/settings?section=security");
+  const first = page.locator(".passkey-row").first();
+  await first.locator("summary").click();
+  await first
+    .getByRole("button", { name: "Rename Phone", exact: true })
+    .click();
+  await page.getByLabel("Passkey name", { exact: true }).fill("Personal phone");
+  await page.getByRole("button", { name: "Save name", exact: true }).click();
+  await expect(first.locator(".passkey-label")).toHaveText("Personal phone");
+  await expect(first.locator("summary")).toBeFocused();
+  await first.locator("summary").click();
+  await first.getByRole("button", { name: /^Remove passkey/ }).click();
+  await expect(first.getByRole("alert")).toBeVisible();
+  await expect(page.locator(".passkey-row")).toHaveCount(2);
+  fail = false;
+  await first.getByRole("button", { name: /^Remove passkey/ }).click();
+  await expect(page.locator(".passkey-row")).toHaveCount(1);
+  await expect(first.locator("summary")).toBeFocused();
+  await first.locator("summary").click();
+  await first.getByRole("button", { name: /^Remove passkey/ }).click();
+  await expect(page.locator(".passkey-row")).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Add a passkey", exact: true }),
+  ).toBeFocused();
+  await expect(
+    page.getByText("No passkeys yet. Add one on a trusted device."),
+  ).toBeVisible();
+});
+
+test("managed profile creation keeps sharing compact", async ({
+  page,
+}, info) => {
+  await setup(page);
+  await page.setViewportSize({ width: 393, height: 852 });
+  await page.goto("/people");
+  await page
+    .getByRole("button", { name: "Managed profile", exact: true })
+    .click();
+  const group = page.locator(".profile-sharing");
+  await expect(group.getByRole("checkbox")).not.toBeChecked();
+  await expect(group).toHaveCSS("margin-top", "8px");
+  await expect(group.locator("legend")).toHaveCSS("margin-bottom", "12px");
+  await page.screenshot({
+    path: info.outputPath("create-profile.png"),
+    fullPage: true,
+  });
+  await group.getByRole("checkbox").check();
+  await expect(
+    group.getByRole("combobox", { name: "Find family groups" }),
+  ).toBeVisible();
+  await page.screenshot({
+    path: info.outputPath("create-profile-sharing.png"),
+    fullPage: true,
+  });
 });

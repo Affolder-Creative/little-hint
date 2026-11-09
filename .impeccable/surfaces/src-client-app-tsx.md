@@ -12,5 +12,5 @@ related_targets: ["src/client/Browser.tsx", "src/client/Buying.tsx"]
 - The server supplies the feed mode for paged worlds. Gifting copy is “A few hints for your favorite people.” Own-wishes fallback copy is “A little hint about what you would love.”
 - Keep one greeting and description with View your people beside it, or My lists for a solo account. Omit the redundant collection heading; gift cards use the next heading level below the greeting.
 - People introduces the directory with “Find your people, browse their wish lists, and keep gift ideas for them.”
-- Buying titles and photos link to the same detail destination. Private ideas pair Only me with an adjacent shared InfoHelp popover. More actions keeps outline icons and separates destructive cancellation at the end.
+- Buying titles and photos link to the same detail destination. Private ideas combine Only me and an info icon in one 44px InfoHelp trigger with a 6px gap. More actions keeps outline icons and separates destructive cancellation at the end.
 - People filters retain selected tags across touch activation, dismissal and history navigation. Input and portaled options form one interaction boundary.

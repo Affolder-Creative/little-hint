@@ -238,9 +238,11 @@ export function Buying() {
                       </p>
                     )}
                     <div className="idea-privacy">
-                      <PrivateIdeaBadge gift={r.item} />
                       {isPrivateIdea(r.item) && (
-                        <InfoHelp title="Only me">
+                        <InfoHelp
+                          title="Only me"
+                          triggerLabel={<PrivateIdeaBadge gift={r.item} />}
+                        >
                           {privateIdeaDescription}
                         </InfoHelp>
                       )}

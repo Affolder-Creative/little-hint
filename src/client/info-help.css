@@ -21,13 +21,13 @@
 .info-help-trigger[aria-expanded="true"] {
   color: var(--text);
 }
-.info-help-trigger svg {
+.info-help-trigger > .info-help-icon {
   box-sizing: content-box;
   padding: 5px;
   border-radius: 6px;
 }
-.info-help-trigger:hover svg,
-.info-help-trigger[aria-expanded="true"] svg {
+.info-help-trigger:hover > .info-help-icon,
+.info-help-trigger[aria-expanded="true"] > .info-help-icon {
   background: var(--soft);
 }
 .info-help-panel {
@@ -91,4 +91,17 @@
   display: flex;
   align-items: center;
   min-height: 28px;
+}
+
+.info-help-labeled {
+  width: auto;
+  height: auto;
+  min-height: 44px;
+  gap: 6px;
+  margin-block: 0;
+  text-align: start;
+}
+.info-help-labeled > .info-help-icon {
+  padding: 0;
+  flex: none;
 }

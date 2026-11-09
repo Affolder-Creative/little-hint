@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-09T16:24:34.061604+00:00",
+  "generatedAt": "2026-11-09T17:43:19.381329+00:00",
   "title": "Design System: Little Hint",
   "extensions": {
     "colorMeta": {
@@ -1274,7 +1274,7 @@
       "name": "Contextual help",
       "kind": "custom",
       "refersTo": "info-help",
-      "description": "Compact explanatory popup above its inline info trigger; same warm paper surface and border in both themes.",
+      "description": "Compact explanatory popup above its inline info trigger; same warm paper surface and border in both themes. Buying combines the Only me badge and info icon in one 44px trigger with a 6px gap; other help controls remain icon-only.",
       "html": "<div class=\"ds-help-sample\"><div class=\"ds-help-panel\"><span>Include tax and shipping. Leave blank to add later.</span><button aria-label=\"Close help\"><svg width=\"17\" height=\"17\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><path d=\"m18 6-12 12M6 6l12 12\"/></svg></button></div><div class=\"ds-help-label\">Amount paid in USD, optional <button aria-label=\"About amount paid\"><svg width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"M12 16v-4M12 8h.01\"/></svg></button></div></div>",
       "css": ".ds-help-sample{font:13px/1.5 -apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;color:var(--text)}.ds-help-panel{position:relative;max-width:20rem;padding:12px 40px 12px 12px;border:1px solid var(--control-border);border-radius:12px;background:var(--paper);color:var(--muted);margin-bottom:8px}.ds-help-label{display:flex;align-items:center;gap:2px;font-weight:550}.ds-help-sample button{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border:0;background:transparent;color:var(--muted);cursor:pointer}.ds-help-panel button{position:absolute;right:0;top:0;font-size:20px}.ds-help-label svg{padding:5px;box-sizing:content-box;border-radius:6px}.ds-help-label button:hover svg,.ds-help-panel button:hover{background:var(--soft);color:var(--text)}.ds-help-sample button:focus-visible{outline:3px solid var(--accent);outline-offset:3px}"
     },
@@ -1319,6 +1319,13 @@
       "description": "Latest-run facts stay separate from historical checks and provider usage.",
       "html": "<section class=\"ds-jobs\"><h5>Latest run</h5><dl><div><dt>Product URLs</dt><dd>25</dd></div><div><dt>Successful</dt><dd>3</dd></div></dl><details><summary>Last seven days</summary><p>Repeated checks count separately.</p></details></section>",
       "css": ".ds-jobs h5 { margin:20px 0 12px; font-size:14px; font-weight:600; } .ds-jobs dl { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px 24px; margin:0; } .ds-jobs dt { font-size:12px; color:var(--muted); overflow-wrap:anywhere; } .ds-jobs dd { margin:2px 0 0; font-size:14px; font-variant-numeric:tabular-nums; } .ds-jobs summary { min-height:44px; padding-block:10px; color:var(--accent); cursor:pointer; font-size:13px; } .ds-jobs summary:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }"
+    },
+    {
+      "name": "Passkey list",
+      "kind": "custom",
+      "description": "Borderless saved-key rows below the section introduction; labels wrap beside a 44px ellipsis menu.",
+      "html": "<div class=\"ds-passkeys\"><div><span>1Password on my personal phone</span><details><summary aria-label=\"Actions for passkey\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><circle cx=\"5\" cy=\"12\" r=\"1\"/><circle cx=\"12\" cy=\"12\" r=\"1\"/><circle cx=\"19\" cy=\"12\" r=\"1\"/></svg></summary><button>Rename</button><button class=\"ds-remove\">Remove</button></details></div></div>",
+      "css": ".ds-passkeys{display:grid;gap:8px;margin-top:16px;font:14px/1.6 system-ui;color:var(--text)}.ds-passkeys>div{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center}.ds-passkeys span{overflow-wrap:anywhere}.ds-passkeys summary{display:flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;list-style:none;cursor:pointer;border-radius:8px}.ds-passkeys summary:hover{background:var(--soft)}.ds-passkeys button{display:block;min-height:44px;width:100%;padding:8px 12px;border:0;background:var(--paper);color:var(--text);font:inherit;text-align:left}.ds-passkeys button:hover{background:var(--soft)}.ds-passkeys .ds-remove{color:var(--error);border-top:1px solid var(--border)}.ds-passkeys :focus-visible{outline:3px solid var(--accent);outline-offset:3px}"
     }
   ],
   "narrative": {
