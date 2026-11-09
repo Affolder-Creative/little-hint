@@ -506,6 +506,7 @@ test("draft saves serialize edits made during a slow request and recover from re
 for (const engine of ["chromium", "webkit"] as const)
   test(`touch People selection survives focus moving to a portaled option in ${engine}`, async ({
     browser: chromiumBrowser,
+    baseURL,
   }) => {
     const safari =
       engine === "webkit"
@@ -518,7 +519,7 @@ for (const engine of ["chromium", "webkit"] as const)
     const context = await browser.newContext({
       hasTouch: true,
       viewport: { width: 393, height: 700 },
-      baseURL: "http://localhost:5173",
+      baseURL,
     });
     const page = await context.newPage();
     try {

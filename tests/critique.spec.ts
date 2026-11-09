@@ -4093,13 +4093,15 @@ test.describe("navigation scroll restoration", () => {
       await page.goto("/buying");
       const purchased = page.getByRole("button", { name: /^Purchased \(/ });
       await purchased.click();
-      const gift = page.locator(".buying-row a").first();
+      const gift = page.locator(".buying-row a[data-navigation-focus]").first();
       const href = await gift.getAttribute("href");
       await gift.click();
       await expect(page.locator(".gift-detail")).toBeVisible();
       await page.goBack();
       await expect(purchased).toHaveAttribute("aria-pressed", "true");
-      await expect(page.locator(`.buying-row a[href="${href}"]`)).toBeFocused();
+      await expect(
+        page.locator(`.buying-row a[data-navigation-focus][href="${href}"]`),
+      ).toBeFocused();
       await page.locator('a[href="/people"]:visible').first().click();
       await expect(
         page.getByRole("heading", { name: "Your people", exact: true }),
