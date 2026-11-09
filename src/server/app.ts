@@ -1,3 +1,4 @@
+import { priceReport } from "./price-report";
 import { sql } from "drizzle-orm";
 import { registerAdminAccounts } from "./admin-accounts";
 import { registerProfileAccounts } from "./profile-accounts";
@@ -750,6 +751,7 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
         s.usage.find((u) => u.key === "worker-heartbeat")?.count ?? null,
       prices: {
         ...priceConfig(),
+        report: priceReport(s),
         providerUsage: s.usage
           .filter((u) =>
             u.key.startsWith(
@@ -787,12 +789,14 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
           diagnostic,
           diagnostics,
           unlockerRetry,
+          draft,
           createdAt,
         }) => ({
           createdAt,
           diagnostic,
           diagnostics,
           attempts: unlockerRetry?.attempts,
+          draftState: draft?.state,
           id,
           status,
           error,

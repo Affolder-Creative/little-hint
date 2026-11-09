@@ -193,8 +193,8 @@ listing photo because it may show a different option.
 
 Existing automatic-photo settings, safe image downloading, private drafts,
 collection resume behavior, and daily allowances apply. Etsy imports bypass older
-generic metadata cache entries. This changes wishlist imports only; background
-price checks retain their existing routing and verification.
+generic metadata cache entries. Background price checks also use the dedicated collection, with stricter
+stock and fixed-price verification described in price-tracking.md.
 
 A staging probe on 2026-11-05 used one collection for listing `1154909286` and
 verified its product identity, title, description, and a downloadable, decodable
@@ -234,3 +234,6 @@ and protections against repeating uncertain AI requests still apply.
 
 Failed shop lookups records the import attempt's outcome. Entering the details
 manually and publishing the gift does not erase that historical failure.
+
+Administration separates failed active drafts from past lookup attempts. Publishing
+or discarding a draft changes its displayed context without erasing the failure.

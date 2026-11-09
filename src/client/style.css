@@ -4755,3 +4755,9 @@ a.button:is(:hover, :focus, :active),
   color: var(--muted);
   max-width: 65ch;
 }
+
+.admin-run-title {
+  margin: 20px 0 12px;
+  font-size: 14px;
+  font-weight: 600;
+}

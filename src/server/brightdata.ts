@@ -74,6 +74,17 @@ export function brightDataFailureReason(status: number, body: string) {
                     : "Request rejected; check provider access and request configuration";
   return `Bright Data HTTP ${status}: ${detail}`;
 }
+export function verifiedInStock(row: {
+  in_stock?: unknown;
+  availability?: unknown;
+}) {
+  const positive = (value: unknown) =>
+    value === true ||
+    (typeof value === "string" &&
+      /^(instock|in_stock|in stock)$/.test(value.trim().toLowerCase()));
+  const values = [row.in_stock, row.availability].filter((v) => v != null);
+  return values.length > 0 && values.every(positive);
+}
 const datasets: Record<string, string> = {
   "amazon.com": "gd_l7q7dkf244hwjntr0",
   "walmart.com": "gd_l95fol7l1ru6rlo116",
@@ -96,7 +107,7 @@ export function retailerDataset(
           ? u.pathname.startsWith("/p/")
           : host === "bestbuy.com"
             ? /\/(?:\d+\.p|sku\/\d+)\/?$/.test(u.pathname)
-            : purpose === "import" && !!etsyListingId(value);
+            : !!etsyListingId(value);
   return product ? datasets[host] : undefined;
 }
 export function normalizeRetailer(
@@ -349,22 +360,20 @@ export async function brightRetailer(
       .filter(Boolean)
       .map(String);
     const requested =
+      etsyListingId(url) ??
       new URL(url).searchParams.get("preselect") ??
       new URL(url).pathname
         .match(/(?:dp|product|sku)\/([A-Z0-9]+)|A-(\d+)|(\d+)\.p/i)
         ?.slice(1)
         .find(Boolean) ??
       new URL(url).pathname.split("/").pop();
-    if (
-      !requested ||
-      !ids.includes(requested) ||
-      ![true, "InStock", "in_stock", "In stock"].includes(
-        row.in_stock ?? row.availability,
-      ) ||
-      row.price_type ||
-      row.subscription_price ||
-      row.member_price
-    )
+    if (etsyListingId(url) && row.listing_has_variations !== false)
+      throw new Error("Etsy listing options cannot be verified");
+    if (!requested || !ids.includes(requested))
+      throw new Error("Product identity mismatch");
+    if (!verifiedInStock(row))
+      throw new Error("In-stock availability cannot be verified");
+    if (row.price_type || row.subscription_price || row.member_price)
       throw new Error("Product price cannot be verified");
   }
   return normalizeRetailer(result[0], url);

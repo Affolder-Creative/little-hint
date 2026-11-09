@@ -269,7 +269,9 @@ test("service status can recover and failed jobs remain actionable", async ({
     });
     await expect(fact.getByRole("definition")).toHaveText("0");
   }
-  await jobs.getByText("Failed shop lookups (1)", { exact: true }).click();
+  await jobs
+    .getByText("Past shop lookup failures (1)", { exact: true })
+    .click();
   await expect(jobs.locator("time")).toHaveAttribute(
     "datetime",
     "2026-10-31T16:00:00Z",
@@ -708,3 +710,86 @@ for (const width of [393, 1280])
       fullPage: true,
     });
   });
+
+for (const width of [393, 768, 1440])
+  for (const dark of [false, true]) {
+    test(`price diagnostics polish ${width} ${dark ? "dark" : "light"}`, async ({
+      page,
+    }, info) => {
+      await page.setViewportSize({ width, height: 1000 });
+      await page.emulateMedia({ colorScheme: dark ? "dark" : "light" });
+      await setup(page);
+      const summary = {
+        total: 25,
+        successful: 3,
+        waiting: 0,
+        failed: 3,
+        unverifiable: 16,
+        deferred: 2,
+        skipped: 1,
+      };
+      await page.route("**/api/v1/admin/jobs", (route) =>
+        route.fulfill({
+          json: {
+            workerLastSeen: Date.now(),
+            imports: [
+              {
+                id: "past",
+                status: "failed",
+                draftState: "published",
+                error: "Shop lookup failed.",
+              },
+            ],
+            notifications: [],
+            prices: {
+              enabled: true,
+              time: "03:00",
+              zone: "America/Indiana/Indianapolis",
+              lastRun: Date.now(),
+              failed: 111,
+              pending: 0,
+              dailyUsed: 23,
+              daily: 100,
+              monthlyUsed: 114,
+              monthly: 3000,
+              providerUsage: [],
+              report: {
+                latest: { day: "2026-11-09", ...summary },
+                history: summary,
+                failures: [],
+              },
+            },
+          },
+        }),
+      );
+      await page.goto("/settings?section=admin");
+      const jobs = page.getByRole("region", {
+        name: "Background jobs",
+        exact: true,
+      });
+      await expect(jobs).toContainText("Latest run");
+      await jobs.getByText("Last seven days", { exact: true }).click();
+      await jobs
+        .getByText("Past shop lookup failures (1)", { exact: true })
+        .click();
+      await expect(jobs).toContainText("Draft published");
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+      ).toBe(true);
+      expect(
+        (
+          await new AxeBuilder({ page })
+            .include('[aria-label="Background jobs"]')
+            .analyze()
+        ).violations,
+      ).toEqual([]);
+      await jobs.evaluate((el) => el.scrollIntoView({ block: "start" }));
+      await page.evaluate(() => window.scrollBy(0, -100));
+      await page.evaluate(() =>
+        (document.activeElement as HTMLElement)?.blur(),
+      );
+      await page.screenshot({ path: info.outputPath("jobs.png") });
+    });
+  }

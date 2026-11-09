@@ -571,7 +571,7 @@ last verification time. Use tabular figures, the existing detail-price role and
 Cards keep only the current price and a compact original-price comparison.
 Price-drop subscriptions use the existing labeled checkbox with a 44px target.
 Pause/resume is an editor-only text action; errors appear beside these controls. The notification explanation opens from a neighboring info button in a keyboard-accessible native popover. Items without a price omit comparison, verification, and tracking controls, leaving the description at the normal prose gap.
-Administration separates price checks and worker activity into compact labeled facts, with schedule, timezone, last run and waiting/failed counts. Provider attempts expand beneath price checks.
+Administration separates price checks and worker activity into compact labeled facts. Schedule, timezone and last-run start precede a dated latest-run summary with total URLs, successful checks, waiting checks, failures, unverifiable prices, allowance deferrals and skipped edits. Seven-day totals and unsuccessful-check diagnostics use a collapsed disclosure; provider attempts remain separate. Worker status includes its last reported time. Active failed imports and past failures use separate disclosures, with published or discarded draft status in supporting copy. Counts retain tabular figures; run headings use 14px semibold type and 20px top spacing.
 No chart, new color, font or elevation treatment is introduced.
 
 ### Spending assignment and mobile controls

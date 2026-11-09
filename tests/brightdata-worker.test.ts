@@ -461,30 +461,120 @@ it("does not cascade an Etsy rejection into Unlocker or discard the draft", asyn
   expect(mock.state.imports[0].providerState).toBeUndefined();
 });
 
-it("keeps Etsy background price checks on the existing Unlocker path", async () => {
+it("uses one dedicated collection for Etsy price checks", async () => {
   const priceJob = {
     ...mock.state.imports[0],
+    id: "price",
     url: etsyUrl,
-    day: "2026-11-05",
+    day: "2026-11-09",
     targets: [],
   };
   mock.state.priceChecks.push(priceJob);
-  mock.request.mockRejectedValue(new Error("Direct blocked"));
   const fetcher = vi
     .fn()
-    .mockResolvedValue(Response.json({ status_code: 502 }));
+    .mockResolvedValueOnce(Response.json({ snapshot_id: "etsy-price" }))
+    .mockResolvedValueOnce(Response.json({ status: "ready" }))
+    .mockResolvedValueOnce(
+      Response.json([
+        {
+          product_id: "1154909286",
+          title: "Fixed listing",
+          final_price: 25,
+          currency: "USD",
+          availability: "in_stock",
+          listing_has_variations: false,
+        },
+      ]),
+    );
   vi.stubGlobal("fetch", fetcher);
   await expect(
-    lookupPrice(etsyUrl, "job", await config(), async () => {}),
+    lookupPrice(etsyUrl, "price", await config(), async () => {}),
+  ).rejects.toBeInstanceOf(ImportPending);
+  expect(
+    await lookupPrice(etsyUrl, "price", await config(), async () => {}, true),
+  ).toMatchObject({ priceCents: 2500, source: "brightdata-scraper" });
+  expect(mock.request).not.toHaveBeenCalled();
+  expect(mock.spend).toHaveBeenCalledTimes(1);
+});
+
+it.each([36.99, 12.99, 29.99])(
+  "verifies Amazon price %s with the actual stock spelling",
+  async (amount) => {
+    mock.state.priceChecks.push({
+      ...mock.state.imports[0],
+      id: "price",
+      day: "2026-11-09",
+      targets: [],
+    });
+    mock.request.mockRejectedValue(new Error("blocked"));
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(Response.json({ snapshot_id: "amazon-price" }))
+      .mockResolvedValueOnce(Response.json({ status: "ready" }))
+      .mockResolvedValueOnce(
+        Response.json([
+          {
+            asin: "B012345678",
+            title: "Product",
+            final_price: amount,
+            currency: "USD",
+            availability: "In Stock",
+          },
+        ]),
+      );
+    vi.stubGlobal("fetch", fetcher);
+    await expect(
+      lookupPrice(url, "price", await config(), async () => {}),
+    ).rejects.toBeInstanceOf(ImportPending);
+    expect(
+      await lookupPrice(url, "price", await config(), async () => {}, true),
+    ).toMatchObject({ priceCents: Math.round(amount * 100) });
+    expect(mock.spend).toHaveBeenCalledTimes(1);
+  },
+);
+it.each([
+  { listing_has_variations: true },
+  { listing_has_variations: undefined },
+  { currency: "EUR" },
+  { availability: undefined },
+  { availability: "out_of_stock" },
+  { product_id: "wrong" },
+  { price_range: "20 - 40" },
+  { variations: [{ type: "Color" }] },
+])("rejects unverifiable Etsy price evidence %j", async (patch) => {
+  mock.state.priceChecks.push({
+    ...mock.state.imports[0],
+    id: "price",
+    url: etsyUrl,
+    day: "2026-11-09",
+    targets: [],
+    providerState: {
+      snapshotId: "existing",
+      submittedAt: new Date().toISOString(),
+      deadline: new Date(Date.now() + 60000).toISOString(),
+    },
+  });
+  vi.stubGlobal(
+    "fetch",
+    vi
+      .fn()
+      .mockResolvedValueOnce(Response.json({ status: "ready" }))
+      .mockResolvedValueOnce(
+        Response.json([
+          {
+            product_id: "1154909286",
+            title: "Product",
+            final_price: 25,
+            currency: "USD",
+            availability: "in_stock",
+            listing_has_variations: false,
+            ...patch,
+          },
+        ]),
+      ),
+  );
+  await expect(
+    lookupPrice(etsyUrl, "price", await config(), async () => {}, true),
   ).rejects.toThrow();
-  expect(fetcher).toHaveBeenCalledExactlyOnceWith(
-    "https://api.brightdata.com/request",
-    expect.anything(),
-  );
-  expect(priceJob.providerState).toBeUndefined();
-  expect(mock.spend).toHaveBeenCalledExactlyOnceWith(
-    "brightdata",
-    true,
-    "brightdata-unlocker",
-  );
+  expect(mock.spend).not.toHaveBeenCalled();
 });

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-09T14:16:37.290923+00:00",
+  "generatedAt": "2026-11-09T16:24:34.061604+00:00",
   "title": "Design System: Little Hint",
   "extensions": {
     "colorMeta": {
@@ -1312,6 +1312,13 @@
       "description": "Two paired actions with a full-width privacy note above; primary save precedes the outlined draft action. Buttons stack at full width on phones.",
       "html": "<div class=\"ds-draft-actions\"><p>Only you can see this draft until you publish.</p><button class=\"ds-draft-primary\">Add to wish list</button><button class=\"ds-draft-secondary\">Save draft</button></div>",
       "css": ".ds-draft-actions { display:flex; flex-wrap:wrap; gap:8px; align-items:start; justify-content:flex-end; } .ds-draft-actions button { min-height:44px; font-size:14px; font-weight:600; cursor:pointer; border-radius:8px; padding:12px 18px; } .ds-draft-primary { background:var(--accent); color:var(--on-accent); border:1px solid transparent; } .ds-draft-secondary { background:var(--paper); color:var(--text); border:1px solid var(--border); } .ds-draft-actions p { flex-basis:100%; margin:0; color:var(--muted); font-size:13px; line-height:1.5; } .ds-draft-primary:hover { opacity:.9; } .ds-draft-secondary:hover { background:var(--soft); } .ds-draft-actions button:focus-visible { outline:3px solid var(--accent); outline-offset:3px; } @media(max-width:650px) { .ds-draft-actions button { width:100%; } }"
+    },
+    {
+      "name": "Background job summary",
+      "kind": "custom",
+      "description": "Latest-run facts stay separate from historical checks and provider usage.",
+      "html": "<section class=\"ds-jobs\"><h5>Latest run</h5><dl><div><dt>Product URLs</dt><dd>25</dd></div><div><dt>Successful</dt><dd>3</dd></div></dl><details><summary>Last seven days</summary><p>Repeated checks count separately.</p></details></section>",
+      "css": ".ds-jobs h5 { margin:20px 0 12px; font-size:14px; font-weight:600; } .ds-jobs dl { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px 24px; margin:0; } .ds-jobs dt { font-size:12px; color:var(--muted); overflow-wrap:anywhere; } .ds-jobs dd { margin:2px 0 0; font-size:14px; font-variant-numeric:tabular-nums; } .ds-jobs summary { min-height:44px; padding-block:10px; color:var(--accent); cursor:pointer; font-size:13px; } .ds-jobs summary:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }"
     }
   ],
   "narrative": {

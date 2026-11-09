@@ -1,3 +1,4 @@
+import { PriceRunReport } from "./PriceRunReport";
 import { ActionMenu } from "./Management";
 import { ProfileTakeovers } from "./ProfileTakeovers";
 import { GroupInvitationRequests } from "./GroupInvitationRequests";
@@ -1228,6 +1229,8 @@ function Admin() {
   const jobs = useQuery({
     queryKey: ["admin-jobs"],
     queryFn: () => api<AdminJobs>("admin/jobs"),
+    refetchInterval: 20000,
+    refetchIntervalInBackground: false,
   });
   const services = useQuery({
     queryKey: ["admin-services"],
@@ -1318,26 +1321,19 @@ function Admin() {
                     </dd>
                   </div>
                   <div>
-                    <dt>Last run</dt>
+                    <dt>Last run started</dt>
                     <dd>
                       {jobs.data.prices.lastRun > 0
                         ? new Date(jobs.data.prices.lastRun).toLocaleString()
                         : "Not run yet"}
                     </dd>
                   </div>
-                  <div>
-                    <dt>Waiting</dt>
-                    <dd>{jobs.data.prices.pending}</dd>
-                  </div>
-                  <div>
-                    <dt>Failed</dt>
-                    <dd
-                      className={jobs.data.prices.failed ? "error" : undefined}
-                    >
-                      {jobs.data.prices.failed}
-                    </dd>
-                  </div>
                 </dl>
+                {jobs.data.prices.report ? (
+                  <PriceRunReport report={jobs.data.prices.report} />
+                ) : (
+                  <p>Retained failed checks: {jobs.data.prices.failed}</p>
+                )}
                 <details className="admin-provider-details">
                   <summary>Provider attempts</summary>
                   <dl className="admin-job-facts">
@@ -1376,6 +1372,13 @@ function Admin() {
                 Date.now() - jobs.data.workerLastSeen < 60000
                   ? "Worker active"
                   : "No recent worker activity reported"}
+                {jobs.data.workerLastSeen ? (
+                  <>
+                    <br />
+                    Last reported{" "}
+                    {new Date(jobs.data.workerLastSeen).toLocaleString()}
+                  </>
+                ) : null}
               </p>
               <dl className="admin-job-facts">
                 <div>
@@ -1406,8 +1409,12 @@ function Admin() {
         {jobs.data && (
           <>
             <AdminJobFailures
-              title="Failed shop lookups"
-              jobs={jobs.data.imports}
+              title="Shop lookups needing attention"
+              jobs={jobs.data.imports.filter((j) => j.draftState === "active")}
+            />
+            <AdminJobFailures
+              title="Past shop lookup failures"
+              jobs={jobs.data.imports.filter((j) => j.draftState !== "active")}
             />
             <AdminJobFailures
               title="Failed updates"
