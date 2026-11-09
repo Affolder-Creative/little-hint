@@ -74,3 +74,18 @@ Run unit tests, the PostgreSQL integration suite, build and Compose checks, plus
 activation, verify live prices and selected options for representative retailer
 links with explicitly bounded staging credentials. Fixture tests do not establish
 live retailer coverage. Observe failures and allowances in Administration.
+
+## Diagnostics and Etsy coverage
+
+Administration shows the latest scheduled run separately from a rolling seven-day
+history. Repeated checks of the same URL count separately. Unverifiable prices,
+allowance deferrals and superseded edits are distinct from provider failures.
+Older generic failures retain an unknown reason; their discarded details cannot
+be reconstructed. Diagnostics exclude gift titles, product links and raw responses.
+
+Etsy checks use the dedicated product collection with all variations disabled.
+A matching listing must explicitly report no variations, a positive stock state,
+and one unambiguous USD price. Selected options and incomplete or conflicting
+evidence keep the saved price and verification timestamp. Existing daily/monthly
+limits and collection-resume protections apply. Amazon stock strings are normalized
+for casing; contradictory or unknown stock evidence remains unverified.

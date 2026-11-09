@@ -1,3 +1,5 @@
+import { recordPriceFailure } from "./price-diagnostics";
+import { etsyListingId } from "./etsy";
 import { transact } from "./db";
 import { load } from "cheerio";
 import { safeFetch, validateUrl, boundedBody } from "./imports";
@@ -83,7 +85,8 @@ export async function lookupPrice(
 ) {
   await guard();
   try {
-    if (resume) throw new Error("Resume existing collection");
+    if (resume || etsyListingId(url))
+      throw new Error("Resume existing collection");
     const page = await safeFetch(url, 2_000_000, guard);
     if (new URL(page.url).pathname !== new URL(url).pathname)
       throw new Error("Product redirected");
@@ -93,8 +96,12 @@ export async function lookupPrice(
       ...(retailerDataset(url, "price") ? { identity: `retailer:${url}` } : {}),
       source: "direct",
     };
-  } catch {
-    /* A verified paid result can recover an incomplete direct response. */
+  } catch (error) {
+    if (!resume && !etsyListingId(url))
+      await transact((s) => {
+        const job = s.priceChecks.find((j) => j.id === id);
+        if (job) recordPriceFailure(job, error, "direct");
+      });
   }
   await guard();
   await validateUrl(url);
@@ -111,6 +118,8 @@ export async function lookupPrice(
   if (provider === "brightdata") {
     if (retailerDataset(url, "price")) {
       const r = await brightRetailer(url, cfg.BRIGHTDATA_API_KEY, id, true);
+      if (etsyListingId(url) && r.warnings?.length)
+        throw new Error("Selected option cannot be verified");
       if (!r.priceCents) throw new Error("Price cannot be verified");
       return {
         priceCents: r.priceCents,

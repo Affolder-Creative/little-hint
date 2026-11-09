@@ -23,7 +23,7 @@ describe("Etsy listings", () => {
   ])("routes the listing, preserving its identity: %s", (link) => {
     expect(etsyListingId(link)).toBe(row.product_id);
     expect(retailerDataset(link)).toBe("gd_ltppk0jdv1jqz25mz");
-    expect(retailerDataset(link, "price")).toBeUndefined();
+    expect(retailerDataset(link, "price")).toBe("gd_ltppk0jdv1jqz25mz");
   });
 
   it.each([

@@ -204,3 +204,21 @@ describe("retailer imports", () => {
     expect(s.items).toHaveLength(1);
   });
 });
+
+import { verifiedInStock } from "../src/server/brightdata";
+it.each([36.99, 12.99, 29.99])(
+  "accepts the observed Amazon availability for a $%s response",
+  () => {
+    expect(verifiedInStock({ availability: "In Stock" })).toBe(true);
+  },
+);
+it("rejects unknown and contradictory stock", () => {
+  for (const row of [
+    {},
+    { availability: "Out of Stock" },
+    { availability: "Available soon" },
+    { in_stock: false, availability: "In Stock" },
+    { in_stock: true, availability: "out_of_stock" },
+  ])
+    expect(verifiedInStock(row)).toBe(false);
+});

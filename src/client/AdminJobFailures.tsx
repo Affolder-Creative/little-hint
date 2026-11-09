@@ -30,6 +30,10 @@ export function AdminJobFailures({
             <p className="job-message">
               {job.error || "The job could not finish."}
             </p>
+            {job.draftState === "published" && (
+              <p>Draft published. This records the earlier lookup attempt.</p>
+            )}
+            {job.draftState === "discarded" && <p>Draft discarded.</p>}
             {job.createdAt && Number.isFinite(Date.parse(job.createdAt)) ? (
               <p>
                 Queued{" "}

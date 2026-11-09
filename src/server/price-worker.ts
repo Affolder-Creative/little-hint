@@ -1,3 +1,4 @@
+import { recordPriceFailure } from "./price-diagnostics";
 import { randomUUID } from "node:crypto";
 import { transact, readState } from "./db";
 import { config } from "./settings";
@@ -114,8 +115,17 @@ export async function processPrice(id: string) {
         }
       }
       j.status = accepted ? "complete" : "failed";
-      if (!accepted)
+      if (!accepted) {
+        j.outcome = "unverifiable";
         j.error = "Product identity changed; previous prices retained.";
+        j.diagnostics = [
+          ...(j.diagnostics ?? []),
+          { stage: "identity", reason: j.error },
+        ].slice(-8);
+      } else {
+        delete j.outcome;
+        delete j.error;
+      }
       delete j.leaseUntil;
     });
   } catch (error) {
@@ -127,7 +137,8 @@ export async function processPrice(id: string) {
         j.status = "pending";
         return;
       }
-      const deferred = /allowance|budget|limit/i.test(String(error));
+      j.outcome = recordPriceFailure(j, error, "price-check");
+      const deferred = j.outcome === "deferred";
       j.status = "failed";
       j.error = deferred
         ? "Deferred: provider request allowance exhausted."

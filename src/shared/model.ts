@@ -162,6 +162,8 @@ export interface PriceWatch extends Base {
   reference: number | null;
 }
 export interface PriceCheck extends Base {
+  outcome?: "unverifiable" | "provider-error" | "deferred" | "skipped";
+  diagnostics?: import("./lookup-diagnostics").LookupDiagnostic[];
   paidAttempted?: boolean;
   url: string;
   day: string;
