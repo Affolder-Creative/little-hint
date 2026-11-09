@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-09T19:48:10.812441+00:00",
+  "generatedAt": "2026-11-09T19:52:09.062803+00:00",
   "title": "Design System: Little Hint",
   "extensions": {
     "colorMeta": {
@@ -1122,7 +1122,7 @@
     },
     "photoEditor": {
       "thumbnail": "80px contained; 64px at 400px and below",
-      "actions": "Two fixed rows: outlined Make cover with star or checked green Cover photo status, then neutral Replace and destructive Remove with icons. All targets retain 44px height."
+      "actions": "Two fixed rows without an added gap: outlined Make cover with 4px by 8px padding and a star, or checked green Cover photo status in a 32px line. Neutral Replace and destructive Remove align toward the top of their 44px targets."
     }
   },
   "components": [
