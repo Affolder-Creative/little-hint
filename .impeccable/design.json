@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-09T19:47:54.826217+00:00",
+  "generatedAt": "2026-11-09T19:48:10.812441+00:00",
   "title": "Design System: Little Hint",
   "extensions": {
     "colorMeta": {
@@ -1339,6 +1339,13 @@
       "description": "Manual gallery navigation beneath a contained product photo.",
       "html": "<div class=\"ds-photo-navigation\"><button aria-label=\"Previous photo\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><path d=\"m15 18-6-6 6-6\"/></svg></button><span>Photo 2 of 5</span><button aria-label=\"Next photo\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><path d=\"m9 18 6-6-6-6\"/></svg></button></div>",
       "css": ".ds-photo-navigation{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:12px}.ds-photo-navigation span{font-size:14px;color:var(--muted);font-variant-numeric:tabular-nums}.ds-photo-navigation button{min-width:44px;min-height:44px;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--paper);color:var(--text)}.ds-photo-navigation button:hover{background:var(--soft)}.ds-photo-navigation button:focus-visible{outline:3px solid var(--accent);outline-offset:3px}.ds-photo-navigation button:disabled{opacity:.5}"
+    },
+    {
+      "name": "Archived item notice",
+      "kind": "custom",
+      "description": "Persistent guidance beneath Archived items tabs, above search.",
+      "html": "<p class=\"ds-archive-notice\">These items are archived and kept for reference. Please don't reserve or buy them. When choosing a gift, take a look at Active items instead.</p>",
+      "css": ".ds-archive-notice { background: var(--soft); color: var(--text); border-radius: 8px; padding: 16px; font-size: 13px; line-height: 1.6; }"
     }
   ],
   "narrative": {
