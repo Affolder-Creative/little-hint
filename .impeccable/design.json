@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-09T19:52:09.062803+00:00",
+  "generatedAt": "2026-11-09T20:18:25.614720+00:00",
   "title": "Design System: Little Hint",
   "extensions": {
     "colorMeta": {
@@ -1346,6 +1346,13 @@
       "description": "Persistent guidance beneath Archived items tabs, above search.",
       "html": "<p class=\"ds-archive-notice\">These items are archived and kept for reference. Please don't reserve or buy them. When choosing a gift, take a look at Active items instead.</p>",
       "css": ".ds-archive-notice { background: var(--soft); color: var(--text); border-radius: 8px; padding: 16px; font-size: 13px; line-height: 1.6; }"
+    },
+    {
+      "name": "Helpful note",
+      "kind": "input",
+      "description": "Compact rich-text notes with wrapping formatting controls and an inset focus outline.",
+      "html": "<div class=\"ds-note\"><div class=\"ds-note-tools\"><button aria-label=\"Bold\" aria-pressed=\"true\"><strong>B</strong></button><button aria-label=\"Italic\"><em>I</em></button><button aria-label=\"Strikethrough\"><s>S</s></button></div><div class=\"ds-note-input\" contenteditable=\"true\" role=\"textbox\" aria-label=\"A helpful note\"><strong>Size:</strong> medium</div></div>",
+      "css": ".ds-note{background:var(--paper);color:var(--text);border:1px solid var(--control-border);border-radius:8px}.ds-note-tools{display:flex;flex-wrap:wrap;gap:4px;padding:4px;border-bottom:1px solid var(--border)}.ds-note-tools button{min-width:44px;min-height:44px;border:0;border-radius:8px;background:transparent;color:var(--text)}.ds-note-tools button:hover,.ds-note-tools button[aria-pressed=true]{background:var(--soft);color:var(--accent)}.ds-note-tools button:focus-visible,.ds-note-input:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}.ds-note-input{min-height:150px;padding:12px;font-size:14px;line-height:1.7;border-radius:0 0 8px 8px}"
     }
   ],
   "narrative": {

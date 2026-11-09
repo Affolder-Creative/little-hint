@@ -1,4 +1,5 @@
 import { ItemPhotoDetail } from "./ItemPhotoDetail";
+import { HelpfulNote } from "./HelpfulNoteView";
 import { netContribution } from "../shared/contribution-money";
 import { NameSetup } from "./NameSetup";
 import {
@@ -1348,7 +1349,7 @@ function GiftDetail() {
             }
           />
           {gift.description && (
-            <p className="description">{gift.description}</p>
+            <HelpfulNote text={gift.description} rich={gift.descriptionRich} />
           )}
           {gift.tags.length > 0 && (
             <div className="tags">

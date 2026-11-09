@@ -124,3 +124,60 @@ it("retains import-draft photos across edits and rejects unauthorized attachment
     }),
   ).toThrow("Choose an imported");
 });
+it("preserves formatted notes and gallery photos through import editing and publishing", () => {
+  const f = fixture();
+  const note = {
+    type: "doc",
+    content: [
+      {
+        type: "paragraph",
+        content: [
+          {
+            type: "text",
+            text: "Blue, size medium",
+            marks: [{ type: "bold" }],
+          },
+        ],
+      },
+    ],
+  };
+  const job: any = command(f.s, f.john, "imports.create", {
+    url: "https://example.com/sweater",
+    draft: {
+      listId: f.list.id,
+      descriptionRich: note,
+      fields: {
+        title: "Sweater",
+        description: "",
+        image: f.urls[0],
+        images: f.urls.slice(0, 2),
+      },
+      touched: ["image", "images", "description"],
+    },
+  });
+  command(f.s, f.john, "imports.update", {
+    id: job.id,
+    revision: job.draft.revision,
+    descriptionRich: note,
+    fields: { ...job.draft.fields, image: f.urls[1] },
+  });
+  expect(job.draft.fields.description).toBe("Blue, size medium");
+  expect(job.draft.fields.images).toEqual(f.urls.slice(0, 2));
+  const item = command(f.s, f.john, "items.create", {
+    title: "Sweater",
+    listId: f.list.id,
+    url: job.url,
+    importId: job.id,
+    importDraftRevision: job.draft.revision,
+    descriptionRich: job.draft.descriptionRich,
+    image: job.draft.fields.image,
+    images: job.draft.fields.images,
+  }) as Item;
+  expect(item.descriptionRich).toEqual(note);
+  expect(item.description).toBe("Blue, size medium");
+  expect(item.image).toBe(f.urls[1]);
+  expect(item.images).toEqual(f.urls.slice(0, 2));
+  command(f.s, f.john, "items.update", { ...item, image: f.urls[0] });
+  expect(f.s.items[0].descriptionRich).toEqual(note);
+  expect(f.s.items[0].images).toEqual(f.urls.slice(0, 2));
+});

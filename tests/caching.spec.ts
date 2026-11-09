@@ -68,7 +68,7 @@ test("polls only the active import, refreshes explicitly, and preserves manual e
   await expect(page.getByLabel("Item name", { exact: true })).toHaveValue(
     "My own title",
   );
-  await expect(page.getByLabel("A helpful note", { exact: true })).toHaveValue(
+  await expect(page.getByLabel("A helpful note", { exact: true })).toHaveText(
     "My own description",
   );
   await page.getByRole("button", { name: "Refresh from shop" }).click();
@@ -80,7 +80,7 @@ test("polls only the active import, refreshes explicitly, and preserves manual e
   await expect(page.getByLabel("Item name", { exact: true })).toHaveValue(
     "My own title",
   );
-  await expect(page.getByLabel("A helpful note", { exact: true })).toHaveValue(
+  await expect(page.getByLabel("A helpful note", { exact: true })).toHaveText(
     "My own description",
   );
   await page.screenshot({
@@ -107,7 +107,7 @@ test("shows cleaned imported copy for review before saving", async ({
   await expect(page.getByLabel("Item name", { exact: true })).toHaveValue(
     "Acme ceramic mug, blue, 12 oz",
   );
-  await expect(page.getByLabel("A helpful note", { exact: true })).toHaveValue(
+  await expect(page.getByLabel("A helpful note", { exact: true })).toHaveText(
     "A blue 12 oz ceramic mug from Acme.",
   );
   await expect(

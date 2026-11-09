@@ -316,8 +316,13 @@ export function Form({
           closeError.current ? closeError.current(e) : setError(actionError(e)),
         );
     };
+    const changed = () => setDirty(true);
+    el?.addEventListener("note-change", changed);
     el?.addEventListener("draft-close", listener);
-    return () => el?.removeEventListener("draft-close", listener);
+    return () => {
+      el?.removeEventListener("draft-close", listener);
+      el?.removeEventListener("note-change", changed);
+    };
   }, []);
 
   useEffect(() => onBusyChange?.(busy), [busy, onBusyChange]);

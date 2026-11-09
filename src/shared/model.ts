@@ -1,3 +1,4 @@
+import type { NoteDocument } from "./helpful-note";
 import type { LookupDiagnostic } from "./lookup-diagnostics";
 import type {
   SpendingSettings,
@@ -182,6 +183,7 @@ export interface PriceChange extends Base {
   source: string;
 }
 export interface Item extends Base {
+  descriptionRich?: NoteDocument | null;
   publicationState?: "draft" | "published";
   draftOwnerId?: string;
   /** Creator-private spending default; never changes wish-list membership. */
@@ -405,6 +407,7 @@ export interface Preferences extends Base {
   smsConsentedDailyLimit?: number;
 }
 export interface ImportDraft {
+  descriptionRich?: NoteDocument | null;
   spendingListId?: string | null;
   friendEntryId?: string;
   kind?: "item" | "idea";

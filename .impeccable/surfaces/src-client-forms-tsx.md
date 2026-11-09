@@ -2,7 +2,7 @@
 version: 1
 slug: "src-client-forms-tsx"
 primary_target: "src/client/forms.tsx"
-related_targets: ["src/client/ImportDrafts.tsx", "src/client/mobile-repairs.css"]
+related_targets: ["src/client/ImportDrafts.tsx", "src/client/mobile-repairs.css", "src/client/HelpfulNote.tsx", "src/client/helpful-note.css"]
 ---
 
 # Gift and draft editors
@@ -15,3 +15,4 @@ related_targets: ["src/client/ImportDrafts.tsx", "src/client/mobile-repairs.css"
 - Preserve intentional field clears, recipient, audience, group and spending choices, late lookup results and guardian visibility rules.
 
 - Photos use contained thumbnail rows. An outlined Make cover button or checked cover status occupies the first action row; neutral Replace and destructive Remove actions with icons share the second row. Counts reflect the deployment limit. Upload batches disable dismissal and saving; failures preserve successful photos and offer retry. Gallery changes follow the existing draft save queue.
+- Helpful notes use the approved rich-text toolbar. Preserve selections during formatting and link editing, literal legacy content, 5,000-character limits and formatting-only dirty state. Match the saved note typography and wrap toolbar targets without horizontal overflow.

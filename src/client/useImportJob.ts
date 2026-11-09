@@ -49,6 +49,7 @@ export function useImportJob(accountId: string, initial?: ImportJob) {
       | "recipientId"
       | "visibility"
       | "groupIds"
+      | "descriptionRich"
       | "fields"
       | "touched"
     >,

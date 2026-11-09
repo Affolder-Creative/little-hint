@@ -1,4 +1,6 @@
 import { itemPhotos } from "../shared/item-photos";
+import { HelpfulNoteEditor } from "./NoteEditor";
+import type { NoteDocument } from "../shared/helpful-note";
 import { ManagedProfileManagers } from "./ManagedProfileManagers";
 import { ManagedProfileSharing } from "./ManagedProfileSharing";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -260,6 +262,7 @@ export function ListForm({
   );
 }
 interface Draft {
+  descriptionRich?: NoteDocument | null;
   id: string;
   title: string;
   url: string;
@@ -381,6 +384,12 @@ function GiftEditor({
 }) {
   const { world, mutate, close, toast } = useApp();
   const lists = world.lists.filter((l) => l.canEdit && !l.archived);
+  const [noteRich, setNoteRich] = useState<NoteDocument | null | undefined>(
+    gift?.descriptionRich ??
+      draft?.descriptionRich ??
+      importDraft?.draft?.descriptionRich,
+  );
+  const [noteBusy, setNoteBusy] = useState(false);
   const [data, setData] = useState({
     title: gift?.title ?? draft?.title ?? capture?.title ?? "",
     url: gift?.url ?? draft?.url ?? capture?.url ?? "",
@@ -611,6 +620,7 @@ function GiftEditor({
   );
   const snapshot = JSON.stringify({
     fields: { ...data, priority },
+    descriptionRich: noteRich,
     touched: [...touched.current],
     ...(idea
       ? {
@@ -728,6 +738,7 @@ function GiftEditor({
                   }
                 : { listId: destination }),
               fields: { ...data, priority },
+              descriptionRich: noteRich,
               touched: [...touched.current],
             }
           : undefined,
@@ -884,12 +895,14 @@ function GiftEditor({
             ? true
             : undefined
       }
+      onBusyChange={setNoteBusy}
       onBeforeClose={savedDraft.current?.draft ? flushDraft : undefined}
       onBeforeCloseError={() => {}}
       submit={
         gift ? "Save changes" : idea ? "Save gift idea" : "Add to wish list"
       }
       disabled={
+        data.description.length > 5000 ||
         uploading ||
         (needsAssignmentPreview &&
           (!assignmentPreview.data || assignmentPreview.isFetching)) ||
@@ -915,6 +928,7 @@ function GiftEditor({
           publicationState: saveAsDraft ? "draft" : undefined,
           importDraftRevision: savedDraft.current?.draft?.revision,
           ...data,
+          descriptionRich: noteRich,
           ...(!idea ? { priority } : {}),
           ...(idea && world.spendingEnabled
             ? {
@@ -961,6 +975,7 @@ function GiftEditor({
             title: data.title,
             url: data.url,
             description: data.description,
+            descriptionRich: noteRich,
           });
           toast("Personal draft saved on this device.");
           close();
@@ -1516,15 +1531,15 @@ function GiftEditor({
                 : "Note, price, quantity, priority, tags & photo")}
           </small>
         </summary>
-        <Field label="A helpful note">
-          <textarea
-            rows={3}
-            value={data.description}
-            onChange={(e) => change("description", e.target.value)}
-            maxLength={5000}
-            placeholder="A size, a favorite color, or why it caught your eye."
-          />
-        </Field>
+        <HelpfulNoteEditor
+          value={data.description}
+          rich={noteRich}
+          disabled={noteBusy}
+          onChange={(text, doc) => {
+            setNoteRich(doc);
+            change("description", text);
+          }}
+        />
         <div className="form-row">
           <Field label="Price in USD">
             <input

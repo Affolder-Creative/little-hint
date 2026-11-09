@@ -1,5 +1,6 @@
 import { itemPhotoLimit } from "./photo-config";
 import { itemPhotos } from "../shared/item-photos";
+import { noteDocumentSchema, normalizeNote } from "../shared/helpful-note";
 import { netContribution } from "../shared/contribution-money";
 import {
   lifecycleBaseline,
@@ -905,6 +906,7 @@ const itemInput = z.object({
     .optional(),
   title: text,
   description: z.string().max(5000).default(""),
+  descriptionRich: noteDocumentSchema.nullable().optional(),
   url: z
     .string()
     .max(2048)
@@ -1648,6 +1650,7 @@ function commandCore(
           importDraftRevision: z.number().int().optional(),
         })
         .parse(b);
+      normalizeNote(p);
       p.images = itemPhotos(p);
       if (!p.image) p.image = p.images[0] ?? "";
       checkPhotos(
@@ -1812,6 +1815,7 @@ function commandCore(
       const i = getItem(s, a, p.id);
       if (!canEdit(s, a, i)) fail(403, "You cannot edit this item.");
       checkRevision(i, p.revision);
+      normalizeNote(p, i);
       if (p.images === undefined)
         p.images = itemPhotos(i).filter(
           (url) => url !== i.image || p.image === i.image,
@@ -2151,6 +2155,7 @@ function commandCore(
         .object({
           id,
           revision: z.number().int().optional(),
+          descriptionRich: noteDocumentSchema.nullable().optional(),
           fields: draftFieldsInput.optional(),
           touched: z.array(z.string().max(40)).max(20).optional(),
           listId: id.optional(),
@@ -2249,6 +2254,10 @@ function commandCore(
           groupIds: p.groupIds ?? j.draft!.groupIds,
         });
       } else if (p.listId) j.draft!.listId = p.listId;
+      if (p.descriptionRich !== undefined)
+        j.draft!.descriptionRich = p.descriptionRich;
+      else if (p.fields && p.fields.description !== j.draft!.fields.description)
+        j.draft!.descriptionRich = null;
       if (p.fields) {
         if (
           p.fields.images === undefined &&
@@ -2262,6 +2271,11 @@ function commandCore(
         checkPhotos(s, a, p.fields, j.draft!.fields);
         j.draft!.fields = p.fields;
       }
+      if (j.draft!.descriptionRich)
+        j.draft!.fields.description = normalizeNote({
+          description: "",
+          descriptionRich: j.draft!.descriptionRich,
+        }).description;
       if (p.touched) j.draft!.touched = p.touched;
       j.draft!.revision++;
       touch(j);
@@ -2283,6 +2297,7 @@ function commandCore(
               recipientId: id.optional(),
               visibility: z.enum(["private", "hidden", "visible"]).optional(),
               groupIds: ids.optional(),
+              descriptionRich: noteDocumentSchema.nullable().optional(),
               fields: draftFieldsInput,
               touched: z.array(z.string().max(40)).max(20),
             })
@@ -2328,6 +2343,11 @@ function commandCore(
           listContext(s, a, p.draft.spendingListId, [p.draft.recipientId]);
         delete p.draft.listId;
       }
+      if (p.draft?.descriptionRich)
+        p.draft.fields.description = normalizeNote({
+          description: "",
+          descriptionRich: p.draft.descriptionRich,
+        }).description;
       const j = {
         ...stamp(),
         ...(p.draft
