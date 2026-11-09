@@ -19,9 +19,11 @@ type Review = {
 export function AdminAccountDeletion({
   userId,
   name,
+  onDeleted,
 }: {
   userId: string;
   name: string;
+  onDeleted?: () => void;
 }) {
   const client = useQueryClient();
   const { close, toast } = useApp();
@@ -149,6 +151,7 @@ export function AdminAccountDeletion({
             client.invalidateQueries({ queryKey: ["admin-profiles"] }),
             client.invalidateQueries({ queryKey: ["world"] }),
           ]);
+          onDeleted?.();
           close();
           toast("Account deleted.");
         }}

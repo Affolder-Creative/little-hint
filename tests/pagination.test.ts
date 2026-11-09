@@ -203,3 +203,27 @@ it("preserves hidden-availability wishes in a collection with transparent wishes
     page.rows.find((item) => item.id === state.items[0].id)!.available,
   ).toBeUndefined();
 });
+
+it("Home uses others before filters and falls back to owned wishes only when others are absent", async () => {
+  const { state, actors } = stagingFixtures();
+  const actor = actors[0];
+  const visible = world(state, actor);
+  const own = visible.items.find(
+    (i) => i.isRecipient && !i.archived && i.listId,
+  )!;
+  const other = visible.items.find((i) => !i.isRecipient && !i.archived)!;
+  expect(world(state, actor, true, true).homeFeedMode).toBe("gifting");
+  const filtered = await itemPage(state, actor, {
+    scope: "home",
+    search: "no-such-wish-unique",
+  });
+  expect(filtered.total).toBe(0);
+  expect(world(state, actor, true, true).homeFeedMode).toBe("gifting");
+  state.items = state.items.filter((i) => i.id === own.id || i.id === other.id);
+  const gifting = await itemPage(state, actor, { scope: "home" });
+  expect(gifting.rows.map((i) => i.id)).toEqual([other.id]);
+  state.items = state.items.filter((i) => i.id === own.id);
+  expect(world(state, actor, true, true).homeFeedMode).toBe("own");
+  const fallback = await itemPage(state, actor, { scope: "home" });
+  expect(fallback.rows.map((i) => i.id)).toEqual([own.id]);
+});
