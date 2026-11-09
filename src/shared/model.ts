@@ -679,6 +679,7 @@ export interface GiftView extends Omit<Item, "creatorId" | "draftOwnerId"> {
 export interface World {
   paged?: boolean;
   hasActiveItems?: boolean;
+  homeFeedMode?: "gifting" | "own";
   priceChecksEnabled?: boolean;
   friendEntries?: Array<FriendEntry & { canManage: boolean }>;
   personRedirects?: Record<string, string>;

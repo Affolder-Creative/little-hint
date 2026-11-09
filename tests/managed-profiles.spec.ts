@@ -243,6 +243,12 @@ for (const [width, theme] of [
     await expect(
       directory.getByRole("heading", { name: "Users & profiles" }),
     ).toBeVisible();
+    await directory.getByRole("searchbox").fill("Taylor");
+    await directory
+      .locator(".admin-profile-match")
+      .filter({ hasText: "Taylor" })
+      .first()
+      .click();
     await directory.scrollIntoViewIfNeeded();
     await capture("admin-profiles");
     await directory
@@ -339,15 +345,15 @@ for (const width of [320, 768, 1440])
       f.child.id,
     ).candidates.filter((m) => m.id !== f.actor.id);
     const next = candidates[0];
-    await dialog.getByRole("searchbox", { name: "Find users" }).fill(next.name);
-    await dialog
-      .getByRole("checkbox", { name: next.name, exact: true })
-      .click();
+    await dialog.getByRole("combobox", { name: "Find users" }).fill(next.name);
+    await dialog.getByRole("option", { name: next.name, exact: true }).click();
     await dialog
       .getByRole("button", { name: "Save profile", exact: true })
       .click();
     await expect.poll(() => f.child.guardians.includes(next.id)).toBe(true);
-    await expect(dialog.getByText("Co-manager", { exact: true })).toBeVisible();
+    await expect(
+      dialog.getByRole("button", { name: `Remove ${next.name}`, exact: true }),
+    ).toBeVisible();
     await dialog
       .getByRole("button", { name: "Transfer ownership", exact: true })
       .click();

@@ -263,6 +263,7 @@ export function Form({
   status,
   onBusyChange,
   onBeforeClose,
+  onBeforeCloseError,
   dialogLayout = false,
   externalBusy = false,
   secondaryActions,
@@ -275,6 +276,7 @@ export function Form({
   secondaryActions?: (busy: boolean) => ReactNode;
   secondaryActionsPosition?: "before" | "after" | "after-cancel";
   onBeforeClose?: () => Promise<void>;
+  onBeforeCloseError?: (error: unknown) => void;
   onSubmit: (data: FormData) => Promise<unknown>;
   children: ReactNode;
   submit?: string;
@@ -299,6 +301,8 @@ export function Form({
   const formRef = useRef<HTMLFormElement>(null);
   const beforeClose = useRef(onBeforeClose);
   beforeClose.current = onBeforeClose;
+  const closeError = useRef(onBeforeCloseError);
+  closeError.current = onBeforeCloseError;
   useEffect(() => {
     const el = formRef.current;
     const listener = (event: Event) => {
@@ -307,7 +311,9 @@ export function Form({
       void beforeClose
         .current()
         .then(() => (event as CustomEvent<() => void>).detail())
-        .catch((e) => setError(actionError(e)));
+        .catch((e) =>
+          closeError.current ? closeError.current(e) : setError(actionError(e)),
+        );
     };
     el?.addEventListener("draft-close", listener);
     return () => el?.removeEventListener("draft-close", listener);

@@ -1,3 +1,4 @@
+import { ActionMenu } from "./Management";
 import { ProfileTakeovers } from "./ProfileTakeovers";
 import { GroupInvitationRequests } from "./GroupInvitationRequests";
 import { AdminProfiles } from "./AdminProfiles";
@@ -39,6 +40,7 @@ import {
   KeyRound,
   Trash2,
   UserRoundMinus,
+  ArrowRightLeft,
   Mail,
 } from "lucide-react";
 import type { World } from "../shared/model";
@@ -412,7 +414,7 @@ export default function SettingsPage({
                                 : ""}
                           </span>
                           {g.ownerId === world.me.id && uid !== world.me.id && (
-                            <div className="member-actions">
+                            <ActionMenu name={person?.name ?? "Member"}>
                               <button
                                 className="text-button"
                                 aria-label={`Transfer ownership to ${person?.name ?? "member"}`}
@@ -452,10 +454,11 @@ export default function SettingsPage({
                                   )
                                 }
                               >
+                                <ArrowRightLeft size={16} aria-hidden="true" />{" "}
                                 Transfer ownership
                               </button>
                               <button
-                                className="button secondary small"
+                                className="text-button danger menu-destructive"
                                 aria-label={`Remove ${person?.name ?? "member"} from family group`}
                                 onClick={() =>
                                   open(
@@ -481,7 +484,7 @@ export default function SettingsPage({
                                 <UserRoundMinus size={16} aria-hidden="true" />
                                 Remove
                               </button>
-                            </div>
+                            </ActionMenu>
                           )}
                         </div>
                       );
@@ -1044,69 +1047,88 @@ function Security() {
     <section className="settings-section">
       <h2>Sign-in & security</h2>
       <AccountEmail />
-      <p>
-        Email codes are always available. Add a passkey for a quicker sign-in on
-        trusted devices.
-      </p>
-      <button
-        className="button secondary"
-        onClick={() =>
-          open(
-            "Add a passkey",
-            <PasskeyLabelForm
-              onSaved={async () => {
-                await client.invalidateQueries({ queryKey: ["passkeys"] });
-                close();
-                toast("Passkey added.");
-              }}
-            />,
-          )
-        }
-      >
-        <KeyRound size={17} /> Add a passkey
-      </button>
-      {keys.isPending && <p role="status">Loading passkeys…</p>}
-      {keys.isSuccess && !keys.data?.length && (
-        <p>No passkeys yet. Add one on a trusted device.</p>
-      )}
-      {keys.data?.map((k) => (
-        <div className="setting-row" key={k.id}>
-          <span className="passkey-label">{k.name || "Passkey"}</span>
+      <section className="passkeys-section" aria-labelledby="passkeys-heading">
+        <div className="passkeys-intro">
+          <h3 id="passkeys-heading">Passkeys</h3>
+          <p>
+            Email codes are always available. Add a passkey for a quicker
+            sign-in on trusted devices.
+          </p>
           <button
             className="button secondary"
-            aria-label={`Rename ${k.name || "passkey"}`}
             onClick={() =>
               open(
-                "Rename passkey",
+                "Add a passkey",
                 <PasskeyLabelForm
-                  passkey={k}
                   onSaved={async () => {
                     await client.invalidateQueries({ queryKey: ["passkeys"] });
                     close();
-                    toast("Passkey renamed.");
+                    toast("Passkey added.");
                   }}
                 />,
               )
             }
           >
-            Rename
+            <KeyRound size={17} /> Add a passkey
           </button>
-          <Action
-            secondary
-            label={`Remove passkey ${k.name || "Passkey"}`}
-            onClick={async () => {
-              const r = await authClient.passkey.deletePasskey({ id: k.id });
-              if (r.error)
-                throw new Error(
-                  "We could not update your sign-in settings. Check your connection and try again.",
-                );
-              await client.invalidateQueries({ queryKey: ["passkeys"] });
-            }}
-          >
-            Remove
-          </Action>
         </div>
-      ))}
+        {keys.isError && (
+          <p role="alert">
+            Could not load passkeys.{" "}
+            <button className="text-button" onClick={() => void keys.refetch()}>
+              Try again
+            </button>
+          </p>
+        )}
+        {keys.isPending && <p role="status">Loading passkeys…</p>}
+        {keys.isSuccess && !keys.data?.length && (
+          <p>No passkeys yet. Add one on a trusted device.</p>
+        )}
+        {keys.data?.map((k) => (
+          <div className="setting-row passkey-row" key={k.id}>
+            <span className="passkey-label">{k.name || "Passkey"}</span>
+            <div className="actions">
+              <button
+                className="button secondary"
+                aria-label={`Rename ${k.name || "passkey"}`}
+                onClick={() =>
+                  open(
+                    "Rename passkey",
+                    <PasskeyLabelForm
+                      passkey={k}
+                      onSaved={async () => {
+                        await client.invalidateQueries({
+                          queryKey: ["passkeys"],
+                        });
+                        close();
+                        toast("Passkey renamed.");
+                      }}
+                    />,
+                  )
+                }
+              >
+                Rename
+              </button>
+              <Action
+                secondary
+                label={`Remove passkey ${k.name || "Passkey"}`}
+                onClick={async () => {
+                  const r = await authClient.passkey.deletePasskey({
+                    id: k.id,
+                  });
+                  if (r.error)
+                    throw new Error(
+                      "We could not update your sign-in settings. Check your connection and try again.",
+                    );
+                  await client.invalidateQueries({ queryKey: ["passkeys"] });
+                }}
+              >
+                Remove
+              </Action>
+            </div>
+          </div>
+        ))}
+      </section>
       <h3>Devices you’re signed in on</h3>
       {sessions.error instanceof FreshSignInRequiredError && (
         <div role="alert" className="error">

@@ -462,8 +462,16 @@ for (const width of [390, 1280]) {
         page.locator(".page-heading + .gift-preference-prompt"),
       ).toHaveCount(1);
       await expect(
-        page.getByRole("heading", { name: "From your people", exact: true }),
+        page.getByText("A few hints for your favorite people.", {
+          exact: true,
+        }),
       ).toBeVisible();
+      const firstGift = page.locator(".gift-card").first();
+      await expect(firstGift).toBeVisible();
+      const reminderBounds = (await reminder.boundingBox())!;
+      expect(reminderBounds.y + reminderBounds.height).toBeLessThan(
+        (await firstGift.boundingBox())!.y,
+      );
       await page.screenshot({
         path: info.outputPath(`hybrid-home-${width}-${colorScheme}.png`),
       });
