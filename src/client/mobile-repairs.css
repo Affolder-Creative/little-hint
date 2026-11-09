@@ -116,7 +116,8 @@ dialog.dialog[open] {
 .form-dialog > .form-actions {
   flex: none;
   justify-content: flex-end;
-  padding: 16px 24px max(16px, env(safe-area-inset-bottom, 0px));
+  padding: 16px 24px
+    max(16px, calc(env(safe-area-inset-bottom, 0px) - var(--dialog-gap, 20px)));
   border-top: 1px solid var(--border);
   background: var(--paper);
 }
@@ -134,14 +135,13 @@ dialog[data-compact="true"] .form-dialog > .form-content {
   overflow: visible;
 }
 .gift-form > .form-actions {
-  align-items: start;
+  align-items: center;
+  gap: 8px;
 }
 .gift-draft-actions {
-  margin-right: auto;
+  flex: 0 1 auto;
   min-width: 0;
   display: grid;
-  justify-items: start;
-  align-self: start;
 }
 .form-action-hint {
   flex-basis: 100%;
@@ -156,10 +156,7 @@ dialog[data-compact="true"] .form-dialog > .form-content {
   margin: 0;
   font-size: 13px;
 }
-.gift-draft-actions {
-  flex: 1 1 9rem;
-}
-.gift-draft-actions .text-button {
+.gift-draft-actions .button {
   min-height: 44px;
 }
 .gift-lookup {
@@ -236,14 +233,23 @@ dialog[data-compact="true"] .form-dialog > .form-content {
     width: 100%;
     justify-content: start;
   }
-  .wishlist-draft-actions .button {
+  .wishlist-draft-actions .button,
+  .gift-draft-actions .button {
     width: 100%;
   }
 }
-.lookup-draft-status .draft-save-feedback,
-.gift-draft-actions .draft-save-feedback {
+.draft-save-region .draft-save-feedback {
   margin: 2px 0 0;
-  min-height: 18px;
   font-size: 12px;
   line-height: 1.5;
+}
+
+.draft-save-region {
+  display: grid;
+  gap: 12px;
+}
+@media (max-width: 650px) {
+  .gift-draft-actions {
+    flex-basis: 100%;
+  }
 }

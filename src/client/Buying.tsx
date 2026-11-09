@@ -1,3 +1,4 @@
+import { InfoHelp } from "./InfoHelp";
 import { GiftPlanDetail, sourceLabels } from "./GiftPlanDetail";
 import {
   CollectionStatus,
@@ -22,7 +23,7 @@ import { contributionStatus } from "./copy";
 import { Confirm } from "./Confirm";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Gift } from "lucide-react";
+import { ArrowRight, Gift, Pencil, Users, CircleX } from "lucide-react";
 import type { Reservation } from "../shared/model";
 import { dollars } from "./api";
 import { useApp } from "./context";
@@ -204,7 +205,7 @@ export function Buying() {
                           )
                   }
                 >
-                  Update purchase
+                  <Pencil size={16} aria-hidden="true" /> Update purchase
                 </button>
               );
               return (
@@ -221,7 +222,13 @@ export function Buying() {
                     <Gift size={36} />
                   )}
                   <div>
-                    <h2>{r.titleSnapshot}</h2>
+                    <h2>
+                      {r.item ? (
+                        <Link to={`/gift/${r.item.id}`}>{r.titleSnapshot}</Link>
+                      ) : (
+                        r.titleSnapshot
+                      )}
+                    </h2>
                     {r.sourceState && r.sourceState !== "active" && (
                       <p>
                         {sourceLabels[r.sourceState]} ·{" "}
@@ -230,7 +237,14 @@ export function Buying() {
                         </Link>
                       </p>
                     )}
-                    <PrivateIdeaBadge gift={r.item} />
+                    <div className="idea-privacy">
+                      <PrivateIdeaBadge gift={r.item} />
+                      {isPrivateIdea(r.item) && (
+                        <InfoHelp title="Only me">
+                          {privateIdeaDescription}
+                        </InfoHelp>
+                      )}
+                    </div>
                     <p>
                       {r.item
                         ? `For ${r.item.recipientNames.join(" & ")}`
@@ -243,9 +257,6 @@ export function Buying() {
                           ? `${r.purchased} of ${r.quantity} purchased`
                           : "Reserved"}
                     </span>
-                    {isPrivateIdea(r.item) && (
-                      <p className="muted">{privateIdeaDescription}</p>
-                    )}
                     {r.exchangeId && (
                       <p className="muted">Secret gift exchange</p>
                     )}
@@ -315,13 +326,14 @@ export function Buying() {
                             )
                           }
                         >
+                          <Users size={16} aria-hidden="true" />
                           {r.poolTargetCents
                             ? "Edit contribution goal"
                             : "Share the cost"}
                         </button>
                       )}
                       <button
-                        className="text-button muted"
+                        className="text-button danger menu-destructive"
                         onClick={() =>
                           open(
                             "Cancel reservation",
@@ -374,7 +386,8 @@ export function Buying() {
                           )
                         }
                       >
-                        Cancel reservation
+                        <CircleX size={16} aria-hidden="true" /> Cancel
+                        reservation
                       </button>
                     </ActionMenu>
                   </div>
