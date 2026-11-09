@@ -1,5 +1,38 @@
 # Changelog
 
+## [1.2.0](https://github.com/Affolder-Creative/little-hint/compare/v1.1.0...v1.2.0) (2026-11-09)
+
+
+### Features
+
+* add owner-controlled co-managers for managed profiles ([#188](https://github.com/Affolder-Creative/little-hint/issues/188)) ([cf69a52](https://github.com/Affolder-Creative/little-hint/commit/cf69a52dd1a44c36f2e5461567f1e5a11319cfe4))
+* add private wish-list drafts and explicit publishing ([#191](https://github.com/Affolder-Creative/little-hint/issues/191)) ([d014c21](https://github.com/Affolder-Creative/little-hint/commit/d014c21c72129dc4b4fb238cb34b36abdb2014ab))
+* preserve private gift plans and contribution settlement after wish removal ([#190](https://github.com/Affolder-Creative/little-hint/issues/190)) ([d61cba5](https://github.com/Affolder-Creative/little-hint/commit/d61cba51dac7c4f0b75bb031dce45de8584e7716))
+
+
+### Fixes
+
+* repair draft saving and polish gifting workflows ([#199](https://github.com/Affolder-Creative/little-hint/issues/199)) ([9975303](https://github.com/Affolder-Creative/little-hint/commit/99753030ce2dbadd95a7d383ccce56ecce72e6d2))
+
+
+### Dependencies
+
+* update brand-tooling Playwright from 1.64.1 to 1.65.0 ([#194](https://github.com/Affolder-Creative/little-hint/issues/194)) ([ea02e0a](https://github.com/Affolder-Creative/little-hint/commit/ea02e0a6e926e523f06eb147abacf1254a682129))
+* update development tooling to Playwright 1.65.0, React plugin 6.2.1, Vite 8.3.6 and Vitest 5.1.0, preserving Rolldown license notices ([#197](https://github.com/Affolder-Creative/little-hint/issues/197)) ([3278ba2](https://github.com/Affolder-Creative/little-hint/commit/3278ba2cc7f622b62bf55f84286fcb13b1f7137d))
+* bump the runtime group with 9 updates ([#196](https://github.com/Affolder-Creative/little-hint/issues/196)) ([9fc98e3](https://github.com/Affolder-Creative/little-hint/commit/9fc98e3e32769645efea65b48b9a96395906e558))
+* bump web-push from 3.6.7 to 4.0.0 ([#198](https://github.com/Affolder-Creative/little-hint/issues/198)) ([c3227be](https://github.com/Affolder-Creative/little-hint/commit/c3227bea77edb6d8a419ccddc293c92102b9e911))
+
+
+### Build and packaging
+
+* bump axllent/mailpit from v1.32.0 to v1.33.0 ([#193](https://github.com/Affolder-Creative/little-hint/issues/193)) ([3109b28](https://github.com/Affolder-Creative/little-hint/commit/3109b288484d390a2868816ff0bd9b57554513d0))
+* bump cloudflare/cloudflared from `1b1d34d` to `4955524` ([#192](https://github.com/Affolder-Creative/little-hint/issues/192)) ([64cb25f](https://github.com/Affolder-Creative/little-hint/commit/64cb25fcbf4a9f1b5466469030da837f960dc054))
+
+
+### Automation
+
+* bump docker/login-action from 4.7.0 to 4.8.0 in the actions group ([#195](https://github.com/Affolder-Creative/little-hint/issues/195)) ([4ef6697](https://github.com/Affolder-Creative/little-hint/commit/4ef6697f5b89735c83bb73a317930593b1dbbce5))
+
 ## [1.1.0](https://github.com/Affolder-Creative/little-hint/compare/v1.0.0...v1.1.0) (2026-11-07)
 
 

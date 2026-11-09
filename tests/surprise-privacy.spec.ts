@@ -137,9 +137,18 @@ for (const width of [1440, 393]) {
           { exact: true },
         ),
       ).toHaveCount(0);
-      await giver
-        .getByRole("button", { name: "Reserve gift", exact: true })
-        .click();
+      // A click starts the save; the observer must reload after it commits.
+      const [savedReservation] = await Promise.all([
+        giver.waitForResponse(
+          (response) =>
+            new URL(response.url()).pathname === "/api/v1/reservations" &&
+            response.request().method() === "POST",
+        ),
+        giver
+          .getByRole("button", { name: "Reserve gift", exact: true })
+          .click(),
+      ]);
+      expect(savedReservation.ok(), await savedReservation.text()).toBe(true);
       await observer.reload();
       await expect(
         observer
