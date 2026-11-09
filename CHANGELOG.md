@@ -17,6 +17,8 @@
 
 ### Dependencies
 
+* update brand-tooling Playwright from 1.64.1 to 1.65.0 ([#194](https://github.com/Affolder-Creative/little-hint/issues/194)) ([ea02e0a](https://github.com/Affolder-Creative/little-hint/commit/ea02e0a6e926e523f06eb147abacf1254a682129))
+* update development tooling to Playwright 1.65.0, React plugin 6.2.1, Vite 8.3.6 and Vitest 5.1.0, preserving Rolldown license notices ([#197](https://github.com/Affolder-Creative/little-hint/issues/197)) ([3278ba2](https://github.com/Affolder-Creative/little-hint/commit/3278ba2cc7f622b62bf55f84286fcb13b1f7137d))
 * bump the runtime group with 9 updates ([#196](https://github.com/Affolder-Creative/little-hint/issues/196)) ([9fc98e3](https://github.com/Affolder-Creative/little-hint/commit/9fc98e3e32769645efea65b48b9a96395906e558))
 * bump web-push from 3.6.7 to 4.0.0 ([#198](https://github.com/Affolder-Creative/little-hint/issues/198)) ([c3227be](https://github.com/Affolder-Creative/little-hint/commit/c3227bea77edb6d8a419ccddc293c92102b9e911))
 
