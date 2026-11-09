@@ -107,9 +107,16 @@ it("collects aged abandoned uploads but preserves recent uploads and all referen
       "thumbnail",
     );
   }
-  s.items.push({ image: "/api/v1/media/saved", archived: true } as any);
+  s.items.push({
+    image: "",
+    images: ["/api/v1/media/saved"],
+    archived: true,
+  } as any);
   s.imports.push({
-    draft: { state: "active", fields: { image: "/api/v1/media/draft" } },
+    draft: {
+      state: "active",
+      fields: { image: "", images: ["/api/v1/media/draft"] },
+    },
   } as any);
   s.imports.push({ result: { image: "/api/v1/media/import" } } as any);
   s.giftDiscoveryJobs.push({

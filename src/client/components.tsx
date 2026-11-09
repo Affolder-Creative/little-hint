@@ -1,6 +1,7 @@
 import { InfoHelp } from "./InfoHelp";
 import { shoppingLink } from "./shopping-context";
 import { Price } from "./Price";
+import { itemPhotos } from "../shared/item-photos";
 import { ProductImage } from "./ProductImage";
 import { prefetchProductImage } from "./image-store";
 import { priorityLabels } from "../shared/organization";
@@ -589,6 +590,11 @@ export function GiftPhoto({
     <div
       className={`gift-photo photo-${gift.tags.join("").length % 4} ${!gift.image || failed ? "without-photo" : ""}`}
     >
+      {size === "card" && itemPhotos(gift).length > 1 && (
+        <span className="gift-photo-count">
+          {itemPhotos(gift).length} photos
+        </span>
+      )}
       {gift.image && !failed ? (
         <ProductImage
           url={gift.image}

@@ -1,3 +1,5 @@
+import { itemPhotoLimit } from "./photo-config";
+import { itemPhotos } from "../shared/item-photos";
 import { priceReport } from "./price-report";
 import { sql } from "drizzle-orm";
 import { registerAdminAccounts } from "./admin-accounts";
@@ -316,6 +318,7 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
       telegram: telegramInfo(cfg),
       canCreateGroups: canCreateGroups(state, a),
       imageDelivery: imageDeliveryForState(state),
+      itemPhotoLimit: itemPhotoLimit(),
       giftDiscovery: discoveryConfiguration(cfg),
       notificationAsOf,
       environment: deploymentEnvironment(),
@@ -649,13 +652,17 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
       if (
         !m ||
         m.deletedAt ||
-        (s.items.some((i) => i.image === `/api/v1/media/${m.id}`) &&
+        (s.items.some((i) => itemPhotos(i).includes(`/api/v1/media/${m.id}`)) &&
           !s.items.some(
-            (i) => i.image === `/api/v1/media/${m.id}` && itemVisible(s, a, i),
+            (i) =>
+              itemPhotos(i).includes(`/api/v1/media/${m.id}`) &&
+              itemVisible(s, a, i),
           )) ||
         (m.userId !== a.id &&
           !s.items.some(
-            (i) => i.image === `/api/v1/media/${m.id}` && itemVisible(s, a, i),
+            (i) =>
+              itemPhotos(i).includes(`/api/v1/media/${m.id}`) &&
+              itemVisible(s, a, i),
           ))
       )
         fail(404, "Image not found.");
@@ -663,7 +670,7 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
       const batches = s.giftDiscoveryJobs.filter((j) =>
         j.candidates.some((c) => c.image === image),
       );
-      if (batches.length && !s.items.some((i) => i.image === image)) {
+      if (batches.length && !s.items.some((i) => itemPhotos(i).includes(image))) {
         const cfg = discoveryConfiguration(await config());
         if (
           !batches.some((j) => {

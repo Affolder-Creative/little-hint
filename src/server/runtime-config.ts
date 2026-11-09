@@ -1,3 +1,4 @@
+import { itemPhotoLimit } from "./photo-config";
 import { channelFlag } from "./channel-availability";
 import { discoveryModes, type DiscoveryConfig } from "../shared/gift-discovery";
 import { deploymentEnvironment, syntheticEnvironment } from "./deployment";
@@ -154,6 +155,7 @@ export function stagingSettings(): Record<SettingKey, string> {
   return result;
 }
 export function effectiveConfig(): Record<SettingKey, string> {
+  itemPhotoLimit();
   if (syntheticEnvironment()) return stagingSettings();
   const result = Object.fromEntries(
     settingKeys.map((k) => [k, process.env[k] || defaults[k] || ""]),

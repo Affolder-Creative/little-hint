@@ -1,3 +1,4 @@
+import { itemPhotos } from "../shared/item-photos";
 import { draftAccess } from "./domain-access";
 import { z } from "zod";
 import type {
@@ -288,7 +289,7 @@ function purge(s: State, kind: TrashKind, id: string) {
   }
   for (const r of s.reservations)
     if (removed.has(r.itemId)) r.sourceState = "removed";
-  const images = s.items.filter((i) => removed.has(i.id)).map((i) => i.image);
+  const images = s.items.filter((i) => removed.has(i.id)).flatMap(itemPhotos);
   s.items = s.items.filter((i) => !removed.has(i.id));
   if (kind === "exchanges") {
     s.exchanges = s.exchanges.filter((e) => e.id !== id);
@@ -341,8 +342,13 @@ function purge(s: State, kind: TrashKind, id: string) {
     const url = `/api/v1/media/${media.id}`;
     if (
       images.includes(url) &&
-      !s.items.some((i) => i.image === url) &&
-      !s.imports.some((i) => i.result?.image === url)
+      !s.items.some((i) => itemPhotos(i).includes(url)) &&
+      !s.imports.some(
+        (i) =>
+          i.result?.image === url ||
+          (i.draft?.state === "active" &&
+            itemPhotos(i.draft.fields).includes(url)),
+      )
     ) {
       media.deletedAt = new Date().toISOString();
       media.revision++;

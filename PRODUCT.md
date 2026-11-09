@@ -206,3 +206,7 @@ Publishing is explicit and one-way, and emits the usual new-item notification on
 Profile takeover transfers guardian-created drafts to the incoming account holder.
 Unfinished product lookups remain creator-private until explicitly saved; offline
 drafts remain device-only. Saved drafts are available in My lists and the destination list.
+
+## Item photos
+
+Wishes and gift ideas support optional photo galleries, including saved drafts. Shop lookups still import one photo. Editors upload additional photos, replace or remove photos, and choose a cover; other photos retain upload order. The deployment-only ITEM_PHOTO_LIMIT defaults to five total photos including the imported photo. Cards retain the cover with a photo count. Detail galleries load only for multiple photos, with manual swipe, button, and keyboard navigation. Existing galleries survive a reduced limit.

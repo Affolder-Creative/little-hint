@@ -56,6 +56,7 @@ export function accountExport(s: State, a: Actor) {
         descriptionRich: i.descriptionRich,
         url: i.url,
         image: i.image,
+        images: i.images ?? (i.image ? [i.image] : []),
         priceCents: i.priceCents,
         currency: i.currency,
         quantity: i.quantity,
