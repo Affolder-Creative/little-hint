@@ -1,5 +1,5 @@
 import { createECDH } from "node:crypto";
-import webPush from "web-push";
+import * as webPush from "web-push";
 import { Agent, fetch as request } from "undici";
 import { lookup } from "node:dns/promises";
 import { z } from "zod";

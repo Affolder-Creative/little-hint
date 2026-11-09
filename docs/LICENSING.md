@@ -158,4 +158,4 @@ and [Sharp's native build sources](https://github.com/lovell/sharp-libvips/tree/
 
 ## Web Push addition
 
-`web-push@3.6.7` is an unmodified MPL-2.0 runtime dependency. The exact npm gitHead source tree is included in `web-push-3.6.7-sources.tar.gz`, with its checksum pinned in the source manifests. Its JavaScript stays external to the application bundle and retains its own license. `http_ece@1.2.0` omits its MIT license from the npm package; the fallback notice comes from its exact published gitHead and is recorded in the notice provenance.
+`web-push@4.0.0` is an unmodified MPL-2.0 runtime dependency. The exact npm gitHead source tree is included in `web-push-4.0.0-sources.tar.gz`, with its checksum pinned in the source manifests. Its JavaScript stays external to the application bundle and retains its own license. `http_ece@1.2.1` omits its MIT license from the npm package; the fallback notice comes from its exact published gitHead and is recorded in the notice provenance.

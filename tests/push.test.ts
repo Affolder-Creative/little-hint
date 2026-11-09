@@ -11,8 +11,9 @@ import {
   type List,
 } from "../src/shared/model";
 import { stamp, command } from "../src/server/domain";
-import webPush from "web-push";
+import * as webPush from "web-push";
 import { wishlistFixture } from "./wishlist-fixture";
+vi.mock("web-push", { spy: true });
 const mock = vi.hoisted(() => ({
   state: null as State | null,
   fetch: vi.fn(),
