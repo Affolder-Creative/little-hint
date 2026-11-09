@@ -3139,9 +3139,11 @@ for (const viewport of [
     await page.goto("/settings?section=admin");
     const guidance = page.getByText(/Backup status is unavailable here/);
     await expect(guidance).toBeVisible();
-    await expect(
-      page.getByText("Worker active", { exact: true }),
-    ).toBeVisible();
+    const workerStatus = page
+      .getByRole("region", { name: "Updates and shop lookups", exact: true })
+      .getByText(/^Worker active/);
+    await expect(workerStatus).toBeVisible();
+    await expect(workerStatus).toContainText(/Last reported\s+\S/);
     await expect(
       page.getByText(
         /Housewatch Digital manages backups|restore progress in Coolify/,
