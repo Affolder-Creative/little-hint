@@ -364,6 +364,31 @@ describe.skipIf(!url)("atomic account closure", () => {
       headers: { cookie: auth },
     });
   }
+  it("searches a large directory without listing everyone on arrival", async () => {
+    const { auth } = await adminSession();
+    await storage.transact((s) => {
+      for (let n = 0; n < 120; n++)
+        s.people.push({
+          ...stamp(),
+          name: `Searchable Person ${String(n).padStart(3, "0")}`,
+          guardians: [id],
+        });
+    });
+    const get = (search: string, page = 1) =>
+      app.inject({
+        method: "GET",
+        url: `/api/v1/admin/profiles?${new URLSearchParams({ search, page: String(page) })}`,
+        headers: { cookie: auth },
+      });
+    expect((await get(" ")).json()).toEqual({ rows: [], total: 0 });
+    const first = (await get("Searchable")).json();
+    const last = (await get("Searchable", 5)).json();
+    expect(first.total).toBe(120);
+    expect(first.rows).toHaveLength(24);
+    expect(last.rows).toHaveLength(24);
+    expect(last.rows[23].name).toBe("Searchable Person 119");
+    expect((await get("Searchable Person 119")).json().total).toBe(1);
+  });
   it("limits administrator profile edits and atomically synchronizes the account name", async () => {
     const { auth } = await adminSession();
     const profile = (await storage.readState()).people.find(
@@ -377,9 +402,13 @@ describe.skipIf(!url)("atomic account closure", () => {
     expect((await post("/api/v1/admin/profiles/update", body)).statusCode).toBe(
       403,
     );
-    expect(
-      (await post("/api/v1/admin/profiles/update", body, auth)).statusCode,
-    ).toBe(200);
+    const updated = await post("/api/v1/admin/profiles/update", body, auth);
+    expect(updated.statusCode).toBe(200);
+    expect(updated.json()).toEqual({
+      id: personId,
+      name: "First Last",
+      revision: profile.revision + 1,
+    });
     expect(
       (await storage.pool.query('SELECT name FROM "user" WHERE id=$1', [id]))
         .rows[0].name,

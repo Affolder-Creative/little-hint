@@ -1,6 +1,6 @@
 import { ManagedProfileManagers } from "./ManagedProfileManagers";
 import { ManagedProfileSharing } from "./ManagedProfileSharing";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { PurchaseListField } from "./SpendingPurchase";
 import { dollars } from "./api";
 import { ProductSources } from "./ProductSources";
@@ -12,7 +12,7 @@ import { actionError } from "./copy";
 import { useNavigate } from "react-router-dom";
 import { familyGroupLabel } from "../shared/households";
 import { canManageGroupEvents } from "../shared/group-events";
-import { useEffect, useRef, useState } from "react";
+import { type ComponentProps, useEffect, useRef, useState } from "react";
 import {
   Link as LinkIcon,
   Upload,
@@ -23,7 +23,7 @@ import {
 import type { GiftView, Group, List, World } from "../shared/model";
 import { Form, Field, Privacy, privateIdeaDescription } from "./components";
 import { useApp } from "./context";
-import { api } from "./api";
+import { api, ApiError } from "./api";
 import { useImportJob } from "./useImportJob";
 import {
   ListPolicyFields,
@@ -279,7 +279,80 @@ export function saveDraft(id: string, data: Omit<Draft, "id" | "savedAt">) {
   });
   localStorage.setItem(draftKey(id), JSON.stringify(rows.slice(0, 30)));
 }
-export function GiftForm({
+// Reopening always reads the current revision before creating editable state.
+export function GiftForm(props: ComponentProps<typeof GiftEditor>) {
+  const [generation, setGeneration] = useState(0);
+  const [reviewDraft, setReviewDraft] = useState(props.importDraft);
+  const reloadDraft = (job: ImportJob) => {
+    setReviewDraft(job);
+    setGeneration((v) => v + 1);
+  };
+  return reviewDraft ? (
+    <FreshDraft
+      key={generation}
+      {...props}
+      importDraft={reviewDraft}
+      reloadDraft={reloadDraft}
+    />
+  ) : (
+    <GiftEditor {...props} reloadDraft={reloadDraft} />
+  );
+}
+function FreshDraft(props: ComponentProps<typeof GiftEditor>) {
+  const { world } = useApp();
+  const [initial, setInitial] = useState<ImportJob>();
+  const query = useQuery({
+    queryKey: ["import", world.me.id, props.importDraft!.id],
+    queryFn: () => api<ImportJob>(`imports/${props.importDraft!.id}`),
+    staleTime: 0,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+  useEffect(() => {
+    if (query.isFetchedAfterMount && query.data)
+      setInitial((previous) => previous ?? query.data);
+  }, [query.isFetchedAfterMount, query.data]);
+  if (initial?.draft?.state === "active")
+    return <GiftEditor {...props} importDraft={initial} />;
+  if (query.isError)
+    return (
+      <p role="alert">
+        Could not open this draft.{" "}
+        <button
+          className="button secondary"
+          onClick={() => void query.refetch()}
+        >
+          Try again
+        </button>
+      </p>
+    );
+  if (!query.isFetchedAfterMount || !query.data)
+    return <p role="status">Opening your draft…</p>;
+  if (query.data.draft?.state !== "active")
+    return <p>This draft is no longer available.</p>;
+  return <GiftEditor {...props} importDraft={query.data} />;
+}
+function draftFields(job?: ImportJob) {
+  const fields = job?.draft?.fields ?? {};
+  if (job?.status !== "complete" || !job.result) return fields;
+  const r = job.result;
+  return {
+    ...fields,
+    ...Object.fromEntries(
+      Object.entries({
+        title: r.title,
+        description: r.description,
+        price: r.priceCents == null ? "" : String(r.priceCents / 100),
+        image: r.image,
+        tags: r.tags?.join(", "),
+      }).filter(
+        ([k, v]) =>
+          v !== undefined && !job.draft?.touched.includes(k) && !fields[k],
+      ),
+    ),
+  };
+}
+function GiftEditor({
   gift,
   listId,
   recipientId: initialRecipientId,
@@ -289,6 +362,7 @@ export function GiftForm({
   draft,
   importDraft,
   capture,
+  reloadDraft,
 }: {
   gift?: GiftView;
   listId?: string;
@@ -298,6 +372,7 @@ export function GiftForm({
   onSaved?: (gift: GiftView) => void;
   draft?: Draft;
   importDraft?: ImportJob;
+  reloadDraft?: (job: ImportJob) => void;
   capture?: { url: string; title: string };
 }) {
   const { world, mutate, close, toast } = useApp();
@@ -312,7 +387,7 @@ export function GiftForm({
     quantity: gift?.quantity ?? 1,
     ...(importDraft?.draft
       ? Object.fromEntries(
-          Object.entries(importDraft.draft.fields).filter(([k]) =>
+          Object.entries(draftFields(importDraft)).filter(([k]) =>
             [
               "title",
               "url",
@@ -347,14 +422,23 @@ export function GiftForm({
   const [destination, setDestination] = useState(
     importDraft?.draft?.listId ?? listId ?? lists[0]?.id ?? "",
   );
+  const client = useQueryClient();
   const savedDraft = useRef(importDraft);
-  const [draftSaved, setDraftSaved] = useState("");
-  const [saveError, setSaveError] = useState("");
-  const [savedFeedback, setSavedFeedback] = useState(false);
-  const savedFeedbackTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
+  const baseline = useRef<string | undefined>(undefined);
+  const autosaveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
     undefined,
   );
-  useEffect(() => () => clearTimeout(savedFeedbackTimer.current), []);
+  const conflict = useRef(false);
+  const [recovery, setRecovery] = useState<"reload" | "close" | null>(null);
+  const [autosaving, setAutosaving] = useState(false);
+  useEffect(() => () => clearTimeout(autosaveTimer.current), []);
+  const [draftSaved, setDraftSaved] = useState("");
+  const [saveError, setSaveError] = useState("");
+  const saveStatus = useRef<HTMLParagraphElement>(null);
+  useEffect(() => {
+    if (saveError) saveStatus.current?.focus();
+  }, [saveError]);
+  const [savedFeedback, setSavedFeedback] = useState(false);
   const saveQueue = useRef(Promise.resolve());
   const [slow, setSlow] = useState(false);
   useEffect(() => {
@@ -364,32 +448,66 @@ export function GiftForm({
     return () => clearTimeout(t);
   }, [importing]);
   async function flushDraft() {
+    clearTimeout(autosaveTimer.current);
     const next = saveQueue.current
       .catch(() => {})
       .then(async () => {
-        const active = savedDraft.current;
-        if (!active?.draft) return;
-        const captured = currentSnapshot.current;
-        const updated = await api<ImportJob>("imports/update", {
-          id: active.id,
-          revision: active.draft.revision,
-          ...JSON.parse(captured),
-        });
-        savedDraft.current = updated;
-        setDraftSaved(captured);
-        setSaveError("");
-        clearTimeout(savedFeedbackTimer.current);
-        setSavedFeedback(true);
-        savedFeedbackTimer.current = setTimeout(
-          () => setSavedFeedback(false),
-          3000,
-        );
+        if (conflict.current)
+          throw new Error(
+            "This draft has newer changes. Reload the latest draft before saving.",
+          );
+        while (
+          savedDraft.current?.draft &&
+          currentSnapshot.current !== baseline.current
+        ) {
+          const active = savedDraft.current;
+          const captured = currentSnapshot.current;
+          setAutosaving(true);
+          try {
+            const updated = await api<ImportJob>("imports/update", {
+              id: active.id,
+              revision: active.draft!.revision,
+              ...JSON.parse(captured),
+            });
+            if (savedDraft.current?.id !== active.id) return;
+            savedDraft.current = updated;
+            baseline.current = captured;
+            setDraftSaved(captured);
+            client.setQueryData(["import", world.me.id, updated.id], updated);
+            client.setQueriesData<World>({ queryKey: ["world"] }, (previous) =>
+              previous
+                ? {
+                    ...previous,
+                    imports: previous.imports.map((j) =>
+                      j.id === updated.id ? updated : j,
+                    ),
+                  }
+                : previous,
+            );
+            void client.invalidateQueries({ queryKey: ["world"] });
+            setSaveError("");
+            setSavedFeedback(true);
+          } catch (e) {
+            if (savedDraft.current?.id !== active.id) return;
+            conflict.current = e instanceof ApiError && e.status === 409;
+            setSaveError(
+              conflict.current
+                ? "This draft has newer changes. Reload the latest draft before saving."
+                : "Your draft could not be saved. Your changes are still here. Try again.",
+            );
+            throw e;
+          } finally {
+            setAutosaving(false);
+          }
+        }
       });
     saveQueue.current = next;
     return next;
   }
 
-  const applied = useRef("");
+  const applied = useRef(
+    importDraft?.status === "complete" ? importDraft.id : "",
+  );
   const recipients = world.people.filter(
     (person) =>
       recipientOptions?.includes(person.id) && person.userId !== world.me.id,
@@ -482,18 +600,20 @@ export function GiftForm({
         }
       : { listId: destination }),
   });
+  baseline.current ??= snapshot;
   const currentSnapshot = useRef(snapshot);
   currentSnapshot.current = snapshot;
   useEffect(() => {
-    if (!savedDraft.current?.draft || snapshot === draftSaved) return;
-    const timer = setTimeout(() => {
-      void flushDraft().catch(() =>
-        setSaveError(
-          "Your latest changes have not been saved. Try saving the draft again.",
-        ),
-      );
-    }, 500);
-    return () => clearTimeout(timer);
+    if (
+      !savedDraft.current?.draft ||
+      snapshot === baseline.current ||
+      conflict.current
+    )
+      return;
+    autosaveTimer.current = setTimeout(() => {
+      void flushDraft().catch(() => {});
+    }, 1000);
+    return () => clearTimeout(autosaveTimer.current);
   }, [snapshot, draftSaved, job?.id]);
   const audienceGroups = world.groups.filter((group) =>
     groupIds.includes(group.id),
@@ -501,6 +621,9 @@ export function GiftForm({
   const sharingIdea = idea && visibility !== "private";
   const change = (key: keyof typeof data, v: string | number) => {
     if (key === "url") {
+      clearTimeout(autosaveTimer.current);
+      conflict.current = false;
+      setSavedFeedback(false);
       if (savedDraft.current?.draft) {
         const previous = savedDraft.current;
         savedDraft.current = undefined;
@@ -587,6 +710,7 @@ export function GiftForm({
           : undefined,
       );
       savedDraft.current = created;
+      baseline.current = snapshot;
       setDraftSaved(snapshot);
     } catch (e) {
       setError(actionError(e));
@@ -671,7 +795,7 @@ export function GiftForm({
             <div className="gift-draft-actions">
               <button
                 type="button"
-                className="text-button"
+                className="button secondary"
                 disabled={busy || uploading}
                 onClick={async () => {
                   if (draftSavingRef.current || busy || uploading) return;
@@ -686,9 +810,7 @@ export function GiftForm({
                     );
                     close();
                   } catch {
-                    setSaveError(
-                      "Your draft could not be saved. Please try again.",
-                    );
+                    // flushDraft owns the single save error and recovery region.
                   } finally {
                     draftSavingRef.current = false;
                     setDraftSaving(false);
@@ -697,23 +819,15 @@ export function GiftForm({
               >
                 {draftSaving ? "Saving draft…" : "Save for later"}
               </button>
-              <p
-                className={`draft-save-feedback ${saveError ? "error" : "muted"}`}
-                role={saveError ? "alert" : "status"}
-              >
-                {saveError ||
-                  (snapshot === draftSaved
-                    ? savedFeedback
-                      ? "Private draft saved"
-                      : ""
-                    : "Saving draft…")}
-              </p>
             </div>
           ) : null}
         </>
       )}
-      dirty={savedDraft.current?.draft ? snapshot !== draftSaved : undefined}
+      dirty={
+        savedDraft.current?.draft ? snapshot !== baseline.current : undefined
+      }
       onBeforeClose={savedDraft.current?.draft ? flushDraft : undefined}
+      onBeforeCloseError={() => {}}
       submit={
         gift ? "Save changes" : idea ? "Save gift idea" : "Add to wish list"
       }
@@ -732,7 +846,13 @@ export function GiftForm({
       onSubmit={async (f) => {
         const saveAsDraft = f.get("draftAction") === "save";
         const publishDraft = f.get("draftAction") === "publish";
-        if (savedDraft.current?.draft) await flushDraft();
+        if (savedDraft.current?.draft) {
+          try {
+            await flushDraft();
+          } catch {
+            return;
+          }
+        }
         const payload = {
           publicationState: saveAsDraft ? "draft" : undefined,
           importDraftRevision: savedDraft.current?.draft?.revision,
@@ -829,19 +949,82 @@ export function GiftForm({
             Your unfinished lookup is saved automatically. Close this dialog to
             finish later.
           </p>
-          <p
-            className={`draft-save-feedback ${saveError ? "error" : "muted"}`}
-            role={saveError ? "alert" : "status"}
-          >
-            {saveError ||
-              (snapshot === draftSaved
-                ? savedFeedback
-                  ? "Private draft saved"
-                  : ""
-                : "Saving draft…")}
-          </p>
         </div>
       )}
+      {savedDraft.current?.draft &&
+        (saveError || autosaving || savedFeedback) && (
+          <div className="draft-save-region">
+            <p
+              ref={saveStatus}
+              tabIndex={-1}
+              className={`draft-save-feedback ${saveError ? "error" : "muted"}`}
+              role={saveError ? "alert" : "status"}
+            >
+              {saveError ||
+                (autosaving ? "Saving draft…" : "Private draft saved")}
+            </p>
+            {saveError && (
+              <div className="actions">
+                {conflict.current ? (
+                  <button
+                    type="button"
+                    className="button secondary"
+                    onClick={() => setRecovery("reload")}
+                  >
+                    Reload latest
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="button secondary"
+                    onClick={() => void flushDraft().catch(() => {})}
+                  >
+                    Try saving again
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="text-button"
+                  onClick={() => setRecovery("close")}
+                >
+                  Discard changes and close
+                </button>
+              </div>
+            )}
+            {recovery && (
+              <div className="notice">
+                <p>
+                  Discard your unsaved changes
+                  {recovery === "reload"
+                    ? " and load the latest saved draft"
+                    : " and close this window"}
+                  ? Your saved draft will be kept.
+                </p>
+                <div className="actions">
+                  <button
+                    type="button"
+                    className="button secondary"
+                    onClick={() => setRecovery(null)}
+                  >
+                    Keep editing
+                  </button>
+                  <button
+                    type="button"
+                    className="button danger"
+                    onClick={() => {
+                      clearTimeout(autosaveTimer.current);
+                      if (recovery === "reload" && savedDraft.current)
+                        reloadDraft?.(savedDraft.current);
+                      else close();
+                    }}
+                  >
+                    Discard changes
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       {idea && importDraft && (
         <Field label="Who is this idea for?">
           <select

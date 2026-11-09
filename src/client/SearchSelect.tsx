@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Check, Gift, Plus } from "lucide-react";
+import { Check, Gift, Plus, Users, X } from "lucide-react";
 import { Avatar } from "./components";
 import "./spending-purchase.css";
 
@@ -18,6 +18,8 @@ export function SearchSelect({
   placeholder,
   multiple = false,
   selected = [],
+  minSearchLength = 0,
+  optionKind = "person",
 }: {
   label: string;
   value: string;
@@ -29,9 +31,27 @@ export function SearchSelect({
   placeholder?: string;
   multiple?: boolean;
   selected?: string[];
+  minSearchLength?: number;
+  optionKind?: "person" | "group";
 }) {
   const id = useId();
-  const [open, setOpen] = useState(false);
+  const [requestedOpen, setOpen] = useState(false);
+  const open = requestedOpen && value.trim().length >= minSearchLength;
+  const root = useRef<HTMLDivElement>(null);
+  const popup = useRef<HTMLDivElement>(null);
+  const pointerInside = useRef(false);
+  useEffect(() => {
+    const outside = (event: PointerEvent) => {
+      pointerInside.current = !!popup.current?.contains(event.target as Node);
+      if (
+        !pointerInside.current &&
+        !root.current?.contains(event.target as Node)
+      )
+        setOpen(false);
+    };
+    document.addEventListener("pointerdown", outside, true);
+    return () => document.removeEventListener("pointerdown", outside, true);
+  }, []);
   const [active, setActive] = useState(0);
   const input = useRef<HTMLInputElement>(null);
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
@@ -91,9 +111,17 @@ export function SearchSelect({
   };
   return (
     <div
+      ref={root}
       className="purchase-search field"
+      onKeyDownCapture={(e) => {
+        if (e.key === "Tab") pointerInside.current = false;
+      }}
       onBlur={(e) => {
-        if (!e.currentTarget.contains(e.relatedTarget as Node | null))
+        if (
+          !pointerInside.current &&
+          !e.currentTarget.contains(e.relatedTarget as Node | null) &&
+          !popup.current?.contains(e.relatedTarget as Node | null)
+        )
           setOpen(false);
       }}
     >
@@ -151,6 +179,7 @@ export function SearchSelect({
           anchor &&
           createPortal(
             <div
+              ref={popup}
               style={bounds}
               className="purchase-options"
               id={`${id}-options`}
@@ -170,8 +199,14 @@ export function SearchSelect({
                     multiple ? selected.includes(choice.id) : index === i
                   }
                   className={`purchase-option ${multiple ? "purchase-option-person" : "purchase-option-gift"} ${index === i ? "active" : ""} ${choice.id === "manual" ? "purchase-option-manual" : ""}`}
-                  onPointerDown={(e) => e.preventDefault()}
-                  onClick={() => choose(choice)}
+                  onPointerDown={(e) => {
+                    pointerInside.current = true;
+                    if (e.pointerType === "mouse") e.preventDefault();
+                  }}
+                  onClick={() => {
+                    choose(choice);
+                    pointerInside.current = false;
+                  }}
                 >
                   <span>
                     {multiple && (
@@ -182,7 +217,11 @@ export function SearchSelect({
                       </span>
                     )}
                     {multiple ? (
-                      <Avatar small name={choice.label} />
+                      optionKind === "group" ? (
+                        <Users size={18} aria-hidden="true" />
+                      ) : (
+                        <Avatar small name={choice.label} />
+                      )
                     ) : choice.id === "manual" ? (
                       <Plus size={18} aria-hidden="true" />
                     ) : (
@@ -200,7 +239,9 @@ export function SearchSelect({
               {!choices.length && (
                 <p className="purchase-hint">
                   {multiple
-                    ? "No matching people."
+                    ? optionKind === "group"
+                      ? "No matching family groups."
+                      : "No matching people."
                     : "No matching items. Enter any gift name."}
                 </p>
               )}
@@ -215,9 +256,35 @@ export function SearchSelect({
       )}
       <span className="sr-only" role="status">
         {open
-          ? `${choices.length} options shown${multiple ? `, ${selected.length} people selected` : ""}.`
+          ? `${choices.length} options shown${multiple ? `, ${selected.length} selected` : ""}.`
           : ""}
       </span>
+    </div>
+  );
+}
+
+export function SelectionTags({
+  choices,
+  onRemove,
+}: {
+  choices: Choice[];
+  onRemove: (id: string) => void;
+}) {
+  return (
+    <div className="selection-tags">
+      {choices.map((choice) => (
+        <span className="purchase-chip" key={choice.id}>
+          <span>{choice.label}</span>
+          <button
+            type="button"
+            data-form-change
+            aria-label={`Remove ${choice.label}`}
+            onClick={() => onRemove(choice.id)}
+          >
+            <X size={14} aria-hidden="true" />
+          </button>
+        </span>
+      ))}
     </div>
   );
 }
