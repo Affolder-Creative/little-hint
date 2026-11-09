@@ -5078,7 +5078,12 @@ for (const engine of ["chromium", "webkit"] as const) {
     page: defaultPage,
   }, testInfo) => {
     const browser =
-      engine === "webkit" ? await webkit.launch({ channel: "" }) : undefined;
+      engine === "webkit"
+        ? await webkit.launch({
+            executablePath: webkit.executablePath(),
+            channel: "",
+          })
+        : undefined;
     const page = browser
       ? await browser.newPage({
           baseURL: process.env.E2E_BASE_URL ?? "http://localhost:5173",
@@ -5272,7 +5277,9 @@ test("item editor keeps failed lookup and draft-save recovery separate", async (
     .getByRole("button", { name: "Close dialog", exact: true })
     .click();
   await expect(dialog).toBeVisible();
-  await expect(dialog).toContainText("Temporarily unavailable");
+  await expect(dialog.locator(".draft-save-region")).toContainText(
+    "Your changes are still here. Try again.",
+  );
   await expect(dialog.getByLabel("Item name", { exact: true })).toHaveValue(
     "Keep my item",
   );

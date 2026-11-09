@@ -1,4 +1,4 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, webkit, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { spendingView } from "../src/server/spending";
 import { itemPage } from "../src/server/collections";
@@ -292,9 +292,10 @@ for (const [width, theme] of [
     const before = await page
       .getByRole("button", { name: "Save draft" })
       .boundingBox();
-    await expect(page.locator(".draft-save-feedback")).toHaveText("", {
-      timeout: 5000,
-    });
+    await page.waitForTimeout(600);
+    await expect(page.locator(".draft-save-feedback")).toHaveText(
+      "Private draft saved",
+    );
     const after = await page
       .getByRole("button", { name: "Save draft" })
       .boundingBox();
@@ -398,3 +399,311 @@ for (const [width, kind] of [
     await expect(toast).toHaveCount(0);
   });
 }
+
+test("draft review stays clean across repeated save-and-reopen cycles", async ({
+  page,
+}) => {
+  const { state, actor } = await setup(page);
+  const job = state.imports.find((j) => j.status === "complete")!;
+  job.draft!.kind = "idea";
+  job.draft!.recipientId = world(state, actor).people.find(
+    (p) => p.userId && p.userId !== actor.id,
+  )!.id;
+  delete job.draft!.listId;
+  let writes = 0;
+  page.on("request", (request) => {
+    if (request.url().endsWith("/imports/update")) writes++;
+  });
+  await page.goto(`/people/${job.draft!.recipientId}?tab=ideas`);
+  const dialog = page.getByRole("dialog");
+  for (let cycle = 0; cycle < 3; cycle++) {
+    await page.getByRole("button", { name: "Review and add" }).click();
+    await expect(
+      dialog.getByLabel("Gift idea name", { exact: true }),
+    ).toHaveValue(cycle ? "My revised gift" : job.result!.title!);
+    const before = writes;
+    await page.waitForTimeout(1200);
+    expect(writes).toBe(before);
+    await expect(dialog.locator(".draft-save-feedback")).toHaveCount(0);
+    if (!cycle)
+      await dialog
+        .getByLabel("Gift idea name", { exact: true })
+        .fill("My revised gift");
+    await dialog.getByRole("button", { name: "Save for later" }).click();
+    await expect(dialog).toHaveCount(0);
+  }
+  expect(writes).toBe(1);
+  expect(job.draft!.fields.title).toBe("My revised gift");
+});
+
+test("draft saves serialize edits made during a slow request and recover from real conflicts", async ({
+  page,
+}) => {
+  const { state, actor } = await setup(page);
+  const job = state.imports.find((j) => j.status === "complete")!;
+  let release!: () => void;
+  const delay = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let writes = 0;
+  await page.route("**/api/v1/imports/update", async (route) => {
+    writes++;
+    if (writes === 1) await delay;
+    try {
+      await route.fulfill({
+        json: command(
+          state,
+          actor,
+          "imports.update",
+          route.request().postDataJSON(),
+        ),
+      });
+    } catch (e) {
+      await route.fulfill({
+        status: 409,
+        json: { error: (e as Error).message },
+      });
+    }
+  });
+  await page.goto(`/lists/${job.draft!.listId}`);
+  await page.getByRole("button", { name: "Review and add" }).click();
+  const dialog = page.getByRole("dialog");
+  const name = dialog.getByLabel("Item name", { exact: true });
+  await name.fill("First edit");
+  await expect.poll(() => writes).toBe(1);
+  await name.fill("Latest edit during save");
+  await page.getByRole("button", { name: "Close dialog" }).click();
+  release();
+  await expect(dialog).toHaveCount(0);
+  expect(job.draft!.fields.title).toBe("Latest edit during save");
+  expect(writes).toBe(2);
+  await page.getByRole("button", { name: "Review and add" }).click();
+  await expect(name).toHaveValue("Latest edit during save");
+  command(state, actor, "imports.update", {
+    id: job.id,
+    revision: job.draft!.revision,
+    fields: { ...job.draft!.fields, title: "Changed in another session" },
+    touched: ["title"],
+  });
+  await name.fill("Unsaved local edit");
+  await expect(dialog.getByRole("alert")).toContainText("newer changes");
+  const failedWrites = writes;
+  await page.waitForTimeout(1400);
+  expect(writes).toBe(failedWrites);
+  await expect(name).toHaveValue("Unsaved local edit");
+  await dialog.getByRole("button", { name: "Reload latest" }).click();
+  await dialog.getByRole("button", { name: "Keep editing" }).click();
+  await expect(name).toHaveValue("Unsaved local edit");
+  await dialog.getByRole("button", { name: "Reload latest" }).click();
+  await dialog
+    .getByRole("button", { name: "Discard changes", exact: true })
+    .click();
+  await expect(name).toHaveValue("Changed in another session");
+  await page.getByRole("button", { name: "Close dialog" }).click();
+  await expect(dialog).toHaveCount(0);
+});
+
+for (const engine of ["chromium", "webkit"] as const)
+  test(`touch People selection survives focus moving to a portaled option in ${engine}`, async ({
+    browser: chromiumBrowser,
+  }) => {
+    const safari =
+      engine === "webkit"
+        ? await webkit.launch({
+            executablePath: webkit.executablePath(),
+            channel: "",
+          })
+        : undefined;
+    const browser = safari ?? chromiumBrowser;
+    const context = await browser.newContext({
+      hasTouch: true,
+      viewport: { width: 393, height: 700 },
+      baseURL: "http://localhost:5173",
+    });
+    const page = await context.newPage();
+    try {
+      const { state, gift } = await setup(page);
+      const person = state.people.find((p) => p.id === gift.recipientIds[0])!;
+      await page.goto("/");
+      await page.getByRole("button", { name: /^Sort & filter/ }).tap();
+      const input = page.getByRole("combobox", { name: "People", exact: true });
+      await input.fill(person.name);
+      const option = page.getByRole("option", {
+        name: person.name,
+        exact: true,
+      });
+      await option.tap();
+      await expect(option).toHaveAttribute("aria-selected", "true");
+      await expect(
+        page.getByRole("dialog").locator(".purchase-chip"),
+      ).toContainText([person.name]);
+      await page.getByRole("button", { name: "Done", exact: true }).tap();
+      await page.getByRole("button", { name: /^Sort & filter/ }).tap();
+      await expect(
+        page.getByRole("dialog").locator(".purchase-chip"),
+      ).toContainText([person.name]);
+    } finally {
+      await context.close();
+      await safari?.close();
+    }
+  });
+
+for (const [width, theme] of [
+  [320, "light"],
+  [393, "dark"],
+  [1440, "light"],
+] as const) {
+  test(`polished Buying, security and member menus at ${width}px ${theme}`, async ({
+    page,
+  }, info) => {
+    const { state, actor, gift } = await setup(page);
+    state.reservations = [];
+    command(state, actor, "reservations.create", {
+      itemId: gift.id,
+      quantity: 1,
+      ordinary: true,
+    });
+    await page.setViewportSize({ width, height: 900 });
+    await page.addInitScript(
+      (theme) => localStorage.setItem("little-hint:theme", theme),
+      theme,
+    );
+    await page.route("**/*list-user-passkeys*", (route) =>
+      route.fulfill({
+        json: [
+          {
+            id: "key",
+            name: "1Password on my personal phone",
+            createdAt: new Date().toISOString(),
+          },
+        ],
+      }),
+    );
+    await page.goto("/buying");
+    const row = page.locator(".buying-row").filter({ hasText: gift.title });
+    await expect(row.getByRole("heading").getByRole("link")).toHaveAttribute(
+      "href",
+      `/gift/${gift.id}`,
+    );
+    const help = row.getByRole("button", { name: "About only me" });
+    await help.click();
+    await expect(
+      page.getByRole("dialog", { name: "Only me", exact: true }),
+    ).toContainText(
+      "Only you can see this idea, including reservations and purchases.",
+    );
+    await page.screenshot({
+      path: info.outputPath("buying-help.png"),
+      fullPage: true,
+    });
+    await page.keyboard.press("Escape");
+    await row.locator("summary").click();
+    await expect(
+      row.getByRole("button", { name: "Cancel reservation", exact: true }),
+    ).toHaveClass(/danger/);
+    await page.screenshot({
+      path: info.outputPath("buying-menu.png"),
+      fullPage: true,
+    });
+    await page.goto("/settings?section=security");
+    await expect(
+      page.getByRole("heading", { name: "Passkeys", exact: true }),
+    ).toBeVisible();
+    await expect(page.locator(".passkey-label")).toHaveText(
+      "1Password on my personal phone",
+    );
+    await page.screenshot({
+      path: info.outputPath("security.png"),
+      fullPage: true,
+    });
+    await page.goto("/settings?section=groups");
+    const member = page
+      .locator(".member-list > div")
+      .filter({ has: page.locator("summary") })
+      .first();
+    const identity = await member
+      .locator(":scope > span:not(.avatar)")
+      .boundingBox();
+    const trigger = await member.locator("summary").boundingBox();
+    expect(trigger!.x).toBeGreaterThan(identity!.x);
+    expect(trigger!.y).toBeLessThan(identity!.y + identity!.height);
+    await member.locator("summary").click();
+    await expect(
+      member.getByRole("button", { name: /^Transfer ownership to/ }),
+    ).toBeVisible();
+    await page.screenshot({
+      path: info.outputPath("member-menu.png"),
+      fullPage: true,
+    });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+  });
+}
+
+test("administration searches on demand and keeps the selected profile current after renaming", async ({
+  page,
+}) => {
+  await setup(page);
+  const profiles = Array.from({ length: 120 }, (_, n) => ({
+    id: `profile-${n}`,
+    revision: 1,
+    name: `Directory Person ${String(n).padStart(3, "0")}`,
+    managed: true,
+    admin: false,
+  }));
+  let searches = 0;
+  await page.route("**/api/v1/admin/profiles?*", async (route) => {
+    searches++;
+    const query = new URL(route.request().url()).searchParams;
+    const found = profiles.filter((p) =>
+      p.name.toLowerCase().includes(query.get("search")!.toLowerCase()),
+    );
+    const page = Number(query.get("page"));
+    await route.fulfill({
+      json: {
+        rows: found.slice((page - 1) * 24, page * 24),
+        total: found.length,
+      },
+    });
+  });
+  await page.route("**/api/v1/admin/profiles/update", async (route) => {
+    const body = route.request().postDataJSON();
+    const p = profiles.find((p) => p.id === body.id)!;
+    expect(body.revision).toBe(p.revision);
+    p.name = body.name;
+    p.revision++;
+    await route.fulfill({ json: p });
+  });
+  await page.goto("/settings?section=admin");
+  const directory = page.getByRole("region", { name: "Users and profiles" });
+  await expect(directory).toContainText("Start typing");
+  expect(searches).toBe(0);
+  await directory.getByRole("searchbox").fill("Directory");
+  await expect(directory.locator(".admin-profile-match")).toHaveCount(24);
+  await directory.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(directory.locator(".admin-profile-match").first()).toHaveText(
+    "Directory Person 024Managed profile",
+  );
+  await directory.locator(".admin-profile-match").first().click();
+  await directory.getByRole("button", { name: /^Edit name for/ }).click();
+  await page
+    .getByRole("dialog")
+    .getByLabel("Name", { exact: true })
+    .fill("Renamed Person");
+  await page.getByRole("button", { name: "Save name" }).click();
+  await expect(directory.locator(".admin-profile-detail")).toContainText(
+    "Renamed Person",
+  );
+  await directory.getByRole("button", { name: /^Edit name for/ }).click();
+  await page
+    .getByRole("dialog")
+    .getByLabel("Name", { exact: true })
+    .fill("Renamed Again");
+  await page.getByRole("button", { name: "Save name" }).click();
+  await expect(directory.locator(".admin-profile-detail")).toContainText(
+    "Renamed Again",
+  );
+});
