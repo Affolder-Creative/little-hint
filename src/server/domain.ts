@@ -1,3 +1,5 @@
+import { itemPhotoLimit } from "./photo-config";
+import { itemPhotos } from "../shared/item-photos";
 import { netContribution } from "../shared/contribution-money";
 import {
   lifecycleBaseline,
@@ -847,6 +849,8 @@ export function signupAllowed(s: State, email: string) {
 }
 function checkImage(s: State, a: Actor, url: string) {
   if (!url) return;
+  if (!/^\/api\/v1\/media\/[a-zA-Z0-9-]+$/.test(url))
+    fail(400, "Choose an imported or uploaded image.");
   const id = url.split("/").pop();
   if (
     !s.media.some(
@@ -854,12 +858,45 @@ function checkImage(s: State, a: Actor, url: string) {
         m.id === id &&
         !m.deletedAt &&
         (m.userId === a.id ||
-          s.items.some((i) => i.image === url && itemVisible(s, a, i))),
+          s.items.some(
+            (i) => itemPhotos(i).includes(url) && itemVisible(s, a, i),
+          )),
     )
   )
     fail(404, "Image not found.");
 }
+function checkPhotos(
+  s: State,
+  a: Actor,
+  input: { image?: unknown; images?: unknown },
+  previous?: { image?: unknown; images?: unknown },
+) {
+  const photos = itemPhotos(input);
+  const before = previous ? itemPhotos(previous) : [];
+  if (photos.length > itemPhotoLimit() && photos.length > before.length)
+    fail(400, `Use up to ${itemPhotoLimit()} photos per item.`);
+  for (const photo of photos) checkImage(s, a, photo);
+}
+const photoUrls = z.array(
+  z
+    .string()
+    .regex(/^\/api\/v1\/media\/[a-zA-Z0-9-]+$/)
+    .max(2048),
+);
+const draftFieldsInput = z
+  .record(
+    z.string().max(40),
+    z.union([z.string().max(5000), z.number().finite(), z.null(), photoUrls]),
+  )
+  .refine(
+    (fields) =>
+      Object.entries(fields).every(
+        ([key, value]) => !Array.isArray(value) || key === "images",
+      ),
+    "Only photos accept multiple values.",
+  );
 const itemInput = z.object({
+  images: photoUrls.optional(),
   spendingListId: id.nullable().optional(),
   spendingAssignmentToken: z.string().max(128).optional(),
   priority: z
@@ -1611,7 +1648,19 @@ function commandCore(
           importDraftRevision: z.number().int().optional(),
         })
         .parse(b);
-      checkImage(s, a, p.image);
+      p.images = itemPhotos(p);
+      if (!p.image) p.image = p.images[0] ?? "";
+      checkPhotos(
+        s,
+        a,
+        p,
+        s.imports.find(
+          (j) =>
+            j.id === p.importId &&
+            j.userId === a.id &&
+            j.draft?.state === "active",
+        )?.draft?.fields,
+      );
       if (!p.listId && p.publicationState === "draft")
         fail(400, "Drafts belong to a wish list.");
       if (!p.listId && p.priority)
@@ -1763,7 +1812,13 @@ function commandCore(
       const i = getItem(s, a, p.id);
       if (!canEdit(s, a, i)) fail(403, "You cannot edit this item.");
       checkRevision(i, p.revision);
-      checkImage(s, a, p.image);
+      if (p.images === undefined)
+        p.images = itemPhotos(i).filter(
+          (url) => url !== i.image || p.image === i.image,
+        );
+      p.images = itemPhotos(p);
+      if (!p.image) p.image = p.images[0] ?? "";
+      checkPhotos(s, a, p, i);
       if (!i.listId) {
         checkFriendAudience(
           s,
@@ -2096,12 +2151,7 @@ function commandCore(
         .object({
           id,
           revision: z.number().int().optional(),
-          fields: z
-            .record(
-              z.string().max(40),
-              z.union([z.string().max(5000), z.number().finite(), z.null()]),
-            )
-            .optional(),
+          fields: draftFieldsInput.optional(),
           touched: z.array(z.string().max(40)).max(20).optional(),
           listId: id.optional(),
           spendingListId: id.nullable().optional(),
@@ -2199,7 +2249,19 @@ function commandCore(
           groupIds: p.groupIds ?? j.draft!.groupIds,
         });
       } else if (p.listId) j.draft!.listId = p.listId;
-      if (p.fields) j.draft!.fields = p.fields;
+      if (p.fields) {
+        if (
+          p.fields.images === undefined &&
+          j.draft!.fields.images !== undefined
+        )
+          p.fields.images = itemPhotos(j.draft!.fields).filter(
+            (url) =>
+              url !== j.draft!.fields.image ||
+              p.fields!.image === j.draft!.fields.image,
+          );
+        checkPhotos(s, a, p.fields, j.draft!.fields);
+        j.draft!.fields = p.fields;
+      }
       if (p.touched) j.draft!.touched = p.touched;
       j.draft!.revision++;
       touch(j);
@@ -2221,10 +2283,7 @@ function commandCore(
               recipientId: id.optional(),
               visibility: z.enum(["private", "hidden", "visible"]).optional(),
               groupIds: ids.optional(),
-              fields: z.record(
-                z.string().max(40),
-                z.union([z.string().max(5000), z.number().finite(), z.null()]),
-              ),
+              fields: draftFieldsInput,
               touched: z.array(z.string().max(40)).max(20),
             })
             .optional(),
@@ -2244,6 +2303,7 @@ function commandCore(
         )
       )
         fail(404, "List not found.");
+      if (p.draft) checkPhotos(s, a, p.draft.fields);
       if (p.draft?.kind === "idea") {
         if (!p.draft.recipientId) fail(400, "Choose a recipient.");
         checkRecipients(s, a, [p.draft.recipientId]);

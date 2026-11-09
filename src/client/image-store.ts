@@ -1,3 +1,4 @@
+import { itemPhotos } from "../shared/item-photos";
 import type { World } from "../shared/model";
 
 const DB = "little-hint-product-images-v1";
@@ -171,7 +172,7 @@ export function configureProductImages(world: World | null | undefined) {
     void validateProductImages(world.me.id);
     return;
   }
-  const next = new Set(world.items.map((item) => item.image).filter(Boolean));
+  const next = new Set(world.items.flatMap(itemPhotos).filter(Boolean));
   allowed = next;
   if (!prefetchEnabled) cancelImagePrefetch();
   for (const url of memory.keys()) if (!permitted(url)) memory.delete(url);
@@ -362,12 +363,10 @@ export function grantProductImages(owner: string, value: unknown) {
       return;
     }
     const row = value as Record<string, unknown>;
-    if (
-      typeof row.image === "string" &&
-      /^\/api\/v1\/media\/[^/?]+$/.test(row.image)
-    ) {
-      allowed.delete(row.image);
-      allowed.add(row.image);
+    for (const photo of itemPhotos(row)) {
+      if (!/^\/api\/v1\/media\/[^/?]+$/.test(photo)) continue;
+      allowed.delete(photo);
+      allowed.add(photo);
     }
     for (const key of ["rows", "item", "gift"]) visit(row[key], depth + 1);
   };

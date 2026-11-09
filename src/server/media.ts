@@ -1,3 +1,4 @@
+import { itemPhotos } from "../shared/item-photos";
 import { randomUUID } from "node:crypto";
 import { access, mkdir, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -103,11 +104,12 @@ export async function removeDeletedMedia() {
       const url = `/api/v1/media/${media.id}`;
       if (
         !media.purgeAfterAccountClosure &&
-        (s.items.some((i) => i.image === url) ||
+        (s.items.some((i) => itemPhotos(i).includes(url)) ||
           s.imports.some(
             (i) =>
               i.result?.image === url ||
-              (i.draft?.state === "active" && i.draft.fields.image === url),
+              (i.draft?.state === "active" &&
+                itemPhotos(i.draft.fields).includes(url)),
           ) ||
           s.giftDiscoveryJobs.some((j) =>
             j.candidates.some((c) => c.image === url),

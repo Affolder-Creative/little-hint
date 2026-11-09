@@ -197,6 +197,7 @@ export interface Item extends Base {
   description: string;
   url: string;
   image: string;
+  images?: string[];
   priceCents: number | null;
   currency: "USD";
   tags: string[];
@@ -413,7 +414,7 @@ export interface ImportDraft {
   listId?: string;
   revision: number;
   state: "active" | "published" | "discarded";
-  fields: Record<string, string | number | null>;
+  fields: Record<string, string | number | null | string[]>;
   touched: string[];
 }
 export interface ImportJob extends Base {
@@ -690,6 +691,7 @@ export interface World {
   spendingEnabled?: boolean;
   spendingInvitation?: boolean;
   productLookupEnabled?: boolean;
+  itemPhotoLimit?: number;
   imageDelivery?: { cacheEnabled: boolean; prefetchEnabled: boolean };
   telegram?: { available: boolean };
   sms?: import("./sms").SmsInfo;

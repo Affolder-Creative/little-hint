@@ -1,3 +1,4 @@
+import { itemPhotos } from "../shared/item-photos";
 import { sourceView } from "./gift-lifecycle";
 import { canShop } from "./domain-access";
 import { z } from "zod";
@@ -229,7 +230,9 @@ export function registerCollections(
       (id) =>
         existing.has(id) &&
         s.items.some(
-          (i) => i.image === `/api/v1/media/${id}` && itemVisible(s, a, i),
+          (i) =>
+            itemPhotos(i).includes(`/api/v1/media/${id}`) &&
+            itemVisible(s, a, i),
         ),
     );
   });

@@ -1,3 +1,4 @@
+import { itemPhotos, removeItemPhoto } from "../shared/item-photos";
 import { reconcileEventParticipants, reconcileHouseholds } from "./domain";
 import { profileOwner, managerCandidates } from "./profile-management";
 import { randomUUID } from "node:crypto";
@@ -646,16 +647,18 @@ export function closeAccountData(
     m.userId = anonymous;
     if (
       options.keepSharedContent &&
-      s.items.some((i) => i.image === `/api/v1/media/${m.id}`)
+      s.items.some((i) => itemPhotos(i).includes(`/api/v1/media/${m.id}`))
     )
       continue;
     m.deletedAt = new Date().toISOString();
     m.purgeAfterAccountClosure = true;
     const url = `/api/v1/media/${m.id}`;
-    for (const i of s.items) if (i.image === url) i.image = "";
+    for (const i of s.items)
+      if (itemPhotos(i).includes(url)) removeItemPhoto(i, url);
     for (const j of s.imports) {
       if (j.result?.image === url) j.result.image = "";
-      if (j.draft?.fields.image === url) j.draft.fields.image = "";
+      if (j.draft && itemPhotos(j.draft.fields).includes(url))
+        removeItemPhoto(j.draft.fields, url);
     }
     for (const j of s.giftDiscoveryJobs)
       for (const c of j.candidates) if (c.image === url) c.image = "";

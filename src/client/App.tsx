@@ -1,3 +1,4 @@
+import { ItemPhotoDetail } from "./ItemPhotoDetail";
 import { netContribution } from "../shared/contribution-money";
 import { NameSetup } from "./NameSetup";
 import {
@@ -1301,7 +1302,7 @@ function GiftDetail() {
             : "Back to Home"}
       </Link>
       <div className="gift-detail">
-        <GiftPhoto gift={gift} size="full" />
+        <ItemPhotoDetail gift={gift} />
         <section className="gift-detail-info">
           <div className="gift-recipient">
             <Avatar name={gift.recipientNames[0]} small />

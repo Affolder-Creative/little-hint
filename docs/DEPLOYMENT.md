@@ -177,3 +177,9 @@ AI and paid shop lookups; gift suggestions retain their separate allowances.
 Set `TRUSTED_PROXIES` to the actual ingress proxy IP addresses or narrow network CIDRs, separated by commas. Leave it empty for direct connections. Do not use a wildcard, boolean, hop count or a network containing untrusted clients. The proxy must replace or correctly append forwarding headers, and the app origin should only be reachable through the intended ingress. This setting is supplied to both app and worker by the production/staging/source Compose files.
 
 Signed-in API users have independent account allowances. Unauthenticated traffic, including sign-in, uses the validated client IP; without proxy configuration it shares the proxy IP allowance. Static files and health checks are excluded from the application API allowance. Verify that two clients behind the configured proxy receive independent limits and that direct requests cannot spoof a forwarded address.
+
+### Item photo galleries
+
+`ITEM_PHOTO_LIMIT=5` sets the total number of photos allowed per item or gift idea, including the single shop-imported photo. It is deployment-only and has no Administration control. Blank or unset uses five; values must be positive integers. Set the same value for app and worker and recreate both containers after changing it. Lowering the limit preserves existing galleries and permits edits, replacements, and removals, but prevents growth while over the limit.
+
+Gallery fields are additive JSON data; existing single-photo records remain readable without backfilling. Upgrade app and worker together: older cleanup code does not recognize secondary photo references. Do not roll back to a version without gallery support while galleries exist.

@@ -2273,16 +2273,18 @@ test("photo upload blocks saving and reports completion", async ({ page }) => {
     .fill("A gift with a photo");
   await expect(page.getByLabel("Price in USD")).not.toBeVisible();
   await page.getByText("More details", { exact: true }).click();
-  await page.locator('input[type="file"]').setInputFiles({
+  await page.locator('input[type="file"][multiple]').setInputFiles({
     name: "gift.png",
     mimeType: "image/png",
     buffer: Buffer.from("fixture"),
   });
   await expect(
-    page.getByRole("button", { name: "Add to wish list", exact: true }),
+    page
+      .locator('button[type="submit"]')
+      .filter({ hasText: "Uploading photos…" }),
   ).toBeDisabled();
   await expect(
-    page.getByRole("status").filter({ hasText: "Uploading photo…" }),
+    page.getByRole("status").filter({ hasText: "Uploading photo 1 of 1…" }),
   ).toBeVisible();
   finish();
   await expect(
@@ -2818,7 +2820,7 @@ test("replacing a failed photo restores the image without reloading the gift", a
   await page.getByRole("button", { name: "Edit item", exact: true }).click();
   const dialog = page.getByRole("dialog");
   await expect(dialog.getByLabel("Price in USD")).toBeVisible();
-  await dialog.locator('input[type="file"]').setInputFiles({
+  await dialog.getByLabel("Replace photo 1", { exact: true }).setInputFiles({
     name: "gift.png",
     mimeType: "image/png",
     buffer: Buffer.from("fixture"),

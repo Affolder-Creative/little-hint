@@ -1,3 +1,4 @@
+import { itemPhotos } from "../shared/item-photos";
 import { friendContext } from "./friends";
 import { personVisible } from "./domain-access";
 import { createHash, randomUUID } from "node:crypto";
@@ -637,7 +638,7 @@ export function pruneDiscovery(
   );
 }
 export function markDiscoveryMedia(s: State, image: string) {
-  if (!image || s.items.some((i) => i.image === image)) return;
+  if (!image || s.items.some((i) => itemPhotos(i).includes(image))) return;
   const m = s.media.find((m) => image === `/api/v1/media/${m.id}`);
   if (m) m.deletedAt = new Date().toISOString();
 }

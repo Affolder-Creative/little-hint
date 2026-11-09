@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-09T17:43:19.381329+00:00",
+  "generatedAt": "2026-11-09T19:45:06.308349+00:00",
   "title": "Design System: Little Hint",
   "extensions": {
     "colorMeta": {
@@ -1027,7 +1027,9 @@
       "src/client/AdminProfiles.tsx",
       "src/client/AdminAccountDeletion.tsx",
       "src/client/ManagedProfileManagers.tsx",
-      "src/client/Action.tsx"
+      "src/client/Action.tsx",
+      "src/client/ItemPhotoGallery.tsx",
+      "src/client/item-photo-gallery.css"
     ],
     "tonalRampNote": "Synthesized OKLCH previews at constant hue/chroma; these ramps are panel metadata, not additional application tokens.",
     "layout": {
@@ -1326,6 +1328,13 @@
       "description": "Borderless saved-key rows below the section introduction; labels wrap beside a 44px ellipsis menu.",
       "html": "<div class=\"ds-passkeys\"><div><span>1Password on my personal phone</span><details><summary aria-label=\"Actions for passkey\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><circle cx=\"5\" cy=\"12\" r=\"1\"/><circle cx=\"12\" cy=\"12\" r=\"1\"/><circle cx=\"19\" cy=\"12\" r=\"1\"/></svg></summary><button>Rename</button><button class=\"ds-remove\">Remove</button></details></div></div>",
       "css": ".ds-passkeys{display:grid;gap:8px;margin-top:16px;font:14px/1.6 system-ui;color:var(--text)}.ds-passkeys>div{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center}.ds-passkeys span{overflow-wrap:anywhere}.ds-passkeys summary{display:flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;list-style:none;cursor:pointer;border-radius:8px}.ds-passkeys summary:hover{background:var(--soft)}.ds-passkeys button{display:block;min-height:44px;width:100%;padding:8px 12px;border:0;background:var(--paper);color:var(--text);font:inherit;text-align:left}.ds-passkeys button:hover{background:var(--soft)}.ds-passkeys .ds-remove{color:var(--error);border-top:1px solid var(--border)}.ds-passkeys :focus-visible{outline:3px solid var(--accent);outline-offset:3px}"
+    },
+    {
+      "name": "Photo navigation",
+      "kind": "custom",
+      "description": "Manual gallery navigation beneath a contained product photo.",
+      "html": "<div class=\"ds-photo-navigation\"><button aria-label=\"Previous photo\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><path d=\"m15 18-6-6 6-6\"/></svg></button><span>Photo 2 of 5</span><button aria-label=\"Next photo\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><path d=\"m9 18 6-6-6-6\"/></svg></button></div>",
+      "css": ".ds-photo-navigation{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:12px}.ds-photo-navigation span{font-size:14px;color:var(--muted);font-variant-numeric:tabular-nums}.ds-photo-navigation button{min-width:44px;min-height:44px;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--paper);color:var(--text)}.ds-photo-navigation button:hover{background:var(--soft)}.ds-photo-navigation button:focus-visible{outline:3px solid var(--accent);outline-offset:3px}.ds-photo-navigation button:disabled{opacity:.5}"
     }
   ],
   "narrative": {

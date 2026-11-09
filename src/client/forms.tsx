@@ -1,3 +1,4 @@
+import { itemPhotos } from "../shared/item-photos";
 import { ManagedProfileManagers } from "./ManagedProfileManagers";
 import { ManagedProfileSharing } from "./ManagedProfileSharing";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -383,6 +384,7 @@ function GiftEditor({
     description: gift?.description ?? draft?.description ?? "",
     price: gift?.priceCents == null ? "" : String(gift.priceCents / 100),
     image: gift?.image ?? "",
+    images: itemPhotos(gift ?? {}),
     tags: gift?.tags.join(", ") ?? "",
     quantity: gift?.quantity ?? 1,
     ...(importDraft?.draft
@@ -394,6 +396,7 @@ function GiftEditor({
               "description",
               "price",
               "image",
+              "images",
               "tags",
               "quantity",
             ].includes(k),
@@ -416,6 +419,23 @@ function GiftEditor({
   const [detailsOpen, setDetailsOpen] = useState(!!gift || !!draft);
   const [photoError, setPhotoError] = useState("");
   const [uploadStatus, setUploadStatus] = useState("");
+  const [failedUploads, setFailedUploads] = useState<
+    Array<{ file: File; replace?: string }>
+  >([]);
+  const uploadLock = useRef(false);
+  const photos = itemPhotos(data);
+  const originalPhotos = useRef(
+    JSON.stringify({ image: data.image, images: photos }),
+  );
+  const photosChanged =
+    originalPhotos.current !==
+    JSON.stringify({ image: data.image, images: photos });
+  const photoLimit = world.itemPhotoLimit ?? 5;
+  function setPhotos(images: string[], cover: string) {
+    touched.current.add("image");
+    touched.current.add("images");
+    setData((previous) => ({ ...previous, images, image: cover }));
+  }
   const [duplicate, setDuplicate] = useState<GiftView | null>(null);
   const [allowDuplicate, setAllowDuplicate] = useState(false);
   const job = importQuery.job;
@@ -730,33 +750,64 @@ function GiftEditor({
       cancelled = true;
     };
   }, [capture, destination, idea]);
-  async function upload(file?: File) {
-    if (!file) return;
-    setPhotoError("");
-    setUploading(true);
-    setUploadStatus("Uploading photo…");
-    try {
-      const r = await fetch("/api/v1/media", {
-        method: "POST",
-        headers: { "Content-Type": "application/octet-stream" },
-        body: file,
-      });
-      const j = await r.json();
-      if (!r.ok) throw new Error(j.error);
-      change("image", j.url);
-      setUploadStatus("Photo uploaded.");
-    } catch (e) {
-      setPhotoError(actionError(e));
-      setUploadStatus("");
-    } finally {
-      setUploading(false);
+  async function upload(files: Array<{ file: File; replace?: string }>) {
+    if (!files.length || uploadLock.current) return;
+    if (
+      photos.length + files.filter((entry) => !entry.replace).length >
+        photoLimit &&
+      files.some((entry) => !entry.replace)
+    ) {
+      setPhotoError(
+        `Choose up to ${Math.max(0, photoLimit - photos.length)} more photos.`,
+      );
+      return;
     }
+    uploadLock.current = true;
+    setUploading(true);
+    setPhotoError("");
+    setFailedUploads([]);
+    let nextPhotos = [...photos],
+      cover = data.image;
+    const failed: typeof files = [];
+    for (const [index, entry] of files.entries()) {
+      setUploadStatus(`Uploading photo ${index + 1} of ${files.length}…`);
+      try {
+        const response = await fetch("/api/v1/media", {
+          method: "POST",
+          headers: { "Content-Type": "application/octet-stream" },
+          body: entry.file,
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error);
+        if (entry.replace)
+          nextPhotos = nextPhotos.map((url) =>
+            url === entry.replace ? result.url : url,
+          );
+        else nextPhotos.push(result.url);
+        if (!cover || cover === entry.replace) cover = result.url;
+        setPhotos([...nextPhotos], cover);
+      } catch (error) {
+        failed.push(entry);
+        setPhotoError(actionError(error));
+      }
+    }
+    setFailedUploads(failed);
+    setUploadStatus(
+      failed.length
+        ? `${files.length - failed.length} uploaded; ${failed.length} failed.`
+        : files.length === 1
+          ? "Photo uploaded."
+          : `${files.length} photos uploaded.`,
+    );
+    uploadLock.current = false;
+    setUploading(false);
   }
   return (
     <Form
       className="gift-form"
       dialogLayout
-      externalBusy={draftSaving}
+      externalBusy={draftSaving || uploading}
+      busyLabel={uploading ? "Uploading photos…" : "Saving…"}
       secondaryActionsPosition="after"
       actionHint={
         !idea && (!gift || gift.publicationState === "draft") ? (
@@ -824,7 +875,11 @@ function GiftEditor({
         </>
       )}
       dirty={
-        savedDraft.current?.draft ? snapshot !== baseline.current : undefined
+        savedDraft.current?.draft
+          ? snapshot !== baseline.current
+          : photosChanged
+            ? true
+            : undefined
       }
       onBeforeClose={savedDraft.current?.draft ? flushDraft : undefined}
       onBeforeCloseError={() => {}}
@@ -1499,44 +1554,102 @@ function GiftEditor({
           />
         </Field>
         <div className="gift-photo-editor">
+          <p className="muted">
+            {photos.length} of {photoLimit} photos
+          </p>
           <label className="upload">
-            <Upload size={18} />
-            <span>
-              {uploading
-                ? "Uploading photo…"
-                : data.image
-                  ? "Replace photo"
-                  : "Add a photo"}
-            </span>
+            <Upload size={18} aria-hidden="true" />
+            <span>{uploading ? "Uploading photos…" : "Add photos"}</span>
             <input
               type="file"
-              disabled={uploading}
+              multiple
+              disabled={uploading || photos.length >= photoLimit}
               accept="image/png,image/jpeg,image/webp,image/gif"
-              onChange={(e) => upload(e.target.files?.[0])}
+              onChange={(event) => {
+                const files = Array.from(event.target.files ?? []);
+                event.target.value = "";
+                void upload(files.map((file) => ({ file })));
+              }}
             />
           </label>
+          {photos.length >= photoLimit && (
+            <p className="muted">
+              Remove a photo to add another. You can still replace photos.
+            </p>
+          )}
           {uploadStatus && <p role="status">{uploadStatus}</p>}
           {photoError && (
             <p className="error" role="alert">
               {photoError}
             </p>
           )}
-          {data.image && (
-            <div className="image-preview">
-              <img
-                src={data.image}
-                alt={idea ? "Gift idea photo" : "Item photo"}
-              />
-              <button
-                className="text-button"
-                type="button"
-                disabled={uploading}
-                onClick={() => change("image", "")}
-              >
-                Remove photo
-              </button>
-            </div>
+          {failedUploads.length > 0 && (
+            <button
+              type="button"
+              className="text-button"
+              disabled={uploading}
+              onClick={() => void upload(failedUploads)}
+            >
+              Retry failed uploads
+            </button>
           )}
+          <div className="item-photo-previews">
+            {photos.map((photo, index) => (
+              <div className="item-photo-preview" key={photo}>
+                <img
+                  src={`${photo}?size=card`}
+                  alt={`${idea ? "Gift idea" : "Item"} photo ${index + 1}`}
+                />
+                <div className="item-photo-actions">
+                  {photo === data.image ? (
+                    <span className="muted">Cover photo</span>
+                  ) : (
+                    <button
+                      type="button"
+                      className="text-button"
+                      disabled={uploading}
+                      onClick={() => setPhotos(photos, photo)}
+                      aria-label={`Use photo ${index + 1} as cover`}
+                    >
+                      Make cover
+                    </button>
+                  )}
+                  <label className="upload">
+                    <span>Replace</span>
+                    <input
+                      type="file"
+                      aria-label={`Replace photo ${index + 1}`}
+                      disabled={uploading}
+                      accept="image/png,image/jpeg,image/webp,image/gif"
+                      onChange={(event) => {
+                        const file = event.target.files?.[0];
+                        event.target.value = "";
+                        if (file) void upload([{ file, replace: photo }]);
+                      }}
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    className="text-button"
+                    disabled={uploading}
+                    aria-label={`Remove photo ${index + 1}`}
+                    onClick={() => {
+                      const remaining = photos.filter((url) => url !== photo);
+                      setPhotos(
+                        remaining,
+                        data.image === photo
+                          ? (remaining[0] ?? "")
+                          : data.image,
+                      );
+                      setFailedUploads([]);
+                    }}
+                  >
+                    Remove photo
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
         {job?.result?.importedAt && (
           <small className="muted">
