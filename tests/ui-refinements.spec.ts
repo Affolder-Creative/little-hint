@@ -252,7 +252,7 @@ for (const [width, theme] of [
       name: "About price-drop notifications",
     });
     const check = page.getByLabel("Notify me of price drops", { exact: true });
-    await help.locator(".private-idea-badge").click();
+    await help.click();
     await expect(check).not.toBeChecked();
     await expect(
       page.getByRole("dialog", { name: "Price-drop notifications" }),
