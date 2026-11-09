@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { Person } from "../shared/model";
 import { useApp } from "./context";
-import { Field } from "./components";
+import { SearchSelect, SelectionTags } from "./SearchSelect";
 import { familyGroupLabel } from "../shared/households";
 
 export function ManagedProfileSharing({ person }: { person?: Person }) {
@@ -22,7 +22,7 @@ export function ManagedProfileSharing({ person }: { person?: Person }) {
         l.groupIds.some((id) => !selected.includes(id)),
     );
   return (
-    <fieldset className="choice-group form-section">
+    <fieldset className="choice-group form-section profile-sharing">
       <legend>Family-group sharing</legend>
       <label className="check">
         <input
@@ -45,35 +45,42 @@ export function ManagedProfileSharing({ person }: { person?: Person }) {
         <>
           {world.groups.length ? (
             <>
-              <Field label="Find family groups">
-                <input
-                  type="search"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-              </Field>
-              <div className="managed-group-choices">
-                {world.groups
+              <SearchSelect
+                label="Find family groups"
+                value={search}
+                onChange={setSearch}
+                placeholder="Search family groups"
+                multiple
+                minSearchLength={1}
+                optionKind="group"
+                selected={groups}
+                choices={world.groups
                   .filter((g) =>
                     g.name.toLowerCase().includes(search.toLowerCase()),
                   )
-                  .map((g) => (
-                    <label className="check" key={g.id}>
-                      <input
-                        type="checkbox"
-                        checked={groups.includes(g.id)}
-                        onChange={(e) =>
-                          setGroups((previous) =>
-                            e.target.checked
-                              ? [...previous, g.id]
-                              : previous.filter((id) => id !== g.id),
-                          )
-                        }
-                      />
-                      {familyGroupLabel(g, world)}
-                    </label>
-                  ))}
-              </div>
+                  .map((g) => ({
+                    id: g.id,
+                    label: familyGroupLabel(g, world),
+                  }))}
+                onChoose={(id) =>
+                  setGroups((ids) =>
+                    ids.includes(id)
+                      ? ids.filter((v) => v !== id)
+                      : [...ids, id],
+                  )
+                }
+              />
+              <SelectionTags
+                choices={world.groups
+                  .filter((g) => groups.includes(g.id))
+                  .map((g) => ({
+                    id: g.id,
+                    label: familyGroupLabel(g, world),
+                  }))}
+                onRemove={(id) =>
+                  setGroups((ids) => ids.filter((v) => v !== id))
+                }
+              />
             </>
           ) : (
             <p>

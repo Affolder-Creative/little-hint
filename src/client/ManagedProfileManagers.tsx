@@ -1,9 +1,11 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Person } from "../shared/model";
 import { useApp } from "./context";
 import { api } from "./api";
 import { Field } from "./components";
+import { ChevronDown } from "lucide-react";
+import { SearchSelect, SelectionTags } from "./SearchSelect";
 import { Action } from "./Action";
 
 type Member = { id: string; name: string };
@@ -21,7 +23,6 @@ export function ManagedProfileManagers({ person }: { person: Person }) {
     queryFn: () => api<Details>(`people/${person.id}/management`),
   });
   const [selected, setSelected] = useState(person.guardians);
-  const searchInput = useRef<HTMLInputElement>(null);
   const [search, setSearch] = useState("");
   const [transfer, setTransfer] = useState(false);
   const [target, setTarget] = useState("");
@@ -62,77 +63,70 @@ export function ManagedProfileManagers({ person }: { person: Person }) {
         </p>
       ) : (
         <>
-          <div className="managed-group-choices">
-            {selected.map((id) => {
-              const member = [...data.managers, ...data.candidates].find(
-                (m) => m.id === id,
-              );
-              return (
-                <label className="check" key={id}>
-                  {owner && (
-                    <input
-                      type="checkbox"
-                      checked
-                      disabled={id === data.ownerId}
-                      onChange={() =>
-                        setSelected((ids) => ids.filter((v) => v !== id))
-                      }
-                    />
-                  )}
-                  <span>
-                    {member?.name ?? "Former member"}
-                    {id === world.me.id ? " · You" : ""}
-                    <small className="manager-role">
-                      {id === data.ownerId ? "Owner" : "Co-manager"}
-                    </small>
-                  </span>
-                </label>
-              );
-            })}
-          </div>
+          <p className="profile-owner">
+            {data.managers.find((m) => m.id === data.ownerId)?.name ??
+              "Profile owner"}
+            {data.ownerId === world.me.id ? " · You" : ""}
+            <small className="manager-role">Owner</small>
+          </p>
+          {!owner && (
+            <div className="managed-group-choices">
+              {data.managers
+                .filter((m) => m.id !== data.ownerId)
+                .map((m) => (
+                  <p key={m.id}>
+                    {m.name}
+                    <small className="manager-role">Co-manager</small>
+                  </p>
+                ))}
+            </div>
+          )}
           {owner && (
             <>
-              <Field label="Find users">
-                <input
-                  ref={searchInput}
-                  type="search"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search connected people"
-                />
-              </Field>
-              <div className="managed-group-choices">
-                {data.candidates
+              <SearchSelect
+                label="Find users"
+                value={search}
+                onChange={setSearch}
+                placeholder="Search connected people"
+                multiple
+                minSearchLength={1}
+                selected={selected}
+                choices={[
+                  ...new Map(
+                    [...data.managers, ...data.candidates].map((m) => [
+                      m.id,
+                      m,
+                    ]),
+                  ).values(),
+                ]
                   .filter(
                     (m) =>
-                      !selected.includes(m.id) &&
+                      m.id !== data.ownerId &&
                       m.name.toLowerCase().includes(search.toLowerCase()),
                   )
-                  .map((m) => (
-                    <label className="check" key={m.id}>
-                      <input
-                        type="checkbox"
-                        checked={false}
-                        onChange={() => {
-                          setSelected((ids) => [...ids, m.id]);
-                          searchInput.current?.focus();
-                        }}
-                      />
-                      {m.name}
-                    </label>
-                  ))}
-                {!data.candidates.some(
-                  (m) =>
-                    !selected.includes(m.id) &&
-                    m.name.toLowerCase().includes(search.toLowerCase()),
-                ) && (
-                  <p className="muted">
-                    {search
-                      ? "No matching connected people."
-                      : "No other connected people to add."}
-                  </p>
-                )}
-              </div>
+                  .map((m) => ({ id: m.id, label: m.name }))}
+                onChoose={(id) =>
+                  setSelected((ids) =>
+                    ids.includes(id)
+                      ? ids.filter((v) => v !== id)
+                      : [...ids, id],
+                  )
+                }
+              />
+              <SelectionTags
+                choices={selected
+                  .filter((id) => id !== data.ownerId)
+                  .map((id) => ({
+                    id,
+                    label:
+                      [...data.managers, ...data.candidates].find(
+                        (m) => m.id === id,
+                      )?.name ?? "Former member",
+                  }))}
+                onRemove={(id) =>
+                  setSelected((ids) => ids.filter((v) => v !== id))
+                }
+              />
               <p className="muted">
                 Save profile to apply manager changes. Access starts
                 immediately.
@@ -161,14 +155,15 @@ export function ManagedProfileManagers({ person }: { person: Person }) {
                 <>
                   <button
                     type="button"
-                    className="text-button"
+                    className="button secondary transfer-disclosure"
                     onClick={() => setTransfer(!transfer)}
                     aria-expanded={transfer}
                   >
-                    Transfer ownership
+                    Transfer ownership{" "}
+                    <ChevronDown size={16} aria-hidden="true" />
                   </button>
                   {transfer && (
-                    <div className="form-section">
+                    <div className="ownership-fields">
                       <Field label="New owner">
                         <select
                           value={target}

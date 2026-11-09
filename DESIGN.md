@@ -301,7 +301,7 @@ Search and filter controls stay mounted while results refresh. Changing a filter
 
 ### Retained gift plans
 
-Buying keeps wish availability separate from purchase status. Private detail sections use open rows, existing text actions and a 65ch prose measure. Review controls have the standard prose spacing before payment information. Return rows distinguish money sent from confirmed receipt in text; they reuse existing forms, action menus, and light/dark tokens.
+Buying links product names to the same detail page as their photos. An info trigger immediately beside Only me opens the existing privacy explanation in the shared native popover. Secondary action menus use consistent outline icons and place destructive cancellation last, separated by a divider. Buying keeps wish availability separate from purchase status. Private detail sections use open rows, existing text actions and a 65ch prose measure. Review controls have the standard prose spacing before payment information. Return rows distinguish money sent from confirmed receipt in text; they reuse existing forms, action menus, and light/dark tokens.
 
 ### Spending views
 
@@ -352,9 +352,10 @@ paired actions and states guardian access where applicable. Save draft and Publi
 use the existing outlined secondary button. Actions align right on desktop and
 stack at full width on phones. The fixed dialog footer remains intact. Archived
 drafts disable Publish. Wish-list imports show automatic-save guidance and a
-reserved save/error status slot in the form content; closing saves unfinished
+save/error feedback in the form content after a real edit; closing saves unfinished
 lookup progress. Their footer contains only the primary action and Save draft.
-Gift-idea imports retain Save for later and its reserved feedback slot.
+Gift-idea imports pair the primary action with an outlined Save for later button.
+Untouched draft openings have no save message or reserved feedback space.
 No new color, typography, spacing, or elevation token is introduced.
 
 ### Collection actions
@@ -419,15 +420,15 @@ that the entry starts private.
 
 ### Profiles and invitation rows
 
-Profile settings keep the avatar fixed, the name and account status together, and related actions in one wrapping group. On screens up to 650px, actions move beneath the name. Family-group member actions follow the same pattern. Removal uses the person-minus icon with a visible Remove label; its confirmation distinguishes group access from account deletion.
+Profile settings keep the avatar fixed, the name and account status together, and related actions in one wrapping group. On screens up to 650px, actions move beneath the name. Family-group members keep a compact ellipsis action menu beside the name at every width. Long names wrap within their text column. The menu groups Transfer ownership and a separated destructive Remove action with outline icons; its confirmation distinguishes group access from account deletion.
 
 Invitation rows place email, status, and expiration together, followed by Share sign-in link and Cancel invitation in a separate action group. Use a flexible text column and an intrinsic action column on wider screens. At 650px and below, the action group moves below the details, with controls sharing available width or stacking at their normal word boundaries. Emails may wrap anywhere; button labels must not break letter by letter. Rows use 20px vertical padding and a 16px gap; action groups use a 12px gap.
 
 The profile editor uses one action row per tab, with the primary Save action first and outlined Done immediately after it. Keep both drafts mounted, retain independent save states, and protect unsaved changes when dismissing either tab.
 
-Managed-profile sharing reuses a labeled checkbox, searchable group checkboxes, and existing form spacing. Explain profile discovery, event eligibility, and new-list defaults beside the control. Existing list audiences and private gift ideas require their own explicit sharing actions.
+Managed-profile Managers and Family-group sharing sections use the title role above smaller field labels, a top divider and 24px separation. Find users and Find family groups use the shared multiselect combobox, with results appearing after typing and removable selected tags below the input. The owner remains visible and cannot be removed. Transfer ownership is an outlined disclosure with a chevron; its expanded fields use 20px gaps. Managed-profile sharing retains its labeled enable checkbox. Explain profile discovery, event eligibility, and new-list defaults beside the control. Existing list audiences and private gift ideas require their own explicit sharing actions.
 
-First-sign-in name setup uses the approved logo, one heading, given-name and family-name fields, and one primary continue action. Its content is capped at 440px with 20px side insets. The administrator directory uses the same divided rows and grouped actions; account deletion opens a separate review with responsibilities, data choices, and exact typed confirmation.
+First-sign-in name setup uses the approved logo, one heading, given-name and family-name fields, and one primary continue action. Its content is capped at 440px with 20px side insets. The administrator directory starts with search guidance and no results. After a nonblank query, compact divided matches appear in pages of 24; selecting one replaces the matches with a focused identity and management area plus Back to results. Account deletion opens a separate review with responsibilities, data choices, and exact typed confirmation.
 
 ### Administration
 
@@ -436,6 +437,8 @@ save/discard form. Its explanation states when the default applies and preserves
 personal choice. Personal spending views show a quiet explanation with a settings
 link when tracking was enabled at signup. Use existing spacing, typography, and
 theme colors.
+
+Sign-in & security groups its passkey heading, supporting explanation and Add a passkey action with 12px gaps. Saved passkeys use divided rows with grouped Rename and Remove controls. Loading, empty and retry states remain inside this section.
 
 Administration contains App settings, This month's usage, Service status, and Background jobs. Family-group creation, automatic product photos, device photo caching, and photo prefetching are editable, with optional locking ENV overrides. All service credentials, providers, models, limits, and AI availability are deployment-only. Service status reports configuration presence, not verified connectivity. When AI_ENABLED is false, omit AI service rows, AI usage groups, and AI-specific explanatory copy even when history exists. Retain other disabled services’ current-month usage with Currently off; omit sections with only prior-month or skipped SMS history. Preserve notification retries, failed shop lookups, and the note that backup status is unavailable.
 
@@ -484,7 +487,7 @@ The dialog heading and action footer stay fixed around one scrollable content
 area. Content uses 24px padding, reduced to 20px vertically and 18px horizontally
 on phones. The footer has a top divider, 16px vertical padding, and safe-area
 clearance. The primary action aligns right on desktop and spans the phone width.
-Wish-list imports save lookup progress automatically and when closing without requiring a complete item or converting it into a saved wish-list draft. Guidance and a fixed status slot sit in the form content, leaving two clear footer actions: Add to wish list and Save draft. Existing saved drafts use Save changes and Publish. Gift-idea imports retain Save for later beside the primary action. Status distinguishes saving, saved, and failed changes; successful feedback appears for three seconds. Saving feedback and errors remain until the operation finishes or the error is resolved. Photo controls, preview,
+Wish-list imports save lookup progress automatically and when closing without requiring a complete item or converting it into a saved wish-list draft. Guidance and a single save-status region sit in the form content, leaving two clear footer actions: Add to wish list and Save draft. Existing saved drafts use Save changes and Publish. Gift-idea imports place the filled primary action before outlined Save for later, grouped with an 8px gap and stacked at full width on phones. The footer accounts for safe-area clearance once, subtracting the dialog’s outer gap. Opening a saved draft is quiet; only actual changes trigger save feedback. A successful save keeps its small confirmation in the content so the footer does not jump. Failed saves retain input and offer retry; revision conflicts offer Reload latest with confirmation before discarding edits. No empty feedback slot is reserved. Photo controls, preview,
 and upload feedback share one compact group. Saving waits for photo uploads.
 
 Notification delivery setup leads the page, with channel connection status and setup beside its checkbox. Push setup, topic customization, and preview privacy use native disclosures with summaries of their current choices. Collapsed controls remain mounted so saving preserves every selection, including disconnected channels. Deployment-unavailable SMS and Telegram controls, counters, setup actions, and explanatory copy are omitted without placeholders. Remaining controls reflow in the existing wrapping layout. Saving visible controls preserves hidden choices. Preview summaries and follow summaries name only available channels; SMS never offers detailed previews. Notification and follow checkbox rows have 44px targets. Save feedback appears beside the form. Inherited follows name their source choices; person follows explain that the source depends on each wish list. Administration services use labeled status rows. Session rows identify this device where available, with readable browser names and expandable details. Loading and failure states never stand in for empty data.
