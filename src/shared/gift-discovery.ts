@@ -1,3 +1,4 @@
+import type { NoteDocument } from "./helpful-note";
 import type { Base, Item } from "./model";
 
 export const giftCategories = [
@@ -79,6 +80,7 @@ export interface DiscoveryInput {
   maxPriceCents: number | null;
 }
 export interface DiscoverySelection {
+  descriptionRich?: NoteDocument | null;
   candidateId: string;
   offerUrl: string;
   listId?: string;

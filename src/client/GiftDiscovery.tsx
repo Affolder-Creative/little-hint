@@ -1,3 +1,4 @@
+import { HelpfulNoteEditor } from "./NoteEditor";
 import { OfferLinks } from "./OfferLinks";
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -498,17 +499,18 @@ function DiscoveryFlow({
                                 }
                               />
                             </Field>
-                            <Field label="Item notes">
-                              <textarea
-                                maxLength={5000}
-                                value={selection.description}
-                                onChange={(e) =>
-                                  change(candidate.id, {
-                                    description: e.target.value,
-                                  })
-                                }
-                              />
-                            </Field>
+                            <HelpfulNoteEditor
+                              label="Item notes"
+                              value={selection.description}
+                              rich={selection.descriptionRich}
+                              disabled={busy || working}
+                              onChange={(text, doc) =>
+                                change(candidate.id, {
+                                  description: text,
+                                  descriptionRich: doc,
+                                })
+                              }
+                            />
                             <Field label="Primary shop">
                               <select
                                 value={selection.offerUrl}

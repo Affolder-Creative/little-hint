@@ -1,0 +1,85 @@
+.helpful-note-label {
+  font-size: 13px;
+  font-weight: 550;
+}
+.helpful-note-shell {
+  border: 1px solid var(--control-border);
+  border-radius: 8px;
+  background: var(--paper);
+  min-width: 0;
+}
+.helpful-note-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px;
+  border-bottom: 1px solid var(--border);
+}
+.helpful-note-toolbar button {
+  display: grid;
+  place-items: center;
+  min-width: 44px;
+  min-height: 44px;
+  border: 0;
+  border-radius: 8px;
+  color: var(--text);
+  background: transparent;
+}
+.helpful-note-toolbar button:hover,
+.helpful-note-toolbar button[aria-pressed="true"] {
+  background: var(--soft);
+  color: var(--accent);
+}
+.helpful-note-input {
+  min-height: 150px;
+  padding: 12px;
+  border-radius: 0 0 8px 8px;
+}
+.helpful-note-prose {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+  line-height: 1.7;
+}
+.helpful-note-prose p {
+  margin: 0 0 12px;
+}
+.helpful-note-prose > :last-child,
+.helpful-note-prose li > p {
+  margin-bottom: 0;
+}
+.helpful-note-prose ul,
+.helpful-note-prose ol {
+  padding-left: 24px;
+  margin: 12px 0;
+}
+.helpful-note-prose a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.helpful-note-link {
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.helpful-note-link .actions {
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.helpful-note-shell[aria-disabled="true"] {
+  color: var(--muted);
+}
+@media (pointer: coarse), (max-width: 650px) {
+  .helpful-note-input {
+    font-size: 16px;
+  }
+}
+
+.helpful-note-input:focus-visible {
+  outline-offset: -3px;
+}
+.helpful-note-input::selection,
+.helpful-note-input ::selection {
+  background: var(--soft);
+  color: var(--text);
+}

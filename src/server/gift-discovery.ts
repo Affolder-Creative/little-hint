@@ -1,3 +1,4 @@
+import { noteDocumentSchema, normalizeNote } from "../shared/helpful-note";
 import { friendContext } from "./friends";
 import { personVisible } from "./domain-access";
 import { createHash, randomUUID } from "node:crypto";
@@ -61,6 +62,7 @@ const selectionSchema = z.object({
   listId: uuid.optional(),
   title: z.string().trim().min(1).max(160),
   description: z.string().trim().max(5000),
+  descriptionRich: noteDocumentSchema.nullable().optional(),
   visibility: z.enum(["private", "hidden", "visible"]).default("private"),
   groupIds: ids.default([]),
   allowDuplicate: z.boolean().default(false),
@@ -419,7 +421,10 @@ function itemPayload(
     fail(400, "Save suggestions for another person as gift ideas.");
   return {
     title: selection.title,
-    description: selection.description,
+    ...normalizeNote({
+      description: selection.description,
+      descriptionRich: selection.descriptionRich,
+    }),
     url: offer.url,
     image: candidate.image,
     priceCents: offer.priceCents,

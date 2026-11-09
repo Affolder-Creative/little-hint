@@ -161,7 +161,9 @@ try {
           "tests/ui-refinements.spec.ts",
         ]
       : []),
-    ...(suite === "gift-discovery" ? ["tests/friends.spec.ts"] : []),
+    ...(suite === "gift-discovery"
+      ? ["tests/friends.spec.ts", "tests/helpful-note.spec.ts"]
+      : []),
   ]).done;
 } finally {
   await stop();

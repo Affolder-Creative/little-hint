@@ -377,6 +377,23 @@ Fields have a paper background, text color, thin border, 8px corners, and a 44px
 
 Exchange setup keeps household avoidance, individual exclusions, and previous-exchange preferences in a Matching rules disclosure. Its summary always states the current household policy, blocked-match count, and selected previous exchange. New exchanges start collapsed; editing opens the rules. Both directions adds the two one-way exclusions without duplicates, and each direction remains independently removable. Person selectors stack on phones. The existing review before saving and drawing remains in place.
 
+### Helpful-note editor
+
+Item and gift-idea helpful notes use a compact rich-text editor inside More details.
+The toolbar offers bold, italic, strikethrough, links, bullets and numbered lists,
+with labeled 44px targets and soft-filled active states. It wraps on narrow phones.
+The paper field uses the shared control border and 8px corners, with a quiet divider
+beneath the toolbar and an inset accent focus outline. Text uses the supporting
+role and increases to 16px on touch screens. Paragraphs and lists retain readable
+spacing; links remain underlined in both themes.
+
+Link editing expands inside the field with a labeled address, Apply link, Remove
+link and Cancel actions. Escape returns focus to the note. Saved links open a new
+tab; editing never navigates away. Formatting changes participate in the existing
+dirty-state and draft-save workflow. Disabled submission state covers the editor
+and toolbar without marking the note edited. Imported notes remain eligible to
+fill untouched fields. Existing plain notes retain literal text and line breaks.
+
 ### Navigation
 
 Desktop navigation combines outlined SVG icons with labels. Muted inactive links gain stronger text and a subtle background on hover; active links use soft fill. Mobile navigation uses five equal-width touch targets, keeps icons and labels together, and marks the active destination with accent text. Enlarged labels wrap within their links instead of overlapping adjacent destinations. Theme and settings actions remain in the opaque sticky top bar on mobile. Header actions stay on one row while the logo can shrink on narrow screens. A keyboard skip link reaches the main content.

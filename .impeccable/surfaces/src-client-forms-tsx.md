@@ -2,7 +2,7 @@
 version: 1
 slug: "src-client-forms-tsx"
 primary_target: "src/client/forms.tsx"
-related_targets: ["src/client/ImportDrafts.tsx", "src/client/mobile-repairs.css"]
+related_targets: ["src/client/ImportDrafts.tsx", "src/client/mobile-repairs.css", "src/client/HelpfulNote.tsx", "src/client/helpful-note.css"]
 ---
 
 # Gift and draft editors
@@ -13,3 +13,5 @@ related_targets: ["src/client/ImportDrafts.tsx", "src/client/mobile-repairs.css"
 - Use one small status region in the content. Successful saves keep their confirmation; failures retain input and offer retry. Genuine revision conflicts stop automatic retries and require confirmation before Reload latest discards local edits. Discard changes and close keeps the saved draft.
 - Gift-idea actions pair a filled primary button with outlined Save for later. Use an 8px gap, group on desktop and stack at full width on phones. Do not reserve empty footer feedback space. Apply safe-area padding once, accounting for the outer dialog gap.
 - Preserve intentional field clears, recipient, audience, group and spending choices, late lookup results and guardian visibility rules.
+
+- Helpful notes use the approved rich-text toolbar. Preserve selections during formatting and link editing, literal legacy content, 5,000-character limits and formatting-only dirty state. Match the saved note typography and wrap toolbar targets without horizontal overflow.
