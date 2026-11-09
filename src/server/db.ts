@@ -294,7 +294,7 @@ export async function readBuyingState(userId: string): Promise<State> {
 /** Read lightweight browse metadata; full descriptions and discussions are hydrated only on demand. */
 export async function readCollectionState(): Promise<State> {
   const { rows } = await pool.query(`SELECT kind, CASE
-    WHEN kind = 'items' THEN data - ARRAY['description','productSources','purchaseOffers','recommendationEvidence']
+    WHEN kind = 'items' THEN data - ARRAY['description','descriptionRich','productSources','purchaseOffers','recommendationEvidence']
     WHEN kind = 'comments' THEN data - ARRAY['body']
     WHEN kind = 'imports' AND data->'draft'->>'state' IS DISTINCT FROM 'active' AND data->>'status' NOT IN ('pending','running') THEN data - ARRAY['result','providerState','error']
     ELSE data END AS data FROM app_record

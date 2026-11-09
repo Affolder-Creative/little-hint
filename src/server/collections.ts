@@ -146,6 +146,7 @@ export async function itemPage(
       delete v.recommendationEvidence;
       delete v.productSources;
       v.description = "";
+      delete v.descriptionRich;
       return v;
     }),
     tags,

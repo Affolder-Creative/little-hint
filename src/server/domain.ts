@@ -1,3 +1,4 @@
+import { noteDocumentSchema, normalizeNote } from "../shared/helpful-note";
 import { netContribution } from "../shared/contribution-money";
 import {
   lifecycleBaseline,
@@ -868,6 +869,7 @@ const itemInput = z.object({
     .optional(),
   title: text,
   description: z.string().max(5000).default(""),
+  descriptionRich: noteDocumentSchema.nullable().optional(),
   url: z
     .string()
     .max(2048)
@@ -1611,6 +1613,7 @@ function commandCore(
           importDraftRevision: z.number().int().optional(),
         })
         .parse(b);
+      normalizeNote(p);
       checkImage(s, a, p.image);
       if (!p.listId && p.publicationState === "draft")
         fail(400, "Drafts belong to a wish list.");
@@ -1763,6 +1766,7 @@ function commandCore(
       const i = getItem(s, a, p.id);
       if (!canEdit(s, a, i)) fail(403, "You cannot edit this item.");
       checkRevision(i, p.revision);
+      normalizeNote(p, i);
       checkImage(s, a, p.image);
       if (!i.listId) {
         checkFriendAudience(
@@ -2096,6 +2100,7 @@ function commandCore(
         .object({
           id,
           revision: z.number().int().optional(),
+          descriptionRich: noteDocumentSchema.nullable().optional(),
           fields: z
             .record(
               z.string().max(40),
@@ -2199,7 +2204,16 @@ function commandCore(
           groupIds: p.groupIds ?? j.draft!.groupIds,
         });
       } else if (p.listId) j.draft!.listId = p.listId;
+      if (p.descriptionRich !== undefined)
+        j.draft!.descriptionRich = p.descriptionRich;
+      else if (p.fields && p.fields.description !== j.draft!.fields.description)
+        j.draft!.descriptionRich = null;
       if (p.fields) j.draft!.fields = p.fields;
+      if (j.draft!.descriptionRich)
+        j.draft!.fields.description = normalizeNote({
+          description: "",
+          descriptionRich: j.draft!.descriptionRich,
+        }).description;
       if (p.touched) j.draft!.touched = p.touched;
       j.draft!.revision++;
       touch(j);
@@ -2221,6 +2235,7 @@ function commandCore(
               recipientId: id.optional(),
               visibility: z.enum(["private", "hidden", "visible"]).optional(),
               groupIds: ids.optional(),
+              descriptionRich: noteDocumentSchema.nullable().optional(),
               fields: z.record(
                 z.string().max(40),
                 z.union([z.string().max(5000), z.number().finite(), z.null()]),
@@ -2268,6 +2283,11 @@ function commandCore(
           listContext(s, a, p.draft.spendingListId, [p.draft.recipientId]);
         delete p.draft.listId;
       }
+      if (p.draft?.descriptionRich)
+        p.draft.fields.description = normalizeNote({
+          description: "",
+          descriptionRich: p.draft.descriptionRich,
+        }).description;
       const j = {
         ...stamp(),
         ...(p.draft
