@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.1](https://github.com/Affolder-Creative/little-hint/compare/v1.2.0...v1.2.1) (2026-11-09)
+
+
+### Fixes
+
+* polish Buying privacy, passkey menus, and profile sharing ([#202](https://github.com/Affolder-Creative/little-hint/issues/202)) ([3199769](https://github.com/Affolder-Creative/little-hint/commit/319976929b728fb257ff31099c482bb7bad113f8))
+* verify product prices and clarify lookup failures ([#200](https://github.com/Affolder-Creative/little-hint/issues/200)) ([f334d22](https://github.com/Affolder-Creative/little-hint/commit/f334d22f112b77fd4b8e1ffd8022ef364c0e1ee3))
+
 ## [1.2.0](https://github.com/Affolder-Creative/little-hint/compare/v1.1.0...v1.2.0) (2026-11-09)
 
 
