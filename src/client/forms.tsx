@@ -18,6 +18,9 @@ import {
   Link as LinkIcon,
   Upload,
   LoaderCircle,
+  ImagePlus,
+  Star,
+  Trash2,
   Check,
   Plus,
 } from "lucide-react";
@@ -1602,50 +1605,58 @@ function GiftEditor({
                 />
                 <div className="item-photo-actions">
                   {photo === data.image ? (
-                    <span className="muted">Cover photo</span>
+                    <span className="item-photo-cover">
+                      <Check size={16} aria-hidden="true" />
+                      Cover photo
+                    </span>
                   ) : (
                     <button
                       type="button"
-                      className="text-button"
+                      className="button secondary item-photo-make-cover"
                       disabled={uploading}
                       onClick={() => setPhotos(photos, photo)}
                       aria-label={`Use photo ${index + 1} as cover`}
                     >
+                      <Star size={16} aria-hidden="true" />
                       Make cover
                     </button>
                   )}
-                  <label className="upload">
-                    <span>Replace</span>
-                    <input
-                      type="file"
-                      aria-label={`Replace photo ${index + 1}`}
+                  <div className="item-photo-tools">
+                    <label className="upload">
+                      <ImagePlus size={16} aria-hidden="true" />
+                      <span>Replace</span>
+                      <input
+                        type="file"
+                        aria-label={`Replace photo ${index + 1}`}
+                        disabled={uploading}
+                        accept="image/png,image/jpeg,image/webp,image/gif"
+                        onChange={(event) => {
+                          const file = event.target.files?.[0];
+                          event.target.value = "";
+                          if (file) void upload([{ file, replace: photo }]);
+                        }}
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      className="text-button danger"
                       disabled={uploading}
-                      accept="image/png,image/jpeg,image/webp,image/gif"
-                      onChange={(event) => {
-                        const file = event.target.files?.[0];
-                        event.target.value = "";
-                        if (file) void upload([{ file, replace: photo }]);
+                      aria-label={`Remove photo ${index + 1}`}
+                      onClick={() => {
+                        const remaining = photos.filter((url) => url !== photo);
+                        setPhotos(
+                          remaining,
+                          data.image === photo
+                            ? (remaining[0] ?? "")
+                            : data.image,
+                        );
+                        setFailedUploads([]);
                       }}
-                    />
-                  </label>
-                  <button
-                    type="button"
-                    className="text-button"
-                    disabled={uploading}
-                    aria-label={`Remove photo ${index + 1}`}
-                    onClick={() => {
-                      const remaining = photos.filter((url) => url !== photo);
-                      setPhotos(
-                        remaining,
-                        data.image === photo
-                          ? (remaining[0] ?? "")
-                          : data.image,
-                      );
-                      setFailedUploads([]);
-                    }}
-                  >
-                    Remove photo
-                  </button>
+                    >
+                      <Trash2 size={16} aria-hidden="true" />
+                      Remove
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}

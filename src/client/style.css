@@ -4799,17 +4799,48 @@ a.button:is(:hover, :focus, :active),
   background: var(--paper);
 }
 .item-photo-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 16px;
+  display: grid;
+  gap: 4px;
+  flex: 1;
   min-width: 0;
 }
-.item-photo-actions > span {
+.item-photo-cover {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
   font-size: 13px;
+  font-weight: 550;
+  color: var(--green);
 }
-.item-photo-actions .upload {
+.item-photo-make-cover {
+  justify-self: start;
+  gap: 8px;
+  padding: 8px 12px;
+}
+.item-photo-tools {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.item-photo-tools .text-button,
+.item-photo-tools .upload {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
   margin: 0;
+  font-size: 14px;
+  font-weight: 550;
+  white-space: nowrap;
+}
+.item-photo-tools .text-button.danger {
+  color: var(--error);
+}
+.item-photo-tools svg,
+.item-photo-cover svg,
+.item-photo-make-cover svg {
+  flex-shrink: 0;
 }
 .gift-photo-count {
   position: absolute;
@@ -4825,7 +4856,7 @@ a.button:is(:hover, :focus, :active),
 .item-photo-actions .upload {
   position: relative;
   min-height: 44px;
-  color: var(--accent);
+  color: var(--text);
   cursor: pointer;
 }
 .item-photo-actions .upload input {
@@ -4843,7 +4874,18 @@ a.button:is(:hover, :focus, :active),
   .item-photo-preview {
     align-items: flex-start;
   }
-  .item-photo-actions {
-    gap: 4px 12px;
+  .item-photo-tools {
+    gap: 12px;
+  }
+}
+
+@media (max-width: 400px) {
+  .item-photo-preview {
+    gap: 12px;
+  }
+  .item-photo-preview img {
+    width: 64px;
+    height: 64px;
+    flex-shrink: 0;
   }
 }

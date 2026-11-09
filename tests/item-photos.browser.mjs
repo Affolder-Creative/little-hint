@@ -192,10 +192,25 @@ try {
   assert.equal(await page.locator(".item-photo-preview").count(), 3);
   for (const [name, width, height] of [
     ["mobile", 390, 844],
+    ["narrow", 320, 760],
     ["desktop", 1280, 900],
   ]) {
     await page.setViewportSize({ width, height });
     await page.locator(".item-photo-previews").scrollIntoViewIfNeeded();
+    const tools = page.locator(".item-photo-tools").first();
+    const replace = await tools.locator("label").boundingBox();
+    const remove = await tools.locator("button").boundingBox();
+    assert(
+      Math.abs(replace.y - remove.y) < 2,
+      "Replace and Remove stay on the same row",
+    );
+    assert(
+      await page.evaluate(
+        () =>
+          document.querySelector("dialog").scrollWidth <=
+          document.querySelector("dialog").clientWidth,
+      ),
+    );
     await page.waitForFunction(() =>
       [...document.querySelectorAll(".gift-detail img")].every(
         (img) => img.naturalWidth > 0,

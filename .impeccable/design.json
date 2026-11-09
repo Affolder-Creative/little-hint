@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-09T19:45:06.308349+00:00",
+  "generatedAt": "2026-11-09T19:47:54.826217+00:00",
   "title": "Design System: Little Hint",
   "extensions": {
     "colorMeta": {
@@ -1119,6 +1119,10 @@
       "selection": "Shared 44px checkbox rows; the owner is checked and disabled. Co-manager views retain the names and role text without selection controls.",
       "transfer": "Secondary text disclosure with native select and checkbox, followed by an outlined request action. Pending requests retain a separate cancellation action.",
       "states": "Inline loading, failed-read retry, empty search results, and action errors reuse shared form and Action patterns."
+    },
+    "photoEditor": {
+      "thumbnail": "80px contained; 64px at 400px and below",
+      "actions": "Two fixed rows: outlined Make cover with star or checked green Cover photo status, then neutral Replace and destructive Remove with icons. All targets retain 44px height."
     }
   },
   "components": [
