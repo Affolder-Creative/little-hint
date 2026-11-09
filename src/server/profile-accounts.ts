@@ -58,6 +58,8 @@ export function registerProfileAccounts(
         page: z.coerce.number().int().min(1).default(1),
       })
       .parse(req.query);
+    reply.header("Cache-Control", "no-store");
+    if (!q.search.trim()) return { rows: [], total: 0 };
     const accounts = await pool.query('SELECT id,email FROM "user"');
     const emails = new Map(accounts.rows.map((u) => [u.id, u.email]));
     const rows = s.people
@@ -74,10 +76,9 @@ export function registerProfileAccounts(
       .filter((p) =>
         `${p.name} ${p.email ?? ""}`
           .toLowerCase()
-          .includes(q.search.toLowerCase()),
+          .includes(q.search.trim().toLowerCase()),
       )
       .sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id));
-    reply.header("Cache-Control", "no-store");
     return {
       rows: rows.slice((q.page - 1) * 24, q.page * 24),
       total: rows.length,
@@ -86,7 +87,7 @@ export function registerProfileAccounts(
   app.post("/api/v1/admin/profiles/update", async (req) => {
     const a = await actor(req),
       b = z.object({ id, revision, name: text }).parse(req.body);
-    await transact(async (s, tx) => {
+    return transact(async (s, tx) => {
       if (!isAdmin(s, a)) fail(403, "Administration access is required.");
       const p =
         s.people.find(
@@ -102,7 +103,7 @@ export function registerProfileAccounts(
         await tx.execute(
           sql`UPDATE "user" SET name=${p.name}, updated_at=now() WHERE id=${p.userId}`,
         );
+      return { id: p.id, name: p.name, revision: p.revision };
     });
-    return { ok: true };
   });
 }
