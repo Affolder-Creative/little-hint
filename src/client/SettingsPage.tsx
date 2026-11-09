@@ -31,7 +31,7 @@ import { Confirm } from "./Confirm";
 import { familyGroupLabel } from "../shared/households";
 import { AccountInvitations } from "./AccountInvitations";
 import { HouseholdSettings } from "./Households";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
 import {
@@ -39,6 +39,7 @@ import {
   ExternalLink,
   LogOut,
   KeyRound,
+  Pencil,
   Trash2,
   UserRoundMinus,
   ArrowRightLeft,
@@ -1005,6 +1006,7 @@ function sessionName(agent?: string | null) {
 }
 class FreshSignInRequiredError extends Error {}
 function Security() {
+  const passkeysRef = useRef<HTMLElement>(null);
   const { open, close, toast } = useApp();
   const client = useQueryClient();
   const current = useQuery({
@@ -1048,7 +1050,11 @@ function Security() {
     <section className="settings-section">
       <h2>Sign-in & security</h2>
       <AccountEmail />
-      <section className="passkeys-section" aria-labelledby="passkeys-heading">
+      <section
+        ref={passkeysRef}
+        className="passkeys-section"
+        aria-labelledby="passkeys-heading"
+      >
         <div className="passkeys-intro">
           <h3 id="passkeys-heading">Passkeys</h3>
           <p>
@@ -1085,50 +1091,68 @@ function Security() {
         {keys.isSuccess && !keys.data?.length && (
           <p>No passkeys yet. Add one on a trusted device.</p>
         )}
-        {keys.data?.map((k) => (
-          <div className="setting-row passkey-row" key={k.id}>
-            <span className="passkey-label">{k.name || "Passkey"}</span>
-            <div className="actions">
-              <button
-                className="button secondary"
-                aria-label={`Rename ${k.name || "passkey"}`}
-                onClick={() =>
-                  open(
-                    "Rename passkey",
-                    <PasskeyLabelForm
-                      passkey={k}
-                      onSaved={async () => {
-                        await client.invalidateQueries({
-                          queryKey: ["passkeys"],
-                        });
-                        close();
-                        toast("Passkey renamed.");
-                      }}
-                    />,
-                  )
-                }
-              >
-                Rename
-              </button>
-              <Action
-                secondary
-                label={`Remove passkey ${k.name || "Passkey"}`}
-                onClick={async () => {
-                  const r = await authClient.passkey.deletePasskey({
-                    id: k.id,
-                  });
-                  if (r.error)
-                    throw new Error(
-                      "We could not update your sign-in settings. Check your connection and try again.",
+        <div className="passkey-list">
+          {keys.data?.map((k, index) => (
+            <div className="setting-row passkey-row" key={k.id}>
+              <span className="passkey-label">{k.name || "Passkey"}</span>
+              <ActionMenu name={k.name || "Passkey"}>
+                <button
+                  className="text-button"
+                  aria-label={`Rename ${k.name || "passkey"}`}
+                  onClick={(event) => {
+                    event.currentTarget.focus({ preventScroll: true });
+                    open(
+                      "Rename passkey",
+                      <PasskeyLabelForm
+                        passkey={k}
+                        onSaved={async () => {
+                          await client.invalidateQueries({
+                            queryKey: ["passkeys"],
+                          });
+                          close();
+                          toast("Passkey renamed.");
+                        }}
+                      />,
                     );
-                  await client.invalidateQueries({ queryKey: ["passkeys"] });
-                }}
-              >
-                Remove
-              </Action>
+                  }}
+                >
+                  <Pencil size={16} aria-hidden="true" /> Rename
+                </button>
+                <Action
+                  danger
+                  label={`Remove passkey ${k.name || "Passkey"}`}
+                  onClick={async () => {
+                    const r = await authClient.passkey.deletePasskey({
+                      id: k.id,
+                    });
+                    if (r.error)
+                      throw new Error(
+                        "We could not update your sign-in settings. Check your connection and try again.",
+                      );
+                    await client.invalidateQueries({
+                      queryKey: ["passkeys"],
+                    });
+                    requestAnimationFrame(() => {
+                      const menus =
+                        passkeysRef.current?.querySelectorAll<HTMLElement>(
+                          ".passkey-row summary",
+                        );
+                      const target =
+                        menus?.[index] ??
+                        menus?.[index - 1] ??
+                        passkeysRef.current?.querySelector<HTMLElement>(
+                          ".passkeys-intro > button",
+                        );
+                      target?.focus({ preventScroll: true });
+                    });
+                  }}
+                >
+                  <Trash2 size={16} aria-hidden="true" /> Remove
+                </Action>
+              </ActionMenu>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </section>
       <h3>Devices you’re signed in on</h3>
       {sessions.error instanceof FreshSignInRequiredError && (

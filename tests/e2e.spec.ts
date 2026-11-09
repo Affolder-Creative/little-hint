@@ -504,15 +504,17 @@ test("passkey registration and sign-in through a virtual platform authenticator"
     page.getByRole("status").filter({ hasText: "Passkey added." }),
   ).toBeVisible();
   await page
+    .locator(".passkey-row")
+    .filter({ hasText: "1Password" })
+    .locator("summary")
+    .click();
+  await page
     .getByRole("button", { name: "Rename 1Password", exact: true })
     .click();
   await page.getByLabel("Passkey name", { exact: true }).fill(label);
   await page.getByRole("button", { name: "Save name", exact: true }).click();
   await expect(
-    page.getByRole("button", {
-      name: `Rename ${label}`,
-      exact: true,
-    }),
+    page.locator(".passkey-label").filter({ hasText: label }),
   ).toBeVisible();
   const saved = (
     await (
@@ -562,6 +564,11 @@ test("passkey registration and sign-in through a virtual platform authenticator"
     .click();
   await expect(page.getByRole("dialog").getByRole("alert")).toBeVisible();
   await page.getByRole("button", { name: "Close dialog", exact: true }).click();
+  await page
+    .locator(".passkey-row")
+    .filter({ hasText: label })
+    .locator("summary")
+    .click();
   await page
     .locator(".setting-row")
     .filter({ hasText: label })

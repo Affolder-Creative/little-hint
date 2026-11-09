@@ -12,8 +12,10 @@ import "./info-help.css";
 export function InfoHelp({
   title,
   children,
+  triggerLabel,
 }: {
   title: string;
+  triggerLabel?: ReactNode;
   children: ReactNode;
 }) {
   const id = useId();
@@ -55,7 +57,7 @@ export function InfoHelp({
       <button
         ref={trigger}
         type="button"
-        className="info-help-trigger"
+        className={`info-help-trigger${triggerLabel ? " info-help-labeled" : ""}`}
         popoverTarget={id}
         aria-haspopup="dialog"
         aria-expanded={open}
@@ -63,7 +65,8 @@ export function InfoHelp({
         aria-label={`About ${title.toLowerCase()}`}
         onClick={(event) => event.currentTarget.focus({ preventScroll: true })}
       >
-        <Info size={15} aria-hidden="true" />
+        {triggerLabel}
+        <Info className="info-help-icon" size={15} aria-hidden="true" />
       </button>
       <div
         ref={panel}
