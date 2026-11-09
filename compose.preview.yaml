@@ -33,7 +33,7 @@ services:
       timeout: 3s
       retries: 30
   mailpit:
-    image: axllent/mailpit:v1.32.0
+    image: axllent/mailpit:v1.33.0
     restart: unless-stopped
     environment:
       MP_DATABASE: /data/mailpit.db
@@ -115,7 +115,7 @@ services:
     # The upstream Caddy binary carries this file capability even on port 8080.
     cap_add: [NET_BIND_SERVICE]
   tunnel:
-    image: cloudflare/cloudflared@sha256:1b1d34d0a9c0bfca9de72db8460d328db3f19edd2b96169114e3e893a97bbe53
+    image: cloudflare/cloudflared@sha256:4955524aeaa379e154023d5a027c250f7b35041a2e7e950cf13f144bc9b9c5ba
     profiles: [share]
     restart: "no"
     command:
