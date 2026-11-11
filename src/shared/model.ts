@@ -112,6 +112,7 @@ export interface List extends Base {
   revealExchangeGivers?: boolean;
 }
 export interface GroupEvent extends Base {
+  eventDate?: string | null;
   spendingGuidelineCents?: number | null;
   deletedAt?: string;
   groupId: string;
@@ -234,6 +235,8 @@ export interface Reservation extends Base {
   exchangeId?: string;
   exchangeRecipientId?: string;
   giverId?: string;
+  poolTotalCents?: number;
+  poolOwnContributionCents?: number;
   poolTargetCents?: number;
   titleSnapshot: string;
   purchasedAt?: string;
@@ -665,6 +668,8 @@ export interface GiftView extends Omit<Item, "creatorId" | "draftOwnerId"> {
     reservedAt?: string;
     purchasedAt?: string;
     exchange: boolean;
+    poolTotalCents?: number;
+    poolOwnContributionCents?: number;
     poolTargetCents?: number;
     contributions?: Contribution[];
   }>;

@@ -252,6 +252,24 @@ export function Buying() {
                         ? `For ${r.item.recipientNames.join(" & ")}`
                         : "Access to the original gift has changed."}
                     </p>
+                    <p className="buying-price">
+                      {r.item?.priceCents != null ? (
+                        <>
+                          Listed price {dollars(r.item.priceCents)}
+                          {r.quantity > 1 && (
+                            <>
+                              {" "}
+                              each · {dollars(
+                                r.item.priceCents * r.quantity,
+                              )}{" "}
+                              for {r.quantity}
+                            </>
+                          )}
+                        </>
+                      ) : (
+                        "Price not listed"
+                      )}
+                    </p>
                     <span className="status">
                       {r.purchased === r.quantity
                         ? "Purchased"
@@ -270,6 +288,7 @@ export function Buying() {
                               priceCents: r.item?.priceCents ?? null,
                               quantity: r.quantity,
                               poolTargetCents: r.poolTargetCents,
+                              poolTotalCents: r.poolTotalCents,
                             }
                           : undefined
                       }
@@ -329,7 +348,7 @@ export function Buying() {
                           }
                         >
                           <Users size={16} aria-hidden="true" />
-                          {r.poolTargetCents
+                          {r.poolTargetCents !== undefined
                             ? "Edit contribution goal"
                             : "Share the cost"}
                         </button>

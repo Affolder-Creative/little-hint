@@ -11,6 +11,7 @@ export interface SpendingPreview {
   itemId?: string;
   quantity?: number;
   poolReservationId?: string;
+  poolTotalCents?: number;
   poolTargetCents?: number;
   contributionReservationId?: string;
   amountCents?: number;
@@ -71,10 +72,12 @@ export function giftEstimate(
   priceCents: number | null,
   quantity: number,
   poolTargetCents = 0,
+  poolTotalCents?: number,
 ) {
   return {
-    cents: Math.max((priceCents ?? 0) * quantity, poolTargetCents),
-    unknown: priceCents === null,
+    cents:
+      poolTotalCents ?? Math.max((priceCents ?? 0) * quantity, poolTargetCents),
+    unknown: poolTotalCents == null && priceCents === null,
   };
 }
 
@@ -118,7 +121,14 @@ export function spendingSummary(
       preview.poolReservationId === r.id
         ? preview.poolTargetCents
         : r.poolTargetCents;
-    const estimate = giftEstimate(r.item.priceCents, r.quantity, target);
+    const estimate = giftEstimate(
+      r.item.priceCents,
+      r.quantity,
+      target,
+      preview.poolReservationId === r.id
+        ? preview.poolTotalCents
+        : r.poolTotalCents,
+    );
     const contributions =
       r.item.reservations?.find((entry) => entry.id === r.id)?.contributions ??
       [];

@@ -1,3 +1,4 @@
+import { netContribution } from "../shared/contribution-money";
 import { useCollection } from "./Pagination";
 import { useState } from "react";
 import type { GiftView, World } from "../shared/model";
@@ -56,6 +57,7 @@ export function SpendingGuidance({
   sharedGift?: {
     priceCents: number | null;
     quantity: number;
+    poolTotalCents?: number;
     poolTargetCents?: number;
   };
 }) {
@@ -95,6 +97,7 @@ export function SpendingGuidance({
         sharedGift.priceCents,
         sharedGift.quantity,
         sharedGift.poolTargetCents,
+        sharedGift.poolTotalCents,
       )
     : null;
   return (
@@ -182,20 +185,50 @@ export function ShareCostForm({
   reservation: World["buying"][number];
 }) {
   const { world, mutate, close } = useApp();
-  const [amount, setAmount] = useState(
-    r.poolTargetCents ? String(r.poolTargetCents / 100) : "",
+  const legacy =
+    r.poolTargetCents !== undefined && r.poolTotalCents === undefined;
+  const [total, setTotal] = useState(
+    r.poolTotalCents != null
+      ? String(r.poolTotalCents / 100)
+      : !legacy && r.item?.priceCents != null
+        ? String((r.item.priceCents * r.quantity) / 100)
+        : "",
   );
-  const cents = Math.max(0, Math.round(Number(amount) * 100)) || 0;
+  const [own, setOwn] = useState(
+    r.poolOwnContributionCents != null
+      ? String(r.poolOwnContributionCents / 100)
+      : legacy
+        ? ""
+        : "0",
+  );
+  const totalCents = Math.round(Number(total) * 100);
+  const ownCents = Math.round(Number(own) * 100);
+  const target = totalCents - ownCents;
+  const contributions =
+    r.item?.reservations?.find((v) => v.id === r.id)?.contributions ?? [];
+  const pledged = contributions.reduce((n, c) => n + netContribution(c), 0);
+  const received = contributions
+    .filter((c) => c.status === "received")
+    .reduce((n, c) => n + netContribution(c), 0);
   return (
     <Form
       submit="Save contribution goal"
       onSubmit={async () => {
+        if (ownCents > totalCents)
+          throw new Error(
+            "Your contribution cannot exceed the total gift cost.",
+          );
+        if (target < pledged)
+          throw new Error(
+            "The goal from others must cover contributions already promised.",
+          );
         await mutate("reservations/update", {
           id: r.id,
           revision: r.revision,
           quantity: r.quantity,
           purchased: r.purchased,
-          poolTargetCents: cents,
+          poolTotalCents: totalCents,
+          poolOwnContributionCents: ownCents,
         });
         close();
       }}
@@ -204,30 +237,76 @@ export function ShareCostForm({
         <strong>{r.titleSnapshot}</strong>
         {r.item ? ` · For ${r.item.recipientNames.join(" & ")}` : ""}
       </p>
-      <Field label="Target amount in USD">
+      {legacy && (
+        <p className="muted">
+          Your existing goal from others is {dollars(r.poolTargetCents!)}. Enter
+          the full gift cost and your intended share to update it.
+        </p>
+      )}
+      <Field
+        label="Total gift cost in USD"
+        hint="The full cost for the quantity you reserved, including any tax or shipping you want to cover."
+      >
         <input
-          name="amount"
+          name="totalCost"
           type="number"
           min="0.01"
           max="1000000"
           step="0.01"
           required
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
+          value={total}
+          onChange={(e) => setTotal(e.target.value)}
         />
       </Field>
+      <Field
+        label="Your contribution in USD"
+        hint="Your intended share. This does not record a payment."
+      >
+        <input
+          name="ownContribution"
+          type="number"
+          min="0"
+          max={total || "1000000"}
+          step="0.01"
+          required
+          value={own}
+          onChange={(e) => setOwn(e.target.value)}
+        />
+      </Field>
+      {total !== "" && own !== "" && target >= 0 && (
+        <div className="shared-cost-summary" role="status" aria-live="polite">
+          <p>
+            <strong>Goal from others: {dollars(target)}</strong>
+          </p>
+          {pledged > 0 && (
+            <p>
+              Already pledged: {dollars(pledged)} · Received:{" "}
+              {dollars(received)}
+            </p>
+          )}
+          <p>
+            Still needs contributors: {dollars(Math.max(0, target - pledged))}
+          </p>
+        </div>
+      )}
       <SpendingGuidance
         context={reservationSpendingContext(world, r)}
-        preview={{ poolReservationId: r.id, poolTargetCents: cents }}
+        preview={{
+          poolReservationId: r.id,
+          poolTargetCents: Math.max(0, target),
+          poolTotalCents: totalCents > 0 ? totalCents : undefined,
+        }}
         sharedGift={{
           priceCents: r.item?.priceCents ?? null,
           quantity: r.quantity,
-          poolTargetCents: cents,
+          poolTargetCents: Math.max(0, target),
+          poolTotalCents: totalCents > 0 ? totalCents : undefined,
         }}
       />
-      <p>
-        You buy the gift and confirm when you receive each contribution. Little
-        Hint does not collect or send money.
+      <p className="shared-cost-help">
+        Your spending estimate includes the full cost until others pledge. You
+        buy the gift and confirm each payment received. Little Hint does not
+        collect or send money.
       </p>
     </Form>
   );
@@ -280,6 +359,7 @@ export function ContributionForm({
           priceCents: gift.priceCents,
           quantity: r.quantity,
           poolTargetCents: r.poolTargetCents,
+          poolTotalCents: r.poolTotalCents,
         }}
       />
       <p>
@@ -315,6 +395,7 @@ export function ContributionSpendingGuidance({
         priceCents: gift.priceCents,
         quantity: reservation.quantity,
         poolTargetCents: reservation.poolTargetCents,
+        poolTotalCents: reservation.poolTotalCents,
       }}
     />
   );

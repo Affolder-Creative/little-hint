@@ -384,8 +384,90 @@ export function ReorderForm({
   const dismiss = useModalDismiss();
   const [rows, setRows] = useState(entries),
     [saving, setSaving] = useState(false),
-    [dragged, setDragged] = useState<string | null>(null),
     [announcement, announce] = useState("");
+  const listRef = useRef<HTMLOListElement>(null);
+  const gesture = useRef<{
+    id: string;
+    start: number;
+    y: number;
+    offset: number;
+    height: number;
+    width: number;
+    left: number;
+    target: number;
+    active: boolean;
+    frame: number;
+  } | null>(null);
+  const [preview, setPreview] = useState<{
+    id: string;
+    top: number;
+    left: number;
+    width: number;
+    height: number;
+    target: number;
+  } | null>(null);
+  const stop = (commit: boolean) => {
+    const g = gesture.current;
+    if (!g) return;
+    cancelAnimationFrame(g.frame);
+    gesture.current = null;
+    setPreview(null);
+    if (commit && g.active && listRef.current) {
+      let target = Array.from(listRef.current.children).filter(
+        (el) =>
+          g.y >
+          el.getBoundingClientRect().top +
+            el.getBoundingClientRect().height / 2,
+      ).length;
+      if (target > rows.findIndex((row) => row.id === g.id)) target--;
+      move(g.id, Math.max(0, Math.min(rows.length - 1, target)));
+    }
+  };
+  useEffect(
+    () => () => {
+      if (gesture.current) cancelAnimationFrame(gesture.current.frame);
+    },
+    [],
+  );
+  useEffect(() => {
+    const cancel = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && gesture.current) {
+        e.preventDefault();
+        e.stopPropagation();
+        stop(false);
+      }
+    };
+    document.addEventListener("keydown", cancel, true);
+    return () => document.removeEventListener("keydown", cancel, true);
+  });
+  function track() {
+    const g = gesture.current;
+    if (!g || !g.active || !listRef.current) return;
+    const scroll = listRef.current.closest<HTMLElement>(".dialog-body");
+    if (scroll) {
+      const box = scroll.getBoundingClientRect();
+      const speed = g.y < box.top + 48 ? -8 : g.y > box.bottom - 48 ? 8 : 0;
+      scroll.scrollTop += speed;
+    }
+    const entries = Array.from(listRef.current.children);
+    g.target = entries.filter(
+      (el) =>
+        g.y >
+        el.getBoundingClientRect().top + el.getBoundingClientRect().height / 2,
+    ).length;
+    const from = rows.findIndex((r) => r.id === g.id);
+    if (g.target > from) g.target--;
+    g.target = Math.max(0, Math.min(rows.length - 1, g.target));
+    setPreview({
+      id: g.id,
+      top: g.y - g.offset,
+      left: g.left,
+      width: g.width,
+      height: g.height,
+      target: g.target,
+    });
+    g.frame = requestAnimationFrame(track);
+  }
   function move(id: string, to: number) {
     const from = rows.findIndex((row) => row.id === id);
     if (from < 0 || to < 0 || to >= rows.length) return;
@@ -417,27 +499,66 @@ export function ReorderForm({
       <p className="sr-only" role="status">
         {announcement}
       </p>
-      <ol className="reorder-list">
+      {preview && (
+        <div
+          className="reorder-preview"
+          aria-hidden="true"
+          style={{
+            position: "fixed",
+            top: preview.top,
+            left: preview.left,
+            width: preview.width,
+            minHeight: preview.height,
+          }}
+        >
+          {rows.find((r) => r.id === preview.id)?.name}
+        </div>
+      )}
+      <ol className="reorder-list" ref={listRef}>
         {rows.map((row, index) => (
           <li
             key={row.id}
-            onDragOver={(event) => event.preventDefault()}
-            onDrop={(event) => {
-              event.preventDefault();
-              if (dragged) move(dragged, index);
-              setDragged(null);
-            }}
+            className={
+              preview?.id === row.id
+                ? "reorder-lifted"
+                : preview?.target === index
+                  ? "reorder-target"
+                  : undefined
+            }
           >
             <span
               className="drag-handle"
-              draggable
-              onDragStart={(event) => {
-                setDragged(row.id);
-                event.dataTransfer.setData("text/plain", row.id);
-                event.dataTransfer.effectAllowed = "move";
-              }}
-              onDragEnd={() => setDragged(null)}
               aria-hidden="true"
+              onPointerDown={(event) => {
+                if (saving || event.button !== 0 || !event.isPrimary) return;
+                const bounds =
+                  event.currentTarget.parentElement!.getBoundingClientRect();
+                event.currentTarget.setPointerCapture(event.pointerId);
+                gesture.current = {
+                  id: row.id,
+                  start: event.clientY,
+                  y: event.clientY,
+                  offset: event.clientY - bounds.top,
+                  left: bounds.left,
+                  width: bounds.width,
+                  height: bounds.height,
+                  target: index,
+                  active: false,
+                  frame: 0,
+                };
+              }}
+              onPointerMove={(event) => {
+                const g = gesture.current;
+                if (!g || g.id !== row.id) return;
+                g.y = event.clientY;
+                if (!g.active && Math.abs(g.y - g.start) >= 6) {
+                  g.active = true;
+                  track();
+                }
+              }}
+              onPointerUp={() => stop(true)}
+              onPointerCancel={() => stop(false)}
+              onLostPointerCapture={() => stop(false)}
             >
               <GripVertical size={18} />
             </span>

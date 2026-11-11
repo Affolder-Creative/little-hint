@@ -214,6 +214,13 @@ export function buyingCommand(
           revision,
           quantity: z.number().int().min(0).max(999),
           purchased: z.number().int().min(0).max(999),
+          poolTotalCents: z.number().int().positive().max(100000000).optional(),
+          poolOwnContributionCents: z
+            .number()
+            .int()
+            .min(0)
+            .max(100000000)
+            .optional(),
           poolTargetCents: z
             .number()
             .int()
@@ -231,19 +238,38 @@ export function buyingCommand(
           400,
           "Make a new reservation to buy more. The quantity purchased cannot be higher than the quantity reserved.",
         );
+      if (
+        (p.poolTotalCents === undefined) !==
+        (p.poolOwnContributionCents === undefined)
+      )
+        fail(400, "Enter both the total gift cost and your contribution.");
+      if (p.poolTotalCents !== undefined) {
+        if (p.poolOwnContributionCents! > p.poolTotalCents)
+          fail(400, "Your contribution cannot exceed the total gift cost.");
+        p.poolTargetCents = p.poolTotalCents - p.poolOwnContributionCents!;
+      } else if (
+        p.poolTargetCents !== undefined &&
+        r.poolTotalCents !== undefined
+      ) {
+        p.poolOwnContributionCents = r.poolOwnContributionCents ?? 0;
+        p.poolTotalCents = p.poolTargetCents + p.poolOwnContributionCents;
+        if (p.poolTotalCents > 100000000)
+          fail(400, "The total gift cost is too large.");
+      }
       const i = s.items.find((i) => i.id === r.itemId);
       if (p.purchased > r.purchased && (!i || !canShop(s, a, i)))
         fail(403, "This gift is no longer available for new purchases.");
       if (
-        p.poolTargetCents &&
-        p.poolTargetCents !== r.poolTargetCents &&
+        (p.poolTotalCents !== undefined || p.poolTargetCents !== undefined) &&
+        (p.poolTotalCents !== r.poolTotalCents ||
+          p.poolTargetCents !== r.poolTargetCents) &&
         (r.exchangeId || !i || !itemVisible(s, a, i) || archived(s, i))
       )
         fail(400, "Contributions are not available for this reservation.");
       const pledged = s.contributions
         .filter((c) => c.reservationId === r.id && c.status !== "cancelled")
         .reduce((n, c) => n + netContribution(c), 0);
-      if (p.poolTargetCents && p.poolTargetCents < pledged)
+      if (p.poolTargetCents !== undefined && p.poolTargetCents < pledged)
         fail(
           409,
           "The contribution goal must cover the contributions already promised.",

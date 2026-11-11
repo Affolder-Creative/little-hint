@@ -1,3 +1,4 @@
+import { EventDate } from "./EventDate";
 import { WishlistDrafts } from "./WishlistDrafts";
 import { Browser } from "./Browser";
 import { SpendingSummary } from "./Spending";
@@ -126,6 +127,11 @@ export function Lists() {
                     <CalendarDays size={20} aria-hidden="true" />
                     {eventName}
                   </h2>
+                  {event?.eventDate && (
+                    <p className="event-date">
+                      <EventDate date={event.eventDate} />
+                    </p>
+                  )}
                   {eventDescription && (
                     <p className="muted">{eventDescription}</p>
                   )}
@@ -136,7 +142,15 @@ export function Lists() {
                   list.groupEventId ? "event-wish-metadata" : undefined
                 }
               >
-                <PrivacyDetails key={list.id} list={list} />
+                <PrivacyDetails
+                  key={list.id}
+                  list={list}
+                  own={list.ownerIds.some((id) =>
+                    world.people.some(
+                      (p) => p.id === id && p.userId === world.me.id,
+                    ),
+                  )}
+                />
                 {list.groupEventId && event && (
                   <Link
                     className="text-button event-wish-manage"

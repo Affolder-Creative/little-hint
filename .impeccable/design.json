@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-09T20:18:25.614720+00:00",
+  "generatedAt": "2026-11-11T20:37:16.136341+00:00",
   "title": "Design System: Little Hint",
   "extensions": {
     "colorMeta": {
@@ -932,8 +932,8 @@
       },
       {
         "name": "working-dots",
-        "value": "1.5s steps(1, end) infinite",
-        "purpose": "Reveal the second and third dots in a fixed 1em slot; reduced motion shows static dots."
+        "value": "2s steps(1, end) infinite",
+        "purpose": "Cycle zero through three dots in 500ms steps in a fixed 1em slot; reduced motion shows static dots."
       }
     ],
     "breakpoints": [
@@ -1123,6 +1123,28 @@
     "photoEditor": {
       "thumbnail": "80px contained; 64px at 400px and below",
       "actions": "Two fixed rows without an added gap: outlined Make cover with 4px by 8px padding and a star, or checked green Cover photo status in a 32px line. Neutral Replace and destructive Remove align toward the top of their 44px targets."
+    },
+    "sharedCost": {
+      "fields": [
+        "Total gift cost in USD",
+        "Your contribution in USD"
+      ],
+      "summary": [
+        "Goal from others",
+        "Already pledged",
+        "Received",
+        "Still needs contributors"
+      ],
+      "typography": "supporting",
+      "shape": "flat divided summary"
+    },
+    "reordering": {
+      "handleSize": "44px",
+      "activationDistance": "6px",
+      "input": "pointer capture",
+      "scrollEdge": "48px",
+      "preview": "paper background, control border, offset shadow",
+      "keyboard": "up/down buttons; Escape cancels gesture"
     }
   },
   "components": [

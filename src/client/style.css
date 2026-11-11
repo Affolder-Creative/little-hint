@@ -4379,9 +4379,21 @@ a.button:is(:hover, :focus, :active),
   white-space: nowrap;
 }
 .working-dots > span {
-  animation-duration: 1.5s;
+  animation-duration: 2s;
   animation-timing-function: steps(1, end);
   animation-iteration-count: infinite;
+}
+.working-dots > span:first-child {
+  animation-name: working-dot-one;
+}
+@keyframes working-dot-one {
+  0% {
+    opacity: 0;
+  }
+  25%,
+  100% {
+    opacity: 1;
+  }
 }
 .working-dots > span:nth-child(2) {
   animation-name: working-dot-two;
@@ -4393,17 +4405,17 @@ a.button:is(:hover, :focus, :active),
   0% {
     opacity: 0;
   }
-  33%,
+  50%,
   100% {
     opacity: 1;
   }
 }
 @keyframes working-dot-three {
   0%,
-  33% {
+  50% {
     opacity: 0;
   }
-  66%,
+  75%,
   100% {
     opacity: 1;
   }
@@ -4898,4 +4910,66 @@ a.button:is(:hover, :focus, :active),
 }
 .item-photo-tools svg {
   margin-top: 2px;
+}
+
+/* Identity actions align with the name and status, above the preference shortcut. */
+.settings-content .profile-setting-row {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+}
+.profile-setting-row .profile-setting-actions {
+  grid-column: 3;
+  grid-row: 1;
+  align-self: start;
+  margin-top: 4px;
+}
+.profile-setting-row .profile-setting-actions .button {
+  padding-inline: 10px;
+}
+.event-date,
+.buying-price {
+  color: var(--muted);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 359px) {
+  .profile-setting-row {
+    gap: 8px;
+  }
+}
+
+.drag-handle {
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+.reorder-preview {
+  z-index: 10;
+  pointer-events: none;
+  background: var(--paper);
+  border: 1px solid var(--control-border);
+  border-radius: 8px;
+  padding: 12px 16px;
+  box-shadow: 0 8px 20px rgba(34, 20, 13, 0.2);
+  overflow-wrap: anywhere;
+}
+.reorder-lifted {
+  opacity: 0.35;
+}
+.reorder-target {
+  background: var(--soft);
+}
+.shared-cost-summary {
+  padding-block: 12px;
+  border-block: 1px solid var(--border);
+  font-variant-numeric: tabular-nums;
+}
+.shared-cost-help {
+  font-size: 14px;
+  color: var(--muted);
 }

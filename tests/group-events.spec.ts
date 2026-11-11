@@ -720,7 +720,9 @@ test("spending guidelines stay advisory for purchases, shared gifts, and drawn e
     await sharedRow
       .getByRole("button", { name: "Share the cost", exact: true })
       .click();
-    await buyer.getByLabel("Target amount in USD", { exact: true }).fill("90");
+    await buyer
+      .getByLabel("Total gift cost in USD", { exact: true })
+      .fill("90");
     await expect(
       buyer
         .getByRole("dialog")
