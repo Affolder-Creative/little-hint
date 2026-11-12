@@ -560,6 +560,7 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
     "exchanges/draw": "exchanges.draw",
     "exchanges/cancel": "exchanges.cancel",
     preferences: "preferences.update",
+    "preferences/archive-privacy": "preferences.archive-privacy",
     imports: "imports.create",
     "imports/update": "imports.update",
     "imports/discard": "imports.discard",

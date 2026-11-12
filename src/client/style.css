@@ -3709,6 +3709,9 @@ main {
 .admin-panel > :last-child {
   margin-bottom: 0;
 }
+.archive-privacy-help {
+  max-width: 65ch;
+}
 .admin-preference {
   margin-top: var(--space-controls);
 }

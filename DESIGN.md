@@ -377,6 +377,18 @@ Event wish lists stay nested beside their event. When the selected Active or Arc
 
 Private product-import drafts use compact divided rows beside their destination list and in My lists. Titles use 15px medium text and open the external product link in a new tab, with an inline external-link icon and underline on hover. Status text names Finding details, Ready to review, or Needs details. Working dots cycle through zero, one, two, and three visible dots at 500ms intervals within a fixed-width slot and remain static for reduced motion. Ready status uses a green check and a soft-filled Review and add action; Needs details uses an accent help icon and Add details, with Try again available for failed lookups. A slow lookup offers Save draft and continue after 15 seconds; fields stay editable. Closing saves the latest edits before dismissing. Drafts remain owner-only until Review and add completes.
 
+### Personal archive privacy
+
+Profile & appearance includes an Archive privacy section after Appearance. Use the
+existing labeled checkbox, muted help, and explicit Save/Discard form. Keep the
+personal checkbox editable when an administrator requires hiding; a notice above
+the form distinguishes the enforced policy from the user's saved choice. Preserve
+drafts through refreshes and navigation, display save errors inline, and retain
+keyboard focus and wrapping labels on narrow screens. Helper paragraphs use
+the shared text stack and a 65ch maximum measure. Administrator copy says
+Require archive privacy for everyone and explains that personal hiding still
+applies when the requirement is off. Reuse existing tokens and spacing.
+
 ### Administrator preferences
 
 Application preferences use flat sections inside the existing App settings panel.

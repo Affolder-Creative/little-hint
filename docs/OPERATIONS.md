@@ -284,3 +284,19 @@ Leave it blank or unset to use the saved preference. Invalid values stop startup
 Set the override on both app and worker and recreate both after ENV changes.
 Admin changes apply to subsequent requests without restart; open sessions refresh
 normally. Archive privacy does not cancel commitments or change saved sharing.
+
+### Personal archive privacy
+
+Settings → Profile & appearance → Archive privacy lets each user hide archived
+wishes and gift ideas. The preference defaults off. The global admin control is
+**Require archive privacy for everyone**. When enabled it forces hiding; when off,
+personal hiding still applies. ENV `false` never forces an owner's items to be shown.
+Users can save their personal choice while global enforcement is on; it takes effect
+when enforcement ends. The variable remains unprefixed in staging.
+
+Wishes follow current list owners: any joint owner's hiding choice protects the
+archive. Managed profiles use the designated profile owner's preference, not a
+co-manager's. Gift ideas follow their creator. Transfers and account takeovers use
+the new owner's preference. Owners/managers retain access and personal buying and
+contribution history remains available. Changes do not cancel commitments or alter
+normal sharing rules. Personal choices are included in account data exports.

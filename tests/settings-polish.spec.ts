@@ -17,6 +17,7 @@ async function setup(
     solo?: boolean;
     admin?: boolean;
     lookup?: boolean;
+    archiveForced?: boolean;
     ai?: boolean;
   } = {},
 ) {
@@ -82,12 +83,22 @@ async function setup(
       "/api/v1/",
       "",
     );
+    if (path === "preferences/archive-privacy")
+      return route.fulfill({
+        json: command(
+          f.state,
+          actor,
+          "preferences.archive-privacy",
+          route.request().postDataJSON(),
+        ),
+      });
     if (path === "admin/profiles")
       return route.fulfill({ json: { rows: [], total: 0 } });
     if (path === "world")
       return route.fulfill({
         json: {
           ...world(f.state, actor),
+          archivePrivacyForced: options.archiveForced ?? false,
           canCreateGroups: !options.restricted || person.admin,
           environment: "development",
           productLookupEnabled: options.lookup !== false,
@@ -810,7 +821,7 @@ for (const locked of [false, true]) {
       exact: true,
     });
     const toggle = section.getByRole("checkbox", {
-      name: "Hide archived items from other users",
+      name: "Require archive privacy for everyone",
     });
     await expect(toggle).not.toBeChecked();
     if (locked) {
@@ -833,5 +844,41 @@ for (const locked of [false, true]) {
       await section.getByRole("button", { name: "Discard changes" }).click();
       await expect(toggle).toBeChecked();
     }
+  });
+}
+
+for (const forced of [false, true]) {
+  test(`personal archive preference, enforced ${forced}`, async ({ page }) => {
+    await setup(page, { archiveForced: forced, admin: false });
+    await page.goto("/settings?section=profile");
+    const section = page.getByRole("region", {
+      name: "Archive privacy",
+      exact: true,
+    });
+    const toggle = section.getByRole("checkbox");
+    await expect(toggle).toBeEnabled();
+    await expect(toggle).not.toBeChecked();
+    if (forced)
+      await expect(
+        section.getByText(/administrator currently requires/),
+      ).toBeVisible();
+    await toggle.focus();
+    await page.keyboard.press("Space");
+    await section.getByRole("button", { name: "Save archive privacy" }).click();
+    await expect(section.getByRole("status")).toHaveText(
+      "Archive privacy saved.",
+    );
+    await page.reload();
+    await expect(toggle).toBeChecked();
+    await toggle.uncheck();
+    await section.getByRole("button", { name: "Discard changes" }).click();
+    await expect(toggle).toBeChecked();
+    await page.route("**/api/v1/preferences/archive-privacy", (route) =>
+      route.fulfill({ status: 500, json: { error: "Try again" } }),
+    );
+    await toggle.uncheck();
+    await section.getByRole("button", { name: "Save archive privacy" }).click();
+    await expect(section.getByRole("alert")).toBeVisible();
+    await expect(toggle).not.toBeChecked();
   });
 }

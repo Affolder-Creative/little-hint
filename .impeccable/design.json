@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-12T16:18:11.259109+00:00",
+  "generatedAt": "2026-11-12T17:26:50.492910+00:00",
   "title": "Design System: Little Hint",
   "extensions": {
     "colorMeta": {
@@ -1029,7 +1029,8 @@
       "src/client/ManagedProfileManagers.tsx",
       "src/client/Action.tsx",
       "src/client/ItemPhotoGallery.tsx",
-      "src/client/item-photo-gallery.css"
+      "src/client/item-photo-gallery.css",
+      "src/client/ArchivePrivacySettings.tsx"
     ],
     "tonalRampNote": "Synthesized OKLCH previews at constant hue/chroma; these ramps are panel metadata, not additional application tokens.",
     "layout": {
@@ -1379,9 +1380,16 @@
     {
       "name": "Administrator preference",
       "kind": "custom",
-      "description": "Flat application preference with a labeled checkbox and associated helper copy. Hosting overrides disable the control.",
-      "html": "<section class=\"ds-preference\"><h4>Archive privacy</h4><label class=\"ds-preference-check\"><input type=\"checkbox\" aria-describedby=\"ds-archive-help\">Hide archived items from other users</label><p id=\"ds-archive-help\">Archived wishes stay visible to their list owners and profile managers.</p></section>",
+      "description": "Global archive requirement. Personal hiding remains effective when the requirement is off; hosting overrides lock this control.",
+      "html": "<section class=\"ds-preference\"><h4>Archive privacy</h4><label class=\"ds-preference-check\"><input type=\"checkbox\" aria-describedby=\"ds-archive-help\">Require archive privacy for everyone</label><p id=\"ds-archive-help\">Archived wishes stay visible to their list owners and profile managers.</p></section>",
       "css": ".ds-preference { color: var(--text); margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--border); } .ds-preference h4 { margin: 0 0 8px; } .ds-preference-check { display: flex; align-items: flex-start; gap: 9px; min-height: 44px; padding-block: 10px; font-size: 14px; line-height: 1.5; cursor: pointer; } .ds-preference-check input { flex-shrink: 0; margin: 2px 0 0; } .ds-preference p { color: var(--muted); line-height: 1.6; } .ds-preference input:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; } .ds-preference-check:has(input:disabled) { cursor: not-allowed; }"
+    },
+    {
+      "name": "Personal archive preference",
+      "kind": "custom",
+      "description": "Personal checkbox remains editable under a global requirement. A notice explains that the saved choice applies after enforcement ends.",
+      "html": "<section class=\"ds-personal-archive\"><h3>Archive privacy</h3><p class=\"ds-archive-notice\">Your administrator currently requires archive privacy for everyone. Your choice below applies when that requirement is off.</p><label class=\"ds-archive-check\"><input type=\"checkbox\">Hide my archived wishes and gift ideas from other users</label></section>",
+      "css": ".ds-personal-archive{color:var(--text);margin-top:16px}.ds-archive-notice{background:var(--soft);color:var(--text);padding:16px;border-radius:8px}.ds-archive-check{display:flex;align-items:flex-start;gap:9px;min-height:44px;padding-block:10px;font-size:14px;line-height:1.5;cursor:pointer}.ds-archive-check input{flex-shrink:0;margin-top:2px}.ds-archive-check input:focus-visible{outline:3px solid var(--accent);outline-offset:3px}"
     }
   ],
   "narrative": {
