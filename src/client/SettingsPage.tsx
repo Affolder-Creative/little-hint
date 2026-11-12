@@ -1,3 +1,4 @@
+import { ArchivePrivacySettings } from "./ArchivePrivacySettings";
 import { PriceRunReport } from "./PriceRunReport";
 import { ActionMenu } from "./Management";
 import { ProfileTakeovers } from "./ProfileTakeovers";
@@ -265,6 +266,7 @@ export default function SettingsPage({
                 <option value="dark">Dark</option>
               </select>
             </Field>
+            <ArchivePrivacySettings />
           </section>
           <section
             className="settings-section family-groups-section"

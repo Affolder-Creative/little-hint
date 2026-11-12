@@ -186,13 +186,14 @@ export function AdminPreferences({ settings }: { settings: Setting[] }) {
                   onChange={(e) => change(archiveKey, String(e.target.checked))}
                   aria-describedby={`archive-privacy-help${locked(archiveKey) ? " archive-privacy-lock" : ""}`}
                 />
-                Hide archived items from other users
+                Require archive privacy for everyone
               </label>
               <p className="muted" id="archive-privacy-help">
-                Archived wishes stay visible to their list owners and profile
-                managers. Archived gift ideas stay visible to their creators.
-                Buyers and contributors keep their personal history, including
-                saved item names.
+                When off, users choose their own archive privacy. Personal
+                hiding preferences always apply. Archived wishes stay visible to
+                their list owners and profile managers. Archived gift ideas stay
+                visible to their creators. Buyers and contributors keep their
+                personal history, including saved item names.
               </p>
               {locked(archiveKey) && (
                 <p className="muted" id="archive-privacy-lock">

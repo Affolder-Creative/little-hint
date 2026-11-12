@@ -10,7 +10,10 @@ import {
   sourceView,
 } from "./gift-lifecycle";
 import { takeOverProfile } from "./profile-takeover";
-import { memberInvitationsEnabled } from "./settings";
+import {
+  hideArchivedItemsForState,
+  memberInvitationsEnabled,
+} from "./settings";
 import { selfRecipient, canShop } from "./domain-access";
 import {
   reservationNeedsReview,
@@ -760,6 +763,7 @@ export function world(
         };
       }),
     preferences: preferences(s, a),
+    archivePrivacyForced: hideArchivedItemsForState(s),
     notificationCount: inbox(s, a).unreadCount,
     follows: s.follows.filter(
       (f) => f.userId === a.id && followVisible(s, a, f),
@@ -2042,6 +2046,18 @@ function commandCore(
         refs,
       );
       return { ok: true };
+    }
+    case "preferences.archive-privacy": {
+      const { hideArchivedItems } = z
+        .object({ hideArchivedItems: z.boolean() })
+        .strict()
+        .parse(b);
+      const prefs = preferences(s, a);
+      prefs.hideArchivedItems = hideArchivedItems;
+      touch(prefs);
+      if (!s.preferences.some((p) => p.id === prefs.id))
+        s.preferences.push(prefs);
+      return { hideArchivedItems };
     }
     case "preferences.update": {
       const p = z

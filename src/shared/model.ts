@@ -392,6 +392,7 @@ export interface NotificationPage {
   nextCursor?: string;
 }
 export interface Preferences extends Base {
+  hideArchivedItems?: boolean;
   notificationDetails?: Partial<Record<NotificationChannel, boolean>>;
   recipientUpdates: boolean;
   userId: string;
@@ -703,6 +704,7 @@ export interface World {
   imageDelivery?: { cacheEnabled: boolean; prefetchEnabled: boolean };
   telegram?: { available: boolean };
   sms?: import("./sms").SmsInfo;
+  archivePrivacyForced?: boolean;
   canCreateGroups?: boolean;
   memberInvitationsEnabled?: boolean;
   groupInviteRequests?: GroupInviteRequest[];

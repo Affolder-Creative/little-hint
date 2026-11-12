@@ -424,3 +424,34 @@ it("denies archived item links and browse metadata after an admin enables privac
     (await app.inject(`/api/v1/items/${fixtureState.item.id}`)).statusCode,
   ).toBe(200);
 });
+
+it("saves only the actor's archive choice and enforces it with a false ENV override", async () => {
+  const { fixture } = await import("./privacy-fixture");
+  const f = fixture();
+  mocks.state = f.state;
+  mocks.actor = f.actors[0];
+  f.item.archived = true;
+  vi.stubEnv("HIDE_ARCHIVED_ITEMS_FROM_OTHERS", "false");
+  const update = (payload: Record<string, unknown>) =>
+    app.inject({
+      method: "POST",
+      url: "/api/v1/preferences/archive-privacy",
+      headers,
+      payload,
+    });
+  expect(
+    (await update({ hideArchivedItems: true, userId: f.actors[1].id }))
+      .statusCode,
+  ).toBe(400);
+  expect((await update({ hideArchivedItems: "true" })).statusCode).toBe(400);
+  expect((await update({ hideArchivedItems: true })).statusCode).toBe(200);
+  expect(mocks.state.preferences).toHaveLength(1);
+  expect(mocks.state.preferences[0].userId).toBe(f.actors[0].id);
+  mocks.actor = f.actors[1];
+  expect((await app.inject(`/api/v1/items/${f.item.id}`)).statusCode).toBe(404);
+  expect(
+    (await app.inject("/api/v1/world")).json().preferences.hideArchivedItems,
+  ).not.toBe(true);
+  mocks.actor = null;
+  expect((await update({ hideArchivedItems: false })).statusCode).toBe(401);
+});

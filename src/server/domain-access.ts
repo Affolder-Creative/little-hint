@@ -1,3 +1,4 @@
+import { profileOwner } from "./profile-management";
 import { hideArchivedItemsForState } from "./settings";
 import type { State, Actor, Person, Group, Item, List } from "../shared/model";
 import { canManageGroupEvents } from "../shared/group-events";
@@ -100,7 +101,21 @@ export function draftAccess(s: State, a: Actor, i: Item): boolean {
 export function itemVisible(s: State, a: Actor, i: Item): boolean {
   return (
     itemSharedWith(s, a, i) &&
-    (!archived(s, i) || canEdit(s, a, i) || !hideArchivedItemsForState(s))
+    (!archived(s, i) || canEdit(s, a, i) || !archivePrivacyRequired(s, i))
+  );
+}
+/** Resolve current ownership, never the viewer's preference or a wish's author. */
+export function archivePrivacyRequired(s: State, i: Item): boolean {
+  if (hideArchivedItemsForState(s)) return true;
+  const owners = i.listId
+    ? (s.lists.find((l) => l.id === i.listId)?.ownerIds ?? []).flatMap((id) => {
+        const person = s.people.find((p) => p.id === id);
+        const userId = person && (person.userId ?? profileOwner(person));
+        return userId ? [userId] : [];
+      })
+    : [i.creatorId];
+  return s.preferences.some(
+    (p) => owners.includes(p.userId) && p.hideArchivedItems === true,
   );
 }
 /** Sharing revocation cancels commitments; archive privacy only hides the source. */

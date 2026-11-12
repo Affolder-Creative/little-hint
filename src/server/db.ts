@@ -276,6 +276,8 @@ export async function readBuyingState(userId: string): Promise<State> {
     UNION ALL
     SELECT 'people', data FROM app_record WHERE kind = 'people'
     UNION ALL
+    SELECT 'preferences', jsonb_build_object('userId', data->'userId', 'hideArchivedItems', data->'hideArchivedItems') FROM app_record WHERE kind='preferences'
+    UNION ALL
     SELECT 'settings', data FROM app_record WHERE kind='settings'
     UNION ALL
     SELECT 'groups', data FROM app_record WHERE kind='groups'

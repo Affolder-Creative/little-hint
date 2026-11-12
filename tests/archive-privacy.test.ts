@@ -120,3 +120,101 @@ describe("archive privacy", () => {
     expect(f.state.contributions[0].status).toBe("cancelled");
   });
 });
+
+const setPrivacy = (
+  f: ReturnType<typeof fixture>,
+  user: number,
+  hideArchivedItems: boolean,
+) =>
+  command(f.state, f.actors[user], "preferences.archive-privacy", {
+    hideArchivedItems,
+  });
+
+describe("personal archive privacy", () => {
+  it.each([false, true])(
+    "combines personal choice with global=%s without forcing disclosure",
+    (forced) => {
+      const f = fixture();
+      vi.stubEnv(key, String(forced));
+      f.item.archived = true;
+      expect(itemVisible(f.state, f.actors[1], f.item)).toBe(!forced);
+      setPrivacy(f, 0, true);
+      expect(itemVisible(f.state, f.actors[1], f.item)).toBe(false);
+      expect(itemVisible(f.state, f.actors[0], f.item)).toBe(true);
+      expect(world(f.state, f.actors[0]).archivePrivacyForced).toBe(forced);
+      vi.stubEnv(key, "false");
+      expect(itemVisible(f.state, f.actors[1], f.item)).toBe(false);
+      setPrivacy(f, 0, false);
+      expect(itemVisible(f.state, f.actors[1], f.item)).toBe(true);
+    },
+  );
+  it("uses any current joint owner, independently of authors and viewers", () => {
+    const f = fixture();
+    vi.stubEnv(key, "false");
+    f.item.archived = true;
+    setPrivacy(f, 1, true);
+    expect(itemVisible(f.state, f.actors[1], f.item)).toBe(true);
+    f.lists[0].ownerIds.push(f.state.people[1].id);
+    expect(itemVisible(f.state, f.actors[2], f.item)).toBe(false);
+    expect(itemVisible(f.state, f.actors[0], f.item)).toBe(true);
+    f.lists[0].ownerIds = [f.state.people[0].id];
+    expect(itemVisible(f.state, f.actors[2], f.item)).toBe(true);
+  });
+  it("uses the designated managed-profile owner and follows transfers and takeover", () => {
+    const f = fixture();
+    vi.stubEnv(key, "false");
+    f.item.archived = true;
+    const p = f.state.people[0];
+    delete p.userId;
+    p.guardians = [f.actors[1].id, f.actors[2].id];
+    p.managedOwnerId = f.actors[1].id;
+    setPrivacy(f, 2, true);
+    expect(itemVisible(f.state, f.actors[3], f.item)).toBe(true);
+    p.managedOwnerId = f.actors[2].id;
+    expect(itemVisible(f.state, f.actors[3], f.item)).toBe(false);
+    expect(itemVisible(f.state, f.actors[1], f.item)).toBe(true);
+    p.userId = f.actors[0].id;
+    p.guardians = [];
+    expect(itemVisible(f.state, f.actors[3], f.item)).toBe(true);
+  });
+  it("uses the idea creator's preference, not its recipient", () => {
+    const f = fixture();
+    vi.stubEnv(key, "false");
+    const idea = {
+      ...f.item,
+      listId: undefined,
+      archived: true,
+      creatorId: f.actors[1].id,
+      groupIds: [f.group.id],
+      visibility: "visible" as const,
+    };
+    setPrivacy(f, 0, true);
+    expect(itemVisible(f.state, f.actors[0], idea)).toBe(true);
+    setPrivacy(f, 1, true);
+    expect(itemVisible(f.state, f.actors[0], idea)).toBe(false);
+    expect(itemVisible(f.state, f.actors[1], idea)).toBe(true);
+  });
+  it("keeps notification preferences separate and exports the personal choice", () => {
+    const f = fixture();
+    vi.stubEnv(key, "true");
+    setPrivacy(f, 0, true);
+    command(f.state, f.actors[0], "preferences.update", {
+      events: ["wishlist"],
+      email: false,
+    });
+    expect(f.state.preferences[0].hideArchivedItems).toBe(true);
+    setPrivacy(f, 0, false);
+    expect(f.state.preferences[0].email).toBe(false);
+    expect(f.state.preferences[0].events).toEqual(["wishlist"]);
+    expect(
+      accountExport(f.state, f.actors[0]).preferences?.hideArchivedItems,
+    ).toBe(false);
+    expect(() =>
+      command(f.state, f.actors[0], "preferences.archive-privacy", {
+        hideArchivedItems: true,
+        userId: f.actors[1].id,
+      }),
+    ).toThrow();
+    expect(f.state.preferences).toHaveLength(1);
+  });
+});

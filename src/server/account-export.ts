@@ -97,6 +97,7 @@ export function accountExport(s: State, a: Actor) {
       })),
     preferences: pref
       ? {
+          hideArchivedItems: pref.hideArchivedItems ?? false,
           email: pref.email,
           telegram: pref.telegram,
           sms: pref.sms,

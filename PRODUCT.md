@@ -216,3 +216,9 @@ Group events have an optional calendar event date, separate from archive and rev
 ## Archive privacy
 
 The app-wide Archive privacy preference defaults off. HIDE_ARCHIVED_ITEMS_FROM_OTHERS=true|false overrides and locks it; blank leaves it editable. Enabled, it hides manually and automatically archived wishes and ideas from other users. List owners and existing profile managers retain wishes; idea creators retain their ideas. The policy does not cancel commitments or change sharing. Buyers and contributors retain personal records and saved names, while hidden live items cannot be opened or used for new purchases. Lists and events retain their existing visibility.
+
+Personal archive privacy defaults off and remains editable under global enforcement.
+The global setting requires hiding for everyone; disabling it lets personal choices
+apply. Wishes follow any current joint owner's choice; unsigned managed profiles
+follow their designated owner's choice. Ideas follow their creator. Ownership
+changes use the new owner's preference. Personal settings never force disclosure.
