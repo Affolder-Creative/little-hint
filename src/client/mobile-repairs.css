@@ -253,3 +253,7 @@ dialog[data-compact="true"] .form-dialog > .form-content {
     flex-basis: 100%;
   }
 }
+
+.gift-draft-actions {
+  grid-template-columns: minmax(0, 1fr);
+}

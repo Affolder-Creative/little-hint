@@ -479,6 +479,8 @@ export function ReorderForm({
   }
   return (
     <Form
+      className="reorder-form"
+      cancel={() => (dismiss ? dismiss() : close())}
       submit="Save order"
       dirty={rows.some((row, index) => row.id !== entries[index]?.id)}
       onSubmit={async () => {
@@ -584,14 +586,6 @@ export function ReorderForm({
           </li>
         ))}
       </ol>
-      <button
-        type="button"
-        className="button secondary"
-        disabled={saving}
-        onClick={() => (dismiss ? dismiss() : close())}
-      >
-        Cancel
-      </button>
     </Form>
   );
 }

@@ -16,3 +16,5 @@ related_targets: ["src/client/ImportDrafts.tsx", "src/client/mobile-repairs.css"
 
 - Photos use contained thumbnail rows. An outlined Make cover button or checked cover status occupies the first action row; neutral Replace and destructive Remove actions with icons share the second row. Counts reflect the deployment limit. Upload batches disable dismissal and saving; failures preserve successful photos and offer retry. Gallery changes follow the existing draft save queue.
 - Helpful notes use the approved rich-text toolbar. Preserve selections during formatting and link editing, literal legacy content, 5,000-character limits and formatting-only dirty state. Match the saved note typography and wrap toolbar targets without horizontal overflow.
+
+Lookup actions disable final saving until completion, failure, or explicit manual entry. Save for later preserves running lookup drafts; completed item lookups restore Save draft. Manual entry retires the lookup and protects local edits. Existing-record changes require discard confirmation.

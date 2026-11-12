@@ -4998,3 +4998,31 @@ a.button:is(:hover, :focus, :active),
   font-size: 14px;
   color: var(--muted);
 }
+
+/* Keep event identity separate from calendar metadata. */
+.event-wish-heading .event-list-context {
+  display: grid;
+  gap: 12px;
+}
+.event-wish-heading .event-list-context h2,
+.event-wish-heading .event-list-context > p {
+  margin: 0;
+}
+.event-wish-heading .event-list-context .event-date {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: -8px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.event-wish-heading .event-date svg {
+  flex: none;
+}
+.reorder-form > .form-actions {
+  flex-direction: row;
+  gap: 12px;
+}
+.reorder-form > .form-actions > .button {
+  width: auto;
+}

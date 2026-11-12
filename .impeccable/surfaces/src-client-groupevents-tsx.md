@@ -25,3 +25,5 @@ related_targets: ["src/client/ListPolicyFields.tsx", "src/client/ListIndex.tsx",
 
 
 Managed people appear in event selectors only when explicitly shared with that group and backed by a manager who belongs to it. Selection creates their normal event wishlist. Removing profile sharing reconciles event eligibility and archives the removed participant's list; choosing them again restores the same list. Own-recipient event lists omit Your spending.
+
+Event wish-list headers place the calendar beside the optional date, without an icon beside the event name. Reorder forms share a primary-first Save order / Cancel footer.

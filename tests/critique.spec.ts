@@ -5138,8 +5138,14 @@ for (const engine of ["chromium", "webkit"] as const) {
         .getByRole("button", { name: "Get details", exact: true })
         .click();
       await expect(
-        page.getByRole("button", { name: "Save draft" }),
+        page.getByRole("button", { name: "Save for later" }),
       ).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: "Save draft", exact: true }),
+      ).toHaveCount(0);
+      await expect(
+        page.getByRole("button", { name: "Add to wish list", exact: true }),
+      ).toBeDisabled();
       await page
         .getByLabel("Item name", { exact: true })
         .fill("My chosen headphones");
@@ -5156,6 +5162,9 @@ for (const engine of ["chromium", "webkit"] as const) {
       await expect(page.getByLabel("Item name", { exact: true })).toHaveValue(
         "My chosen headphones",
       );
+      await expect(
+        page.getByRole("button", { name: "Save draft", exact: true }),
+      ).toBeEnabled();
       await page.screenshot({
         path: testInfo.outputPath(`draft-${engine}.png`),
         fullPage: true,
@@ -5334,7 +5343,10 @@ for (const width of [390, 1440]) {
     await expect(
       page.getByText("Bring your favorite gift ideas.", { exact: true }),
     ).toBeVisible();
-    await expect(page.locator(".event-list-context h2 svg")).toBeVisible();
+    await expect(page.locator(".event-list-context h2 svg")).toHaveCount(0);
+    await expect(page.locator(".event-list-context .event-date")).toHaveCount(
+      0,
+    );
     const ideas = await page.locator(".list-gift-ideas").boundingBox();
     const itemsHeading = await page
       .getByRole("heading", { name: "On this wish list", exact: true })

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-12T17:33:44.270463+00:00",
+  "generatedAt": "2026-11-12T17:34:23.154989+00:00",
   "title": "Design System: Little Hint",
   "extensions": {
     "colorMeta": {
@@ -1126,7 +1126,10 @@
       "actions": "Two fixed rows without an added gap: outlined Make cover with 4px by 8px padding and a star, or checked green Cover photo status in a 32px line. Neutral Replace and destructive Remove align toward the top of their 44px targets."
     },
     "sharedCost": {
-      "fields": ["Total gift cost in USD", "Your contribution in USD"],
+      "fields": [
+        "Total gift cost in USD",
+        "Your contribution in USD"
+      ],
       "summary": [
         "Goal from others",
         "Already pledged",
@@ -1271,9 +1274,9 @@
     {
       "name": "Event wish-list heading",
       "kind": "custom",
-      "description": "Recipient title and page actions share the desktop top row. The event name uses 18px medium text and its saved description uses 16px regular text. Privacy opens a popover without moving the management link or items.",
-      "html": "<header class=\"ds-recipient-heading\"><div class=\"ds-title-row\"><h1>Your wish list</h1><button>Add item</button></div><h2>Family celebration</h2><p>Share a few things you would love.</p><div class=\"ds-metadata-row\"><button class=\"ds-privacy-trigger\" aria-label=\"Keep it a surprise Privacy details\">Keep it a surprise <svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"M12 16v-4M12 8h.01\"/></svg></button><a href=\"#event\">Manage event →</a></div><p class=\"ds-context\">You manage the items. Event leaders manage the settings.</p></header>",
-      "css": ".ds-recipient-heading{font:14px/1.6 system-ui;color:var(--text,#2b201d)}.ds-recipient-heading h1{font-size:34px;line-height:1.15;margin:0 0 12px}.ds-recipient-heading h2{font-size:18px;font-weight:500;line-height:1.4;letter-spacing:normal;margin:0 0 12px}.ds-recipient-heading p{font-size:16px;color:var(--muted,#746057);max-width:65ch}.ds-recipient-heading .ds-context{font-size:13px}.ds-privacy-trigger{font:inherit;min-height:44px;background:transparent;color:var(--muted,#746057);border:0;padding:4px 0;text-align:left;cursor:pointer}.ds-privacy-trigger:focus-visible{outline:3px solid var(--accent,#aa4d37);outline-offset:3px}.ds-title-row,.ds-metadata-row{display:flex;justify-content:space-between;gap:16px;align-items:center;flex-wrap:wrap}.ds-title-row button{min-height:44px;border:0;border-radius:8px;padding:10px 16px;background:var(--accent,#aa4d37);color:var(--on-accent,#fff8f0);font:inherit}.ds-metadata-row a{color:var(--accent,#aa4d37)}"
+      "description": "Recipient title and page actions share the desktop top row. The event name uses 18px medium text and its saved description uses 16px regular text. Privacy opens a popover without moving the management link or items. The calendar belongs to the optional 14px date, with 4px from the event name and 12px before the description.",
+      "html": "<header class=\"ds-recipient-heading\"><div class=\"ds-title-row\"><h1>Your wish list</h1><button>Add item</button></div><h2>Family celebration</h2><p class=\"ds-event-date\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><rect x=\"3\" y=\"5\" width=\"18\" height=\"16\" rx=\"2\"/><path d=\"M16 3v4M8 3v4M3 11h18\"/></svg><time datetime=\"2026-12-25\">December 25, 2026</time></p><p>Share a few things you would love.</p><div class=\"ds-metadata-row\"><button class=\"ds-privacy-trigger\" aria-label=\"Keep it a surprise Privacy details\">Keep it a surprise <svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"M12 16v-4M12 8h.01\"/></svg></button><a href=\"#event\">Manage event →</a></div><p class=\"ds-context\">You manage the items. Event leaders manage the settings.</p></header>",
+      "css": ".ds-recipient-heading{font:14px/1.6 system-ui;color:var(--text,#2b201d)}.ds-recipient-heading h1{font-size:34px;line-height:1.15;margin:0 0 12px}.ds-recipient-heading h2{font-size:18px;font-weight:500;line-height:1.4;letter-spacing:normal;margin:0 0 12px}.ds-recipient-heading p{font-size:16px;color:var(--muted,#746057);max-width:65ch}.ds-recipient-heading .ds-context{font-size:13px}.ds-privacy-trigger{font:inherit;min-height:44px;background:transparent;color:var(--muted,#746057);border:0;padding:4px 0;text-align:left;cursor:pointer}.ds-privacy-trigger:focus-visible{outline:3px solid var(--accent,#aa4d37);outline-offset:3px}.ds-title-row,.ds-metadata-row{display:flex;justify-content:space-between;gap:16px;align-items:center;flex-wrap:wrap}.ds-title-row button{min-height:44px;border:0;border-radius:8px;padding:10px 16px;background:var(--accent,#aa4d37);color:var(--on-accent,#fff8f0);font:inherit}.ds-metadata-row a{color:var(--accent,#aa4d37)} .ds-recipient-heading h2{margin-bottom:4px}.ds-recipient-heading .ds-event-date{display:flex;align-items:center;gap:8px;font-size:14px;line-height:1.5;margin:0 0 12px}"
     },
     {
       "name": "Spending dialog actions",
@@ -1335,9 +1338,9 @@
     {
       "name": "Saved draft actions",
       "kind": "custom",
-      "description": "Two paired actions with a full-width privacy note above; primary save precedes the outlined draft action. Buttons stack at full width on phones.",
+      "description": "Two paired actions with a full-width privacy note above; primary save precedes the outlined draft action. Buttons stack at full width on phones. During lookup the primary action is disabled, and Save for later keeps the lookup active. Save draft returns after completion or failure.",
       "html": "<div class=\"ds-draft-actions\"><p>Only you can see this draft until you publish.</p><button class=\"ds-draft-primary\">Add to wish list</button><button class=\"ds-draft-secondary\">Save draft</button></div>",
-      "css": ".ds-draft-actions { display:flex; flex-wrap:wrap; gap:8px; align-items:start; justify-content:flex-end; } .ds-draft-actions button { min-height:44px; font-size:14px; font-weight:600; cursor:pointer; border-radius:8px; padding:12px 18px; } .ds-draft-primary { background:var(--accent); color:var(--on-accent); border:1px solid transparent; } .ds-draft-secondary { background:var(--paper); color:var(--text); border:1px solid var(--border); } .ds-draft-actions p { flex-basis:100%; margin:0; color:var(--muted); font-size:13px; line-height:1.5; } .ds-draft-primary:hover { opacity:.9; } .ds-draft-secondary:hover { background:var(--soft); } .ds-draft-actions button:focus-visible { outline:3px solid var(--accent); outline-offset:3px; } @media(max-width:650px) { .ds-draft-actions button { width:100%; } }"
+      "css": ".ds-draft-actions { display:flex; flex-wrap:wrap; gap:8px; align-items:start; justify-content:flex-end; } .ds-draft-actions button { min-height:44px; font-size:14px; font-weight:600; cursor:pointer; border-radius:8px; padding:12px 18px; } .ds-draft-primary { background:var(--accent); color:var(--on-accent); border:1px solid transparent; } .ds-draft-secondary { background:var(--paper); color:var(--text); border:1px solid var(--border); } .ds-draft-actions p { flex-basis:100%; margin:0; color:var(--muted); font-size:13px; line-height:1.5; } .ds-draft-primary:hover { opacity:.9; } .ds-draft-secondary:hover { background:var(--soft); } .ds-draft-actions button:focus-visible { outline:3px solid var(--accent); outline-offset:3px; } @media(max-width:650px) { .ds-draft-actions button { width:100%; } } .ds-draft-actions button:disabled{opacity:.5;cursor:not-allowed}"
     },
     {
       "name": "Background job summary",
@@ -1387,6 +1390,13 @@
       "description": "Compact personal checkbox with the shared info popover beside its label and 32px separation from Appearance. The checkbox remains editable under a global requirement, with a visible policy notice.",
       "html": "<section class=\"ds-personal-archive\"><h3>Archive privacy</h3><p class=\"ds-archive-notice\">Your administrator currently requires archive privacy for everyone. Your choice below applies when that requirement is off.</p><div class=\"ds-archive-option\"><label class=\"ds-archive-check\"><input type=\"checkbox\">Hide my archived wishes and gift ideas from other users</label><button class=\"ds-archive-info\" aria-label=\"About archive privacy\"><svg width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"M12 16v-4M12 8h.01\"/></svg></button></div></section>",
       "css": ".ds-personal-archive{color:var(--text);margin-top:32px}.ds-personal-archive h3{margin-bottom:4px}.ds-archive-notice{background:var(--soft);color:var(--text);padding:16px;border-radius:8px}.ds-archive-option{display:flex;align-items:center;gap:2px}.ds-archive-check{display:flex;align-items:center;gap:9px;min-width:0;min-height:44px;margin:0;padding:0;font-size:14px;line-height:1.5;cursor:pointer}.ds-archive-check input{flex-shrink:0;margin:0}.ds-archive-info{display:inline-flex;align-items:center;justify-content:center;flex:none;width:44px;height:44px;padding:0;border:0;border-radius:8px;background:transparent;color:var(--muted);cursor:pointer}.ds-archive-check input:focus-visible,.ds-archive-info:focus-visible{outline:3px solid var(--accent);outline-offset:3px}"
+    },
+    {
+      "name": "Spending scope",
+      "kind": "custom",
+      "description": "Explicit filter labels distinguish matching event and list names; redundant sole-owner captions are omitted by ID.",
+      "html": "<dl class=\"ds-scope\"><div><dt>Person</dt><dd>Alex Morgan</dd></div><div><dt>Occasion</dt><dd>Family celebration</dd></div><div><dt>Wish list</dt><dd>Family celebration</dd></div></dl>",
+      "css": ".ds-scope{display:flex;flex-wrap:wrap;gap:12px 24px;margin:16px 0 0;font-family:system-ui;color:var(--text)}.ds-scope dt{font-size:12px;color:var(--muted)}.ds-scope dd{margin:0;font-size:14px;font-weight:500;overflow-wrap:anywhere}"
     }
   ],
   "narrative": {
