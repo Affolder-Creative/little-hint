@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.3.1](https://github.com/Affolder-Creative/little-hint/compare/v1.3.0...v1.3.1) (2026-11-12)
+
+
+### Features
+
+* Update Buy Me a Coffee username in FUNDING.yml ([#208](https://github.com/Affolder-Creative/little-hint/issues/208)) ([5992658](https://github.com/Affolder-Creative/little-hint/commit/5992658476008b0e4465cceadf8a330a688d2e03))
+
+
+### Fixes
+
+* clarify gift planning and improve touch controls ([#207](https://github.com/Affolder-Creative/little-hint/issues/207)) ([fbc399e](https://github.com/Affolder-Creative/little-hint/commit/fbc399e93d74ac78d90d626a630d6ff4c4f2b0ab))
+
 ## [1.3.0](https://github.com/Affolder-Creative/little-hint/compare/v1.2.1...v1.3.0) (2026-11-09)
 
 
