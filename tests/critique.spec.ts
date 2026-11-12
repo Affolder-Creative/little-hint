@@ -4411,7 +4411,10 @@ test.describe("navigation scroll restoration", () => {
     const { list } = await longList(page);
     await page.goto(`/lists/${list.id}`);
     await expect(page.locator(".gift-card")).toHaveCount(46);
-    await scroll(page, 600);
+    // Real input cancels any pending initial restoration before scrolling.
+    await page.mouse.move(600, 400);
+    await page.mouse.wheel(0, 600);
+    await expectScroll(page, 600);
     await page.locator('a[href="/people"]:visible').first().click();
     await page.goBack();
     await expectScroll(page, 600);
