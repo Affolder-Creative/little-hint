@@ -439,7 +439,16 @@ export function SpendingSummary({
   return (
     <section className="spending-quick" aria-label="Your spending">
       <div className="spending-quick-title">
-        Your spending <span>· All time</span>
+        Your spending{" "}
+        <span>
+          ·{" "}
+          {event ||
+          (list && world.lists.find((l) => l.id === list)?.groupEventId)
+            ? "This event"
+            : list
+              ? "This wish list"
+              : "All time"}
+        </span>
       </div>
       <div className="spending-quick-metric">
         <span>Recorded spending</span>
@@ -1005,7 +1014,8 @@ export function SpendingPage() {
     filter.occasion &&
       (data.occasions.find((o) => o.id === filter.occasion)?.name ??
         "Selected occasion"),
-    filter.year ?? "All time",
+    filter.year ??
+      (filter.event || filter.occasion || filter.list ? null : "All time"),
   ]
     .filter(Boolean)
     .join(" · ");
@@ -1192,12 +1202,12 @@ export function SpendingPage() {
               Add personal occasion
             </button>
           </div>
-          <Field label="Period">
+          <Field label="Date range">
             <select
               value={filter.year ?? ""}
               onChange={(e) => set("year", e.target.value)}
             >
-              <option value="">All time</option>
+              <option value="">All dates</option>
               {[...(history.data?.years ?? [new Date().getFullYear()])]
                 .sort((a, b) => b - a)
                 .map((y) => (

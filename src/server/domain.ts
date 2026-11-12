@@ -1,3 +1,4 @@
+import { validCalendarDate } from "../shared/list-dates";
 import { itemPhotoLimit } from "./photo-config";
 import { itemPhotos } from "../shared/item-photos";
 import { noteDocumentSchema, normalizeNote } from "../shared/helpful-note";
@@ -134,6 +135,11 @@ import {
 } from "../shared/invitations";
 
 const eventInput = z.object({
+  eventDate: z
+    .string()
+    .refine(validCalendarDate, "Choose a valid event date.")
+    .nullable()
+    .optional(),
   spendingGuidelineCents: spendingGuideline.optional(),
   ...listDates,
   name: text,
@@ -369,6 +375,8 @@ export function giftView(s: State, a: Actor, i: Item): GiftView {
       exchange: !!(r.exchangeId || reservationNeedsReview(s, r)),
       ...(!own && !(r.exchangeId || reservationNeedsReview(s, r))
         ? {
+            poolTotalCents: r.poolTotalCents,
+            poolOwnContributionCents: r.poolOwnContributionCents,
             poolTargetCents: r.poolTargetCents,
             contributions: s.contributions
               .filter((c) => c.reservationId === r.id)

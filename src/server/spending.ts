@@ -279,6 +279,14 @@ export function syncSpending(s: State, a: Actor) {
       s.spendingRecords.push(plan);
     }
     const remaining = r.quantity - r.purchased;
+    if (r.poolTotalCents !== undefined && r.quantity > 0) {
+      const estimate = Math.round((r.poolTotalCents * remaining) / r.quantity);
+      if (plan.amountCents !== estimate) {
+        plan.amountCents = estimate;
+        plan.revision++;
+      }
+      plan.unitEstimateCents = r.poolTotalCents / r.quantity;
+    }
     if (remaining !== plan.quantity) {
       plan.amountCents =
         plan.unitEstimateCents == null

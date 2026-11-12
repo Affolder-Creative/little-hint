@@ -1,3 +1,5 @@
+import { syncSpending, spendingView } from "../src/server/spending";
+import { spendingTotals } from "../src/shared/spending";
 import { describe, expect, it } from "vitest";
 import { command, stamp, world, noticeAllowed } from "../src/server/domain";
 import { inbox } from "../src/server/activity";
@@ -418,4 +420,123 @@ describe("advisory spending estimates", () => {
       }).exchangeRecipientId,
     ).toBe(assigned[1][1]);
   });
+});
+
+describe("shared cost setup", () => {
+  it("counts current responsibility, caps pledges, and preserves private amounts", () => {
+    const f = fixture(),
+      gift = f.item(8000),
+      r = f.reserve(gift);
+    command(f.s, f.actors[1], "reservations.update", {
+      ...r,
+      poolTotalCents: 10000,
+      poolOwnContributionCents: 2500,
+    });
+    expect(r.poolTargetCents).toBe(7500);
+    expect(f.summary().cents).toBe(10000);
+    command(f.s, f.actors[2], "contributions.create", {
+      reservationId: r.id,
+      amountCents: 3000,
+    });
+    expect(f.summary().cents).toBe(7000);
+    expect(() =>
+      command(f.s, f.actors[1], "reservations.update", {
+        ...r,
+        poolOwnContributionCents: 8000,
+      }),
+    ).toThrow(/already promised/);
+    expect(() =>
+      command(f.s, f.actors[2], "contributions.create", {
+        reservationId: r.id,
+        amountCents: 5000,
+      }),
+    ).toThrow(/more than/);
+    expect(
+      world(f.s, f.actors[0]).items.find((i) => i.id === gift.id)?.reservations,
+    ).toBeUndefined();
+  });
+  it("supports full self funding and legacy target edits", () => {
+    const f = fixture(),
+      r = f.reserve(f.item(null));
+    command(f.s, f.actors[1], "reservations.update", {
+      ...r,
+      poolTotalCents: 10000,
+      poolOwnContributionCents: 10000,
+    });
+    expect(r.poolTargetCents).toBe(0);
+    expect(f.summary()).toMatchObject({ cents: 10000, unknown: 0 });
+    const { poolTotalCents, poolOwnContributionCents, ...legacy } = r;
+    command(f.s, f.actors[1], "reservations.update", {
+      ...legacy,
+      poolTargetCents: 5000,
+    });
+    expect(r.poolTotalCents).toBe(15000);
+    expect(r.poolOwnContributionCents).toBe(10000);
+  });
+  it("rejects incomplete or excessive personal shares", () => {
+    const f = fixture(),
+      r = f.reserve(f.item(10000));
+    expect(() =>
+      command(f.s, f.actors[1], "reservations.update", {
+        ...r,
+        poolTotalCents: 10000,
+      }),
+    ).toThrow(/both/);
+    expect(() =>
+      command(f.s, f.actors[1], "reservations.update", {
+        ...r,
+        poolTotalCents: 10000,
+        poolOwnContributionCents: 10001,
+      }),
+    ).toThrow(/cannot exceed/);
+  });
+  it("persists and clears event calendar dates", () => {
+    const f = fixture();
+    command(f.s, f.actors[0], "group-events.update", {
+      ...f.event,
+      eventDate: "2028-02-29",
+    });
+    expect(world(f.s, f.actors[1]).groupEvents[0].eventDate).toBe("2028-02-29");
+    expect(() =>
+      command(f.s, f.actors[0], "group-events.update", {
+        ...f.event,
+        eventDate: "2027-02-29",
+      }),
+    ).toThrow();
+    command(f.s, f.actors[0], "group-events.update", {
+      ...f.event,
+      eventDate: null,
+    });
+    expect(f.event.eventDate).toBeNull();
+  });
+});
+
+it("uses the configured full cost in optional spending without recording payment", () => {
+  const f = fixture();
+  command(f.s, f.actors[1], "spending.settings", {
+    enabled: true,
+    summaries: true,
+  });
+  const r = f.reserve(f.item(8000));
+  command(f.s, f.actors[1], "reservations.update", {
+    ...r,
+    poolTotalCents: 10000,
+    poolOwnContributionCents: 2500,
+  });
+  syncSpending(f.s, f.actors[1]);
+  expect(spendingTotals(spendingView(f.s, f.actors[1]).records)).toMatchObject({
+    planned: 10000,
+    spent: 0,
+  });
+  command(f.s, f.actors[2], "contributions.create", {
+    reservationId: r.id,
+    amountCents: 3000,
+  });
+  expect(spendingTotals(spendingView(f.s, f.actors[1]).records)).toMatchObject({
+    planned: 7000,
+    spent: 0,
+  });
+  expect(f.s.spendingRecords.some((record) => record.kind === "purchase")).toBe(
+    false,
+  );
 });

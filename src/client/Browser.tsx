@@ -165,8 +165,22 @@ export function Browser({
         itemStatus === "archived" && (
           <p className="notice">
             These items are archived and kept for reference. Please don't
-            reserve or buy them. When choosing a gift, take a look at Active
-            items instead.
+            reserve or buy them. When choosing a gift, take a look at{" "}
+            <button
+              type="button"
+              className="text-button"
+              onClick={() => {
+                setItemStatus("active");
+                document
+                  .querySelector<HTMLButtonElement>(
+                    '[aria-label="Item status"] button',
+                  )
+                  ?.focus();
+              }}
+            >
+              Active items
+            </button>{" "}
+            instead.
           </p>
         )}
       {collectionTotal > 0 && (

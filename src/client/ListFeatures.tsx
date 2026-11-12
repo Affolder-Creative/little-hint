@@ -7,14 +7,16 @@ import { useApp } from "./context";
 
 export function RevealPolicy({
   list,
+  own = false,
 }: {
+  own?: boolean;
   list: Pick<List, "revealAfter" | "timeZone" | "revealExchangeGivers">;
 }) {
   const revealed = dateHasElapsed(list.revealAfter, list.timeZone);
   return (
     <p className="privacy-note">
       {list.revealAfter
-        ? `${revealed ? "List owners can now see purchased gifts, who bought them, and who contributed, even with Keep it a surprise." : `List owners can view purchased gifts, buyers, and contributors after ${list.revealAfter} ends (${list.timeZone ?? "UTC"}), even with Keep it a surprise.`} ${list.revealExchangeGivers ? "Secret exchange purchases and giver names are also included." : "Secret exchange purchases and giver names stay hidden; other purchased gifts are included."}`
+        ? `${revealed ? `${own ? "You" : "List owners"} can now see purchased gifts, who bought them, and who contributed, even with Keep it a surprise.` : `${own ? "You" : "List owners"} can view purchased gifts, buyers, and contributors after ${list.revealAfter} ends (${list.timeZone ?? "UTC"}), even with Keep it a surprise.`} ${list.revealExchangeGivers ? "Secret exchange purchases and giver names are also included." : "Secret exchange purchases and giver names stay hidden; other purchased gifts are included."}`
         : "No gift summary is scheduled. Secret exchange giver names stay hidden."}{" "}
       Contribution amounts and private notes stay private.
     </p>

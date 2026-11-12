@@ -1,3 +1,4 @@
+import { EventDate } from "./EventDate";
 import { SpendingSummary } from "./Spending";
 import { PrivacyDetails } from "./PrivacyDetails";
 import { useNavigationState } from "./NavigationScroll";
@@ -139,6 +140,7 @@ export function EventForm({
                     sourceRevision: repeatFrom.revision,
                   }
                 : { groupId }),
+            eventDate: String(form.get("eventDate") ?? "") || null,
             name: String(form.get("name") ?? ""),
             description: String(form.get("description") ?? ""),
             spendingGuidelineCents: guidelineValue(form),
@@ -200,6 +202,16 @@ export function EventForm({
       ) : (
         <p className="muted">For {group.name}</p>
       )}
+      <Field
+        label="Event date"
+        hint="Optional. The day this occasion takes place."
+      >
+        <input
+          type="date"
+          name="eventDate"
+          defaultValue={initial?.eventDate ?? ""}
+        />
+      </Field>
       <Field label="Event name">
         <input
           name="name"
@@ -468,13 +480,22 @@ export function GroupEventsSection({ archived }: { archived: boolean }) {
         return (
           <article className="event-entry" key={event.id}>
             <div className="event-entry-heading">
-              <span className="list-symbol">
-                <CalendarDays size={24} />
-              </span>
+              <Link
+                className="list-symbol"
+                to={`/events/${event.id}`}
+                aria-label={`Open ${event.name}`}
+              >
+                <CalendarDays size={24} aria-hidden="true" />
+              </Link>
               <div className="event-entry-copy">
                 <h3>
                   <Link to={`/events/${event.id}`}>{event.name}</Link>
                 </h3>
+                {event.eventDate && (
+                  <p className="event-date">
+                    <EventDate date={event.eventDate} />
+                  </p>
+                )}
                 <p>
                   Shared with:{" "}
                   {world.groups.find((g) => g.id === event.groupId)?.name ??
@@ -688,6 +709,11 @@ export function EventPage() {
           </ActionMenu>
         )}
       </Header>
+      {event.eventDate && (
+        <p className="event-date">
+          <EventDate date={event.eventDate} />
+        </p>
+      )}
       <SpendingSummary event={event.id} />
       <div className="event-overview">
         <PrivacyDetails key={event.id} list={event} />
@@ -701,7 +727,7 @@ export function EventPage() {
           </div>
           {!event.archived && event.archiveAfter && (
             <div>
-              <dt>Lists archive</dt>
+              <dt>Archive lists</dt>
               <dd>
                 After{" "}
                 <time dateTime={event.archiveAfter}>

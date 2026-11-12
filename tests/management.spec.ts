@@ -92,7 +92,10 @@ test("priorities, shared ordering, Trash, and event preservation", async ({
   ]);
   await page.getByLabel("Actions for Ceramic mug", { exact: true }).click();
   await page.getByRole("button", { name: "Restore item", exact: true }).click();
-  await page.getByRole("button", { name: "Active items", exact: true }).click();
+  await page
+    .getByRole("group", { name: "Item status", exact: true })
+    .getByRole("button", { name: "Active items", exact: true })
+    .click();
   await page.getByLabel("Actions for Ceramic mug", { exact: true }).click();
   await page
     .getByRole("button", { name: "Move to Trash", exact: true })
