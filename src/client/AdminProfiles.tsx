@@ -48,7 +48,14 @@ export function AdminProfiles() {
     <section className="admin-panel" aria-label="Users and profiles">
       <h3>Users &amp; profiles</h3>
       <p>Find someone to edit their name or manage their account.</p>
-      <Field label="Find a user or profile">
+      <Field
+        label="Find a user or profile"
+        hint={
+          !search.trim()
+            ? "Start typing a name or email to find a user or profile."
+            : undefined
+        }
+      >
         <input
           ref={searchInput}
           type="search"
@@ -62,11 +69,7 @@ export function AdminProfiles() {
           }}
         />
       </Field>
-      {!search.trim() ? (
-        <p className="muted">
-          Start typing a name or email to find a user or profile.
-        </p>
-      ) : term !== search.trim() || query.isPending ? (
+      {!search.trim() ? null : term !== search.trim() || query.isPending ? (
         <p role="status">Loading profiles…</p>
       ) : query.error ? (
         <p role="alert">

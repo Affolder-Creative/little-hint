@@ -210,3 +210,5 @@ drafts remain device-only. Saved drafts are available in My lists and the destin
 ## Item photos
 
 Wishes and gift ideas support optional photo galleries, including saved drafts. Shop lookups still import one photo. Editors upload additional photos, replace or remove photos, and choose a cover; other photos retain upload order. The deployment-only ITEM_PHOTO_LIMIT defaults to five total photos including the imported photo. Cards retain the cover with a photo count. Detail galleries load only for multiple photos, with manual swipe, button, and keyboard navigation. Existing galleries survive a reduced limit.
+
+Group events have an optional calendar event date, separate from archive and reveal schedules. Repeated events start without an event date. Shared-cost setup records full estimated cost and the buyer's intended share, deriving the external contribution goal. Existing pledges constrain reductions. Personal spending remains full cost minus net pledges until others commit; setup never creates a payment. Legacy goals remain unchanged until explicitly edited.

@@ -7,7 +7,9 @@ import "./privacy-details.css";
 
 export function PrivacyDetails({
   list,
+  own = false,
 }: {
+  own?: boolean;
   list: Pick<
     List,
     "mode" | "revealAfter" | "timeZone" | "revealExchangeGivers"
@@ -90,7 +92,7 @@ export function PrivacyDetails({
           </button>
         </div>
         <div id={`${id}-body`}>
-          <RevealPolicy list={list} />
+          <RevealPolicy list={list} own={own} />
         </div>
       </div>
     </div>

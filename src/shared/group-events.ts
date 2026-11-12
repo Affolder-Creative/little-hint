@@ -37,6 +37,7 @@ export function repeatEventDefaults(
     timeZone: event.timeZone,
     spendingGuidelineCents: event.spendingGuidelineCents ?? null,
     revealExchangeGivers: event.revealExchangeGivers,
+    eventDate: null,
     archiveAfter: null,
     revealAfter: null,
     participantIds: event.participantIds.filter((id) => eligible.has(id)),

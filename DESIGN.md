@@ -295,7 +295,7 @@ Gift details group the recipient, title, status, price, and quantity with the pr
 
 ### Archived item guidance
 
-Archived item tabs show a persistent soft notice directly below the tabs and above search. The notice explains that items are kept for reference and directs gift selection to Active items. Reuse the existing notice typography, padding and theme colors; text wraps naturally on phones. Keep the notice visible through filtered-empty results and hide it in active views.
+Archived item tabs show a persistent soft notice directly below the tabs and above search. The notice explains that items are kept for reference and includes an underlined Active items action that selects and focuses that tab. Reuse the existing notice typography, padding and theme colors; text wraps naturally on phones. Keep the notice visible through filtered-empty results and hide it in active views.
 
 ### Collection pagination
 
@@ -375,7 +375,7 @@ Event metadata and privacy form one heading group. On wide screens, participant-
 
 Event wish lists stay nested beside their event. When the selected Active or Archived view contains an editable event list, the lower collection is labeled Other wish lists. Its empty state is a short sentence pointing to the event lists above. Without editable event lists, retain Your lists and the existing first-list empty state. Lists from unavailable events remain accessible in the lower collection.
 
-Private product-import drafts use compact divided rows beside their destination list and in My lists. Titles use 15px medium text and open the external product link in a new tab, with an inline external-link icon and underline on hover. Status text names Finding details, Ready to review, or Needs details. Working dots animate within a fixed-width slot and remain static for reduced motion. Ready status uses a green check and a soft-filled Review and add action; Needs details uses an accent help icon and Add details, with Try again available for failed lookups. A slow lookup offers Save draft and continue after 15 seconds; fields stay editable. Closing saves the latest edits before dismissing. Drafts remain owner-only until Review and add completes.
+Private product-import drafts use compact divided rows beside their destination list and in My lists. Titles use 15px medium text and open the external product link in a new tab, with an inline external-link icon and underline on hover. Status text names Finding details, Ready to review, or Needs details. Working dots cycle through zero, one, two, and three visible dots at 500ms intervals within a fixed-width slot and remain static for reduced motion. Ready status uses a green check and a soft-filled Review and add action; Needs details uses an accent help icon and Add details, with Try again available for failed lookups. A slow lookup offers Save draft and continue after 15 seconds; fields stay editable. Closing saves the latest edits before dismissing. Drafts remain owner-only until Review and add completes.
 
 ### Inputs / Fields
 
@@ -447,7 +447,7 @@ that the entry starts private.
 
 ### Profiles and invitation rows
 
-Profile settings keep the avatar fixed, the name and account status together, and related actions in one wrapping group. On screens up to 650px, actions move beneath the name. Family-group members keep a compact ellipsis action menu beside the name at every width. Long names wrap within their text column. The menu groups Transfer ownership and a separated destructive Remove action with outline icons; its confirmation distinguishes group access from account deletion.
+Profile settings keep the avatar fixed, the name and account status together, and related actions in one wrapping group. The Edit profile action stays to the right, centered beside the name and account status on phones and desktop. Gift preferences stays beneath the identity text. Family-group members keep a compact ellipsis action menu beside the name at every width. Long names wrap within their text column. The menu groups Transfer ownership and a separated destructive Remove action with outline icons; its confirmation distinguishes group access from account deletion.
 
 Invitation rows place email, status, and expiration together, followed by Share sign-in link and Cancel invitation in a separate action group. Use a flexible text column and an intrinsic action column on wider screens. At 650px and below, the action group moves below the details, with controls sharing available width or stacking at their normal word boundaries. Emails may wrap anywhere; button labels must not break letter by letter. Rows use 20px vertical padding and a 16px gap; action groups use a 12px gap.
 
@@ -612,6 +612,14 @@ Action menus position within the visible viewport above the bottom navigation an
 ### Connection fallback
 
 Connection screens use approved horizontal artwork, the existing headline and body typography, and the current light or dark palette. Center a narrow text group with generous space after the logo, then a primary retry action. Supporting text uses the muted foreground. Personal draft controls follow as a separate, quieter group. Center the standalone clear-device action beneath this group. Preserve mobile safe-area padding, visible focus, and a stable layout during retries. A playful headline may introduce the problem; the explanation and recovery action stay plain.
+
+### Shared costs and event context
+
+Shared-cost setup separates total gift cost, the buyer's intended contribution, and the calculated goal from others. A flat summary uses existing dividers, supporting type and tabular figures to distinguish pledged and received amounts from the amount still needing contributors. Supporting copy explains that a goal does not record a payment. All fields remain labeled and use the established field-help pattern.
+
+Event calendar dates use a written month and the supporting text role below the event name; missing dates occupy no space. The event-row calendar icon links to the event. Quick spending summaries identify This event or This wish list where scoped, while person and general Buying summaries retain All time. Detailed filters label the date selector Date range and its unrestricted value All dates. Scoped captions omit the redundant unrestricted period. Buying rows label current shop values Listed price and include quantity subtotals separately from recorded payments.
+
+Reordering retains arrow controls and explicit Save/Cancel. A 44px handle captures touch or mouse movement after a small threshold. The dragged row follows the pointer in the dialog with a paper preview, control border and temporary offset shadow; the target row uses the existing soft background. Edge scrolling handles long lists. Escape and interrupted gestures cancel the drag. Normal scrolling remains available outside handles.
 
 ## Do's and Don'ts
 

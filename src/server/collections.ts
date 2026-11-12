@@ -371,6 +371,12 @@ export function registerCollections(
         itemId: z.string().uuid().optional(),
         quantity: z.coerce.number().int().min(0).optional(),
         poolReservationId: z.string().uuid().optional(),
+        poolTotalCents: z.coerce
+          .number()
+          .int()
+          .positive()
+          .max(100000000)
+          .optional(),
         poolTargetCents: z.coerce.number().int().min(0).optional(),
         contributionReservationId: z.string().uuid().optional(),
         amountCents: z.coerce.number().int().min(0).optional(),

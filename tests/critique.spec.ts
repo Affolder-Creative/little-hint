@@ -5610,3 +5610,182 @@ for (const width of [320, 768, 1440]) {
     ).toBeLessThanOrEqual(1);
   });
 }
+
+for (const width of [320, 393, 1440]) {
+  for (const theme of ["light", "dark"]) {
+    test(`gifting refinements polish ${width} ${theme}`, async ({
+      page,
+    }, testInfo) => {
+      const { state, actor } = await preview(page, 1);
+      await page.setViewportSize({ width, height: 900 });
+      await page.addInitScript(
+        (value) => localStorage.setItem("little-hint:theme", value),
+        theme,
+      );
+      const reservation = state.reservations.find(
+        (r) => r.buyerId === actor.id && !r.exchangeId && r.quantity > 0,
+      )!;
+      const gift = state.items.find((i) => i.id === reservation.itemId)!;
+      await page.goto("/buying");
+      const row = page.locator(".buying-row").filter({ hasText: gift.title });
+      await expect(
+        row.getByText(/Listed price|Price not listed/),
+      ).toBeVisible();
+      await row.locator("summary").click();
+      await row
+        .getByRole("button", { name: /Share the cost|Edit contribution goal/ })
+        .click();
+      await page
+        .getByLabel("Total gift cost in USD", { exact: true })
+        .fill("100");
+      await page
+        .getByLabel("Your contribution in USD", { exact: true })
+        .fill("25");
+      await expect(page.getByRole("dialog")).toContainText(
+        "Goal from others: $75",
+      );
+      await expect(page.getByRole("dialog")).toContainText(
+        "Still needs contributors:",
+      );
+      await page.screenshot({
+        path: testInfo.outputPath("shared-cost.png"),
+        fullPage: true,
+      });
+      await page
+        .getByRole("button", { name: "Save contribution goal", exact: true })
+        .click();
+      await expect(page.getByRole("dialog")).toHaveCount(0);
+      expect(reservation.poolTotalCents).toBe(10000);
+      expect(reservation.poolOwnContributionCents).toBe(2500);
+      expect(reservation.poolTargetCents).toBe(7500);
+      await page.goto("/settings?section=profile");
+      await expect(
+        page.getByRole("heading", {
+          name: "Profile & appearance",
+          exact: true,
+        }),
+      ).toBeVisible();
+      await page.screenshot({
+        path: testInfo.outputPath("profile.png"),
+        fullPage: true,
+      });
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+      ).toBe(true);
+    });
+  }
+}
+
+test("touch reordering follows the finger and commits on release", async ({
+  page,
+}) => {
+  const { state, actor } = await preview(page);
+  const list = state.lists.find((l) => l.name === "Alex's wishes")!;
+  command(state, actor, "items.create", {
+    listId: list.id,
+    title: "Touch second wish",
+  });
+  await page.setViewportSize({ width: 393, height: 850 });
+  await page.goto(`/lists/${list.id}`);
+  await page.getByRole("button", { name: /^Sort & filter/ }).click();
+  await page
+    .getByRole("button", { name: "Reorder items", exact: true })
+    .click();
+  const rows = page.locator(".reorder-list > li");
+  const original = await rows
+    .locator("span:not(.drag-handle)")
+    .allTextContents();
+  const handle = (await rows.last().locator(".drag-handle").boundingBox())!;
+  const first = (await rows.first().boundingBox())!;
+  const cdp = await page.context().newCDPSession(page);
+  const x = handle.x + handle.width / 2,
+    y = handle.y + handle.height / 2;
+  await cdp.send("Input.dispatchTouchEvent", {
+    type: "touchStart",
+    touchPoints: [{ x, y }],
+  });
+  await cdp.send("Input.dispatchTouchEvent", {
+    type: "touchMove",
+    touchPoints: [{ x, y: y - 10 }],
+  });
+  await expect(page.locator(".reorder-preview")).toBeVisible();
+  await cdp.send("Input.dispatchTouchEvent", {
+    type: "touchMove",
+    touchPoints: [{ x, y: first.y + 5 }],
+  });
+  await cdp.send("Input.dispatchTouchEvent", {
+    type: "touchEnd",
+    touchPoints: [],
+  });
+  await expect(rows.locator("span:not(.drag-handle)")).toHaveText(
+    [...original].reverse(),
+  );
+  await page.getByRole("button", { name: "Save order", exact: true }).click();
+  await expect(page.locator(".gift-card .gift-title").first()).toHaveText(
+    "Touch second wish",
+  );
+});
+
+test("event dates, linked calendar icons and archive guidance retain their context", async ({
+  page,
+}, testInfo) => {
+  const { state, actor } = await preview(page);
+  const person = state.people.find((p) => p.userId === actor.id)!;
+  const group = state.groups.find((g) => g.ownerId === actor.id)!;
+  const result = command(state, actor, "group-events.create", {
+    groupId: group.id,
+    name: "Dated celebration",
+    participantIds: [person.id],
+    mode: "surprise",
+    eventDate: "2026-12-25",
+    revealAfter: "2026-12-26",
+    timeZone: "America/Indianapolis",
+  }) as { id: string };
+  const list = state.lists.find((l) => l.groupEventId === result.id)!;
+  const created = command(state, actor, "items.create", {
+    listId: list.id,
+    title: "Archived idea",
+  }) as { id: string };
+  const item = state.items.find((i) => i.id === created.id)!;
+  command(state, actor, "items.archive", {
+    id: item.id,
+    revision: item.revision,
+    archived: true,
+  });
+  await page.setViewportSize({ width: 393, height: 900 });
+  await page.goto("/lists");
+  await page
+    .getByRole("link", { name: "Open Dated celebration", exact: true })
+    .click();
+  await expect(page).toHaveURL(new RegExp(`/events/${result.id}`));
+  await expect(
+    page.getByText("December 25, 2026", { exact: true }),
+  ).toBeVisible();
+  await page.goto(`/lists/${list.id}`);
+  await expect(
+    page.getByText("December 25, 2026", { exact: true }),
+  ).toBeVisible();
+  await page.locator(".privacy-trigger").click();
+  await expect(
+    page.getByRole("dialog", { name: "Gift privacy" }),
+  ).toContainText("You can view");
+  await page.getByRole("button", { name: "Close privacy details" }).click();
+  await page
+    .getByRole("button", { name: "Archived items", exact: true })
+    .click();
+  await page
+    .locator(".notice")
+    .getByRole("button", { name: "Active items", exact: true })
+    .click();
+  await expect(
+    page
+      .locator('[aria-label="Item status"]')
+      .getByRole("button", { name: "Active items", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await page.screenshot({
+    path: testInfo.outputPath("event-list.png"),
+    fullPage: true,
+  });
+});
