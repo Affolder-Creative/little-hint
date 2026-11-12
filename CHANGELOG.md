@@ -1,6 +1,6 @@
 # Changelog
 
-## [1.4.0](https://github.com/Affolder-Creative/little-hint/compare/v1.3.0...v1.4.0) (2026-11-12)
+## [1.3.1](https://github.com/Affolder-Creative/little-hint/compare/v1.3.0...v1.3.1) (2026-11-12)
 
 
 ### Features
