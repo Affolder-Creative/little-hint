@@ -1,6 +1,6 @@
 import { test, expect, webkit, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
-import { spendingView } from "../src/server/spending";
+import { spendingHistory, spendingView } from "../src/server/spending";
 import { itemPage } from "../src/server/collections";
 import { shoppingChoices } from "../src/client/shopping-context";
 import { stagingFixtures } from "../src/server/staging-fixtures";
@@ -847,3 +847,147 @@ test("managed profile creation keeps sharing compact", async ({
     fullPage: true,
   });
 });
+
+for (const width of [393, 1440]) {
+  test(`lookup actions preserve edits and offer manual entry at ${width}px`, async ({
+    page,
+  }, info) => {
+    const { state } = await setup(page);
+    const job = state.imports.find((j) => j.status === "running")!;
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto(`/lists/${job.draft!.listId}`);
+    await page.getByRole("button", { name: "Open draft", exact: true }).click();
+    const dialog = page.getByRole("dialog");
+    const add = dialog.getByRole("button", {
+      name: "Add to wish list",
+      exact: true,
+    });
+    await expect(add).toBeDisabled();
+    await expect(
+      dialog.getByRole("button", { name: "Save draft", exact: true }),
+    ).toHaveCount(0);
+    await dialog
+      .getByLabel("Item name", { exact: true })
+      .fill("Keep my manual title");
+    await dialog.getByRole("button", { name: "Save for later" }).click();
+    await expect(dialog).toHaveCount(0);
+    expect(job.draft!.fields.title).toBe("Keep my manual title");
+    expect(job.draft!.state).toBe("active");
+    await page.getByRole("button", { name: "Open draft", exact: true }).click();
+    await page.screenshot({
+      path: info.outputPath("running-lookup.png"),
+      fullPage: true,
+    });
+    await dialog
+      .getByRole("button", { name: "Enter details manually" })
+      .click();
+    await expect(add).toBeEnabled();
+    await expect(dialog.getByLabel("Item name", { exact: true })).toHaveValue(
+      "Keep my manual title",
+    );
+    expect(job.draft!.state).toBe("discarded");
+    job.status = "complete";
+    job.result = { title: "Late shop result" };
+    await dialog
+      .getByLabel("Item name", { exact: true })
+      .fill("Unsaved manual change");
+    await dialog.getByRole("button", { name: "Close dialog" }).click();
+    await expect(
+      dialog.getByRole("button", { name: "Keep editing" }),
+    ).toBeVisible();
+    await dialog.getByRole("button", { name: "Keep editing" }).click();
+    await expect(dialog.getByLabel("Item name", { exact: true })).toHaveValue(
+      "Unsaved manual change",
+    );
+  });
+}
+
+for (const [width, theme] of [
+  [393, "light"],
+  [768, "dark"],
+  [1440, "light"],
+] as const) {
+  test(`event, reorder and spending context at ${width}px`, async ({
+    page,
+  }, info) => {
+    const { state, actor } = await setup(page);
+    await page.setViewportSize({ width, height: 1000 });
+    await page.addInitScript(
+      (theme) => localStorage.setItem("little-hint:theme", theme),
+      theme,
+    );
+    const event = state.groupEvents[0];
+    event.eventDate = "2026-12-25";
+    const list = state.lists.find(
+      (l) =>
+        l.groupEventId === event.id &&
+        l.ownerIds.includes(
+          state.people.find((p) => p.userId === actor.id)!.id,
+        ),
+    )!;
+    command(state, actor, "items.create", {
+      listId: list.id,
+      title: "First wish",
+    });
+    command(state, actor, "items.create", {
+      listId: list.id,
+      title: "Second wish",
+    });
+    await page.goto(`/lists/${list.id}`);
+    await expect(page.locator(".event-list-context h2 svg")).toHaveCount(0);
+    await expect(page.locator(".event-date svg")).toHaveCount(1);
+    await expect(page.locator(".event-date")).toContainText(
+      "December 25, 2026",
+    );
+    await page.screenshot({
+      path: info.outputPath("event-header.png"),
+      fullPage: true,
+    });
+    await page.getByRole("button", { name: /^Sort & filter/ }).click();
+    await page.getByRole("button", { name: "Reorder items" }).click();
+    const save = page.getByRole("button", { name: "Save order", exact: true });
+    const cancel = page.getByRole("button", { name: "Cancel", exact: true });
+    const a = (await save.boundingBox())!,
+      b = (await cancel.boundingBox())!;
+    expect(a.x).toBeLessThan(b.x);
+    expect(Math.abs(a.y - b.y)).toBeLessThan(2);
+    await page.screenshot({
+      path: info.outputPath("reorder.png"),
+      fullPage: true,
+    });
+    await cancel.click();
+    command(state, actor, "spending.settings", {
+      enabled: true,
+      summaries: true,
+    });
+    await page.route("**/api/v1/spending/history?*", async (route) =>
+      route.fulfill({
+        json: spendingHistory(
+          state,
+          actor,
+          Object.fromEntries(new URL(route.request().url()).searchParams),
+        ),
+      }),
+    );
+    await page.goto(
+      `/buying/spending?person=${list.ownerIds[0]}&event=${event.id}&list=${list.id}`,
+    );
+    const scope = page.locator(".spending-scope-summary dd");
+    await expect(page.locator(".spending-scope-summary dt")).toHaveText([
+      "Person",
+      "Occasion",
+      "Wish list",
+    ]);
+    await expect(scope).toHaveCount(3);
+    await expect(scope.nth(2)).toHaveText(list.name);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    await page.screenshot({
+      path: info.outputPath("spending-scope.png"),
+      fullPage: true,
+    });
+  });
+}

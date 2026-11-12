@@ -997,27 +997,65 @@ export function SpendingPage() {
     ]
       .filter(Boolean)
       .join("|") || "all";
-  const scopeLabel = [
-    filter.person
-      ? (recipients.find((p) => p.id === filter.person)?.name ??
-        "Selected person")
-      : "Everyone",
-    filter.list &&
-      (() => {
-        const l = lists.find((l) => l.id === filter.list);
-        return l
-          ? `${l.name} • ${("ownerIds" in l ? l.ownerIds.map((id) => world.people.find((p) => p.id === id)?.name ?? "Recipient") : (l.ownerNames ?? [])).join(" & ")}`
-          : "Selected wish list";
-      })(),
-    filter.event &&
-      (events.find((e) => e.id === filter.event)?.name ?? "Selected event"),
-    filter.occasion &&
-      (data.occasions.find((o) => o.id === filter.occasion)?.name ??
-        "Selected occasion"),
-    filter.year ??
-      (filter.event || filter.occasion || filter.list ? null : "All time"),
-  ]
-    .filter(Boolean)
+  const selectedList = lists.find((list) => list.id === filter.list);
+  const listOwners =
+    selectedList &&
+    ("ownerIds" in selectedList
+      ? selectedList.ownerIds.map(
+          (id) => world.people.find((p) => p.id === id)?.name ?? "Recipient",
+        )
+      : (selectedList.ownerNames ?? []));
+  const redundantOwner =
+    selectedList &&
+    "ownerIds" in selectedList &&
+    selectedList.ownerIds.length === 1 &&
+    selectedList.ownerIds[0] === filter.person;
+  const scopeParts = [
+    {
+      label: "Person",
+      value:
+        recipients.find((p) => p.id === filter.person)?.name ??
+        (filter.person ? "Selected person" : "Everyone"),
+    },
+    ...(filter.event
+      ? [
+          {
+            label: "Occasion",
+            value:
+              events.find((e) => e.id === filter.event)?.name ??
+              "Selected event",
+          },
+        ]
+      : []),
+    ...(filter.occasion
+      ? [
+          {
+            label: "Occasion",
+            value:
+              data.occasions.find((o) => o.id === filter.occasion)?.name ??
+              "Selected occasion",
+          },
+        ]
+      : []),
+    ...(filter.list
+      ? [
+          {
+            label: "Wish list",
+            value: selectedList
+              ? selectedList.name +
+                (!redundantOwner && listOwners?.length
+                  ? ` (${listOwners.join(" & ")})`
+                  : "")
+              : "Selected wish list",
+          },
+        ]
+      : []),
+    ...(filter.year || !(filter.event || filter.occasion || filter.list)
+      ? [{ label: "Date range", value: String(filter.year ?? "All dates") }]
+      : []),
+  ];
+  const scopeLabel = scopeParts
+    .map(({ label, value }) => `${label}: ${value}`)
     .join(" · ");
   const matchingBudgets = data.budgets.filter(
     (b) =>
@@ -1277,7 +1315,17 @@ export function SpendingPage() {
             </button>
           )}
         </div>
-        <p className="spending-scope">{scopeLabel}</p>
+        <dl
+          className="spending-scope-summary"
+          aria-label="Selected spending filters"
+        >
+          {scopeParts.map(({ label, value }) => (
+            <div key={label}>
+              <dt>{label}</dt>
+              <dd>{value}</dd>
+            </div>
+          ))}
+        </dl>
         {!history.isPlaceholderData && !!history.data?.unassignedCount && (
           <button
             className="text-button"

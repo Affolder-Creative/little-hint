@@ -24,3 +24,5 @@ Review: domain privacy and transactional tests plus Chromium/WebKit browser work
 Buying retains source availability separately from purchase status. A selected plan opens above the existing status filters with a bounded prose measure and standard action controls. Contribution returns show sending and receipt as separate events and reuse existing forms and open rows. The recipient's management screens remain independent of hidden financial activity.
 
 Validation: synthetic Chromium desktop/tablet/phone journeys in light and dark themes; return entry and counterparty receipt confirmation; responsive overflow checks; source-state and financial-privacy domain tests. One polish pass corrected control/prose spacing. Existing typography, colors, and navigation remain the visual authority.
+
+Scope summaries use explicit label/value groups and omit redundant sole-owner captions only after matching owner IDs. Budget descriptions use the same labels.

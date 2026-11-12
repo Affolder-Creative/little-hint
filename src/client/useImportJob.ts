@@ -74,6 +74,7 @@ export function useImportJob(accountId: string, initial?: ImportJob) {
     }
   }
   return {
+    creating,
     job: id ? query.data : undefined,
     error: id ? query.error : null,
     busy:
