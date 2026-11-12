@@ -5,6 +5,7 @@ import { api } from "./api";
 import { Field, Form } from "./components";
 
 type Setting = { key: string; source: string; value?: string };
+const archiveKey = "HIDE_ARCHIVED_ITEMS_FROM_OTHERS";
 const groupKey = "FAMILY_GROUP_CREATION";
 const photoKey = "AUTO_IMPORT_PRODUCT_PHOTOS";
 const cacheKey = "PRODUCT_IMAGE_CACHE_ENABLED";
@@ -95,6 +96,8 @@ function PreferenceGroup({
             await Promise.all([
               client.invalidateQueries({ queryKey: ["admin-settings"] }),
               client.invalidateQueries({ queryKey: ["world"] }),
+              client.invalidateQueries({ queryKey: ["collection"] }),
+              client.invalidateQueries({ queryKey: ["notifications"] }),
             ]);
             setEdits({});
             setSaved(true);
@@ -167,6 +170,39 @@ export function AdminPreferences({ settings }: { settings: Setting[] }) {
           </>
         )}
       </PreferenceGroup>
+      {settings.some((s) => s.key === archiveKey) && (
+        <PreferenceGroup
+          settings={settings.filter((s) => s.key === archiveKey)}
+          title="Archive privacy"
+          submit="Save archive privacy"
+        >
+          {(value, change) => (
+            <>
+              <label className="check">
+                <input
+                  type="checkbox"
+                  checked={value(archiveKey) === "true"}
+                  disabled={locked(archiveKey)}
+                  onChange={(e) => change(archiveKey, String(e.target.checked))}
+                  aria-describedby={`archive-privacy-help${locked(archiveKey) ? " archive-privacy-lock" : ""}`}
+                />
+                Hide archived items from other users
+              </label>
+              <p className="muted" id="archive-privacy-help">
+                Archived wishes stay visible to their list owners and profile
+                managers. Archived gift ideas stay visible to their creators.
+                Buyers and contributors keep their personal history, including
+                saved item names.
+              </p>
+              {locked(archiveKey) && (
+                <p className="muted" id="archive-privacy-lock">
+                  Managed in hosting configuration.
+                </p>
+              )}
+            </>
+          )}
+        </PreferenceGroup>
+      )}
       {!!group.length && (
         <PreferenceGroup
           settings={group}

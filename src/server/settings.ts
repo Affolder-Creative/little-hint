@@ -5,6 +5,7 @@ import { stamp, fail } from "./domain-common";
 import { isAdmin } from "./domain-access";
 import {
   imageDeliveryOverride,
+  archivePrivacyOverride,
   syntheticEnvironment,
   productPhotoOverride,
   familyGroupCreationOverride,
@@ -91,14 +92,35 @@ export const imageSettingKeys = [
   "PRODUCT_IMAGE_CACHE_ENABLED",
   "PRODUCT_IMAGE_PREFETCH_ENABLED",
 ] as const;
+export const archivePrivacyKey = "HIDE_ARCHIVED_ITEMS_FROM_OTHERS";
 export const spendingDefaultKey = "SPENDING_DEFAULT_ENABLED";
 export const applicationSettingKeys = [
+  archivePrivacyKey,
   spendingDefaultKey,
   "FAMILY_GROUP_INVITATIONS",
   productPhotoSettingKey,
   familyGroupCreationKey,
   ...imageSettingKeys,
 ];
+function archivePrivacySetting(values: Map<string, string>) {
+  const override = archivePrivacyOverride();
+  const saved = values.get(archivePrivacyKey);
+  return {
+    key: archivePrivacyKey,
+    configured: override !== undefined || saved !== undefined,
+    source:
+      override !== undefined
+        ? "environment"
+        : saved !== undefined
+          ? "settings"
+          : "default",
+    default: "false",
+    value: String(override ?? saved === "true"),
+  };
+}
+export function hideArchivedItemsForState(s: State) {
+  return archivePrivacySetting(settingsValues(s.settings)).value === "true";
+}
 function imageSetting(k: string, values: Map<string, string>) {
   const override = imageDeliveryOverride(k);
   const saved = values.get(k);
@@ -194,6 +216,7 @@ export async function settingsSummary() {
       value: values.get("FAMILY_GROUP_INVITATIONS") ?? "owners",
     },
     spendingDefaultSetting(values),
+    archivePrivacySetting(values),
     photoSetting(values),
     groupCreationSetting(values),
     ...imageSettingKeys.map((k) => imageSetting(k, values)),
@@ -204,6 +227,13 @@ function validateSetting(k: string, value: string) {
     if (settingKeys.includes(k as SettingKey))
       fail(409, "This value is set on the server. Change it there instead.");
     fail(400, "Unknown setting.");
+  }
+  if (k === archivePrivacyKey) {
+    if (value !== "true" && value !== "false")
+      fail(400, "Choose true or false for archive privacy.");
+    if (archivePrivacyOverride() !== undefined)
+      fail(409, "This value is set on the server. Change it there instead.");
+    return;
   }
   if (k === "FAMILY_GROUP_INVITATIONS") {
     if (!["owners", "members"].includes(value))
@@ -249,7 +279,7 @@ export async function saveSettings(
   updates: Array<{ key: string; value: string }>,
 ) {
   if (!updates.length || updates.length > applicationSettingKeys.length)
-    fail(400, "Choose between one and five settings to save.");
+    fail(400, "Choose at least one setting to save.");
   if (new Set(updates.map((update) => update.key)).size !== updates.length)
     fail(400, "Each setting can only appear once.");
   for (const update of updates) validateSetting(update.key, update.value);

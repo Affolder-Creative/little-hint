@@ -29,6 +29,11 @@ async function setup(
     f.state.people.push(person);
   }
   const settings = [
+    {
+      key: "HIDE_ARCHIVED_ITEMS_FROM_OTHERS",
+      value: "false",
+      source: options.locked ? "environment" : "settings",
+    },
     { key: "SPENDING_DEFAULT_ENABLED", value: "false", source: "settings" },
     ...["PRODUCT_IMAGE_CACHE_ENABLED", "PRODUCT_IMAGE_PREFETCH_ENABLED"].map(
       (key) => ({
@@ -793,3 +798,40 @@ for (const width of [393, 768, 1440])
       await page.screenshot({ path: info.outputPath("jobs.png") });
     });
   }
+
+for (const locked of [false, true]) {
+  test(`archive privacy ${locked ? "locked" : "editable"}`, async ({
+    page,
+  }) => {
+    await setup(page, { locked });
+    await page.goto("/settings?section=admin");
+    const section = page.getByRole("region", {
+      name: "Archive privacy",
+      exact: true,
+    });
+    const toggle = section.getByRole("checkbox", {
+      name: "Hide archived items from other users",
+    });
+    await expect(toggle).not.toBeChecked();
+    if (locked) {
+      await expect(toggle).toBeDisabled();
+      await expect(
+        section.getByText("Managed in hosting configuration."),
+      ).toBeVisible();
+      await expect(section.getByRole("button")).toHaveCount(0);
+    } else {
+      await toggle.check();
+      await section
+        .getByRole("button", { name: "Save archive privacy" })
+        .click();
+      await expect(section.getByRole("status")).toHaveText(
+        "Archive privacy saved.",
+      );
+      await page.reload();
+      await expect(toggle).toBeChecked();
+      await toggle.uncheck();
+      await section.getByRole("button", { name: "Discard changes" }).click();
+      await expect(toggle).toBeChecked();
+    }
+  });
+}

@@ -377,6 +377,16 @@ Event wish lists stay nested beside their event. When the selected Active or Arc
 
 Private product-import drafts use compact divided rows beside their destination list and in My lists. Titles use 15px medium text and open the external product link in a new tab, with an inline external-link icon and underline on hover. Status text names Finding details, Ready to review, or Needs details. Working dots cycle through zero, one, two, and three visible dots at 500ms intervals within a fixed-width slot and remain static for reduced motion. Ready status uses a green check and a soft-filled Review and add action; Needs details uses an accent help icon and Add details, with Try again available for failed lookups. A slow lookup offers Save draft and continue after 15 seconds; fields stay editable. Closing saves the latest edits before dismissing. Drafts remain owner-only until Review and add completes.
 
+### Administrator preferences
+
+Application preferences use flat sections inside the existing App settings panel.
+Separate sections with the shared divider and 24px spacing. Archive privacy uses
+the same labeled checkbox, muted explanation, and explicit Save/Discard controls
+as neighboring preferences. Keep helper copy associated with its checkbox.
+Hosting-managed preferences show a disabled checkbox and the existing muted lock
+explanation, without a save action. Preserve keyboard focus, wrapping labels,
+and 44px targets across mobile and desktop in both themes.
+
 ### Inputs / Fields
 
 Fields have a paper background, text color, thin border, 8px corners, and a 44px minimum height. Visible labels and optional hints stay with their inputs. Search adds a leading icon and transparent fill. Forms show errors in text; busy submission disables the fieldset and changes the action label. Changed dialogs require an explicit discard decision before closing, including departures to gift discovery and arrow or drag reordering. Returning entries to their original order clears the reorder warning. Saving keeps dismissal disabled. First sharing uses a focused review of audience and visibility while preserving editable form values. The global focus outline applies to inputs, selects, and textareas. Single-column form grids use shrinkable tracks; two-column rows use equal shrinkable tracks. Fields and native date inputs can shrink to their container width. Dialogs scroll vertically, with horizontal containment after controls have been sized to fit. Keep the native date picker and 16px phone input text.

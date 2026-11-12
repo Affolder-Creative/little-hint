@@ -9,6 +9,8 @@ vi.mock("../src/server/db", () => ({
   readImport: vi.fn(),
   readSettings: async () => mocks.state.settings,
   readState: async () => structuredClone(mocks.state),
+  readCollectionState: async () => structuredClone(mocks.state),
+  hydrateCollectionItems: async () => {},
   transact: async (run: (s: State) => unknown) => {
     const next = structuredClone(mocks.state);
     const result = await run(next);
@@ -204,6 +206,7 @@ it("locks environment overrides and validates limits, mode and staging isolation
   expect((await settingsSummary()).map((s) => s.key)).toEqual([
     "FAMILY_GROUP_INVITATIONS",
     "SPENDING_DEFAULT_ENABLED",
+    "HIDE_ARCHIVED_ITEMS_FROM_OTHERS",
     "AUTO_IMPORT_PRODUCT_PHOTOS",
     "FAMILY_GROUP_CREATION",
     "PRODUCT_IMAGE_CACHE_ENABLED",
@@ -283,7 +286,7 @@ it("exposes only preferences and safe service status to administrators", async (
   expect(services.statusCode).toBe(200);
   expect(services.body).not.toContain("synthetic-key");
   expect(services.json()).toHaveLength(8);
-  expect((await app.inject("/api/v1/admin/settings")).json()).toHaveLength(6);
+  expect((await app.inject("/api/v1/admin/settings")).json()).toHaveLength(7);
   for (const key of [
     "OPENAI_API_KEY",
     "GIFT_DISCOVERY_MODE",
@@ -375,4 +378,49 @@ it("limits the new-account spending default to app admins", async () => {
     expect.objectContaining({ key: "SPENDING_DEFAULT_ENABLED", value: "true" }),
   );
   expect(mocks.state.spendingSettings).toEqual([]);
+});
+
+it("restricts archive settings to administrators and locks ENV overrides", async () => {
+  const key = "HIDE_ARCHIVED_ITEMS_FROM_OTHERS";
+  vi.stubEnv(key, "");
+  const update = () =>
+    app.inject({
+      method: "POST",
+      url: "/api/v1/admin/settings",
+      headers: { origin: headers.origin },
+      payload: { key, value: "true" },
+    });
+  expect((await update()).statusCode).toBe(403);
+  mocks.state.people.find((p) => p.userId === mocks.actor!.id)!.admin = true;
+  expect((await update()).statusCode).toBe(200);
+  expect((await app.inject("/api/v1/admin/settings")).json()).toContainEqual(
+    expect.objectContaining({ key, value: "true", source: "settings" }),
+  );
+  vi.stubEnv(key, "false");
+  expect((await update()).statusCode).toBe(409);
+});
+
+it("denies archived item links and browse metadata after an admin enables privacy", async () => {
+  const { fixture } = await import("./privacy-fixture");
+  const fixtureState = fixture();
+  mocks.state = fixtureState.state;
+  mocks.actor = fixtureState.actors[1];
+  fixtureState.item.archived = true;
+  fixtureState.item.tags = ["private-archive-tag"];
+  vi.stubEnv("HIDE_ARCHIVED_ITEMS_FROM_OTHERS", "true");
+  expect(
+    (await app.inject(`/api/v1/items/${fixtureState.item.id}`)).statusCode,
+  ).toBe(404);
+  const page = (
+    await app.inject(
+      `/api/v1/items?scope=list&id=${fixtureState.lists[0].id}&status=archived`,
+    )
+  ).json();
+  expect(page.collectionTotal).toBe(0);
+  expect(page.tags).toEqual([]);
+  expect(page.rows).toEqual([]);
+  mocks.actor = fixtureState.actors[0];
+  expect(
+    (await app.inject(`/api/v1/items/${fixtureState.item.id}`)).statusCode,
+  ).toBe(200);
 });

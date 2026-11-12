@@ -1,3 +1,4 @@
+import { hideArchivedItemsForState } from "./settings";
 import type { State, Actor, Person, Group, Item, List } from "../shared/model";
 import { canManageGroupEvents } from "../shared/group-events";
 import { itemTrashed } from "../shared/organization";
@@ -97,6 +98,13 @@ export function draftAccess(s: State, a: Actor, i: Item): boolean {
   );
 }
 export function itemVisible(s: State, a: Actor, i: Item): boolean {
+  return (
+    itemSharedWith(s, a, i) &&
+    (!archived(s, i) || canEdit(s, a, i) || !hideArchivedItemsForState(s))
+  );
+}
+/** Sharing revocation cancels commitments; archive privacy only hides the source. */
+function itemSharedWith(s: State, a: Actor, i: Item): boolean {
   if (itemTrashed(s, i) || !draftAccess(s, a, i)) return false;
   if (i.listId) {
     const l = s.lists.find((l) => l.id === i.listId);
@@ -139,7 +147,7 @@ export function reconcileAccess(s: State) {
       !r.former &&
       i &&
       !itemTrashed(s, i) &&
-      !itemVisible(s, { id: r.buyerId, email: "", name: "" }, i)
+      !itemSharedWith(s, { id: r.buyerId, email: "", name: "" }, i)
     ) {
       r.quantity = r.purchased;
       r.former = true;
