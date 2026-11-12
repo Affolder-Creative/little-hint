@@ -123,12 +123,10 @@ export function Lists() {
             <>
               {list.groupEventId && (
                 <div className="event-list-context">
-                  <h2>
-                    <CalendarDays size={20} aria-hidden="true" />
-                    {eventName}
-                  </h2>
+                  <h2>{eventName}</h2>
                   {event?.eventDate && (
                     <p className="event-date">
+                      <CalendarDays size={16} aria-hidden="true" />
                       <EventDate date={event.eventDate} />
                     </p>
                   )}

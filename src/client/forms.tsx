@@ -424,7 +424,16 @@ function GiftEditor({
   const touched = useRef(new Set<string>(importDraft?.draft?.touched ?? []));
   const [error, setError] = useState("");
   const importQuery = useImportJob(world.me.id, importDraft);
-  const importing = importQuery.busy;
+  const importing =
+    importQuery.busy ||
+    !!(
+      importQuery.job && ["pending", "running"].includes(importQuery.job.status)
+    );
+  const [switchingToManual, setSwitchingToManual] = useState(false);
+  const [archived, setArchived] = useState(gift?.archived ?? false);
+  const [closing, setClosing] = useState(false);
+  const [manualLookup, setManualLookup] = useState(false);
+  const ignoringLookup = useRef(false);
   const [uploading, setUploading] = useState(false);
   const [draftSaving, setDraftSaving] = useState(false);
   const draftSavingRef = useRef(false);
@@ -633,11 +642,14 @@ function GiftEditor({
         }
       : { listId: destination }),
   });
+  const editSnapshot = JSON.stringify({ snapshot, archived });
+  const originalEditSnapshot = useRef(editSnapshot);
   baseline.current ??= snapshot;
   const currentSnapshot = useRef(snapshot);
   currentSnapshot.current = snapshot;
   useEffect(() => {
     if (
+      switchingToManual ||
       !savedDraft.current?.draft ||
       snapshot === baseline.current ||
       conflict.current
@@ -677,6 +689,7 @@ function GiftEditor({
   };
   useEffect(() => {
     if (
+      !ignoringLookup.current &&
       job?.status === "complete" &&
       job.result &&
       applied.current !== job.id
@@ -709,6 +722,7 @@ function GiftEditor({
     }
   }, [job?.id, job?.status]);
   async function importUrl(forceRefresh = false) {
+    ignoringLookup.current = false;
     setError("");
     try {
       if (idea && !recipientId)
@@ -764,6 +778,41 @@ function GiftEditor({
       cancelled = true;
     };
   }, [capture, destination, idea]);
+  async function enterManually() {
+    if (switchingToManual || importQuery.creating) return;
+    ignoringLookup.current = true;
+    setSwitchingToManual(true);
+    clearTimeout(autosaveTimer.current);
+    try {
+      await saveQueue.current.catch(() => {});
+      if (savedDraft.current?.draft)
+        await api("imports/discard", { id: savedDraft.current.id });
+      savedDraft.current = undefined;
+      setManualLookup(true);
+      importQuery.reset();
+      setSavedFeedback(false);
+      setSaveError("");
+      setError("");
+      void client.invalidateQueries({ queryKey: ["world"] });
+    } catch (error) {
+      ignoringLookup.current = false;
+      setError(actionError(error));
+    } finally {
+      setSwitchingToManual(false);
+    }
+  }
+  async function saveBeforeClose() {
+    if (draftSavingRef.current)
+      throw new Error("Saving is already in progress.");
+    draftSavingRef.current = true;
+    setClosing(true);
+    try {
+      await flushDraft();
+    } finally {
+      draftSavingRef.current = false;
+      setClosing(false);
+    }
+  }
   async function upload(files: Array<{ file: File; replace?: string }>) {
     if (!files.length || uploadLock.current) return;
     if (
@@ -820,11 +869,22 @@ function GiftEditor({
     <Form
       className="gift-form"
       dialogLayout
-      externalBusy={draftSaving || uploading}
+      externalBusy={
+        draftSaving ||
+        uploading ||
+        importQuery.creating ||
+        switchingToManual ||
+        closing
+      }
       busyLabel={uploading ? "Uploading photos…" : "Saving…"}
       secondaryActionsPosition="after"
       actionHint={
-        !idea && (!gift || gift.publicationState === "draft") ? (
+        savedDraft.current?.draft && importing ? (
+          <>
+            Only you can see this unfinished lookup. Save for later keeps it
+            running.
+          </>
+        ) : !idea && (!gift || gift.publicationState === "draft") ? (
           <>
             {world.people.some(
               (p) =>
@@ -841,7 +901,9 @@ function GiftEditor({
       }
       secondaryActions={(busy) => (
         <>
-          {!idea && (!gift || gift.publicationState === "draft") ? (
+          {!idea &&
+          (!gift || gift.publicationState === "draft") &&
+          !(!gift && importing) ? (
             <div className="wishlist-draft-actions">
               <button
                 type="submit"
@@ -849,14 +911,18 @@ function GiftEditor({
                 value={gift ? "publish" : "save"}
                 className="button secondary"
                 disabled={
-                  busy || uploading || !!gift?.archived || !navigator.onLine
+                  busy ||
+                  importing ||
+                  uploading ||
+                  !!gift?.archived ||
+                  !navigator.onLine
                 }
               >
                 {gift ? "Publish" : "Save draft"}
               </button>
             </div>
           ) : null}
-          {idea && savedDraft.current?.draft ? (
+          {(idea || importing) && savedDraft.current?.draft ? (
             <div className="gift-draft-actions">
               <button
                 type="button"
@@ -891,17 +957,19 @@ function GiftEditor({
       dirty={
         savedDraft.current?.draft
           ? snapshot !== baseline.current
-          : photosChanged
-            ? true
-            : undefined
+          : manualLookup ||
+            editSnapshot !== originalEditSnapshot.current ||
+            photosChanged
       }
       onBusyChange={setNoteBusy}
-      onBeforeClose={savedDraft.current?.draft ? flushDraft : undefined}
+      onBeforeClose={savedDraft.current?.draft ? saveBeforeClose : undefined}
       onBeforeCloseError={() => {}}
       submit={
         gift ? "Save changes" : idea ? "Save gift idea" : "Add to wish list"
       }
       disabled={
+        importing ||
+        switchingToManual ||
         data.description.length > 5000 ||
         uploading ||
         (needsAssignmentPreview &&
@@ -1016,7 +1084,7 @@ function GiftEditor({
         onSaved?.(result);
       }}
     >
-      {!idea && savedDraft.current?.draft && (
+      {savedDraft.current?.draft && !importing && (
         <div className="lookup-draft-status">
           <p className="muted">
             Your unfinished lookup is saved automatically. Close this dialog to
@@ -1406,8 +1474,19 @@ function GiftEditor({
               ? savedDraft.current?.draft
                 ? "This is taking a little longer. You can keep editing or save for later while we keep working."
                 : "This is taking a little longer. You can keep editing."
-              : "Getting product details. You can keep editing."}
+              : savedDraft.current?.draft
+                ? "Finding product details. You can keep editing or save for later."
+                : "Finding product details. Save when the lookup finishes, or enter details manually."}
           </p>
+        )}
+        {(importing || importQuery.error) && !importQuery.creating && (
+          <button
+            type="button"
+            className="text-button"
+            onClick={() => void enterManually()}
+          >
+            Enter details manually
+          </button>
         )}
         {!job && !importing && !error && (
           <p className="muted">Or enter the details below.</p>
@@ -1690,7 +1769,8 @@ function GiftEditor({
           <input
             type="checkbox"
             name="archived"
-            defaultChecked={gift.archived}
+            checked={archived}
+            onChange={(event) => setArchived(event.target.checked)}
           />
           {idea ? "Archive this gift idea" : "Archive this item"}
         </label>
