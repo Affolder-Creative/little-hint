@@ -388,6 +388,25 @@ test.describe("settings visual review", () => {
           path: info.outputPath(`${section}.png`),
           fullPage: true,
         });
+        if (section === "profile") {
+          const archive = page.getByRole("region", { name: "Archive privacy" });
+          await archive
+            .getByRole("button", { name: "About archive privacy" })
+            .click();
+          const help = archive.getByRole("dialog", {
+            name: "Archive privacy",
+            exact: true,
+          });
+          await expect(help).toBeVisible();
+          const bounds = await help.boundingBox();
+          expect(bounds!.x).toBeGreaterThanOrEqual(0);
+          expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width);
+          await page.screenshot({ path: info.outputPath("archive-help.png") });
+          expect((await new AxeBuilder({ page }).analyze()).violations).toEqual(
+            [],
+          );
+          await help.getByRole("button", { name: "Close help" }).click();
+        }
         if (section === "about" && width < 1100) {
           await page.locator(".settings-about").evaluate((element) => {
             window.scrollTo({
@@ -858,6 +877,20 @@ for (const forced of [false, true]) {
     const toggle = section.getByRole("checkbox");
     await expect(toggle).toBeEnabled();
     await expect(toggle).not.toBeChecked();
+    const help = section.getByRole("button", { name: "About archive privacy" });
+    const panel = section.getByRole("dialog", {
+      name: "Archive privacy",
+      exact: true,
+    });
+    await expect(panel).not.toBeVisible();
+    await help.focus();
+    await page.keyboard.press("Enter");
+    await expect(panel).toBeVisible();
+    await expect(panel).toContainText("any owner's hide preference");
+    await expect(toggle).not.toBeChecked();
+    await page.keyboard.press("Escape");
+    await expect(panel).not.toBeVisible();
+    await expect(help).toBeFocused();
     if (forced)
       await expect(
         section.getByText(/administrator currently requires/),

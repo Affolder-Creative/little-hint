@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-12T17:26:50.492910+00:00",
+  "generatedAt": "2026-11-12T17:33:44.270463+00:00",
   "title": "Design System: Little Hint",
   "extensions": {
     "colorMeta": {
@@ -1126,10 +1126,7 @@
       "actions": "Two fixed rows without an added gap: outlined Make cover with 4px by 8px padding and a star, or checked green Cover photo status in a 32px line. Neutral Replace and destructive Remove align toward the top of their 44px targets."
     },
     "sharedCost": {
-      "fields": [
-        "Total gift cost in USD",
-        "Your contribution in USD"
-      ],
+      "fields": ["Total gift cost in USD", "Your contribution in USD"],
       "summary": [
         "Goal from others",
         "Already pledged",
@@ -1387,9 +1384,9 @@
     {
       "name": "Personal archive preference",
       "kind": "custom",
-      "description": "Personal checkbox remains editable under a global requirement. A notice explains that the saved choice applies after enforcement ends.",
-      "html": "<section class=\"ds-personal-archive\"><h3>Archive privacy</h3><p class=\"ds-archive-notice\">Your administrator currently requires archive privacy for everyone. Your choice below applies when that requirement is off.</p><label class=\"ds-archive-check\"><input type=\"checkbox\">Hide my archived wishes and gift ideas from other users</label></section>",
-      "css": ".ds-personal-archive{color:var(--text);margin-top:16px}.ds-archive-notice{background:var(--soft);color:var(--text);padding:16px;border-radius:8px}.ds-archive-check{display:flex;align-items:flex-start;gap:9px;min-height:44px;padding-block:10px;font-size:14px;line-height:1.5;cursor:pointer}.ds-archive-check input{flex-shrink:0;margin-top:2px}.ds-archive-check input:focus-visible{outline:3px solid var(--accent);outline-offset:3px}"
+      "description": "Compact personal checkbox with the shared info popover beside its label and 32px separation from Appearance. The checkbox remains editable under a global requirement, with a visible policy notice.",
+      "html": "<section class=\"ds-personal-archive\"><h3>Archive privacy</h3><p class=\"ds-archive-notice\">Your administrator currently requires archive privacy for everyone. Your choice below applies when that requirement is off.</p><div class=\"ds-archive-option\"><label class=\"ds-archive-check\"><input type=\"checkbox\">Hide my archived wishes and gift ideas from other users</label><button class=\"ds-archive-info\" aria-label=\"About archive privacy\"><svg width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"M12 16v-4M12 8h.01\"/></svg></button></div></section>",
+      "css": ".ds-personal-archive{color:var(--text);margin-top:32px}.ds-personal-archive h3{margin-bottom:4px}.ds-archive-notice{background:var(--soft);color:var(--text);padding:16px;border-radius:8px}.ds-archive-option{display:flex;align-items:center;gap:2px}.ds-archive-check{display:flex;align-items:center;gap:9px;min-width:0;min-height:44px;margin:0;padding:0;font-size:14px;line-height:1.5;cursor:pointer}.ds-archive-check input{flex-shrink:0;margin:0}.ds-archive-info{display:inline-flex;align-items:center;justify-content:center;flex:none;width:44px;height:44px;padding:0;border:0;border-radius:8px;background:transparent;color:var(--muted);cursor:pointer}.ds-archive-check input:focus-visible,.ds-archive-info:focus-visible{outline:3px solid var(--accent);outline-offset:3px}"
     }
   ],
   "narrative": {

@@ -380,12 +380,15 @@ Private product-import drafts use compact divided rows beside their destination 
 ### Personal archive privacy
 
 Profile & appearance includes an Archive privacy section after Appearance. Use the
-existing labeled checkbox, muted help, and explicit Save/Discard form. Keep the
+existing labeled checkbox and explicit Save/Discard form. Separate the section
+from Appearance by 32px and keep the checkbox row compact, with 4px below the
+heading and 8px before the actions. Keep the
 personal checkbox editable when an administrator requires hiding; a notice above
 the form distinguishes the enforced policy from the user's saved choice. Preserve
 drafts through refreshes and navigation, display save errors inline, and retain
-keyboard focus and wrapping labels on narrow screens. Helper paragraphs use
-the shared text stack and a 65ch maximum measure. Administrator copy says
+keyboard focus and wrapping labels on narrow screens. Put the explanatory
+paragraphs in the shared info popover immediately to the right of the checkbox
+label, with 44px targets and the shared text stack. Administrator copy says
 Require archive privacy for everyone and explains that personal hiding still
 applies when the requirement is off. Reuse existing tokens and spacing.
 
