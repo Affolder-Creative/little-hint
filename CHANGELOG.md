@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.4.0](https://github.com/Affolder-Creative/little-hint/compare/v1.3.1...v1.4.0) (2026-11-12)
+
+
+### Features
+
+* add optional archive privacy ([#210](https://github.com/Affolder-Creative/little-hint/issues/210)) ([58f7878](https://github.com/Affolder-Creative/little-hint/commit/58f78784ccfcfd4cddf339bb9120f5b8516c612f))
+* let users keep their archived items private ([#213](https://github.com/Affolder-Creative/little-hint/issues/213)) ([f3a6333](https://github.com/Affolder-Creative/little-hint/commit/f3a6333259af7f80fc5fd24b419ce1db44221f05))
+
+
+### Fixes
+
+* clarify draft saving and wish-list context ([#212](https://github.com/Affolder-Creative/little-hint/issues/212)) ([e21037e](https://github.com/Affolder-Creative/little-hint/commit/e21037e60403124a153c8c03d8d8de4dd3fd094a))
+
 ## [1.3.1](https://github.com/Affolder-Creative/little-hint/compare/v1.3.0...v1.3.1) (2026-11-12)
 
 
