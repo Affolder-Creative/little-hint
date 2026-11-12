@@ -276,6 +276,8 @@ export async function readBuyingState(userId: string): Promise<State> {
     UNION ALL
     SELECT 'people', data FROM app_record WHERE kind = 'people'
     UNION ALL
+    SELECT 'settings', data FROM app_record WHERE kind='settings'
+    UNION ALL
     SELECT 'groups', data FROM app_record WHERE kind='groups'
     UNION ALL
     SELECT 'friendEntries', data FROM app_record WHERE kind='friendEntries'

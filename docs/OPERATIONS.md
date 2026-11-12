@@ -271,3 +271,16 @@ Draft state is stored in existing item JSON records; missing state means publish
 Deploy the app and worker from the same draft-aware release. Older versions ignore
 item draft state and can expose unpublished items. Roll back only to a build that
 retains draft authorization, or restore the pre-upgrade database and uploads backup.
+
+### Archive privacy
+
+Administration → App settings → Archive privacy can hide archived wishes and ideas
+from other users. It defaults off. Wish-list owners and profile managers retain
+access to wishes; idea creators retain access to ideas. Personal buying, spending,
+and contribution history retains saved names. Lists and events remain visible.
+
+`HIDE_ARCHIVED_ITEMS_FROM_OTHERS=true|false` overrides and locks this setting.
+Leave it blank or unset to use the saved preference. Invalid values stop startup.
+Set the override on both app and worker and recreate both after ENV changes.
+Admin changes apply to subsequent requests without restart; open sessions refresh
+normally. Archive privacy does not cancel commitments or change saved sharing.

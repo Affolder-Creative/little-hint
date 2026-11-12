@@ -39,6 +39,7 @@ export function validateDeployment(env = process.env) {
   imageDeliveryOverride("PRODUCT_IMAGE_CACHE_ENABLED", env);
   imageDeliveryOverride("PRODUCT_IMAGE_PREFETCH_ENABLED", env);
   familyGroupCreationOverride(env);
+  archivePrivacyOverride(env);
   cloudflareWebAnalyticsEnabled(env);
   productImportCacheEnabled(env);
   if (deploymentEnvironment(env) === "preview") {
@@ -153,4 +154,8 @@ export function imageDeliveryOverride(
 /** Deployment availability is independent of each account’s opt-in. */
 export function spendingAvailable(env = process.env): boolean {
   return env.SPENDING_ENABLED?.trim().toLowerCase() !== "false";
+}
+
+export function archivePrivacyOverride(env = process.env): boolean | undefined {
+  return imageDeliveryOverride("HIDE_ARCHIVED_ITEMS_FROM_OTHERS", env);
 }

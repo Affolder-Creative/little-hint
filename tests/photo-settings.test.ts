@@ -135,7 +135,7 @@ describe("settings read and decryption reuse", () => {
       createdAt: "",
     });
     expect((await config()).SMTP_HOST).toBe("");
-    expect(await settingsSummary()).toHaveLength(6);
+    expect(await settingsSummary()).toHaveLength(7);
     expect(createDecipheriv).not.toHaveBeenCalled();
     expect(readSettings).toHaveBeenCalledTimes(1);
   });
@@ -255,4 +255,33 @@ it("persists spending defaults without a deployment override", async () => {
   );
   await saveSetting("SPENDING_DEFAULT_ENABLED", "false");
   expect(spendingDefaultForState(storage.state)).toBe(false);
+});
+
+describe("archive privacy setting", () => {
+  const archiveKey = "HIDE_ARCHIVED_ITEMS_FROM_OTHERS";
+  it("persists the preference and locks both explicit ENV values", async () => {
+    vi.stubEnv(archiveKey, "");
+    expect(
+      (await settingsSummary()).find((s) => s.key === archiveKey),
+    ).toMatchObject({ value: "false", source: "default" });
+    await saveSetting(archiveKey, "true");
+    expect(
+      (await settingsSummary()).find((s) => s.key === archiveKey),
+    ).toMatchObject({ value: "true", source: "settings" });
+    for (const value of ["true", "false"]) {
+      vi.stubEnv(archiveKey, value);
+      expect(
+        (await settingsSummary()).find((s) => s.key === archiveKey),
+      ).toMatchObject({ value, source: "environment" });
+      await expect(saveSetting(archiveKey, "false")).rejects.toThrow(
+        "set on the server",
+      );
+    }
+    vi.stubEnv(archiveKey, "");
+    await expect(saveSetting(archiveKey, "yes")).rejects.toThrow(
+      "true or false",
+    );
+    vi.stubEnv(archiveKey, "yes");
+    expect(() => validateDeployment()).toThrow(archiveKey);
+  });
 });

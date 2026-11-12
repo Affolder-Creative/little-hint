@@ -467,10 +467,16 @@ for (const [file, variables] of [
     const parsed = config(file, {
       ...variables,
       AUTO_IMPORT_PRODUCT_PHOTOS: value,
+      HIDE_ARCHIVED_ITEMS_FROM_OTHERS: value,
       CLOUDFLARE_WEB_ANALYTICS: value,
     });
     assert.equal(parsed.status, 0, parsed.stderr);
     const services = JSON.parse(parsed.stdout).services;
+    for (const name of ["app", "worker"])
+      assert.equal(
+        services[name].environment.HIDE_ARCHIVED_ITEMS_FROM_OTHERS,
+        value,
+      );
     for (const name of ["app", "worker"])
       assert.equal(
         services[name].environment.AUTO_IMPORT_PRODUCT_PHOTOS,

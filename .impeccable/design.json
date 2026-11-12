@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-11T20:37:16.136341+00:00",
+  "generatedAt": "2026-11-12T16:18:11.259109+00:00",
   "title": "Design System: Little Hint",
   "extensions": {
     "colorMeta": {
@@ -1375,6 +1375,13 @@
       "description": "Compact rich-text notes with wrapping formatting controls and an inset focus outline.",
       "html": "<div class=\"ds-note\"><div class=\"ds-note-tools\"><button aria-label=\"Bold\" aria-pressed=\"true\"><strong>B</strong></button><button aria-label=\"Italic\"><em>I</em></button><button aria-label=\"Strikethrough\"><s>S</s></button></div><div class=\"ds-note-input\" contenteditable=\"true\" role=\"textbox\" aria-label=\"A helpful note\"><strong>Size:</strong> medium</div></div>",
       "css": ".ds-note{background:var(--paper);color:var(--text);border:1px solid var(--control-border);border-radius:8px}.ds-note-tools{display:flex;flex-wrap:wrap;gap:4px;padding:4px;border-bottom:1px solid var(--border)}.ds-note-tools button{min-width:44px;min-height:44px;border:0;border-radius:8px;background:transparent;color:var(--text)}.ds-note-tools button:hover,.ds-note-tools button[aria-pressed=true]{background:var(--soft);color:var(--accent)}.ds-note-tools button:focus-visible,.ds-note-input:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}.ds-note-input{min-height:150px;padding:12px;font-size:14px;line-height:1.7;border-radius:0 0 8px 8px}"
+    },
+    {
+      "name": "Administrator preference",
+      "kind": "custom",
+      "description": "Flat application preference with a labeled checkbox and associated helper copy. Hosting overrides disable the control.",
+      "html": "<section class=\"ds-preference\"><h4>Archive privacy</h4><label class=\"ds-preference-check\"><input type=\"checkbox\" aria-describedby=\"ds-archive-help\">Hide archived items from other users</label><p id=\"ds-archive-help\">Archived wishes stay visible to their list owners and profile managers.</p></section>",
+      "css": ".ds-preference { color: var(--text); margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--border); } .ds-preference h4 { margin: 0 0 8px; } .ds-preference-check { display: flex; align-items: flex-start; gap: 9px; min-height: 44px; padding-block: 10px; font-size: 14px; line-height: 1.5; cursor: pointer; } .ds-preference-check input { flex-shrink: 0; margin: 2px 0 0; } .ds-preference p { color: var(--muted); line-height: 1.6; } .ds-preference input:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; } .ds-preference-check:has(input:disabled) { cursor: not-allowed; }"
     }
   ],
   "narrative": {
