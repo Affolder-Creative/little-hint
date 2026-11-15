@@ -1,3 +1,4 @@
+import { PersonCoManagement } from "./CoManagement";
 import { ItemPhotoDetail } from "./ItemPhotoDetail";
 import { HelpfulNote } from "./HelpfulNoteView";
 import { netContribution } from "../shared/contribution-money";
@@ -857,11 +858,18 @@ function People() {
                   ? "Your wish lists"
                   : p.guardians.includes(world.me.id)
                     ? "Managed by you"
-                    : world.friendEntries?.some(
-                          (f) => f.personId === p.id && !f.connectedAt,
+                    : world.coManagement?.arrangements.some(
+                          (r) =>
+                            r.personId === p.id &&
+                            r.helperId === world.me.id &&
+                            r.status === "active",
                         )
-                      ? "Gift ideas · Not connected"
-                      : "Wishes & gift ideas"}
+                      ? "Wishes co-managed by you"
+                      : world.friendEntries?.some(
+                            (f) => f.personId === p.id && !f.connectedAt,
+                          )
+                        ? "Gift ideas · Not connected"
+                        : "Wishes & gift ideas"}
               </p>
             </div>
             <ArrowRight size={19} />
@@ -920,6 +928,13 @@ function PersonPage() {
     );
   const own =
     person.userId === world.me.id || person.guardians.includes(world.me.id);
+  const coManaging =
+    world.coManagement?.arrangements.some(
+      (r) =>
+        r.personId === person.id &&
+        r.helperId === world.me.id &&
+        r.status === "active",
+    ) ?? false;
   const friendEntries = (world.friendEntries ?? []).filter(
     (f) => f.personId === person.id,
   );
@@ -974,19 +989,31 @@ function PersonPage() {
       <Header
         title={person.name}
         description={
-          own
-            ? person.userId === world.me.id
-              ? "Help your people choose something you would love."
-              : `Manage wish lists for ${person.name}.`
-            : unconnectedFriend
-              ? `Plan gifts for ${person.name} before they join.`
-              : `A few hints about what ${person.name} would love.`
+          coManaging
+            ? `Managing wishes for ${person.name}`
+            : own
+              ? person.userId === world.me.id
+                ? "Help your people choose something you would love."
+                : `Manage wish lists for ${person.name}.`
+              : unconnectedFriend
+                ? `Plan gifts for ${person.name} before they join.`
+                : `A few hints about what ${person.name} would love.`
         }
       >
-        {own && tab === "wishes" && (
+        {(own || coManaging) && tab === "wishes" && (
           <button className="button" onClick={addWish}>
             <Plus size={17} />
             {editableLists.length ? "Add item" : "Create wish list"}
+          </button>
+        )}
+        {coManaging && tab === "wishes" && editableLists.length > 0 && (
+          <button
+            className="button secondary"
+            onClick={() =>
+              open("Create wish list", <ListForm personId={person.id} />)
+            }
+          >
+            <Plus size={17} /> Create wish list
           </button>
         )}
         {own && person.userId !== world.me.id && tab === "ideas" && (
@@ -1044,6 +1071,7 @@ function PersonPage() {
             : "Profile sharing is off. Lists and ideas you share separately keep their audience."}
         </p>
       )}
+      <PersonCoManagement personId={person.id} />
       <FriendManagement personId={person.id} />
       {person.userId !== world.me.id && <SpendingSummary person={person.id} />}
       <PreferenceSummary personId={person.id} />
@@ -1314,6 +1342,13 @@ function GiftDetail() {
             <ItemActions gift={gift} />
           </div>
           <PrivateIdeaBadge gift={gift} />
+          {gift.listId && (gift.creatorName || gift.lastEditorName) && (
+            <p className="muted">
+              {gift.creatorName && `Added by ${gift.creatorName}`}
+              {gift.creatorName && gift.lastEditorName && " · "}
+              {gift.lastEditorName && `Last edited by ${gift.lastEditorName}`}
+            </p>
+          )}
           {gift.listId && gift.priority && (
             <span className={`item-priority priority-${gift.priority}`}>
               {priorityLabels[gift.priority]}

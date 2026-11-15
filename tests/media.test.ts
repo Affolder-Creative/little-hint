@@ -92,6 +92,7 @@ it("collects aged abandoned uploads but preserves recent uploads and all referen
     "draft",
     "import",
     "discovery",
+    "recovered",
   ]) {
     s.media.push({
       id,
@@ -123,6 +124,21 @@ it("collects aged abandoned uploads but preserves recent uploads and all referen
     candidates: [{ image: "/api/v1/media/discovery" }],
   } as any);
   vi.mocked(transact).mockImplementationOnce(async (fn) => fn(s, {} as never));
+  s.recoveredDrafts.push({
+    id: "recovery",
+    sourceId: "removed-wish",
+    revision: 1,
+    createdAt: now,
+    userId: "helper",
+    title: "Unfinished",
+    description: "",
+    url: "",
+    image: "/api/v1/media/recovered",
+    priceCents: null,
+    currency: "USD",
+    quantity: 1,
+    tags: [],
+  });
   await removeDeletedMedia();
   expect(s.media.map((m) => m.id)).toEqual([
     "recent",
@@ -130,9 +146,15 @@ it("collects aged abandoned uploads but preserves recent uploads and all referen
     "draft",
     "import",
     "discovery",
+    "recovered",
   ]);
   expect(await readdir(directory)).not.toContain("orphan.webp");
   expect(await readdir(directory)).not.toContain("orphan.webp.card-v1.webp");
+  s.recoveredDrafts = [];
+  vi.mocked(transact).mockImplementationOnce(async (fn) => fn(s, {} as never));
+  await removeDeletedMedia();
+  expect(s.media.some((m) => m.id === "recovered")).toBe(false);
+  expect(await readdir(directory)).not.toContain("recovered.webp");
 });
 
 it("purges closed-account uploads even if a delayed job leaves a stale reference", async () => {

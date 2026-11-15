@@ -1,3 +1,4 @@
+import { listCanEdit } from "./co-management";
 import { itemPhotos } from "../shared/item-photos";
 import { sourceView } from "./gift-lifecycle";
 import { canShop } from "./domain-access";
@@ -97,8 +98,7 @@ export async function itemPage(
         (!archived(s, i) || canEdit(s, a, i)),
     );
   const canManage =
-    items.some((i) => canEdit(s, a, i)) ||
-    !!list?.ownerIds.some((id) => controls(s, a, id));
+    items.some((i) => canEdit(s, a, i)) || (!!list && listCanEdit(s, a, list));
   const archivedView =
     canManage &&
     q.status === "archived" &&
@@ -247,11 +247,16 @@ export function registerCollections(
     return ids.filter(
       (id) =>
         existing.has(id) &&
-        s.items.some(
+        (s.items.some(
           (i) =>
             itemPhotos(i).includes(`/api/v1/media/${id}`) &&
             itemVisible(s, a, i),
-        ),
+        ) ||
+          s.recoveredDrafts.some(
+            (d) =>
+              d.userId === a.id &&
+              itemPhotos(d).includes(`/api/v1/media/${id}`),
+          )),
     );
   });
   app.get("/api/v1/buying/contribution-context/:id", async (req: any) => {
@@ -327,8 +332,7 @@ export function registerCollections(
     const a = await actor(req),
       s = await readCollectionState();
     const l = s.lists.find(
-      (l) =>
-        l.id === req.params.id && l.ownerIds.some((id) => controls(s, a, id)),
+      (l) => l.id === req.params.id && listCanEdit(s, a, l),
     );
     if (!l) fail(404, "Wish list not found.");
     return ordered(

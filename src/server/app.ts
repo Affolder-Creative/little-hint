@@ -532,6 +532,10 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
     "people/update": "people.update",
     "people/link": "people.link",
     "people/cancel-link": "people.cancel-link",
+    "co-management/request": "co-management.request",
+    "co-management/respond": "co-management.respond",
+    "co-management/end": "co-management.end",
+    "co-management/discard-draft": "co-management.discard-draft",
     lists: "lists.create",
     "lists/accept": "lists.accept",
     "lists/update": "lists.update",
@@ -650,16 +654,25 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
       const a = await actor(req),
         s = await readState(),
         m = s.media.find((m) => m.id === req.params.id);
+      const recovered = s.recoveredDrafts.some(
+        (d) =>
+          d.userId === a.id &&
+          itemPhotos(d).includes(`/api/v1/media/${req.params.id}`),
+      );
       if (
         !m ||
         m.deletedAt ||
-        (s.items.some((i) => itemPhotos(i).includes(`/api/v1/media/${m.id}`)) &&
+        (!recovered &&
+          s.items.some((i) =>
+            itemPhotos(i).includes(`/api/v1/media/${m.id}`),
+          ) &&
           !s.items.some(
             (i) =>
               itemPhotos(i).includes(`/api/v1/media/${m.id}`) &&
               itemVisible(s, a, i),
           )) ||
-        (m.userId !== a.id &&
+        (!recovered &&
+          m.userId !== a.id &&
           !s.items.some(
             (i) =>
               itemPhotos(i).includes(`/api/v1/media/${m.id}`) &&
@@ -671,7 +684,11 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
       const batches = s.giftDiscoveryJobs.filter((j) =>
         j.candidates.some((c) => c.image === image),
       );
-      if (batches.length && !s.items.some((i) => itemPhotos(i).includes(image))) {
+      if (
+        !recovered &&
+        batches.length &&
+        !s.items.some((i) => itemPhotos(i).includes(image))
+      ) {
         const cfg = discoveryConfiguration(await config());
         if (
           !batches.some((j) => {

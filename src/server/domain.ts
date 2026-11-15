@@ -1,3 +1,10 @@
+import {
+  listCanEdit,
+  coManagementCommand,
+  coManagementView,
+  reconcileCoManagement,
+  coNotice,
+} from "./co-management";
 import { validCalendarDate } from "../shared/list-dates";
 import { itemPhotoLimit } from "./photo-config";
 import { itemPhotos } from "../shared/item-photos";
@@ -320,7 +327,8 @@ export function giftSummary(s: State, a: Actor, listId: string): GiftSummary {
   };
 }
 export function giftView(s: State, a: Actor, i: Item): GiftView {
-  const { creatorId, spendingListId, draftOwnerId, ...fields } = i;
+  const { creatorId, spendingListId, draftOwnerId, lastEditorId, ...fields } =
+    i;
   const own = recipient(s, a, i);
   const view: GiftView = {
     ...fields,
@@ -339,7 +347,9 @@ export function giftView(s: State, a: Actor, i: Item): GiftView {
     mode: mode(s, i),
   };
   if (!i.listId && creatorId === a.id) view.spendingListId = spendingListId;
-  if (!i.listId) view.creatorName = name(s, creatorId);
+  if (!i.listId || canEdit(s, a, i)) view.creatorName = name(s, creatorId);
+  if (i.listId && canEdit(s, a, i) && lastEditorId)
+    view.lastEditorName = name(s, lastEditorId);
   if (!own || view.mode === "transparent") {
     const rs = s.reservations.filter(
       (r) => r.itemId === i.id && r.quantity > 0,
@@ -538,6 +548,7 @@ export function world(
   const people = s.people.filter((p) => personVisible(s, a, p));
   const ps = ownIds(s, a);
   return {
+    coManagement: coManagementView(s, a),
     compact,
     paged,
     homeFeedMode: s.items.some(
@@ -684,14 +695,13 @@ export function world(
           s.items.some((i) => i.id === id && itemVisible(s, a, i)),
         ),
         archived: listIsArchived(l),
-        canEdit: l.ownerIds.some((p) => ps.includes(p)),
+        canEdit: listCanEdit(s, a, l),
         hasOtherItemEditors: s.people.some(
           (p) =>
             l.ownerIds.includes(p.id) &&
             controllers(p).some((id) => id !== a.id),
         ),
-        canManageSettings:
-          !l.groupEventId && l.ownerIds.some((p) => ps.includes(p)),
+        canManageSettings: !l.groupEventId && listCanEdit(s, a, l),
         revealAvailable: dateHasElapsed(l.revealAfter, l.timeZone),
       })),
     items: paged
@@ -944,11 +954,112 @@ export function command(
   action: string,
   raw: unknown,
 ): unknown {
+  reconcileCoManagement(s);
   reconcilePrivacyReview(s);
   reconcileSpendingPrivacy(s);
   lifecycleBaseline(s);
   reconcileGiftLifecycle(s);
+  const beforeLists = new Map(
+    s.lists.map((l) => [
+      l.id,
+      {
+        revision: l.revision,
+        name: l.name,
+        description: l.description,
+        groupIds: [...l.groupIds],
+        mode: l.mode,
+        timeZone: l.timeZone,
+        revealAfter: l.revealAfter,
+        archiveAfter: l.archiveAfter,
+        archived: l.archived,
+        deletedAt: l.deletedAt,
+        revealExchangeGivers: l.revealExchangeGivers,
+      },
+    ]),
+  );
+  const beforeItems = new Map(s.items.map((i) => [i.id, i.revision]));
   const result = commandCore(s, a, action, raw);
+  reconcileCoManagement(s);
+  const changedItems = action.startsWith("items.")
+    ? s.items.filter((i) => i.listId && i.revision !== beforeItems.get(i.id))
+    : [];
+  for (const i of changedItems) i.lastEditorId = a.id;
+  if (
+    result &&
+    typeof result === "object" &&
+    "id" in result &&
+    "canEdit" in result &&
+    changedItems.some((i) => i.id === result.id)
+  )
+    (result as GiftView).lastEditorName = name(s, a.id);
+  for (const l of s.lists) {
+    const grants = s.coManagement.filter(
+      (g) => g.personId === l.ownerIds[0] && g.status === "active",
+    );
+    if (!grants.length) continue;
+    const users = [grants[0].ownerId, ...grants.map((g) => g.helperId)];
+    const eligible = l.ownerIds.length === 1 && l.pendingOwnerIds.length === 0;
+
+    if (!eligible) continue;
+    if (
+      l.revision !== beforeLists.get(l.id)?.revision &&
+      action.startsWith("lists.")
+    ) {
+      const before = beforeLists.get(l.id);
+      const changes: string[] = [];
+      if (before) {
+        const fields = {
+          name: "name",
+          description: "description",
+          mode: "gifting mode",
+          timeZone: "time zone",
+          revealAfter: "reveal date",
+          archiveAfter: "archive date",
+          archived: "archive status",
+          deletedAt: "Trash status",
+          revealExchangeGivers: "exchange reveal policy",
+        } as const;
+        for (const [key, label] of Object.entries(fields)) {
+          const k = key as keyof typeof fields;
+          if (before[k] !== l[k])
+            changes.push(
+              `${label}: ${String(before[k] ?? "none")} → ${String(l[k] ?? "none")}`,
+            );
+        }
+        const added = l.groupIds.filter((id) => !before.groupIds.includes(id));
+        const removed = before.groupIds.filter(
+          (id) => !l.groupIds.includes(id),
+        );
+        if (added.length)
+          changes.push(
+            `shared with ${added.map((id) => s.groups.find((g) => g.id === id)?.name ?? "a group").join(", ")}`,
+          );
+        if (removed.length)
+          changes.push(
+            `stopped sharing with ${removed.map((id) => s.groups.find((g) => g.id === id)?.name ?? "a former group").join(", ")}`,
+          );
+      }
+      coNotice(
+        s,
+        users,
+        l.ownerIds[0],
+        before
+          ? `changed ${changes.length ? changes.join("; ") : "list organization"}.`
+          : `created the wish list ${l.name}.`,
+        a.id,
+        { listId: l.id, content: true },
+      );
+    }
+    for (const i of changedItems.filter(
+      (i) => i.listId === l.id && i.publicationState !== "draft",
+    )) {
+      coNotice(s, users, l.ownerIds[0], "updated a wish.", a.id, {
+        listId: l.id,
+        itemId: i.id,
+        content: true,
+      });
+    }
+  }
   reconcileGiftLifecycle(s);
   reconcilePrivacyReview(s);
   reconcileSpendingPrivacy(s);
@@ -960,6 +1071,8 @@ function commandCore(
   action: string,
   raw: unknown,
 ): unknown {
+  if (action.startsWith("co-management."))
+    return coManagementCommand(s, a, action, raw);
   if (action.startsWith("friends.")) return friendCommand(s, a, action, raw);
   if (listActions.includes(action)) return listCommand(s, a, action, raw);
   if (buyingActions.includes(action)) return buyingCommand(s, a, action, raw);
@@ -1692,7 +1805,7 @@ function commandCore(
               l.id === p.listId &&
               !l.deletedAt &&
               !listIsArchived(l) &&
-              l.ownerIds.some((id) => controls(s, a, id)),
+              listCanEdit(s, a, l),
           ) ?? fail(404, "List not found.");
         recipients = l.ownerIds;
       } else {
@@ -2242,7 +2355,7 @@ function commandCore(
             l.id === p.listId &&
             !l.deletedAt &&
             !listIsArchived(l) &&
-            l.ownerIds.some((id) => controls(s, a, id)),
+            listCanEdit(s, a, l),
         )
       )
         fail(404, "List not found.");
@@ -2341,7 +2454,7 @@ function commandCore(
             l.id === p.draft!.listId &&
             !l.deletedAt &&
             !listIsArchived(l) &&
-            l.ownerIds.some((id) => controls(s, a, id)),
+            listCanEdit(s, a, l),
         )
       )
         fail(404, "List not found.");

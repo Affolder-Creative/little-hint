@@ -120,8 +120,8 @@ export function ListPolicyFields({
         </label>
         <small id={privacyHintId}>
           {list?.modeLocked
-            ? "This privacy choice cannot change after sharing."
-            : "Choose before sharing. This privacy choice cannot change later."}
+            ? "This privacy choice is locked after sharing or co-manager access."
+            : "Choose before sharing or giving a co-manager access. This privacy choice cannot change later."}
         </small>
       </fieldset>
       {children}
@@ -157,7 +157,7 @@ export function ListPolicyFields({
                 <span className="policy-guidance">
                   {list?.modeLocked && !list.revealAfter ? (
                     <span>
-                      Shared without a reveal date. Gift summaries stay hidden.
+                      Locked without a reveal date. Gift summaries stay hidden.
                     </span>
                   ) : (
                     <>
@@ -175,10 +175,10 @@ export function ListPolicyFields({
                         {list?.modeLocked
                           ? revealLocked
                             ? "Gift summaries are now available. This date is fixed."
-                            : "After sharing, this date can only move later."
+                            : "Once privacy is locked, this date can only move later."
                           : event
                             ? "Choose before creating the event. After creation, this date can only move later."
-                            : "Choose before first sharing. After sharing, this date can only move later."}
+                            : "Choose before first sharing. Once privacy is locked, this date can only move later."}
                       </span>
                     </>
                   )}
@@ -263,19 +263,36 @@ export function SharingReview({
   data,
   audience,
   list,
+  coManagerAccess = false,
 }: {
   data: FormData;
   audience: string[];
   list?: Policy;
+  coManagerAccess?: boolean;
 }) {
   const policy = listPolicyValues(data, list);
   return (
     <section aria-label="Review sharing">
-      <h3>Review before sharing</h3>
+      <h3>
+        {coManagerAccess ? "Review list privacy" : "Review before sharing"}
+      </h3>
       <p>
         <strong>{String(data.get("name"))}</strong>
       </p>
-      <p>Shared with: {audience.join(", ") || "Only the list owners"}.</p>
+      <p>
+        Shared with:{" "}
+        {audience.join(", ") ||
+          (coManagerAccess
+            ? "The account holder and co-managers"
+            : "Only the list owners")}
+        .
+      </p>
+      {coManagerAccess && (
+        <p>
+          Co-managers can access this list as soon as it is saved. This
+          permanently locks the gifting policy, even without group sharing.
+        </p>
+      )}
       <p>
         {policy.mode === "surprise"
           ? "Keep it a surprise: recipients cannot see who reserves or buys their gifts."

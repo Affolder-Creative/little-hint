@@ -28,6 +28,17 @@ export function ListIndex() {
     [group, setGroup] = useNavigationState<string>("listGroup", "");
   const settings = useOrganization("lists");
   const archived = status === "archived";
+  const managed =
+    world.coManagement?.arrangements.filter(
+      (r) => r.helperId === world.me.id && r.status === "active",
+    ) ?? [];
+  const coManagedOwner = (list: {
+    ownerIds: string[];
+    pendingOwnerIds: string[];
+  }) =>
+    list.ownerIds.length === 1 && !list.pendingOwnerIds.length
+      ? managed.find((r) => r.personId === list.ownerIds[0])?.ownerName
+      : undefined;
   const hasEventLists = world.lists.some(
     (l) =>
       l.canEdit &&
@@ -61,7 +72,11 @@ export function ListIndex() {
     <>
       <Header
         title="Your wish lists"
-        description="A little hint about what you’d love."
+        description={
+          managed.length
+            ? "Wish lists you own or help manage."
+            : "A little hint about what you’d love."
+        }
       >
         <button
           className="button"
@@ -128,13 +143,26 @@ export function ListIndex() {
                   </span>
                   <div>
                     <h3>{l.name}</h3>
+                    {coManagedOwner(l) && (
+                      <p>Managing wishes for {coManagedOwner(l)}</p>
+                    )}
                     {l.groupEventId && (
                       <p>From an unavailable event · Your items are kept</p>
                     )}
                     <p>
                       {l.groupIds.length
                         ? `Shared with: ${l.groupIds.map((id) => world.groups.find((g) => g.id === id)?.name ?? "Family group").join(", ")}`
-                        : "Only you for now"}
+                        : coManagedOwner(l)
+                          ? "Unshared · Visible to the account holder and co-managers"
+                          : world.coManagement?.arrangements.some(
+                                (r) =>
+                                  r.status === "active" &&
+                                  l.ownerIds.length === 1 &&
+                                  !l.pendingOwnerIds.length &&
+                                  r.personId === l.ownerIds[0],
+                              )
+                            ? "Unshared · Visible to you and your co-managers"
+                            : "Only you for now"}
                     </p>
                   </div>
                   <Privacy mode={l.mode} />

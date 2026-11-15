@@ -144,21 +144,59 @@ export function ListForm({
   const mine = world.people.filter(
     (p) => p.userId === world.me.id || p.guardians.includes(world.me.id),
   );
+  const targetId = list?.ownerIds.length === 1 ? list.ownerIds[0] : personId;
+  const delegated =
+    !!targetId &&
+    (world.coManagement?.arrangements.some(
+      (r) =>
+        r.personId === targetId &&
+        r.helperId === world.me.id &&
+        r.status === "active",
+    ) ??
+      false);
+  const target = world.people.find((p) => p.id === targetId);
+  const eligibleGroups = delegated
+    ? (world.coManagement?.audiences.find(
+        (entry) => entry.personId === targetId,
+      )?.groups ?? [])
+    : world.groups;
+  const groups = [...eligibleGroups];
+  for (const id of list?.groupIds ?? []) {
+    if (!groups.some((g) => g.id === id))
+      groups.push({
+        id,
+        name:
+          world.groups.find((g) => g.id === id)?.name ??
+          "Previously shared family group",
+      });
+  }
   return (
     <Form
       className="list-form"
       submit={list ? "Save list" : "Create list"}
-      review={(data) =>
-        !list?.modeLocked && data.getAll("groupIds").length > 0 ? (
+      review={(data) => {
+        const recipients = delegated
+          ? [targetId!]
+          : (list?.ownerIds ?? selected(data, "ownerIds"));
+        const coManagerAccess =
+          recipients.length === 1 &&
+          !list?.pendingOwnerIds.length &&
+          (world.coManagement?.arrangements.some(
+            (r) => r.status === "active" && r.personId === recipients[0],
+          ) ??
+            false);
+        return !list?.modeLocked &&
+          (coManagerAccess || data.getAll("groupIds").length > 0) ? (
           <SharingReview
             data={data}
             list={list}
-            audience={world.groups
+            coManagerAccess={coManagerAccess}
+            audience={groups
               .filter((g) => data.getAll("groupIds").includes(g.id))
               .map((g) => g.name)}
           />
-        ) : null
-      }
+        ) : null;
+      }}
       onSubmit={async (f) => {
         const saved = await mutate<List>(list ? "lists/update" : "lists", {
           ...(list
@@ -167,7 +205,7 @@ export function ListForm({
                 revision: list.revision,
                 archived: f.get("archived") === "on",
               }
-            : { ownerIds: selected(f, "ownerIds") }),
+            : { ownerIds: delegated ? [targetId!] : selected(f, "ownerIds") }),
           name: value(f, "name"),
           description: value(f, "description"),
           groupIds: selected(f, "groupIds"),
@@ -177,6 +215,13 @@ export function ListForm({
         else close();
       }}
     >
+      {delegated && (
+        <p className="notice">
+          Managing wishes for {target?.name ?? "this person"}. Share with their
+          family groups. Gifting policy locks as soon as a co-manager can access
+          the list.
+        </p>
+      )}
       <Field label="List name">
         <input
           name="name"
@@ -195,7 +240,13 @@ export function ListForm({
         />
       </Field>
       <ListPolicyFields list={list}>
-        {!list && (
+        {!list && delegated && (
+          <p>
+            This list is for {target?.name}. Only the account holder can change
+            its recipients.
+          </p>
+        )}
+        {!list && !delegated && (
           <fieldset className="choice-group form-section">
             <legend>Who is this list for?</legend>
             {world.people.map((p) => (
@@ -218,8 +269,8 @@ export function ListForm({
         )}
         <fieldset className="choice-group form-section">
           <legend>Share with</legend>
-          {world.groups.length ? (
-            world.groups.map((g) => (
+          {groups.length ? (
+            groups.map((g) => (
               <label className="check" key={g.id}>
                 <input
                   type="checkbox"
@@ -233,14 +284,21 @@ export function ListForm({
                           ?.managedGroupIds?.includes(g.id)
                   }
                 />
-                {familyGroupLabel(g, world)}
+                {world.groups.some((group) => group.id === g.id)
+                  ? familyGroupLabel(
+                      world.groups.find((group) => group.id === g.id)!,
+                      world,
+                    )
+                  : g.name}
               </label>
             ))
           ) : (
             <p>
-              {world.canCreateGroups === false
-                ? "Accept a family-group invitation to share this list, or ask an app administrator to create a group."
-                : "Create a family group in Settings to share this list."}
+              {delegated
+                ? "This person has no family groups available for sharing. You can still create an unshared list."
+                : world.canCreateGroups === false
+                  ? "Accept a family-group invitation to share this list, or ask an app administrator to create a group."
+                  : "Create a family group in Settings to share this list."}
             </p>
           )}
           <small>

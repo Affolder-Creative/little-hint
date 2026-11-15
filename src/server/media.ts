@@ -105,6 +105,7 @@ export async function removeDeletedMedia() {
       if (
         !media.purgeAfterAccountClosure &&
         (s.items.some((i) => itemPhotos(i).includes(url)) ||
+          s.recoveredDrafts.some((d) => itemPhotos(d).includes(url)) ||
           s.imports.some(
             (i) =>
               i.result?.image === url ||

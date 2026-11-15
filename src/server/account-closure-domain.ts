@@ -1,3 +1,4 @@
+import { reconcileCoManagement } from "./co-management";
 import { itemPhotos, removeItemPhoto } from "../shared/item-photos";
 import { reconcileEventParticipants, reconcileHouseholds } from "./domain";
 import { profileOwner, managerCandidates } from "./profile-management";
@@ -280,6 +281,17 @@ export function closeAccountData(
       409,
       "Resolve the listed responsibilities and gift commitments first.",
     );
+  for (const g of s.coManagement.filter(
+    (g) => g.ownerId === a.id || g.helperId === a.id,
+  )) {
+    g.status = "ended";
+    touch(g);
+  }
+  reconcileCoManagement(s);
+  s.coManagement = s.coManagement.filter(
+    (g) => g.ownerId !== a.id && g.helperId !== a.id,
+  );
+  s.recoveredDrafts = s.recoveredDrafts.filter((d) => d.userId !== a.id);
   const anonymous = randomUUID();
   const formerNames = new Set(
     s.people.filter((p) => plan.own.has(p.id)).map((p) => p.name),
@@ -646,8 +658,11 @@ export function closeAccountData(
   for (const m of s.media.filter((m) => m.userId === a.id)) {
     m.userId = anonymous;
     if (
-      options.keepSharedContent &&
-      s.items.some((i) => itemPhotos(i).includes(`/api/v1/media/${m.id}`))
+      (options.keepSharedContent &&
+        s.items.some((i) => itemPhotos(i).includes(`/api/v1/media/${m.id}`))) ||
+      s.recoveredDrafts.some((d) =>
+        itemPhotos(d).includes(`/api/v1/media/${m.id}`),
+      )
     )
       continue;
     m.deletedAt = new Date().toISOString();

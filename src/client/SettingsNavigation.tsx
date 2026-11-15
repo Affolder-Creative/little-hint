@@ -3,6 +3,7 @@ import { Field } from "./components";
 
 export const settingsSections = [
   { id: "profile", label: "Profile & appearance" },
+  { id: "co-management", label: "Wish-list co-managers" },
   { id: "invitations", label: "Invitations" },
   { id: "groups", label: "Family groups" },
   { id: "spending", label: "Spending" },
