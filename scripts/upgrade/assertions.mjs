@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
-function currentViewContract(value) {
-  if (Array.isArray(value)) return value.map(currentViewContract);
+function currentViewContract(value, records) {
+  if (Array.isArray(value))
+    return value.map((child) => currentViewContract(child, records));
   if (!value || typeof value !== "object") return value;
   const view = Object.fromEntries(
     Object.entries(value).map(([key, child]) => [
       key,
-      currentViewContract(child),
+      currentViewContract(child, records),
     ]),
   );
   // The pinned release inferred shopping eligibility from isRecipient. Its
@@ -13,6 +14,29 @@ function currentViewContract(value) {
   // Keep every existing field, including all reservation and privacy evidence.
   if (typeof view.isRecipient === "boolean" && !Object.hasOwn(view, "canShop"))
     view.canShop = !view.isRecipient;
+  // New view metadata is derived from retained baseline records, never from
+  // candidate output. Preserve existing values so corruption and leaks fail.
+  if (typeof view.isRecipient === "boolean") {
+    const item = records.find(
+      (r) => r.kind === "items" && r.id === view.id,
+    )?.data;
+    if (item) {
+      if (
+        !Object.hasOwn(view, "individuallyArchived") &&
+        typeof item.archived === "boolean"
+      )
+        view.individuallyArchived = item.archived;
+      if (
+        item.listId &&
+        view.canEdit === true &&
+        !Object.hasOwn(view, "creatorName")
+      )
+        view.creatorName =
+          records.find(
+            (r) => r.kind === "people" && r.data.userId === item.creatorId,
+          )?.data.name ?? "Former member";
+    }
+  }
   return view;
 }
 // Schema 9 adds a baseline only: derive its exact expected fields from the
@@ -84,9 +108,11 @@ export function assertPreserved(actual, expected) {
       `Missing baseline ${field} evidence`,
     );
     assert.deepEqual(
-      field === "views" ? currentViewContract(actual[field]) : actual[field],
       field === "views"
-        ? currentViewContract(expected[field])
+        ? currentViewContract(actual[field], expected.records)
+        : actual[field],
+      field === "views"
+        ? currentViewContract(expected[field], expected.records)
         : expected[field],
       `${field} changed during upgrade or recovery`,
     );
