@@ -92,12 +92,22 @@ describe("account closure policy", () => {
       title: "Private item",
       listId: privateList.id,
     });
+    const idea = { ...f.item, ...stamp(), listId: undefined };
+    const legacyIdea = { ...idea, ...stamp(), archived: true };
+    f.s.items.push(idea, legacyIdea);
     closeAccountData(f.s, f.a, { keepSharedContent: true });
     expect(f.s.lists.find((l) => l.id === f.list.id)?.archived).toBe(true);
     expect(f.s.items.some((i) => i.id === f.item.id)).toBe(true);
     expect(f.s.lists.some((l) => l.id === privateList.id)).toBe(false);
     expect(f.s.items.some((i) => i.listId === privateList.id)).toBe(false);
     expect(f.s.items[0].creatorId).not.toBe(f.a.id);
+    expect(f.item.archivedAt).toBeUndefined();
+    expect(f.s.items.find((i) => i.id === idea.id)?.archivedAt).toEqual(
+      expect.any(String),
+    );
+    expect(
+      f.s.items.find((i) => i.id === legacyIdea.id)?.archivedAt,
+    ).toBeUndefined();
   });
   it("never retains author-only notes or content with no surviving audience", () => {
     const f = fixture();

@@ -211,6 +211,8 @@ export interface Item extends Base {
   visibility: Visibility;
   groupIds: string[];
   archived: boolean;
+  /** Latest individual archive time; absent for active items and legacy archives. */
+  archivedAt?: string;
   importedAt?: string;
   source?: string;
 }
@@ -647,6 +649,8 @@ export interface Actor {
   name: string;
 }
 export interface GiftView extends Omit<Item, "creatorId" | "draftOwnerId"> {
+  /** Unlike archived, this excludes archive status inherited from a wish list. */
+  individuallyArchived?: boolean;
   watchingNotes?: boolean;
   priceWatching?: boolean;
   recipientNames: string[];

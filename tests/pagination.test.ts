@@ -8,6 +8,7 @@ import { itemPage, buyingPage } from "../src/server/collections";
 import { stagingFixtures } from "../src/server/staging-fixtures";
 import { stamp, world } from "../src/server/domain";
 import { pageRows } from "../src/shared/pagination";
+import { orderedArchivedItems } from "../src/shared/organization";
 function fixture(n = 49) {
   const { state, actors } = stagingFixtures();
   const actor = actors[1];
@@ -98,14 +99,110 @@ it("denies strangers and hides availability from surprise recipients", async () 
   expect(page.rows.every((i) => i.available === undefined)).toBe(true);
 });
 it("preserves manual order and all archived-list entries", async () => {
-  const { state, actor, listId } = fixture(25);
+  const { state, listId } = fixture(25);
   const list = state.lists.find((l) => l.id === listId)!;
+  const person = state.people.find((p) => p.id === list.ownerIds[0])!;
+  const owner = {
+    id: person.userId!,
+    name: person.name,
+    email: "owner@example.test",
+  };
   list.itemOrder = [...state.items].reverse().map((i) => i.id);
   list.archived = true;
   state.items[0].archived = true;
-  const page = await itemPage(state, actor, { scope: "list", id: listId });
+  state.items[0].archivedAt = "2026-01-01T00:00:00.000Z";
+  const page = await itemPage(state, owner, {
+    scope: "list",
+    id: listId,
+    status: "archived",
+  });
   expect(page.total).toBe(25);
   expect(page.rows[0].id).toBe(state.items[24].id);
+});
+it("orders archive times before pagination and retains legacy order across pages", async () => {
+  const { state, listId } = fixture(51);
+  const list = state.lists.find((l) => l.id === listId)!;
+  const person = state.people.find((p) => p.id === list.ownerIds[0])!;
+  const owner = {
+    id: person.userId!,
+    name: person.name,
+    email: "owner@example.test",
+  };
+  list.itemOrder = [...state.items].reverse().map((i) => i.id);
+  state.items.forEach((item, n) => {
+    item.archived = true;
+    item.createdAt = new Date(Date.UTC(2025, 0, n + 1)).toISOString();
+  });
+  state.items[0].archivedAt = "2026-01-03T00:00:00.000Z";
+  state.items[1].archivedAt = "2026-01-02T00:00:00.000Z";
+  state.items[2].archivedAt = state.items[1].archivedAt;
+  const expected = [
+    state.items[0],
+    state.items[2],
+    state.items[1],
+    ...state.items.slice(3).reverse(),
+  ].map((item) => item.id);
+  for (const sort of [
+    "manual",
+    "newest",
+    "oldest",
+    "name-asc",
+    "name-desc",
+    "price-asc",
+    "price-desc",
+    "priority",
+  ]) {
+    const pages = await Promise.all(
+      [1, 2, 3].map((page) =>
+        itemPage(state, owner, {
+          scope: "list",
+          id: listId,
+          status: "archived",
+          sort,
+          page,
+        }),
+      ),
+    );
+    expect(pages.flatMap((page) => page.rows.map((i) => i.id))).toEqual(
+      expected,
+    );
+    expect(pages[0].rows[0].archivedAt).toBe(state.items[0].archivedAt);
+    expect(pages[0].total).toBe(51);
+  }
+  expect(
+    orderedArchivedItems(world(state, owner).items, list.itemOrder).map(
+      (i) => i.id,
+    ),
+  ).toEqual(expected);
+  const filtered = await itemPage(state, owner, {
+    scope: "list",
+    id: listId,
+    status: "archived",
+    tag: "Last",
+    page: 3,
+  });
+  expect(filtered.rows.map((i) => i.id)).toEqual([state.items[50].id]);
+  expect(filtered.page).toBe(1);
+});
+it("uses archive chronology for a person's gift ideas", async () => {
+  const { state, actor } = fixture(3);
+  state.items.forEach((item, n) => {
+    delete item.listId;
+    item.creatorId = actor.id;
+    item.visibility = "private";
+    item.archived = true;
+    item.createdAt = new Date(Date.UTC(2025, 0, n + 1)).toISOString();
+  });
+  state.items[0].archivedAt = "2026-01-02T00:00:00.000Z";
+  state.items[1].archivedAt = "2026-01-01T00:00:00.000Z";
+  const page = await itemPage(state, actor, {
+    scope: "person",
+    id: state.items[0].recipientIds[0],
+    tab: "ideas",
+    status: "archived",
+    sort: "newest",
+  });
+  expect(page.rows.map((i) => i.id)).toEqual(state.items.map((i) => i.id));
 });
 it("keeps purchase counts independent of pages", async () => {
   const { state, actor } = fixture();

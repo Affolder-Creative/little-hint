@@ -12,6 +12,7 @@ import { itemTrashed, ordered } from "../shared/organization";
 import { canManageGroupEvents } from "../shared/group-events";
 import { listIsArchived } from "../shared/list-dates";
 import { controls, fail, stamp, syncEventLists, world } from "./domain";
+import { setItemArchived } from "./domain-common";
 
 const identity = z.object({
   id: z.string().uuid(),
@@ -226,9 +227,10 @@ export function managementCommand(
         fail(400, "Only wish-list items have a recipient priority.");
       i.priority = input.priority;
     } else
-      i.archived = identity
-        .extend({ archived: z.boolean() })
-        .parse(raw).archived;
+      setItemArchived(
+        i,
+        identity.extend({ archived: z.boolean() }).parse(raw).archived,
+      );
     i.revision++;
     return { ok: true };
   }

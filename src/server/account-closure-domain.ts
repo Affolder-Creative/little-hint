@@ -12,7 +12,7 @@ import {
   itemVisible,
   reconcileAccess,
 } from "./domain-access";
-import { fail, stamp, touch } from "./domain-common";
+import { fail, setItemArchived, stamp, touch } from "./domain-common";
 
 const active = (e: State["exchanges"][number]) =>
   !e.archived && !e.deletedAt && e.status !== "cancelled";
@@ -380,7 +380,7 @@ export function closeAccountData(
     for (const item of s.items.filter(
       (i) => !i.listId && i.creatorId === a.id && !removedItems.has(i.id),
     )) {
-      item.archived = true;
+      setItemArchived(item, true);
       touch(item);
     }
   }

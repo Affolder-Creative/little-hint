@@ -20,6 +20,15 @@ export function itemTrashed(s: State, item: Item): boolean {
     !!item.deletedAt || !!s.lists.find((l) => l.id === item.listId)?.deletedAt
   );
 }
+export function orderedArchivedItems<T extends Base & { archivedAt?: string }>(
+  rows: readonly T[],
+  order: readonly string[] = [],
+): T[] {
+  // Stable sorting retains default order for ties and undated legacy archives.
+  return ordered(rows, "manual", order).sort((a, b) =>
+    (b.archivedAt ?? "").localeCompare(a.archivedAt ?? ""),
+  );
+}
 export function ordered<
   T extends Base & {
     name?: string;

@@ -9,7 +9,11 @@ import {
 import type { ItemPage } from "../shared/pagination";
 import { BrowseTools } from "./BrowseTools";
 import { useNavigationState } from "./NavigationScroll";
-import { ordered, sortLabels } from "../shared/organization";
+import {
+  ordered,
+  orderedArchivedItems,
+  sortLabels,
+} from "../shared/organization";
 import {
   ItemActions,
   ReorderForm,
@@ -95,13 +99,18 @@ export function Browser({
   const collectionTotal = remote?.collectionTotal ?? items.length;
   const canManage =
     remote?.canManage ?? (parentList?.canEdit || items.some((i) => i.canEdit));
-  const canReorder = !!parentList?.canEdit && !parentList.archived;
+  const archivedView =
+    canManage && itemStatus === "archived" && !parentList?.archived;
+  const canReorder =
+    !!parentList?.canEdit && !parentList.archived && !archivedView;
   const visibleItems = parentList?.archived
     ? items
     : items.filter(
         (i) => i.archived === (canManage && itemStatus === "archived"),
       );
-  const sorted = ordered(visibleItems, settings.sort, parentList?.itemOrder);
+  const sorted = archivedView
+    ? orderedArchivedItems(visibleItems, parentList?.itemOrder)
+    : ordered(visibleItems, settings.sort, parentList?.itemOrder);
   const showAvailability =
     remote?.showAvailability ??
     items.some((item) => item.available !== undefined);
@@ -186,6 +195,7 @@ export function Browser({
       {collectionTotal > 0 && (
         <>
           <BrowseTools
+            title={archivedView ? "Filter" : undefined}
             search={search}
             setSearch={setSearch}
             searchLabel={searchLabel}
@@ -202,9 +212,11 @@ export function Browser({
               Number(chosenPeople.length > 0)
             }
             summary={[
-              ...(settings.sort !== "manual"
-                ? [sortLabels[settings.sort]]
-                : []),
+              ...(archivedView
+                ? ["Most recently archived first"]
+                : settings.sort !== "manual"
+                  ? [sortLabels[settings.sort]]
+                  : []),
               ...(tag ? [tag] : []),
               ...(chosenPeople.length
                 ? [
@@ -229,12 +241,14 @@ export function Browser({
               setPeopleSearch("");
             }}
           >
-            <SortSelect
-              items
-              manualLabel={parentList ? "List order" : "Default order"}
-              sort={settings.sort}
-              change={(sort) => settings.save(sort)}
-            />
+            {!archivedView && (
+              <SortSelect
+                items
+                manualLabel={parentList ? "List order" : "Default order"}
+                sort={settings.sort}
+                change={(sort) => settings.save(sort)}
+              />
+            )}
             {canReorder && collectionTotal > 1 && (
               <button
                 data-browse-reorder

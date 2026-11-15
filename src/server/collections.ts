@@ -3,7 +3,7 @@ import { sourceView } from "./gift-lifecycle";
 import { canShop } from "./domain-access";
 import { z } from "zod";
 import type { Actor, State, Reservation } from "../shared/model";
-import { ordered } from "../shared/organization";
+import { ordered, orderedArchivedItems } from "../shared/organization";
 import {
   pageRows,
   type ItemPage,
@@ -93,6 +93,11 @@ export async function itemPage(
   const canManage =
     items.some((i) => canEdit(s, a, i)) ||
     !!list?.ownerIds.some((id) => controls(s, a, id));
+  const archivedView =
+    canManage &&
+    q.status === "archived" &&
+    q.publicationState !== "draft" &&
+    !(list && listIsArchived(list));
   const tags = [...new Set(items.flatMap((i) => i.tags))].sort();
   const people = [...new Set(items.flatMap((i) => i.recipientIds))];
   const quantities = new Map<string, number>();
@@ -107,32 +112,31 @@ export async function itemPage(
   const showAvailability = items.some((i) => availability(i) !== undefined);
   const chosen = q.people.split(",").filter((id) => people.includes(id));
   const collectionTotal = items.length;
-  const filtered = ordered(
-    items.filter((i) => {
-      const available = availability(i);
-      return (
-        (q.publicationState === "draft" ||
-          (!!list && listIsArchived(list)) ||
-          archived(s, i) === (canManage && q.status === "archived")) &&
-        `${i.title} ${i.recipientIds.map((id) => names.get(id) ?? "Recipient").join(" ")} ${i.tags.join(" ")}`
-          .toLowerCase()
-          .includes(q.search.trim().toLowerCase()) &&
-        (q.type === "all" || !!i.listId === (q.type === "wish")) &&
-        (!q.tag || i.tags.includes(q.tag)) &&
-        (!chosen.length || i.recipientIds.some((id) => chosen.includes(id))) &&
-        (!showAvailability ||
-          q.available !== "true" ||
-          !!q.search.trim() ||
-          q.status === "archived" ||
-          (!!list && listIsArchived(list)) ||
-          available === undefined ||
-          available > 0)
-      );
-    }),
-    q.sort,
-    list?.itemOrder,
-  );
-  const result = pageRows(filtered, q.page);
+  const filtered = items.filter((i) => {
+    const available = availability(i);
+    return (
+      (q.publicationState === "draft" ||
+        (!!list && listIsArchived(list)) ||
+        archived(s, i) === (canManage && q.status === "archived")) &&
+      `${i.title} ${i.recipientIds.map((id) => names.get(id) ?? "Recipient").join(" ")} ${i.tags.join(" ")}`
+        .toLowerCase()
+        .includes(q.search.trim().toLowerCase()) &&
+      (q.type === "all" || !!i.listId === (q.type === "wish")) &&
+      (!q.tag || i.tags.includes(q.tag)) &&
+      (!chosen.length || i.recipientIds.some((id) => chosen.includes(id))) &&
+      (!showAvailability ||
+        q.available !== "true" ||
+        !!q.search.trim() ||
+        q.status === "archived" ||
+        (!!list && listIsArchived(list)) ||
+        available === undefined ||
+        available > 0)
+    );
+  });
+  const sorted = archivedView
+    ? orderedArchivedItems(filtered, list?.itemOrder)
+    : ordered(filtered, q.sort, list?.itemOrder);
+  const result = pageRows(sorted, q.page);
   await hydrate(
     s,
     result.rows.map((i) => i.id),

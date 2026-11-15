@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
-import type { Base, List } from "../shared/model";
+import type { Base, Item, List } from "../shared/model";
 import {
   dateHasElapsed,
   validCalendarDate,
@@ -25,6 +25,12 @@ export const stamp = (): Base => ({
 export const touch = (r: Base) => {
   r.revision++;
 };
+export function setItemArchived(item: Item, archived: boolean) {
+  if (item.archived === archived) return;
+  item.archived = archived;
+  if (archived) item.archivedAt = new Date().toISOString();
+  else delete item.archivedAt;
+}
 export const normalizedEmail = (s: string) => s.trim().toLowerCase();
 export const text = z.string().trim().min(1).max(160);
 export const id = z.string().uuid();
