@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, expect, it } from "vitest";
 import { stagingFixtures } from "../src/server/staging-fixtures";
-import { stamp, world, giftView } from "../src/server/domain";
+import { command, stamp, world, giftView } from "../src/server/domain";
 
 const enabled = !!process.env.TEST_DATABASE_URL;
 let storage: typeof import("../src/server/db");
@@ -77,5 +77,52 @@ it.skipIf(!enabled)(
         .slice(0, 24)
         .map((i) => i.id),
     );
+  },
+);
+
+it.skipIf(!enabled)(
+  "persists archive times through collection metadata and restore",
+  async () => {
+    const [legacy, recent] = fixture.state.items;
+    const list = fixture.state.lists.find((l) => l.id === recent.listId)!;
+    const person = fixture.state.people.find((p) => p.id === list.ownerIds[0])!;
+    const owner = fixture.actors.find((a) => a.id === person.userId)!;
+    await storage.transact((s) => {
+      s.items.find((i) => i.id === legacy.id)!.archived = true;
+      s.lists.find((l) => l.id === list.id)!.itemOrder = [legacy.id, recent.id];
+      command(s, owner, "items.archive", {
+        id: recent.id,
+        revision: recent.revision,
+        archived: true,
+      });
+    });
+    const state = await storage.readCollectionState();
+    const archivedAt = state.items.find((i) => i.id === recent.id)!.archivedAt;
+    expect(archivedAt).toEqual(expect.any(String));
+    const page = await itemPage(state, owner, {
+      scope: "list",
+      id: list.id,
+      status: "archived",
+      sort: "manual",
+    });
+    expect(page.rows.map((i) => i.id)).toEqual([recent.id, legacy.id]);
+    expect(page.rows[0].archivedAt).toBe(archivedAt);
+    expect(page.rows[1].archivedAt).toBeUndefined();
+    await storage.transact((s) => {
+      const item = s.items.find((i) => i.id === recent.id)!;
+      command(s, owner, "items.archive", {
+        id: item.id,
+        revision: item.revision,
+        archived: false,
+      });
+    });
+    const restored = await storage.readCollectionState();
+    expect(
+      restored.items.find((i) => i.id === recent.id)!.archivedAt,
+    ).toBeUndefined();
+    expect(restored.lists.find((l) => l.id === list.id)!.itemOrder).toEqual([
+      legacy.id,
+      recent.id,
+    ]);
   },
 );

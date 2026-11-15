@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   emptyState,
   type Item,
@@ -14,7 +14,7 @@ import {
   idempotent,
 } from "../src/server/domain";
 import { trash } from "../src/server/management";
-import { ordered } from "../src/shared/organization";
+import { ordered, orderedArchivedItems } from "../src/shared/organization";
 import { activityAllowed } from "../src/server/activity";
 
 function fixture() {
@@ -329,6 +329,83 @@ describe("events and exchanges", () => {
     f.run("exchanges.trash", e);
     f.run("exchanges.purge", e);
     expect(f.s.exchanges).toEqual([]);
+  });
+});
+describe("individual archive chronology", () => {
+  afterEach(() => vi.useRealTimers());
+
+  it.each(["items.archive", "items.update"])(
+    "%s dates transitions, preserves edits, and keeps the restore position",
+    (action) => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-01-01T12:00:00Z"));
+      const f = fixture();
+      const second = f.add("Mug");
+      f.run("lists.reorder", f.list, { order: [second.id, f.item.id] });
+      const setArchived = (archived: boolean) =>
+        f.run(action, f.item, { ...f.item, archived });
+
+      setArchived(true);
+      expect(f.item.archivedAt).toBe("2026-01-01T12:00:00.000Z");
+      expect(world(f.s, f.actors[0]).items[0].archivedAt).toBe(
+        f.item.archivedAt,
+      );
+
+      vi.setSystemTime(new Date("2026-01-02T12:00:00Z"));
+      setArchived(true);
+      f.run("items.update", f.item, {
+        ...f.item,
+        title: "Edited book",
+        archivedAt: "2099-01-01T00:00:00.000Z",
+      });
+      expect(f.item.archivedAt).toBe("2026-01-01T12:00:00.000Z");
+
+      f.run("items.archive", second, { archived: true });
+      expect(orderedArchivedItems(f.s.items).map((i) => i.id)).toEqual([
+        second.id,
+        f.item.id,
+      ]);
+      setArchived(false);
+      expect(f.item.archivedAt).toBeUndefined();
+      expect(f.list.itemOrder).toEqual([second.id, f.item.id]);
+
+      vi.setSystemTime(new Date("2026-01-03T12:00:00Z"));
+      setArchived(true);
+      expect(f.item.archivedAt).toBe("2026-01-03T12:00:00.000Z");
+      expect(orderedArchivedItems(f.s.items).map((i) => i.id)).toEqual([
+        f.item.id,
+        second.id,
+      ]);
+      expect(f.list.itemOrder).toEqual([second.id, f.item.id]);
+    },
+  );
+
+  it("leaves legacy archive times unknown until a restore and new archive", () => {
+    const f = fixture();
+    f.item.archived = true;
+    f.run("items.archive", f.item, { archived: true });
+    f.run("items.update", f.item, { ...f.item, title: "Legacy archive" });
+    expect(f.item.archivedAt).toBeUndefined();
+    f.run("items.archive", f.item, { archived: false });
+    f.run("items.archive", f.item, { archived: true });
+    expect(f.item.archivedAt).toEqual(expect.any(String));
+  });
+
+  it("does not turn whole-list archiving into individual item archives", () => {
+    const f = fixture();
+    f.run("lists.update", f.list, { ...f.list, archived: true });
+    const view = world(f.s, f.actors[0]).items[0];
+    expect(view.archived).toBe(true);
+    expect(view.individuallyArchived).toBe(false);
+    f.run("items.update", f.item, {
+      ...view,
+      archived: view.individuallyArchived,
+      title: "Edited in an archived list",
+    });
+    expect(f.item.archived).toBe(false);
+    expect(f.item.archivedAt).toBeUndefined();
+    f.run("lists.update", f.list, { ...f.list, archived: false });
+    expect(world(f.s, f.actors[0]).items[0].archived).toBe(false);
   });
 });
 describe("priorities and organization", () => {

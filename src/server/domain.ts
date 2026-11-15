@@ -50,6 +50,7 @@ import {
   fail,
   stamp,
   touch,
+  setItemArchived,
   normalizedEmail,
   text,
   id,
@@ -328,6 +329,7 @@ export function giftView(s: State, a: Actor, i: Item): GiftView {
       (w) => w.userId === a.id && w.itemId === i.id,
     ),
     archived: archived(s, i),
+    individuallyArchived: i.archived,
     recipientNames: i.recipientIds.map(
       (id) => s.people.find((p) => p.id === id)?.name ?? "Recipient",
     ),
@@ -1921,6 +1923,7 @@ function commandCore(
         for (const w of s.priceWatches.filter((w) => w.itemId === i.id))
           w.reference = null;
       }
+      setItemArchived(i, fields.archived);
       Object.assign(i, fields);
       touch(i);
       reconcileAccess(s);

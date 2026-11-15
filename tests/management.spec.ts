@@ -81,21 +81,71 @@ test("priorities, shared ordering, Trash, and event preservation", async ({
   await expect(page.locator(".gift-card .gift-title").last()).toHaveText(
     "Poetry book",
   );
-  await page.getByLabel("Actions for Ceramic mug", { exact: true }).click();
-  await page.getByRole("button", { name: "Archive item", exact: true }).click();
-  await expect(page.locator(".gift-card")).toHaveCount(2);
+  for (const title of ["Alpine jacket", "Ceramic mug"]) {
+    await page.getByLabel(`Actions for ${title}`, { exact: true }).click();
+    await page
+      .getByRole("button", { name: "Archive item", exact: true })
+      .click();
+    await expect(
+      page.locator(".gift-card .gift-title").filter({ hasText: title }),
+    ).toHaveCount(0);
+  }
+  await expect(page.locator(".gift-card")).toHaveCount(1);
   await page
     .getByRole("button", { name: "Archived items", exact: true })
     .click();
   await expect(page.locator(".gift-card .gift-title")).toHaveText([
     "Ceramic mug",
+    "Alpine jacket",
   ]);
-  await page.getByLabel("Actions for Ceramic mug", { exact: true }).click();
-  await page.getByRole("button", { name: "Restore item", exact: true }).click();
+  await expect(page.locator(".browse-summary")).toHaveText(
+    "Most recently archived first",
+  );
+  await page.getByRole("button", { name: "Filter", exact: true }).click();
+  await expect(
+    page.getByRole("dialog", { name: "Filter", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByLabel("Sort by", { exact: true })).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Reorder items", exact: true }),
+  ).toHaveCount(0);
+  await expect(page.getByLabel("Filter by tag", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Done", exact: true }).click();
+  await page.getByLabel("Search items", { exact: true }).fill("mug");
+  await expect(page.locator(".gift-card .gift-title")).toHaveText([
+    "Ceramic mug",
+  ]);
+  await page.getByLabel("Search items", { exact: true }).fill("");
+  await expect(page.locator(".gift-card")).toHaveCount(2);
+  for (const title of ["Alpine jacket", "Ceramic mug"]) {
+    await page.getByLabel(`Actions for ${title}`, { exact: true }).click();
+    await page
+      .getByRole("button", { name: "Restore item", exact: true })
+      .click();
+    await expect(
+      page.locator(".gift-card .gift-title").filter({ hasText: title }),
+    ).toHaveCount(0);
+  }
   await page
     .getByRole("group", { name: "Item status", exact: true })
     .getByRole("button", { name: "Active items", exact: true })
     .click();
+  await page.getByRole("button", { name: /^Sort & filter/ }).click();
+  await expect(page.getByLabel("Sort by", { exact: true })).toHaveValue(
+    "price-desc",
+  );
+  await expect(
+    page.getByRole("button", { name: "Reorder items", exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Done", exact: true }).click();
+  const restoredList = (await readWorld(page)).lists.find(
+    (l) => l.id === list.id,
+  )!;
+  expect(restoredList.itemOrder).toEqual([
+    items[2].id,
+    items[0].id,
+    items[1].id,
+  ]);
   await page.getByLabel("Actions for Ceramic mug", { exact: true }).click();
   await page
     .getByRole("button", { name: "Move to Trash", exact: true })
@@ -167,6 +217,40 @@ test("priorities, shared ordering, Trash, and event preservation", async ({
       .filter((l) => l.name === eventName)
       .every((l) => l.archived && !l.groupEventId && l.canManageSettings),
   ).toBe(true);
+});
+
+test("editing inside an archived wish list preserves individual archive state", async ({
+  page,
+}) => {
+  await login(page, "alex@example.test");
+  const world = await readWorld(page);
+  const person = world.people.find((p) => p.userId === world.me.id)!;
+  const list = await post(page, "lists", {
+    name: `Archived wishes ${Date.now()}`,
+    ownerIds: [person.id],
+    groupIds: [],
+    mode: "surprise",
+  });
+  const item = await post(page, "items", {
+    listId: list.id,
+    title: "Retained book",
+  });
+  await post(page, "lists/update", { ...list, archived: true });
+  await page.goto(`/lists/${list.id}`);
+  await page.getByLabel("Actions for Retained book", { exact: true }).click();
+  await page.getByRole("button", { name: "Edit item", exact: true }).click();
+  await expect(
+    page.getByLabel("Archive this item", { exact: true }),
+  ).not.toBeChecked();
+  await page
+    .getByLabel("Item name", { exact: true })
+    .fill("Retained book, edited");
+  await page.getByRole("button", { name: "Save changes", exact: true }).click();
+  await expect(page.getByRole("dialog")).not.toBeVisible();
+  const edited = (await readWorld(page)).items.find((i) => i.id === item.id)!;
+  expect(edited.archived).toBe(true);
+  expect(edited.individuallyArchived).toBe(false);
+  expect(edited.archivedAt).toBeUndefined();
 });
 
 test("management screens remain clear on desktop and mobile in both themes", async ({

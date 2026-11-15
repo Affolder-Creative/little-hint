@@ -32,6 +32,7 @@ export function BrowseTools({
   searchLabel,
   placeholder = "Search by name",
   searchHint,
+  title = "Sort & filter",
   summary,
   activeCount,
   clear,
@@ -42,6 +43,7 @@ export function BrowseTools({
   searchLabel: string;
   placeholder?: string;
   searchHint?: string;
+  title?: string;
   summary: string[];
   activeCount: number;
   clear: () => void;
@@ -77,7 +79,8 @@ export function BrowseTools({
           onClick={() => setOpened(true)}
         >
           <SlidersHorizontal size={17} />
-          Sort &amp; filter{activeCount > 0 && <span>({activeCount})</span>}
+          {title}
+          {activeCount > 0 && <span>({activeCount})</span>}
         </button>
       </div>
       {summary.length > 0 && (
@@ -92,7 +95,7 @@ export function BrowseTools({
       )}
       {opened && (
         <BrowseSaving.Provider value={{ busy, setBusy }}>
-          <Modal title="Sort & filter" onClose={() => setOpened(false)}>
+          <Modal title={title} onClose={() => setOpened(false)}>
             <fieldset
               disabled={busy}
               className="browse-options"

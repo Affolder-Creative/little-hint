@@ -430,7 +430,9 @@ function GiftEditor({
       importQuery.job && ["pending", "running"].includes(importQuery.job.status)
     );
   const [switchingToManual, setSwitchingToManual] = useState(false);
-  const [archived, setArchived] = useState(gift?.archived ?? false);
+  const [archived, setArchived] = useState(
+    gift?.individuallyArchived ?? gift?.archived ?? false,
+  );
   const [closing, setClosing] = useState(false);
   const [manualLookup, setManualLookup] = useState(false);
   const ignoringLookup = useRef(false);
