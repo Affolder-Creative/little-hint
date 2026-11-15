@@ -409,6 +409,59 @@ describe("individual archive chronology", () => {
   });
 });
 describe("priorities and organization", () => {
+  it("saves Archived sorts separately by account and scope without changing list order", () => {
+    const f = fixture();
+    f.list.itemOrder = [f.item.id];
+    const active = `items:list:${f.list.id}`;
+    const archive = `${active}:archived`;
+    const person = `items:person:${f.s.people[0].id}:archived`;
+    for (const [scope, sort] of [
+      [active, "name-asc"],
+      [archive, "archived-oldest"],
+      [person, "priority"],
+    ])
+      command(f.s, f.actors[0], "organization.update", {
+        scope,
+        sort,
+        revision: 0,
+      });
+    command(f.s, f.actors[1], "organization.update", {
+      scope: archive,
+      sort: "price-desc",
+      revision: 0,
+    });
+    command(f.s, f.actors[0], "organization.update", {
+      scope: archive,
+      sort: "price-asc",
+      revision: 1,
+    });
+    expect(
+      world(f.s, f.actors[0]).organization?.map((p) => [p.scope, p.sort]),
+    ).toEqual([
+      [active, "name-asc"],
+      [archive, "price-asc"],
+      [person, "priority"],
+    ]);
+    expect(
+      world(f.s, f.actors[1]).organization?.map((p) => [p.scope, p.sort]),
+    ).toEqual([[archive, "price-desc"]]);
+    expect(f.list.itemOrder).toEqual([f.item.id]);
+    for (const sort of ["manual", "newest", "oldest"])
+      expect(() =>
+        command(f.s, f.actors[0], "organization.update", {
+          scope: archive,
+          sort,
+          revision: 2,
+        }),
+      ).toThrow("Choose a sort");
+    expect(() =>
+      command(f.s, f.actors[0], "organization.update", {
+        scope: active,
+        sort: "archived-newest",
+        revision: 1,
+      }),
+    ).toThrow("Choose a sort");
+  });
   it("shares list order while keeping priority and personal sorting independent", () => {
     const f = fixture(),
       b = f.add("Mug");

@@ -280,6 +280,11 @@ describe("friend planning", () => {
   });
   it("connects only on acceptance and keeps surprise ideas hidden", () => {
     const f = fixture();
+    command(f.s, f.actors[0], "organization.update", {
+      scope: `items:person:${f.f.personId}:archived`,
+      sort: "archived-oldest",
+      revision: 0,
+    });
     f.share();
     const item = f.idea(f.actors[1], "hidden");
     const inv = f.invite();
@@ -289,6 +294,11 @@ describe("friend planning", () => {
     expect(f.f.personId).toBe(
       f.s.people.find((p) => p.userId === f.actors[2].id)!.id,
     );
+    expect(
+      f.s.organization.find(
+        (o) => o.scope === `items:person:${f.f.personId}:archived`,
+      )?.sort,
+    ).toBe("archived-oldest");
     expect(f.s.items.find((i) => i.id === item.id)?.friendEntryId).toBe(f.f.id);
     f.group.memberIds.push(f.actors[2].id);
     expect(world(f.s, f.actors[2]).items.map((i) => i.id)).not.toContain(

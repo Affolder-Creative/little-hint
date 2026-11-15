@@ -1,4 +1,11 @@
-import type { Base, Item, ItemPriority, SortOrder, State } from "./model";
+import type {
+  ArchivedSortOrder,
+  Base,
+  Item,
+  ItemPriority,
+  SortOrder,
+  State,
+} from "./model";
 
 export const priorityLabels: Record<ItemPriority, string> = {
   "most-wanted": "Most wanted",
@@ -14,7 +21,29 @@ export const sortLabels: Record<SortOrder, string> = {
   "price-desc": "Price high–low",
   newest: "Newest",
   oldest: "Oldest",
+  "archived-newest": "Newest archived",
+  "archived-oldest": "Oldest archived",
 };
+export const archivedSortOrders: readonly ArchivedSortOrder[] = [
+  "archived-newest",
+  "archived-oldest",
+  "priority",
+  "name-asc",
+  "name-desc",
+  "price-asc",
+  "price-desc",
+];
+export function isArchivedSort(sort: SortOrder): sort is ArchivedSortOrder {
+  return archivedSortOrders.some((value) => value === sort);
+}
+export function archivedItemSort(
+  sort: SortOrder,
+  ideasOnly = false,
+): ArchivedSortOrder {
+  return isArchivedSort(sort) && !(ideasOnly && sort === "priority")
+    ? sort
+    : "archived-newest";
+}
 export function itemTrashed(s: State, item: Item): boolean {
   return (
     !!item.deletedAt || !!s.lists.find((l) => l.id === item.listId)?.deletedAt
@@ -23,11 +52,9 @@ export function itemTrashed(s: State, item: Item): boolean {
 export function orderedArchivedItems<T extends Base & { archivedAt?: string }>(
   rows: readonly T[],
   order: readonly string[] = [],
+  sort: ArchivedSortOrder = "archived-newest",
 ): T[] {
-  // Stable sorting retains default order for ties and undated legacy archives.
-  return ordered(rows, "manual", order).sort((a, b) =>
-    (b.archivedAt ?? "").localeCompare(a.archivedAt ?? ""),
-  );
+  return ordered(rows, sort, order);
 }
 export function ordered<
   T extends Base & {
@@ -35,6 +62,7 @@ export function ordered<
     title?: string;
     priority?: ItemPriority | null;
     priceCents?: number | null;
+    archivedAt?: string;
   },
 >(
   rows: readonly T[],
@@ -50,6 +78,15 @@ export function ordered<
   const priorities = Object.keys(priorityLabels);
   return [...rows].sort((a, b) => {
     let result = 0;
+    if (sort === "archived-newest" || sort === "archived-oldest")
+      result = !a.archivedAt
+        ? b.archivedAt
+          ? 1
+          : 0
+        : !b.archivedAt
+          ? -1
+          : a.archivedAt.localeCompare(b.archivedAt) *
+            (sort === "archived-newest" ? -1 : 1);
     if (sort.startsWith("name"))
       result =
         (a.title ?? a.name ?? "").localeCompare(b.title ?? b.name ?? "", "en", {

@@ -100,7 +100,10 @@ export function takeOverProfile(
       value
         .split("|")
         .some(
-          (part) => part === `person:${old}` || part === `items:person:${old}`,
+          (part) =>
+            part === `person:${old}` ||
+            part === `items:person:${old}` ||
+            part === `items:person:${old}:archived`,
         )
     )
       return value
@@ -110,7 +113,9 @@ export function takeOverProfile(
             ? `person:${account.id}`
             : part === `items:person:${old}`
               ? `items:person:${account.id}`
-              : part,
+              : part === `items:person:${old}:archived`
+                ? `items:person:${account.id}:archived`
+                : part,
         )
         .join("|");
     if (Array.isArray(value)) return value.map(remap);

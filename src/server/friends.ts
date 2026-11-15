@@ -282,9 +282,14 @@ export function acceptFriend(s: State, a: Actor, inv: Invitation) {
     touch(j);
   }
   for (const o of s.organization.filter(
-    (o) => o.scope === `items:person:${old}`,
+    (o) =>
+      o.scope === `items:person:${old}` ||
+      o.scope === `items:person:${old}:archived`,
   )) {
-    const scope = `items:person:${person.id}`;
+    const scope = o.scope.replace(
+      `items:person:${old}`,
+      `items:person:${person.id}`,
+    );
     if (
       !s.organization.some((x) => x.userId === o.userId && x.scope === scope)
     ) {

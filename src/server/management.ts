@@ -8,7 +8,7 @@ import type {
   TrashEntry,
   TrashKind,
 } from "../shared/model";
-import { itemTrashed, ordered } from "../shared/organization";
+import { isArchivedSort, itemTrashed, ordered } from "../shared/organization";
 import { canManageGroupEvents } from "../shared/group-events";
 import { listIsArchived } from "../shared/list-dates";
 import { controls, fail, stamp, syncEventLists, world } from "./domain";
@@ -31,6 +31,8 @@ const sort = z.enum([
   "price-desc",
   "newest",
   "oldest",
+  "archived-newest",
+  "archived-oldest",
 ]);
 export const managementActions = [
   ...["items", "lists", "group-events", "exchanges"].flatMap((kind) =>
@@ -119,13 +121,19 @@ export function managementCommand(
           .string()
           .max(100)
           .regex(
-            /^(lists|events|exchanges|items:(home|person:[a-zA-Z0-9-]+|list:[a-zA-Z0-9-]+))$/,
+            /^(lists|events|exchanges|items:(home|person:[a-zA-Z0-9-]+|list:[a-zA-Z0-9-]+)(:archived)?)$/,
           ),
         revision: z.number().int().nonnegative(),
         sort,
         order: uniqueIds.optional(),
       })
       .parse(raw);
+    if (
+      p.scope.endsWith(":archived")
+        ? !isArchivedSort(p.sort)
+        : p.sort.startsWith("archived-")
+    )
+      fail(400, "Choose a sort available in this view.");
     const existing = s.organization.find(
       (o) => o.userId === a.id && o.scope === p.scope,
     );

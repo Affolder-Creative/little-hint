@@ -31,7 +31,13 @@ export type SortOrder =
   | "price-asc"
   | "price-desc"
   | "newest"
-  | "oldest";
+  | "oldest"
+  | "archived-newest"
+  | "archived-oldest";
+export type ArchivedSortOrder = Exclude<
+  SortOrder,
+  "manual" | "newest" | "oldest"
+>;
 export interface Organization extends Base {
   userId: string;
   scope: string;

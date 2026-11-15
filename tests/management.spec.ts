@@ -98,18 +98,49 @@ test("priorities, shared ordering, Trash, and event preservation", async ({
     "Ceramic mug",
     "Alpine jacket",
   ]);
-  await expect(page.locator(".browse-summary")).toHaveText(
-    "Most recently archived first",
-  );
-  await page.getByRole("button", { name: "Filter", exact: true }).click();
+  await expect(page.locator(".browse-summary")).toHaveText("Newest archived");
+  await page.getByRole("button", { name: /^Sort & filter/ }).click();
   await expect(
-    page.getByRole("dialog", { name: "Filter", exact: true }),
+    page.getByRole("dialog", { name: "Sort & filter", exact: true }),
   ).toBeVisible();
-  await expect(page.getByLabel("Sort by", { exact: true })).toHaveCount(0);
+  await expect(page.getByLabel("Sort by", { exact: true })).toHaveValue(
+    "archived-newest",
+  );
+  await expect(
+    page.getByLabel("Sort by", { exact: true }).locator("option"),
+  ).toHaveText([
+    "Newest archived",
+    "Oldest archived",
+    "Priority",
+    "Name A–Z",
+    "Name Z–A",
+    "Price low–high",
+    "Price high–low",
+  ]);
   await expect(
     page.getByRole("button", { name: "Reorder items", exact: true }),
   ).toHaveCount(0);
   await expect(page.getByLabel("Filter by tag", { exact: true })).toBeVisible();
+  await mkdir("test-results/visual", { recursive: true });
+  await page.screenshot({
+    path: "test-results/visual/archived-sort-options.png",
+  });
+  await page
+    .getByLabel("Sort by", { exact: true })
+    .selectOption("archived-oldest");
+  await page.getByRole("button", { name: "Done", exact: true }).click();
+  await expect(page.locator(".gift-card .gift-title")).toHaveText([
+    "Alpine jacket",
+    "Ceramic mug",
+  ]);
+  await page.reload();
+  await page
+    .getByRole("button", { name: "Archived items", exact: true })
+    .click();
+  await page.getByRole("button", { name: /^Sort & filter/ }).click();
+  await expect(page.getByLabel("Sort by", { exact: true })).toHaveValue(
+    "archived-oldest",
+  );
   await page.getByRole("button", { name: "Done", exact: true }).click();
   await page.getByLabel("Search items", { exact: true }).fill("mug");
   await expect(page.locator(".gift-card .gift-title")).toHaveText([
@@ -218,6 +249,99 @@ test("priorities, shared ordering, Trash, and event preservation", async ({
       .every((l) => l.archived && !l.groupEventId && l.canManageSettings),
   ).toBe(true);
 });
+
+for (const local of [false, true])
+  test(`Archived person sorting shares preferences with a temporary gift-idea fallback (${local ? "local" : "paged"})`, async ({
+    page,
+  }) => {
+    if (local)
+      await page.route("**/api/v1/world", async (route) => {
+        const headers = { ...route.request().headers() };
+        delete headers["x-little-hint-world"];
+        await route.continue({ headers });
+      });
+    await login(page, "alex@example.test");
+    const world = await readWorld(page);
+    const group = world.groups.find((g) => g.name === "The Morgan circle")!;
+    const person = await post(page, "people", {
+      name: `Archive sorts ${Date.now()}`,
+      managedGroupIds: [group.id],
+    });
+    const list = await post(page, "lists", {
+      name: "Archived sorting",
+      ownerIds: [person.id],
+      groupIds: [group.id],
+      mode: "surprise",
+    });
+    for (const fields of [
+      { listId: list.id, title: "A wish", priority: "most-wanted" },
+      { listId: list.id, title: "Z wish", priority: "nice-to-have" },
+      { recipientIds: [person.id], title: "Z idea" },
+      { recipientIds: [person.id], title: "A idea" },
+    ]) {
+      const item = await post(page, "items", fields);
+      await post(page, "items/archive", {
+        id: item.id,
+        revision: item.revision,
+        archived: true,
+      });
+    }
+    const enterArchive = async () => {
+      await page
+        .getByRole("button", { name: "Archived items", exact: true })
+        .click();
+      await page.getByRole("button", { name: /^Sort & filter/ }).click();
+    };
+    const closeSort = () =>
+      page.getByRole("button", { name: "Done", exact: true }).click();
+    const sort = page.getByLabel("Sort by", { exact: true });
+    const titles = page.locator(".gift-card .gift-title");
+    await page.goto(`/people/${person.id}`);
+    await enterArchive();
+    await expect(sort).toHaveValue("archived-newest");
+    await sort.selectOption("priority");
+    await closeSort();
+    await expect(titles).toHaveText(["A wish", "Z wish"]);
+    await page.getByRole("tab", { name: /^Gift ideas for/ }).click();
+    await enterArchive();
+    await expect(sort).toHaveValue("archived-newest");
+    await expect(sort.locator('option[value="priority"]')).toHaveCount(0);
+    await expect(sort.locator("option")).toHaveCount(6);
+    await closeSort();
+    await expect(titles).toHaveText(["A idea", "Z idea"]);
+    await expect(page.locator(".browse-summary")).toHaveText("Newest archived");
+    const archiveScope = `items:person:${person.id}:archived`;
+    expect(
+      (await readWorld(page)).organization?.find(
+        (p) => p.scope === archiveScope,
+      )?.sort,
+    ).toBe("priority");
+    await page
+      .getByRole("tab", { name: "On their wish lists", exact: true })
+      .click();
+    await enterArchive();
+    await expect(sort).toHaveValue("priority");
+    await closeSort();
+    await page.getByRole("tab", { name: /^Gift ideas for/ }).click();
+    await enterArchive();
+    await sort.selectOption("name-desc");
+    await closeSort();
+    await expect(titles).toHaveText(["Z idea", "A idea"]);
+    await page
+      .getByRole("tab", { name: "On their wish lists", exact: true })
+      .click();
+    await enterArchive();
+    await expect(sort).toHaveValue("name-desc");
+    await closeSort();
+    await expect(titles).toHaveText(["Z wish", "A wish"]);
+    await page.reload();
+    await enterArchive();
+    await expect(sort).toHaveValue("name-desc");
+    await closeSort();
+    await page.goto(`/lists/${list.id}`);
+    await enterArchive();
+    await expect(sort).toHaveValue("archived-newest");
+  });
 
 test("editing inside an archived wish list preserves individual archive state", async ({
   page,

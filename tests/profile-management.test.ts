@@ -137,9 +137,20 @@ describe("profile ownership and co-management", () => {
   });
   it("clears ownership and outstanding transfers when the recipient takes over", () => {
     const f = setup();
+    command(f.state, f.a, "organization.update", {
+      scope: `items:person:${f.p.id}:archived`,
+      sort: "archived-oldest",
+      revision: 0,
+    });
     requestHandoff(f.state, f.a, "guardian", f.p.id, f.b.id, true);
     const linkId = f.state.links.at(-1)!.id;
     takeOverProfile(f.state, f.actors[2], f.p, "account");
+    const account = f.state.people.find((p) => p.userId === f.actors[2].id)!;
+    expect(
+      f.state.organization.find(
+        (o) => o.scope === `items:person:${account.id}:archived`,
+      )?.sort,
+    ).toBe("archived-oldest");
     expect(f.p.managedOwnerId).toBeUndefined();
     expect(f.p.guardians).toEqual([]);
     expect(f.state.links.find((l) => l.id === linkId)?.consumed).toBe(true);

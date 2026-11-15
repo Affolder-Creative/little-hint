@@ -13,6 +13,8 @@ import {
   ordered,
   orderedArchivedItems,
   sortLabels,
+  archivedItemSort,
+  archivedSortOrders,
 } from "../shared/organization";
 import {
   ItemActions,
@@ -66,12 +68,21 @@ export function Browser({
   const [itemType, setItemType] = useNavigationState<string>("itemType", "all");
   const [peopleSearch, setPeopleSearch] = useState("");
   const { world, open, mutate, toast } = useApp();
-  const settings = useOrganization(useItemScope(listId));
+  const itemScope = useItemScope(listId);
   const parentList = world.lists.find((l) => l.id === listId);
   const [itemStatus, setItemStatus] = useNavigationState<string>(
     "itemStatus",
     "active",
   );
+  const archivedSelected = itemStatus === "archived" && !parentList?.archived;
+  const settings = useOrganization(
+    archivedSelected ? `${itemScope}:archived` : itemScope,
+    archivedSelected ? "archived-newest" : "manual",
+  );
+  const ideasOnly =
+    (scope === "person" && tab === "ideas") || itemType === "idea";
+  const archiveSort = archivedItemSort(settings.sort, ideasOnly);
+  const sort = archivedSelected ? archiveSort : settings.sort;
   const debounced = useDebounced(search);
   const availabilityApplies =
     !debounced.trim() && itemStatus === "active" && !parentList?.archived;
@@ -86,7 +97,7 @@ export function Browser({
     available: String(availableOnly),
     type: itemType,
     status: itemStatus,
-    sort: settings.sort,
+    sort,
   });
   const pagination = useCollectionPage(queryParams.toString());
   queryParams.set("page", String(pagination.page));
@@ -99,8 +110,7 @@ export function Browser({
   const collectionTotal = remote?.collectionTotal ?? items.length;
   const canManage =
     remote?.canManage ?? (parentList?.canEdit || items.some((i) => i.canEdit));
-  const archivedView =
-    canManage && itemStatus === "archived" && !parentList?.archived;
+  const archivedView = canManage && archivedSelected;
   const canReorder =
     !!parentList?.canEdit && !parentList.archived && !archivedView;
   const visibleItems = parentList?.archived
@@ -109,8 +119,8 @@ export function Browser({
         (i) => i.archived === (canManage && itemStatus === "archived"),
       );
   const sorted = archivedView
-    ? orderedArchivedItems(visibleItems, parentList?.itemOrder)
-    : ordered(visibleItems, settings.sort, parentList?.itemOrder);
+    ? orderedArchivedItems(visibleItems, parentList?.itemOrder, archiveSort)
+    : ordered(visibleItems, sort, parentList?.itemOrder);
   const showAvailability =
     remote?.showAvailability ??
     items.some((item) => item.available !== undefined);
@@ -195,7 +205,6 @@ export function Browser({
       {collectionTotal > 0 && (
         <>
           <BrowseTools
-            title={archivedView ? "Filter" : undefined}
             search={search}
             setSearch={setSearch}
             searchLabel={searchLabel}
@@ -212,11 +221,7 @@ export function Browser({
               Number(chosenPeople.length > 0)
             }
             summary={[
-              ...(archivedView
-                ? ["Most recently archived first"]
-                : settings.sort !== "manual"
-                  ? [sortLabels[settings.sort]]
-                  : []),
+              ...(sort !== "manual" ? [sortLabels[sort]] : []),
               ...(tag ? [tag] : []),
               ...(chosenPeople.length
                 ? [
@@ -241,14 +246,19 @@ export function Browser({
               setPeopleSearch("");
             }}
           >
-            {!archivedView && (
-              <SortSelect
-                items
-                manualLabel={parentList ? "List order" : "Default order"}
-                sort={settings.sort}
-                change={(sort) => settings.save(sort)}
-              />
-            )}
+            <SortSelect
+              items
+              manualLabel={parentList ? "List order" : "Default order"}
+              options={
+                archivedView
+                  ? archivedSortOrders.filter(
+                      (value) => !ideasOnly || value !== "priority",
+                    )
+                  : undefined
+              }
+              sort={sort}
+              change={(sort) => settings.save(sort)}
+            />
             {canReorder && collectionTotal > 1 && (
               <button
                 data-browse-reorder
