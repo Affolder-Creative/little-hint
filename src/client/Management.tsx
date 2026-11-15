@@ -589,11 +589,14 @@ export function ReorderForm({
     </Form>
   );
 }
-export function useOrganization(scope: string) {
+export function useOrganization(
+  scope: string,
+  defaultSort: SortOrder = "manual",
+) {
   const { world, mutate } = useApp();
   const preference = world.organization?.find((p) => p.scope === scope);
   return {
-    sort: preference?.sort ?? ("manual" as SortOrder),
+    sort: preference?.sort ?? defaultSort,
     order: preference?.order ?? [],
     save: (sort: SortOrder, order?: string[]) =>
       mutate("organization/update", {
@@ -609,11 +612,13 @@ export function SortSelect({
   change,
   items = false,
   manualLabel,
+  options,
 }: {
   sort: SortOrder;
   change: (sort: SortOrder) => Promise<unknown>;
   items?: boolean;
   manualLabel?: string;
+  options?: readonly SortOrder[];
 }) {
   const saving = useBrowseSaving();
   const [busy, setBusy] = useState(false),
@@ -641,18 +646,21 @@ export function SortSelect({
             }
           }}
         >
-          {Object.entries(sortLabels)
-            .filter(
-              ([key]) =>
-                items || !["priority", "price-asc", "price-desc"].includes(key),
+          {(
+            options ??
+            (Object.keys(sortLabels) as SortOrder[]).filter(
+              (key) =>
+                !key.startsWith("archived-") &&
+                (items ||
+                  !["priority", "price-asc", "price-desc"].includes(key)),
             )
-            .map(([key, label]) => (
-              <option key={key} value={key}>
-                {key === "manual"
-                  ? (manualLabel ?? (items ? label : "My order"))
-                  : label}
-              </option>
-            ))}
+          ).map((key) => (
+            <option key={key} value={key}>
+              {key === "manual"
+                ? (manualLabel ?? (items ? sortLabels[key] : "My order"))
+                : sortLabels[key]}
+            </option>
+          ))}
         </select>
       </label>
       {error && (

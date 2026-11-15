@@ -3,7 +3,11 @@ import { sourceView } from "./gift-lifecycle";
 import { canShop } from "./domain-access";
 import { z } from "zod";
 import type { Actor, State, Reservation } from "../shared/model";
-import { ordered, orderedArchivedItems } from "../shared/organization";
+import {
+  archivedItemSort,
+  ordered,
+  orderedArchivedItems,
+} from "../shared/organization";
 import {
   pageRows,
   type ItemPage,
@@ -57,6 +61,8 @@ export const browseQuery = z.object({
       "price-desc",
       "newest",
       "oldest",
+      "archived-newest",
+      "archived-oldest",
     ])
     .default("manual"),
 });
@@ -134,7 +140,14 @@ export async function itemPage(
     );
   });
   const sorted = archivedView
-    ? orderedArchivedItems(filtered, list?.itemOrder)
+    ? orderedArchivedItems(
+        filtered,
+        list?.itemOrder,
+        archivedItemSort(
+          q.sort,
+          (q.scope === "person" && q.tab === "ideas") || q.type === "idea",
+        ),
+      )
     : ordered(filtered, q.sort, list?.itemOrder);
   const result = pageRows(sorted, q.page);
   await hydrate(

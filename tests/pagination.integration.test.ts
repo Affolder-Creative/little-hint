@@ -90,6 +90,16 @@ it.skipIf(!enabled)(
     await storage.transact((s) => {
       s.items.find((i) => i.id === legacy.id)!.archived = true;
       s.lists.find((l) => l.id === list.id)!.itemOrder = [legacy.id, recent.id];
+      command(s, owner, "organization.update", {
+        scope: `items:list:${list.id}`,
+        revision: 0,
+        sort: "name-desc",
+      });
+      command(s, owner, "organization.update", {
+        scope: `items:list:${list.id}:archived`,
+        revision: 0,
+        sort: "archived-oldest",
+      });
       command(s, owner, "items.archive", {
         id: recent.id,
         revision: recent.revision,
@@ -97,13 +107,21 @@ it.skipIf(!enabled)(
       });
     });
     const state = await storage.readCollectionState();
+    expect(
+      state.organization.find(
+        (p) => p.scope === `items:list:${list.id}:archived`,
+      )?.sort,
+    ).toBe("archived-oldest");
+    expect(
+      state.organization.find((p) => p.scope === `items:list:${list.id}`)?.sort,
+    ).toBe("name-desc");
     const archivedAt = state.items.find((i) => i.id === recent.id)!.archivedAt;
     expect(archivedAt).toEqual(expect.any(String));
     const page = await itemPage(state, owner, {
       scope: "list",
       id: list.id,
       status: "archived",
-      sort: "manual",
+      sort: "archived-oldest",
     });
     expect(page.rows.map((i) => i.id)).toEqual([recent.id, legacy.id]);
     expect(page.rows[0].archivedAt).toBe(archivedAt);

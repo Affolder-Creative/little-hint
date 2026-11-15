@@ -146,12 +146,18 @@ it("orders archive times before pagination and retains legacy order across pages
     "manual",
     "newest",
     "oldest",
-    "name-asc",
-    "name-desc",
-    "price-asc",
-    "price-desc",
-    "priority",
+    "archived-newest",
+    "archived-oldest",
   ]) {
+    const expectedOrder =
+      sort === "archived-oldest"
+        ? [
+            state.items[2],
+            state.items[1],
+            state.items[0],
+            ...state.items.slice(3).reverse(),
+          ].map((i) => i.id)
+        : expected;
     const pages = await Promise.all(
       [1, 2, 3].map((page) =>
         itemPage(state, owner, {
@@ -164,9 +170,9 @@ it("orders archive times before pagination and retains legacy order across pages
       ),
     );
     expect(pages.flatMap((page) => page.rows.map((i) => i.id))).toEqual(
-      expected,
+      expectedOrder,
     );
-    expect(pages[0].rows[0].archivedAt).toBe(state.items[0].archivedAt);
+    expect(pages[0].rows[0].archivedAt).toBeDefined();
     expect(pages[0].total).toBe(51);
   }
   expect(
@@ -184,6 +190,55 @@ it("orders archive times before pagination and retains legacy order across pages
   expect(filtered.rows.map((i) => i.id)).toEqual([state.items[50].id]);
   expect(filtered.page).toBe(1);
 });
+it("sorts dated and undated archives together by name, priority, and price", async () => {
+  const { state, listId } = fixture(4);
+  const list = state.lists.find((l) => l.id === listId)!;
+  const person = state.people.find((p) => p.id === list.ownerIds[0])!;
+  const owner = {
+    id: person.userId!,
+    name: person.name,
+    email: "owner@example.test",
+  };
+  const [a, b, c, d] = state.items;
+  state.items.forEach((i) => {
+    i.archived = true;
+  });
+  a.archivedAt = "2026-01-02T00:00:00.000Z";
+  c.archivedAt = "2026-01-01T00:00:00.000Z";
+  a.title = "Zebra";
+  b.title = "apple";
+  c.title = "Book 10";
+  d.title = "Book 2";
+  a.priceCents = 100;
+  b.priceCents = 100;
+  c.priceCents = null;
+  d.priceCents = 500;
+  a.priority = "would-love";
+  b.priority = "most-wanted";
+  c.priority = null;
+  d.priority = "nice-to-have";
+  list.itemOrder = [d.id, c.id, b.id, a.id];
+  for (const [sort, expected] of [
+    ["name-asc", [b, d, c, a]],
+    ["name-desc", [a, c, d, b]],
+    ["price-asc", [b, a, d, c]],
+    ["price-desc", [d, b, a, c]],
+    ["priority", [b, a, d, c]],
+  ] as const) {
+    const page = await itemPage(state, owner, {
+      scope: "list",
+      id: listId,
+      status: "archived",
+      sort,
+    });
+    expect(page.rows.map((i) => i.id)).toEqual(expected.map((i) => i.id));
+    expect(
+      orderedArchivedItems(world(state, owner).items, list.itemOrder, sort).map(
+        (i) => i.id,
+      ),
+    ).toEqual(expected.map((i) => i.id));
+  }
+});
 it("uses archive chronology for a person's gift ideas", async () => {
   const { state, actor } = fixture(3);
   state.items.forEach((item, n) => {
@@ -200,7 +255,7 @@ it("uses archive chronology for a person's gift ideas", async () => {
     id: state.items[0].recipientIds[0],
     tab: "ideas",
     status: "archived",
-    sort: "newest",
+    sort: "priority",
   });
   expect(page.rows.map((i) => i.id)).toEqual(state.items.map((i) => i.id));
 });
