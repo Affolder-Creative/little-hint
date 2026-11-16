@@ -69,7 +69,7 @@ are recorded in `compliance/source-bundles.lock.json`.
 
 | Bundle                               | Reviewed materials                                                                                                                                                                                                                |
 | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `alpine-3.24.3-sources.tar.gz`       | Seven exact aports recipe revisions and their external inputs. All source downloads and local patches/configurations match the APKBUILD SHA-512 values. Includes both architectures' configuration and subpackage rules.          |
+| `alpine-3.24.4-sources.tar.gz`       | Seven exact aports recipe revisions and their external inputs. All source downloads and local patches/configurations match the APKBUILD SHA-512 values. Includes both architectures' configuration and subpackage rules.          |
 | `sharp-libvips-1.3.4-sources.tar.gz` | The release recipe, all 28 reported native library versions, five external patches, GLib's pinned GVDB source, and the complete original librsvg Cargo.lock crate set. Both musl platform recipes and inline edits are preserved. |
 | `lightningcss-1.33.0-sources.tar.gz` | The exact npm gitHead source tree, JavaScript wrappers, Rust toolchain/build workflows, Cargo.lock and all locked registry crates. The Git tag changed the toolchain after the npm revision, so the npm revision is used.         |
 

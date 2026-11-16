@@ -3826,16 +3826,16 @@
       ]
     },
     {
-      "file": "alpine-3.24.3-sources.tar.gz",
+      "file": "alpine-3.24.4-sources.tar.gz",
       "covers": [
         "apk:alpine-baselayout-data@3.7.2-r1#60a7585bbab2fa0f762504eb617dbca90216e31f",
         "apk:alpine-baselayout@3.7.2-r1#60a7585bbab2fa0f762504eb617dbca90216e31f",
-        "apk:apk-tools@3.0.8-r0#4588b452722bd4800efdc6cce4f6e980e02a997f",
+        "apk:apk-tools@3.0.9-r0#13685e8f2cf1c103cbba2fb9efcfcf19f4918df0",
         "apk:busybox-binsh@1.37.0-r31#c3ef5d10e6ef6528852c51f0564963e2f8c1be19",
         "apk:busybox@1.37.0-r31#c3ef5d10e6ef6528852c51f0564963e2f8c1be19",
         "apk:ca-certificates-bundle@20261020-r0#e78f5987166c6ffbe23f6472e2e8f040298fe2da",
         "apk:ca-certificates@20261020-r0#e78f5987166c6ffbe23f6472e2e8f040298fe2da",
-        "apk:libapk@3.0.8-r0#4588b452722bd4800efdc6cce4f6e980e02a997f",
+        "apk:libapk@3.0.9-r0#13685e8f2cf1c103cbba2fb9efcfcf19f4918df0",
         "apk:libatomic@15.2.0-r5#423a8ad043d07f2c7546c8ec3e2b0384cda360ae",
         "apk:libgcc@15.2.0-r5#423a8ad043d07f2c7546c8ec3e2b0384cda360ae",
         "apk:libstdc++@15.2.0-r5#423a8ad043d07f2c7546c8ec3e2b0384cda360ae",
@@ -3872,17 +3872,17 @@
           "size": 12813
         },
         {
-          "file": "alpine/apk-tools/apk-tools-v3.0.8.tar.gz",
-          "url": "https://distfiles.alpinelinux.org/distfiles/v3.24/apk-tools-v3.0.8.tar.gz",
-          "originalUrl": "https://gitlab.alpinelinux.org/alpine/apk-tools/-/archive/v3.0.8/apk-tools-v3.0.8.tar.gz",
-          "sha256": "e81c64a6e7c3806d45d4622c253e757aee970be84048554fa0eed79310e9453e",
-          "size": 390114
+          "file": "alpine/apk-tools/apk-tools-v3.0.9.tar.gz",
+          "url": "https://distfiles.alpinelinux.org/distfiles/v3.24/apk-tools-v3.0.9.tar.gz",
+          "originalUrl": "https://gitlab.alpinelinux.org/alpine/apk-tools/-/archive/v3.0.9/apk-tools-v3.0.9.tar.gz",
+          "sha256": "0063029a3eb228fd494b6804613ac53c30372a1a79ac83e23cefa78368767726",
+          "size": 392363
         },
         {
           "file": "alpine/apk-tools/aports.tar.gz",
-          "url": "https://codeload.github.com/alpinelinux/aports/tar.gz/4588b452722bd4800efdc6cce4f6e980e02a997f",
-          "sha256": "3c26628c2ba9224e3fe968719545707415296c4ae1516b3042d8ef91a54013e2",
-          "size": 13957065
+          "url": "https://codeload.github.com/alpinelinux/aports/tar.gz/13685e8f2cf1c103cbba2fb9efcfcf19f4918df0",
+          "sha256": "96de2037da7e9624bfbfbddb39b99e7ba66d77feddcd00d991c6abe614a73ed7",
+          "size": 14086482
         },
         {
           "file": "alpine/busybox/aports.tar.gz",
