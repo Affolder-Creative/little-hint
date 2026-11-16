@@ -132,6 +132,7 @@ try {
           "tests/reliability.spec.ts",
           "tests/efficiency.spec.ts",
           "tests/pagination.spec.ts",
+          "tests/co-management.spec.ts",
         ]
       : []),
     ...(suite === "management" ? ["tests/account-closure.spec.ts"] : []),

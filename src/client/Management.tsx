@@ -858,30 +858,32 @@ export function TrashView({ kinds }: { kinds: TrashKind[] }) {
             >
               Restore
             </RunButton>
-            <button
-              className="text-button danger"
-              onClick={() =>
-                open(
-                  `Permanently delete “${entry.name}”?`,
-                  <Confirm
-                    label="Delete permanently"
-                    onConfirm={async () => {
-                      await mutate(`${entry.kind}/purge`, {
-                        id: entry.id,
-                        revision: entry.revision,
-                      });
-                      toast("Permanently deleted.");
-                    }}
-                  >
-                    {entry.kind === "group-events"
-                      ? "This cannot be undone. Participants keep their wish lists as independent archived lists."
-                      : "This cannot be undone. The entry and its contents will be deleted. Buyers’ purchase and contribution records will remain."}
-                  </Confirm>,
-                )
-              }
-            >
-              Delete permanently
-            </button>
+            {entry.canPurge !== false && (
+              <button
+                className="text-button danger"
+                onClick={() =>
+                  open(
+                    `Permanently delete “${entry.name}”?`,
+                    <Confirm
+                      label="Delete permanently"
+                      onConfirm={async () => {
+                        await mutate(`${entry.kind}/purge`, {
+                          id: entry.id,
+                          revision: entry.revision,
+                        });
+                        toast("Permanently deleted.");
+                      }}
+                    >
+                      {entry.kind === "group-events"
+                        ? "This cannot be undone. Participants keep their wish lists as independent archived lists."
+                        : "This cannot be undone. The entry and its contents will be deleted. Buyers’ purchase and contribution records will remain."}
+                    </Confirm>,
+                  )
+                }
+              >
+                Delete permanently
+              </button>
+            )}
           </div>
         </div>
       ))}

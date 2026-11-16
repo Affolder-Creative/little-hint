@@ -1,3 +1,4 @@
+import { listCanEdit } from "./co-management";
 import { draftAccess } from "./domain-access";
 import type { Actor, State } from "../shared/model";
 import { itemVisible, personVisible, listVisible } from "./domain-access";
@@ -33,9 +34,7 @@ export function accountCsv(s: State, a: Actor, table: ExportTable) {
       .map((p) => p.id),
   );
   const ownLists = new Set(
-    s.lists
-      .filter((l) => l.ownerIds.some((id) => owned.has(id)))
-      .map((l) => l.id),
+    s.lists.filter((l) => listCanEdit(s, a, l)).map((l) => l.id),
   );
   const names = (ids: string[]) =>
     ids
@@ -76,7 +75,8 @@ export function accountCsv(s: State, a: Actor, table: ExportTable) {
         .filter(
           (i) =>
             draftAccess(s, a, i) &&
-            (i.creatorId === a.id || (!!i.listId && ownLists.has(i.listId))),
+            ((!i.listId && i.creatorId === a.id) ||
+              (!!i.listId && ownLists.has(i.listId))),
         )
         .map((i) => [
           i.listId ? "Wish" : "Idea",

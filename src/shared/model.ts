@@ -46,6 +46,7 @@ export interface Organization extends Base {
 }
 export type TrashKind = "items" | "lists" | "group-events" | "exchanges";
 export interface TrashEntry extends Base {
+  canPurge?: boolean;
   kind: TrashKind;
   name: string;
   deletedAt: string;
@@ -190,6 +191,7 @@ export interface PriceChange extends Base {
   source: string;
 }
 export interface Item extends Base {
+  lastEditorId?: string;
   descriptionRich?: NoteDocument | null;
   publicationState?: "draft" | "published";
   draftOwnerId?: string;
@@ -302,6 +304,7 @@ export interface Exchange extends Base {
   drawnAt?: string;
 }
 export interface Notice extends Base {
+  coManagement?: { personId: string; message: string; content?: boolean };
   lifecycle?: { reservationIds: string[]; state: GiftSourceState };
   importId?: string;
   suppressedChannels?: Array<"sms" | "telegram">;
@@ -557,6 +560,8 @@ export interface SmsGrant extends Base {
   expiresAt: string;
 }
 export interface Records {
+  coManagement: import("./co-management").CoManagement;
+  recoveredDrafts: import("./co-management").RecoveredDraft;
   priceChecks: PriceCheck;
   priceWatches: PriceWatch;
   priceChanges: PriceChange;
@@ -603,6 +608,8 @@ export interface Records {
 export type Kind = keyof Records;
 export type State = { [K in Kind]: Records[K][] };
 export const kinds: Kind[] = [
+  "coManagement",
+  "recoveredDrafts",
   "priceChecks",
   "priceWatches",
   "priceChanges",
@@ -654,13 +661,17 @@ export interface Actor {
   email: string;
   name: string;
 }
-export interface GiftView extends Omit<Item, "creatorId" | "draftOwnerId"> {
+export interface GiftView extends Omit<
+  Item,
+  "creatorId" | "draftOwnerId" | "lastEditorId"
+> {
   /** Unlike archived, this excludes archive status inherited from a wish list. */
   individuallyArchived?: boolean;
   watchingNotes?: boolean;
   priceWatching?: boolean;
   recipientNames: string[];
   creatorName?: string;
+  lastEditorName?: string;
   canEdit: boolean;
   isRecipient: boolean;
   canShop?: boolean;
@@ -699,6 +710,7 @@ export interface GiftView extends Omit<Item, "creatorId" | "draftOwnerId"> {
   }>;
 }
 export interface World {
+  coManagement?: import("./co-management").CoManagementView;
   paged?: boolean;
   hasActiveItems?: boolean;
   homeFeedMode?: "gifting" | "own";

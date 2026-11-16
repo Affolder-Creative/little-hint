@@ -1,3 +1,7 @@
+import {
+  CoManagementSettings,
+  RecoveredCoManagementDrafts,
+} from "./CoManagement";
 import { ArchivePrivacySettings } from "./ArchivePrivacySettings";
 import { PriceRunReport } from "./PriceRunReport";
 import { ActionMenu } from "./Management";
@@ -93,6 +97,13 @@ export default function SettingsPage({
     world.invitations.filter(
       (i) => !!i.groupId && i.email === world.me.email.toLowerCase(),
     ).length + world.links.filter((l) => l.kind === "ownership").length;
+  const pendingCoManagement =
+    world.coManagement?.arrangements.filter(
+      (r) =>
+        r.status === "pending" &&
+        r.requestedBy !== world.me.id &&
+        (r.ownerId === world.me.id || r.helperId === world.me.id),
+    ).length ?? 0;
   const [notificationSaved, setNotificationSaved] = useState(false);
   const [draftsEnabled, setDraftsEnabled] = useState(
     !!localStorage.getItem(`little-hint:draft-optin:${world.me.id}`),
@@ -133,6 +144,22 @@ export default function SettingsPage({
         {/* Keep panels mounted so switching sections preserves unsaved form values. */}
         <div className="settings-content">
           {section === "spending" && <SpendingSettingsPanel />}
+          {section === "co-management" && (
+            <section
+              className="settings-section"
+              aria-labelledby="settings-co-management-title"
+            >
+              <CoManagementSettings />
+            </section>
+          )}
+          {pendingCoManagement > 0 && section !== "co-management" && (
+            <p className="notice">
+              <Link to="?section=co-management">
+                Review {pendingCoManagement} pending co-management{" "}
+                {pendingCoManagement === 1 ? "request" : "requests"}
+              </Link>
+            </p>
+          )}
           {pendingGroupRequests > 0 && section !== "groups" && (
             <p className="notice">
               <Link to="?section=groups">
@@ -808,6 +835,7 @@ export default function SettingsPage({
             ))}
           </section>
           <div hidden={section !== "device"}>
+            {section === "device" && <RecoveredCoManagementDrafts />}
             <AccountExport />
           </div>
           <div hidden={section !== "security"}>

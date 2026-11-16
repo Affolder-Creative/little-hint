@@ -1,3 +1,4 @@
+import { coManages, listCanEdit } from "./co-management";
 import { profileOwner } from "./profile-management";
 import { hideArchivedItemsForState } from "./settings";
 import type { State, Actor, Person, Group, Item, List } from "../shared/model";
@@ -24,12 +25,13 @@ export const ownedGroup = (s: State, a: Actor, id: string) =>
   fail(404, "Family group not found.");
 export const personVisible = (s: State, a: Actor, p: Person) =>
   !p.mergedIntoId &&
-  (s.imports.some(
-    (j) =>
-      j.userId === a.id &&
-      !!j.draft?.friendEntryId &&
-      j.draft?.recipientId === p.id,
-  ) ||
+  (coManages(s, a, p.id) ||
+    s.imports.some(
+      (j) =>
+        j.userId === a.id &&
+        !!j.draft?.friendEntryId &&
+        j.draft?.recipientId === p.id,
+    ) ||
     s.spendingRecords.some(
       (r) =>
         r.ownerId === a.id &&
@@ -84,13 +86,16 @@ export const recipient = (s: State, a: Actor, i: Item) =>
   i.recipientIds.some((p) => controls(s, a, p));
 export const listVisible = (s: State, a: Actor, l: List) =>
   !l.deletedAt &&
-  (l.ownerIds.some((p) => controls(s, a, p)) ||
-    l.groupIds.some((g) => groupAccess(s, a, g)));
+  (listCanEdit(s, a, l) || l.groupIds.some((g) => groupAccess(s, a, g)));
 /** Draft access also applies to Trash and exports, independently of deletion. */
 export function draftAccess(s: State, a: Actor, i: Item): boolean {
   if (i.publicationState !== "draft") return true;
   const list = s.lists.find((l) => l.id === i.listId);
-  if (!list || !list.ownerIds.some((id) => controls(s, a, id))) return false;
+  if (!list || !listCanEdit(s, a, list)) return false;
+  if (
+    list.ownerIds.some((id) => s.people.some((p) => p.id === id && !!p.userId))
+  )
+    return (i.draftOwnerId ?? i.creatorId) === a.id;
   return (
     (i.draftOwnerId ?? i.creatorId) === a.id ||
     s.people.some(
@@ -141,9 +146,7 @@ function itemSharedWith(s: State, a: Actor, i: Item): boolean {
 export const canEdit = (s: State, a: Actor, i: Item) =>
   draftAccess(s, a, i) &&
   (i.listId
-    ? !!s.lists.find(
-        (l) => l.id === i.listId && l.ownerIds.some((p) => controls(s, a, p)),
-      )
+    ? !!s.lists.find((l) => l.id === i.listId && listCanEdit(s, a, l))
     : i.creatorId === a.id);
 export const getItem = (s: State, a: Actor, id: string) =>
   s.items.find((i) => i.id === id && itemVisible(s, a, i)) ??

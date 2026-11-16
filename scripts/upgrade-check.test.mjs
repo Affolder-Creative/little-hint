@@ -77,6 +77,99 @@ test("upgrade adds explicit shopping eligibility without changing legacy permiss
   assert.throws(() => assertPreserved(current, baseline));
 });
 
+test("upgrade derives archive and editable-wish attribution from retained records", () => {
+  const baseline = structuredClone(original);
+  baseline.records = [
+    {
+      id: "gift",
+      kind: "items",
+      data: {
+        id: "gift",
+        listId: "list",
+        creatorId: "author",
+        archived: false,
+      },
+    },
+    {
+      id: "person",
+      kind: "people",
+      data: { id: "person", userId: "author", name: "Alex" },
+    },
+  ];
+  const wish = {
+    id: "gift",
+    listId: "list",
+    title: "Gift",
+    archived: true,
+    isRecipient: true,
+    canEdit: true,
+  };
+  baseline.views = {
+    recipient: { items: [wish] },
+    buyer: {
+      buying: [{ item: { ...wish, isRecipient: false, canEdit: false } }],
+    },
+  };
+  const candidate = structuredClone(baseline);
+  Object.assign(candidate.views.recipient.items[0], {
+    individuallyArchived: false,
+    creatorName: "Alex",
+  });
+  candidate.views.buyer.buying[0].item.individuallyArchived = false;
+  assertPreserved(candidate, baseline);
+  assertPreserved(baseline, baseline); // Recovery still runs the pinned release.
+  for (const corrupt of [
+    (v) => {
+      v.views.recipient.items[0].individuallyArchived = true;
+    },
+    (v) => {
+      v.views.recipient.items[0].creatorName = "Someone else";
+    },
+    (v) => {
+      v.views.buyer.buying[0].item.creatorName = "Alex";
+    },
+    (v) => {
+      v.views.recipient.items[0].reservations = [{ buyerId: "private" }];
+    },
+    (v) => {
+      v.views.recipient.items[0].title = "Changed";
+    },
+  ]) {
+    const changed = structuredClone(candidate);
+    corrupt(changed);
+    assert.throws(() => assertPreserved(changed, baseline));
+  }
+  baseline.records.pop();
+  candidate.records.pop();
+  candidate.views.recipient.items[0].creatorName = "Former member";
+  assertPreserved(candidate, baseline);
+});
+
+test("upgrade retains existing gift-idea attribution evidence", () => {
+  const baseline = structuredClone(original);
+  baseline.records = [
+    {
+      id: "idea",
+      kind: "items",
+      data: { id: "idea", creatorId: "author", archived: true },
+    },
+  ];
+  baseline.views.recipient.items = [
+    {
+      id: "idea",
+      isRecipient: true,
+      canEdit: false,
+      creatorName: "Alex",
+      archived: true,
+    },
+  ];
+  const candidate = structuredClone(baseline);
+  candidate.views.recipient.items[0].individuallyArchived = true;
+  assertPreserved(candidate, baseline);
+  delete candidate.views.recipient.items[0].creatorName;
+  assert.throws(() => assertPreserved(candidate, baseline));
+});
+
 test("failed startup cleans only its two disposable projects and excludes operator credentials", async () => {
   const { mkdtempSync, writeFileSync, readFileSync, rmSync } =
     await import("node:fs");

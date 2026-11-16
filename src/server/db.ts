@@ -1,3 +1,4 @@
+import { reconcileCoManagement } from "./co-management";
 import { lifecycleBaseline } from "./gift-lifecycle";
 import { reconcilePrivacyReview } from "./privacy-review";
 import { reconcileSpendingPrivacy } from "./spending-privacy";
@@ -93,9 +94,11 @@ export async function transact<T>(
         if (kinds.includes(row.kind as Kind))
           (state[row.kind as Kind] as unknown[]).push(row.data);
       }
+      reconcileCoManagement(state);
       reconcilePrivacyReview(state);
       reconcileSpendingPrivacy(state);
       const result = await fn(state, tx);
+      reconcileCoManagement(state);
       reconcilePrivacyReview(state);
       reconcileSpendingPrivacy(state);
       const closed = new Set(
@@ -279,6 +282,8 @@ export async function readBuyingState(userId: string): Promise<State> {
     SELECT 'preferences', jsonb_build_object('userId', data->'userId', 'hideArchivedItems', data->'hideArchivedItems') FROM app_record WHERE kind='preferences'
     UNION ALL
     SELECT 'settings', data FROM app_record WHERE kind='settings'
+    UNION ALL
+    SELECT 'coManagement', data FROM app_record WHERE kind='coManagement'
     UNION ALL
     SELECT 'groups', data FROM app_record WHERE kind='groups'
     UNION ALL

@@ -1,3 +1,4 @@
+import { listCanEdit } from "./co-management";
 import { draftAccess } from "./domain-access";
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { Actor, State } from "../shared/model";
@@ -11,9 +12,7 @@ export function accountExport(s: State, a: Actor) {
     (p) => p.userId === a.id || p.guardians.includes(a.id),
   );
   const peopleIds = new Set(people.map((p) => p.id));
-  const lists = s.lists.filter((l) =>
-    l.ownerIds.some((id) => peopleIds.has(id)),
-  );
+  const lists = s.lists.filter((l) => listCanEdit(s, a, l));
   const listIds = new Set(lists.map((l) => l.id));
   const pref = s.preferences.find((p) => p.userId === a.id);
   return {
@@ -47,7 +46,8 @@ export function accountExport(s: State, a: Actor) {
       .filter(
         (i) =>
           draftAccess(s, a, i) &&
-          (i.creatorId === a.id || (!!i.listId && listIds.has(i.listId))),
+          ((!i.listId && i.creatorId === a.id) ||
+            (!!i.listId && listIds.has(i.listId))),
       )
       .map((i) => ({
         id: i.id,
@@ -87,6 +87,7 @@ export function accountExport(s: State, a: Actor) {
       occasions: s.spendingOccasions.filter((r) => r.ownerId === a.id),
       settings: s.spendingSettings.filter((r) => r.userId === a.id),
     },
+    recoveredDrafts: s.recoveredDrafts.filter((d) => d.userId === a.id),
     drafts: s.imports
       .filter((j) => j.userId === a.id && j.draft?.state === "active")
       .map((j) => ({

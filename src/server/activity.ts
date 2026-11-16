@@ -1,3 +1,4 @@
+import { listCanEdit } from "./co-management";
 import { selfRecipient } from "./domain-access";
 import { buyingDestination } from "./gift-lifecycle";
 import { noteNeedsReview, reservationNeedsReview } from "./privacy-review";
@@ -299,6 +300,18 @@ export function watchesItem(s: State, userId: string, itemId: string) {
 export function activityAllowed(s: State, n: Notice): boolean {
   const a = actor(s, n.userId);
   if (!accountIds(s).includes(a.id)) return false;
+  if (n.coManagement) {
+    if (!n.coManagement.content) return true;
+    const l = s.lists.find((l) => l.id === n.listId);
+    return (
+      !!l &&
+      listCanEdit(s, a, l) &&
+      (!n.itemId ||
+        s.items.some(
+          (i) => i.id === n.itemId && i.publicationState !== "draft",
+        ))
+    );
+  }
   if (n.lifecycle)
     return (
       n.lifecycle.reservationIds.length > 0 &&
@@ -396,7 +409,8 @@ export function activityAllowed(s: State, n: Notice): boolean {
     if (!item || !itemVisible(s, a, item)) return false;
     if (n.event === "price-drop")
       return priceAlertAllowed(s, n.userId, item.id);
-    if (n.event === "wishlist") return !!item.listId && item.publicationState !== "draft";
+    if (n.event === "wishlist")
+      return !!item.listId && item.publicationState !== "draft";
     if (n.commentId) {
       const comment = s.comments.find(
         (c) => c.id === n.commentId && c.itemId === item.id,
@@ -502,6 +516,7 @@ export function topicEnabled(
   n: Notice,
   channel: "email" | "telegram" | "sms" | "push",
 ) {
+  if (n.coManagement) return false;
   if (n.event === "price-drop" && channel === "sms") return false;
   const p = preferences(s, actor(s, n.userId));
   return channel === "push"
@@ -544,6 +559,9 @@ function renderActivity(s: State, n: Notice): NotificationView {
     id: n.id,
     event: n.event,
     message:
+      (n.coManagement
+        ? `${n.actorId ? who + " " : ""}${n.coManagement.message}`
+        : undefined) ??
       (n.lifecycle
         ? {
             active: "A wish is available again",
@@ -574,8 +592,11 @@ function renderActivity(s: State, n: Notice): NotificationView {
       (n.exchangeId
         ? s.exchanges.find((e) => e.id === n.exchangeId)?.name
         : undefined),
-    href:
-      n.lifecycle || (n.event === "contribution" && n.reservationId)
+    href: n.coManagement
+      ? n.coManagement.content && list
+        ? `/lists/${list.id}`
+        : "/settings?section=co-management"
+      : n.lifecycle || (n.event === "contribution" && n.reservationId)
         ? buyingDestination(s, n)
         : n.importId
           ? (() => {

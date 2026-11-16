@@ -1,3 +1,4 @@
+import { listCanEdit, recoverDraft } from "./co-management";
 import { itemPhotos } from "../shared/item-photos";
 import { draftAccess } from "./domain-access";
 import { z } from "zod";
@@ -59,20 +60,14 @@ function manages(s: State, a: Actor, kind: TrashKind, id: string): boolean {
       draftAccess(s, a, i) &&
       (i.listId
         ? !!s.lists.find(
-            (l) =>
-              l.id === i.listId &&
-              !l.deletedAt &&
-              l.ownerIds.some((p) => controls(s, a, p)),
+            (l) => l.id === i.listId && !l.deletedAt && listCanEdit(s, a, l),
           )
         : i.creatorId === a.id)
     );
   }
   if (kind === "lists")
     return s.lists.some(
-      (l) =>
-        l.id === id &&
-        !l.groupEventId &&
-        l.ownerIds.some((p) => controls(s, a, p)),
+      (l) => l.id === id && !l.groupEventId && listCanEdit(s, a, l),
     );
   if (kind === "group-events") {
     const e = s.groupEvents.find((e) => e.id === id);
@@ -96,6 +91,7 @@ export function trash(s: State, a: Actor): TrashEntry[] {
                 revision: row.revision,
                 createdAt: row.createdAt,
                 kind,
+                canPurge: canPurge(s, a, kind, row.id),
                 name: "title" in row ? row.title : row.name,
                 deletedAt: row.deletedAt,
               },
@@ -191,7 +187,7 @@ export function managementCommand(
           l.id === p.id &&
           !l.deletedAt &&
           !listIsArchived(l) &&
-          l.ownerIds.some((id) => controls(s, a, id)),
+          listCanEdit(s, a, l),
       ) ?? fail(404, "Active wish list not found.");
     current(list, p.revision);
     const active = s.items.filter(
@@ -246,6 +242,8 @@ export function managementCommand(
   const row = collection(s, kind).find((r) => r.id === p.id);
   if (!row || !manages(s, a, kind, p.id)) fail(404, "Entry not found.");
   current(row, p.revision);
+  if (operation === "purge" && !canPurge(s, a, kind, row.id))
+    fail(403, "Only the account holder can permanently delete this entry.");
   if (operation === "archive" && kind === "exchanges") {
     if (row.deletedAt) fail(404, "Exchange not found.");
     const exchange = s.exchanges.find((e) => e.id === row.id)!;
@@ -283,6 +281,15 @@ export function managementCommand(
     );
   return { ok: true };
 }
+function canPurge(s: State, a: Actor, kind: TrashKind, id: string) {
+  const list =
+    kind === "lists"
+      ? s.lists.find((l) => l.id === id)
+      : kind === "items"
+        ? s.lists.find((l) => l.id === s.items.find((i) => i.id === id)?.listId)
+        : undefined;
+  return !list || list.ownerIds.some((id) => controls(s, a, id));
+}
 function purge(s: State, kind: TrashKind, id: string) {
   const removed = new Set([id]);
   if (kind === "group-events") {
@@ -300,6 +307,17 @@ function purge(s: State, kind: TrashKind, id: string) {
   for (const r of s.reservations)
     if (removed.has(r.itemId)) r.sourceState = "removed";
   const images = s.items.filter((i) => removed.has(i.id)).flatMap(itemPhotos);
+  for (const i of s.items.filter(
+    (i) => removed.has(i.id) && i.publicationState === "draft",
+  ))
+    if (
+      s.coManagement.some(
+        (g) =>
+          g.helperId === (i.draftOwnerId ?? i.creatorId) &&
+          i.recipientIds.includes(g.personId),
+      )
+    )
+      recoverDraft(s, i);
   s.items = s.items.filter((i) => !removed.has(i.id));
   if (kind === "exchanges") {
     s.exchanges = s.exchanges.filter((e) => e.id !== id);
@@ -353,6 +371,7 @@ function purge(s: State, kind: TrashKind, id: string) {
     if (
       images.includes(url) &&
       !s.items.some((i) => itemPhotos(i).includes(url)) &&
+      !s.recoveredDrafts.some((d) => itemPhotos(d).includes(url)) &&
       !s.imports.some(
         (i) =>
           i.result?.image === url ||

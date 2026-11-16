@@ -43,10 +43,12 @@ test("email change verifies both addresses and keeps failed codes recoverable", 
   await expect(page.getByLabel("New email address")).toBeFocused();
   await page.getByLabel("New email address").fill("New@example.test");
   await page.getByRole("button", { name: "Send current email code" }).click();
-  expect(calls.at(-1)?.body).toEqual({
-    email: f.actors[0].email,
-    type: "email-verification",
-  });
+  await expect
+    .poll(() => calls.at(-1)?.body)
+    .toEqual({
+      email: f.actors[0].email,
+      type: "email-verification",
+    });
   await page.getByLabel("Current email code").fill("123456");
   await page.getByRole("button", { name: "Verify current email" }).click();
   await expect(page.getByRole("alert")).toContainText("Invalid code");

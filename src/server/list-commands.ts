@@ -1,3 +1,4 @@
+import { coManages, listCanEdit, listAudience } from "./co-management";
 import { z } from "zod";
 import type { State, Actor, List } from "../shared/model";
 import { listIsArchived } from "../shared/list-dates";
@@ -54,8 +55,19 @@ export function listCommand(
         )
       )
         fail(400, "Friends must connect an account before owning a wish list.");
-      checkGroups(s, a, p.groupIds);
-      const mine = p.ownerIds.filter((id) => controls(s, a, id));
+      const delegated =
+        p.ownerIds.length === 1 && coManages(s, a, p.ownerIds[0]);
+      if (delegated)
+        listAudience(
+          s,
+          a,
+          { ownerIds: p.ownerIds, pendingOwnerIds: [], groupIds: [] },
+          p.groupIds,
+        );
+      else checkGroups(s, a, p.groupIds);
+      const mine = p.ownerIds.filter(
+        (id) => controls(s, a, id) || (delegated && coManages(s, a, id)),
+      );
       if (!mine.length) fail(403, "Create a list for a profile you manage.");
       const pending = p.ownerIds.filter((id) => !mine.includes(id));
       if (p.revealExchangeGivers && !p.revealAfter)
@@ -120,15 +132,12 @@ export function listCommand(
         .parse(b);
       const l =
         s.lists.find(
-          (l) =>
-            l.id === p.id &&
-            !l.deletedAt &&
-            l.ownerIds.some((id) => controls(s, a, id)),
+          (l) => l.id === p.id && !l.deletedAt && listCanEdit(s, a, l),
         ) ?? fail(404, "List not found.");
       if (l.groupEventId)
         fail(403, "This list is managed through its group event.");
       checkRevision(l, p.revision);
-      checkGroups(s, a, p.groupIds);
+      listAudience(s, a, l, p.groupIds);
       checkSharedListPolicy(l, { ...l, ...p });
       if (l.pendingOwnerIds.length && p.groupIds.length)
         fail(

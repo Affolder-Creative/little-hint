@@ -2,7 +2,7 @@ import sharp from "sharp";
 import AxeBuilder from "@axe-core/playwright";
 import { test, expect, type Page, type BrowserContext } from "@playwright/test";
 import { readdir, readFile, mkdir } from "node:fs/promises";
-import { login, post } from "./browser-helpers";
+import { login, post, submitAuth } from "./browser-helpers";
 test("standalone invitation creates a private account that can later join two groups", async ({
   browser,
 }) => {
@@ -159,9 +159,11 @@ test("cancelling a standalone invitation after a code was issued blocks signup",
     await guest.goto("/");
     const before = new Set(await readdir(".local/mail"));
     await guest.getByLabel("Email address", { exact: true }).fill(email);
-    await guest
-      .getByRole("button", { name: "Send me a code", exact: true })
-      .click();
+    await submitAuth(
+      guest,
+      "Send me a code",
+      "/api/auth/email-otp/send-verification-otp",
+    );
     await expect(guest.getByLabel("Six-digit code")).toBeVisible();
     let code = "";
     await expect
@@ -189,6 +191,7 @@ test("cancelling a standalone invitation after a code was issued blocks signup",
       guest.getByRole("button", { name: "Sign in", exact: true }).click(),
     ]);
     expect(response.ok()).toBe(false);
+    expect(response.status()).not.toBe(429);
     expect((await guest.request.get("/api/v1/world")).status()).toBe(401);
     await expect(guest.getByRole("heading", { name: /Hi,/ })).toHaveCount(0);
   } finally {
