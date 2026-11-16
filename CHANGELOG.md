@@ -1,5 +1,32 @@
 # Changelog
 
+## [1.5.0](https://github.com/Affolder-Creative/little-hint/compare/v1.4.0...v1.5.0) (2026-11-16)
+
+
+### Features
+
+* add wish-list co-management ([#224](https://github.com/Affolder-Creative/little-hint/issues/224)) ([9eb7eb0](https://github.com/Affolder-Creative/little-hint/commit/9eb7eb0302db655ca876242cf688c49e26f1a70c))
+* configure engineering skills ([#214](https://github.com/Affolder-Creative/little-hint/issues/214)) ([eafc718](https://github.com/Affolder-Creative/little-hint/commit/eafc7187f95de9988edca7d918d396091aacb961))
+* restore archived item sort choices ([#223](https://github.com/Affolder-Creative/little-hint/issues/223)) ([1bcd461](https://github.com/Affolder-Creative/little-hint/commit/1bcd4616afc2df53a296f0a7c712395db892a640))
+
+
+### Fixes
+
+* order archived items by archive time ([#217](https://github.com/Affolder-Creative/little-hint/issues/217)) ([9f26cee](https://github.com/Affolder-Creative/little-hint/commit/9f26cee59bcf368864d2bcc5fa8e7430e1ab9119))
+
+
+### Dependencies
+
+* bump the development group with 4 updates ([#226](https://github.com/Affolder-Creative/little-hint/issues/226)) ([25ea128](https://github.com/Affolder-Creative/little-hint/commit/25ea1283672300c849553fe1d64a0bd7fb60188a))
+* bump the runtime group with 12 updates ([#225](https://github.com/Affolder-Creative/little-hint/issues/225)) ([80aa277](https://github.com/Affolder-Creative/little-hint/commit/80aa2773405eef5dea4210ec9f52be5e39c93efc))
+
+
+### Build and packaging
+
+* bump axllent/mailpit from v1.33.0 to v1.33.1 ([#220](https://github.com/Affolder-Creative/little-hint/issues/220)) ([6e5e53f](https://github.com/Affolder-Creative/little-hint/commit/6e5e53f2434e164ee66383fc348297669c325866))
+* bump cloudflare/cloudflared from `4955524` to `b94b96e` ([#219](https://github.com/Affolder-Creative/little-hint/issues/219)) ([27474ec](https://github.com/Affolder-Creative/little-hint/commit/27474ec678c8c2f9fa6fc33253aa1e4715f56a8f))
+* bump node from `8a32c8c` to `116b800` ([#218](https://github.com/Affolder-Creative/little-hint/issues/218)) ([e3790e5](https://github.com/Affolder-Creative/little-hint/commit/e3790e5a5d15b89f48850bea8334362c729d9d81))
+
 ## [1.4.0](https://github.com/Affolder-Creative/little-hint/compare/v1.3.1...v1.4.0) (2026-11-12)
 
 
