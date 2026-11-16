@@ -47,18 +47,18 @@
     ]
   },
   {
-    "file": "alpine-3.24.3-sources.tar.gz",
-    "sha256": "8c66ccc0d0ce3623a7cb671c6850c4d81dd2a57ca3c5f3346a69660b277addbe",
-    "size": 201927743,
+    "file": "alpine-3.24.4-sources.tar.gz",
+    "sha256": "8f70328644ba70d663224feb03d3c86def52b9a431cbb3a049fbea5206835244",
+    "size": 202060878,
     "covers": [
       "apk:alpine-baselayout-data@3.7.2-r1#60a7585bbab2fa0f762504eb617dbca90216e31f",
       "apk:alpine-baselayout@3.7.2-r1#60a7585bbab2fa0f762504eb617dbca90216e31f",
-      "apk:apk-tools@3.0.8-r0#4588b452722bd4800efdc6cce4f6e980e02a997f",
+      "apk:apk-tools@3.0.9-r0#13685e8f2cf1c103cbba2fb9efcfcf19f4918df0",
       "apk:busybox-binsh@1.37.0-r31#c3ef5d10e6ef6528852c51f0564963e2f8c1be19",
       "apk:busybox@1.37.0-r31#c3ef5d10e6ef6528852c51f0564963e2f8c1be19",
       "apk:ca-certificates-bundle@20261020-r0#e78f5987166c6ffbe23f6472e2e8f040298fe2da",
       "apk:ca-certificates@20261020-r0#e78f5987166c6ffbe23f6472e2e8f040298fe2da",
-      "apk:libapk@3.0.8-r0#4588b452722bd4800efdc6cce4f6e980e02a997f",
+      "apk:libapk@3.0.9-r0#13685e8f2cf1c103cbba2fb9efcfcf19f4918df0",
       "apk:libatomic@15.2.0-r5#423a8ad043d07f2c7546c8ec3e2b0384cda360ae",
       "apk:libgcc@15.2.0-r5#423a8ad043d07f2c7546c8ec3e2b0384cda360ae",
       "apk:libstdc++@15.2.0-r5#423a8ad043d07f2c7546c8ec3e2b0384cda360ae",
