@@ -105,3 +105,12 @@ test("publisher restores a locked bundle omitted from the runtime inventory", ()
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+test("draft retry selector has the contents permission required to read drafts", () => {
+  const workflow = readFileSync(
+    new URL("../.github/workflows/release.yml", import.meta.url),
+    "utf8",
+  );
+  const selector = workflow.split("  select:\n")[1].split("  prepare:\n")[0];
+  assert.match(selector, /permissions:\n      contents: write/);
+});

@@ -18,6 +18,9 @@ jobs:
     if: github.repository == 'Affolder-Creative/little-hint' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
+    # GitHub only exposes draft releases to callers with push access.
+    permissions:
+      contents: write
     outputs:
       sha: ${{ steps.ref.outputs.sha }}
     steps:
