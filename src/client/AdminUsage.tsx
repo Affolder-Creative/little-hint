@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "./api";
 import type { AdminUsage as Usage, AiUsage } from "../shared/admin-usage";
+import { formatDateTime } from "./copy";
 const number = (n: number) => n.toLocaleString();
 const smsLabels: Record<string, string> = {
   textbelt: "Textbelt",
@@ -154,7 +155,7 @@ export function AdminUsage() {
             <p className="muted">
               Balance {u.sms.quotaState}.
               {u.sms.checkedAt
-                ? ` Last checked ${new Date(u.sms.checkedAt).toLocaleString()}.`
+                ? ` Last checked ${formatDateTime(u.sms.checkedAt)}.`
                 : " Not yet checked."}{" "}
               <button
                 className="text-button"
@@ -186,7 +187,7 @@ export function AdminUsage() {
                 {u.sms.recentFailures.map((failure) => (
                   <p key={failure.id}>
                     <time dateTime={failure.createdAt}>
-                      {new Date(failure.createdAt).toLocaleString()}
+                      {formatDateTime(failure.createdAt)}
                     </time>{" "}
                     · {smsLabel(failure.provider)}
                     <br />

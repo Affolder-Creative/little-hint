@@ -42,6 +42,19 @@
   gap: 8px;
   margin-block: 16px;
 }
+/* Phones stack organizer controls at one shared width instead of ragged
+   content widths; the review summary keeps its own full row. */
+@media (max-width: 650px) {
+  .exchange-panel > .exchange-controls {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+  }
+  .exchange-panel > .exchange-controls > .entry-actions > summary {
+    width: 100%;
+    justify-content: center;
+  }
+}
 .exchange-panel > .assignments {
   padding: 18px;
   margin-block: 16px;

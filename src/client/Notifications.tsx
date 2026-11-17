@@ -137,19 +137,11 @@ export function NotificationCenter() {
         </Link>
       </Header>
       <div className="notification-toolbar">
-        <div className="actions" aria-label="Filter notifications">
-          <button
-            className={`button ${unread ? "secondary" : ""}`}
-            aria-pressed={!unread}
-            onClick={() => setUnread(false)}
-          >
+        <div className="tabs" role="group" aria-label="Filter notifications">
+          <button aria-pressed={!unread} onClick={() => setUnread(false)}>
             All
           </button>
-          <button
-            className={`button ${unread ? "" : "secondary"}`}
-            aria-pressed={unread}
-            onClick={() => setUnread(true)}
-          >
+          <button aria-pressed={unread} onClick={() => setUnread(true)}>
             Unread
           </button>
         </div>

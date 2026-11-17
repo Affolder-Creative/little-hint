@@ -212,7 +212,10 @@ export function FollowSettings({ target, targetId }: FollowTarget) {
 export function FollowingSettings() {
   const { world, open } = useApp();
   return (
-    <section aria-labelledby="following-settings-title">
+    <section
+      className="following-settings"
+      aria-labelledby="following-settings-title"
+    >
       <h3 id="following-settings-title">Following and muted lists</h3>
       <p className="muted">
         Follow people and lists from their pages, or family groups and

@@ -167,7 +167,10 @@ export function PersonCoManagement({ personId }: { personId: string }) {
   const eligible = data.candidates.some((c) => c.personId === personId);
   if (!mine && !eligible) return null;
   return (
-    <section className="settings-section" aria-label="Wish-list co-management">
+    <section
+      className="settings-section person-co-management"
+      aria-label="Wish-list co-management"
+    >
       <details open={mine?.status === "pending"}>
         <summary>
           {mine?.status === "active"

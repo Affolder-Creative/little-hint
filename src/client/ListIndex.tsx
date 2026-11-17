@@ -85,12 +85,10 @@ export function ListIndex() {
           <Plus size={17} />
           Create a list
         </button>
-      </Header>
-      <p>
         <Link to="/capture" className="button secondary">
           Capture a product
         </Link>
-      </p>
+      </Header>
       <WishlistDrafts />
       <ImportDrafts />
       <div className="tabs" role="group" aria-label="List status">

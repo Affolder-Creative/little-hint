@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-12T17:34:23.154989+00:00",
+  "generatedAt": "2026-11-17T02:00:04.139059+00:00",
   "title": "Design System: Little Hint",
   "extensions": {
     "colorMeta": {
@@ -779,6 +779,30 @@
           "oklch(83.57% 0.01554 42.05)",
           "oklch(95.00% 0.01084 42.05)"
         ]
+      },
+      "selection": {
+        "canonical": "rgba(170, 77, 55, 0.2)",
+        "role": "accent",
+        "displayName": "Selection",
+        "purpose": "Text selection highlight drawn from the accent."
+      },
+      "dark-selection": {
+        "canonical": "rgba(241, 190, 173, 0.3)",
+        "role": "accent",
+        "displayName": "Dark Selection",
+        "purpose": "Dark-theme text selection highlight."
+      },
+      "scrollbar": {
+        "canonical": "#d3c1b5",
+        "role": "neutral",
+        "displayName": "Scrollbar",
+        "purpose": "Document scrollbar thumb via scrollbar-color."
+      },
+      "dark-scrollbar": {
+        "canonical": "#6b5348",
+        "role": "neutral",
+        "displayName": "Dark Scrollbar",
+        "purpose": "Dark-theme scrollbar thumb."
       }
     },
     "typographyMeta": {
@@ -934,6 +958,11 @@
         "name": "working-dots",
         "value": "2s steps(1, end) infinite",
         "purpose": "Cycle zero through three dots in 500ms steps in a fixed 1em slot; reduced motion shows static dots."
+      },
+      {
+        "name": "disclosure-chevron",
+        "value": "transform 160ms cubic-bezier(0.22, 1, 0.36, 1)",
+        "purpose": "Disclosure chevron turns 90deg when open; no transition with reduced motion."
       }
     ],
     "breakpoints": [
@@ -1161,9 +1190,9 @@
       "name": "Secondary button",
       "kind": "button",
       "refersTo": "button-secondary",
-      "description": "A supporting action.",
+      "description": "A supporting action. Outlined with control-border, the same 3:1 boundary as fields; hover fills with soft instead of dimming.",
       "html": "<button class=\"ds-button-secondary\">Save gift</button>",
-      "css": ".ds-button-secondary{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 18px;border:1px solid transparent;border-radius:8px;font-size:14px;font-weight:600;line-height:1.25;min-height:44px;min-width:44px;max-width:100%;overflow-wrap:anywhere;cursor:pointer;font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;background:var(--paper, #fffdf9);color:var(--text, #2b201d);border-color:var(--border, #e6d9cf);}.ds-button-secondary:hover:not(:disabled){filter:brightness(.94)}.ds-button-secondary:active:not(:disabled){filter:brightness(.88)}.ds-button-secondary:focus-visible{outline:3px solid var(--accent, #aa4d37);outline-offset:3px;}.ds-button-secondary:disabled{opacity:.55;cursor:not-allowed}"
+      "css": ".ds-button-secondary{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 18px;border:1px solid transparent;border-radius:8px;font-size:14px;font-weight:600;line-height:1.25;min-height:44px;min-width:44px;max-width:100%;overflow-wrap:anywhere;cursor:pointer;font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;background:var(--paper, #fffdf9);color:var(--text, #2b201d);border-color:var(--control-border, #93796c);}.ds-button-secondary:hover:not(:disabled){background:var(--soft, #f4e4da)}.ds-button-secondary:active:not(:disabled){filter:brightness(.88)}.ds-button-secondary:focus-visible{outline:3px solid var(--accent, #aa4d37);outline-offset:3px;}.ds-button-secondary:disabled{opacity:.55;cursor:not-allowed}"
     },
     {
       "name": "Text button",
@@ -1209,14 +1238,14 @@
       "name": "Gift card",
       "kind": "card",
       "refersTo": "gift-card",
-      "description": "Unboxed gift details with explicit Wish/Gift idea and recipient text. Real photos use neutral paper frames; warm variations are reserved for placeholders. Compact price/privacy/availability metadata.",
+      "description": "Unboxed gift details with explicit Wish/Gift idea and recipient text. Real photos use neutral paper frames; warm variations are reserved for placeholders. Price/privacy/availability metadata anchors the card bottom. All image frames retain matching proportions, including missing photos, with proportional 36–88px fallback icons. The recipient row carries no trailing arrow glyph; the whole card is the link. Editor overflow menus float as 44px round paper buttons inset 8px over the image.",
       "html": "<a class=\"ds-gift-card\" href=\"#gift\"><div class=\"ds-photo\"><svg aria-hidden=\"true\" width=\"32\" height=\"32\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.1\"><path d=\"M3 8h18v4H3zM5 12v9h14v-9M12 8v13M12 8H7.5A2.5 2.5 0 1 1 10 5.5L12 8Zm0 0h4.5A2.5 2.5 0 1 0 14 5.5L12 8Z\"/></svg><span>No photo yet</span></div><div class=\"ds-card-copy\"><div class=\"ds-recipient\"><strong>Wish</strong> · For Alex</div><h2 class=\"ds-gift-title\">Gift title</h2><span class=\"ds-priority\">Most wanted</span><div class=\"ds-meta\"><span>$25.00</span><span class=\"ds-available\">Available</span></div></div></a>",
-      "css": ".ds-gift-card{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;display:block;max-width:300px;text-decoration:none;color:var(--text, #2b201d)}.ds-photo{aspect-ratio:auto;min-height:80px;padding:12px;flex-direction:column;gap:8px;border-radius:var(--radius,14px);background:#efe7dc;color:#8b7164;display:flex;position:relative;align-items:center;justify-content:center;overflow:hidden}.ds-photo span{position:static;font-size:11px;color:var(--muted,#746057)}.ds-card-copy{padding:16px 2px 0}.ds-recipient{font-size:11px;color:var(--muted, #746057);margin-bottom:11px}.ds-gift-card .ds-gift-title{font-size:16px;line-height:1.4;font-weight:550;margin:0 0 9px}.ds-gift-card:hover .ds-gift-title{text-decoration:underline;text-underline-offset:4px}.ds-meta{display:flex;justify-content:flex-start;align-items:center;flex-wrap:wrap;gap:8px 12px;font-size:14px}.ds-available{font-size:11px;line-height:1.4;border-radius:4px;padding:4px 6px;background:#e9eddf;color:#486348}.ds-gift-card:focus-visible{outline:3px solid var(--accent, #aa4d37);outline-offset:3px;}.ds-priority{display:inline-flex;width:fit-content;margin:6px 0;padding:3px 6px;border-radius:4px;font-size:12px;color:var(--text,#2b201d);border:1px solid transparent;background:var(--soft,#f4e4da);font-weight:600}@media(max-width:650px){.ds-gift-card .ds-gift-title{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}.ds-meta>span:first-child{flex-basis:100%}}"
+      "css": ".ds-gift-card{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;display:block;max-width:300px;text-decoration:none;color:var(--text, #2b201d)}.ds-photo{aspect-ratio:1.13;min-height:80px;padding:12px;flex-direction:column;gap:8px;border-radius:var(--radius,14px);background:#efe7dc;color:#8b7164;display:flex;position:relative;align-items:center;justify-content:center;overflow:hidden}.ds-photo>svg{width:28%;height:auto;min-width:36px;max-width:88px}.ds-photo span{position:static;font-size:11px;color:var(--muted,#746057)}.ds-card-copy{padding:16px 2px 0;display:flex;flex-direction:column;align-items:flex-start}.ds-recipient{font-size:11px;color:var(--muted, #746057);margin-bottom:11px}.ds-gift-card .ds-gift-title{font-size:16px;line-height:1.4;font-weight:550;margin:0 0 9px}.ds-gift-card:hover .ds-gift-title{text-decoration:underline;text-underline-offset:4px}.ds-meta{width:100%;margin-top:auto;padding-top:4px;display:flex;justify-content:flex-start;align-items:center;flex-wrap:wrap;gap:8px 12px;font-size:14px}.ds-available{font-size:11px;line-height:1.4;border-radius:4px;padding:4px 6px;background:#e9eddf;color:#486348}.ds-gift-card:focus-visible{outline:3px solid var(--accent, #aa4d37);outline-offset:3px;}.ds-priority{display:inline-flex;width:fit-content;margin:6px 0;padding:3px 6px;border-radius:4px;font-size:12px;color:var(--text,#2b201d);border:1px solid transparent;background:var(--soft,#f4e4da);font-weight:600}@media(max-width:650px){.ds-photo{aspect-ratio:1}.ds-gift-card .ds-gift-title{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}.ds-meta>span:first-child{flex-basis:100%}}"
     },
     {
       "name": "Group event entry",
       "kind": "custom",
-      "description": "A compact event heading with participant-list links beside Event actions on wide screens; actions wrap beneath the heading on smaller screens.",
+      "description": "A compact event heading with participant-list links beside Event actions on wide screens; actions wrap beneath the heading on smaller screens at the 68px text inset. Managed list rows share the same anatomy: 52px tile top-aligned with the title, 16px gap, 20px vertical padding; on wide screens List actions replaces the trailing arrow.",
       "html": "<section class=\"ds-event-entry\"><div class=\"ds-event-heading\"><h3><a href=\"#event\">Family celebration</a></h3><p>Shared with: Morgan family · 2 participants</p><span>Keep it a surprise</span></div><nav><a class=\"ds-event-list\" href=\"#wish-list\">Your wish list →</a><details><summary>⋯ Event actions</summary><a href=\"#event\">Manage event →</a></details></nav></section>",
       "css": ".ds-event-entry{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px 24px;font:14px/1.6 system-ui;color:var(--text,#2b201d);padding:16px 0;border-bottom:1px solid var(--border,#e6d9cf)}.ds-event-heading{flex:1;min-width:200px}.ds-event-heading h3{margin:0;font-size:19px}.ds-event-heading h3 a{color:inherit;text-decoration:none}.ds-event-heading p{margin:4px 0;color:var(--muted,#746057);font-size:13px}.ds-event-heading span{color:var(--muted,#746057);font-size:12px}.ds-event-entry nav{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.ds-event-list,.ds-event-entry summary{display:flex;align-items:center;min-height:44px;border:1px solid var(--border,#e6d9cf);border-radius:8px;padding:8px 12px;font-weight:600;text-decoration:none;color:inherit}.ds-event-list{background:var(--paper,#fffdf9)}.ds-event-entry details{position:relative}.ds-event-entry details>a{position:absolute;right:0;min-width:150px;padding:12px;background:var(--paper,#fffdf9);color:var(--text,#2b201d)}.ds-event-entry :focus-visible{outline:3px solid var(--accent,#aa4d37);outline-offset:3px}"
     },
@@ -1295,9 +1324,9 @@
     {
       "name": "Collection pagination",
       "kind": "nav",
-      "description": "Result count with wrapping Previous/Next controls above and below a bounded collection.",
+      "description": "Muted tabular result count above the collection; Previous/Next controls wrap above and below only when there are several pages. With no results the count is a screen-reader-only status and the empty state speaks.",
       "html": "<nav class=\"ds-pages\" aria-label=\"Results pages\"><span>Showing 25–48 of 83</span><div><button>Previous</button><span>Page 2 of 4</span><button>Next</button></div></nav>",
-      "css": ".ds-pages{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-block:20px;font-size:14px;color:var(--text)}.ds-pages>div{display:flex;align-items:center;flex-wrap:wrap;gap:12px}.ds-pages button{min-height:44px;padding:12px 18px;border:1px solid var(--border);border-radius:8px;background:var(--paper);color:var(--text);font-size:14px;font-weight:600}.ds-pages button:hover{filter:brightness(.97)}.ds-pages button:focus-visible{outline:3px solid var(--accent);outline-offset:3px}.ds-pages button:disabled{opacity:.5;cursor:not-allowed}@media(max-width:650px){.ds-pages>div{width:100%;justify-content:space-between}}"
+      "css": ".ds-pages{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-block:20px;font-size:14px;color:var(--text)}.ds-pages>span{color:var(--muted);font-variant-numeric:tabular-nums}.ds-pages>div{display:flex;align-items:center;flex-wrap:wrap;gap:12px}.ds-pages button{min-height:44px;padding:12px 18px;border:1px solid var(--border);border-radius:8px;background:var(--paper);color:var(--text);font-size:14px;font-weight:600}.ds-pages button:hover{filter:brightness(.97)}.ds-pages button:focus-visible{outline:3px solid var(--accent);outline-offset:3px}.ds-pages button:disabled{opacity:.5;cursor:not-allowed}@media(max-width:650px){.ds-pages>div{width:100%;justify-content:space-between}}"
     },
     {
       "name": "Contextual help",
@@ -1397,6 +1426,20 @@
       "description": "Explicit filter labels distinguish matching event and list names; redundant sole-owner captions are omitted by ID.",
       "html": "<dl class=\"ds-scope\"><div><dt>Person</dt><dd>Alex Morgan</dd></div><div><dt>Occasion</dt><dd>Family celebration</dd></div><div><dt>Wish list</dt><dd>Family celebration</dd></div></dl>",
       "css": ".ds-scope{display:flex;flex-wrap:wrap;gap:12px 24px;margin:16px 0 0;font-family:system-ui;color:var(--text)}.ds-scope dt{font-size:12px;color:var(--muted)}.ds-scope dd{margin:0;font-size:14px;font-weight:500;overflow-wrap:anywhere}"
+    },
+    {
+      "name": "Disclosure",
+      "kind": "disclosure",
+      "description": "Native details/summary with a drawn 16px chevron in the summary's start padding (26px). The chevron uses currentColor at 72% opacity, full on hover, and rotates 90deg when open; on summaries with a supporting second line it stays centered on the first title line. Two title roles only: section disclosures (17px/600, standing in for a section heading) and inline disclosures (14px/500, optional detail within a task including notification setup groups); supporting lines are 13px muted regular. Action menus keep their own trigger.",
+      "html": "<details class=\"ds-disclosure\"><summary>More details<small>Note, price, quantity</small></summary><p>Optional fields.</p></details>",
+      "css": ".ds-disclosure>summary{position:relative;display:block;list-style:none;padding:10px 0 10px 26px;min-height:44px;cursor:pointer;font:500 14px/1.5 -apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif}.ds-disclosure>summary::-webkit-details-marker{display:none}.ds-disclosure>summary small{display:block;color:var(--muted);font-weight:400}.ds-disclosure>summary::before{content:\"\";position:absolute;left:0;top:calc(10px + .5lh);width:16px;height:16px;background:currentColor;opacity:.72;-webkit-mask:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%23000' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 4 4 4-4 4'/%3E%3C/svg%3E\") center/contain no-repeat;mask:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%23000' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 4 4 4-4 4'/%3E%3C/svg%3E\") center/contain no-repeat;transform:translateY(-50%);transition:transform .16s cubic-bezier(.22,1,.36,1)}.ds-disclosure[open]>summary::before{transform:translateY(-50%) rotate(90deg)}"
+    },
+    {
+      "name": "Select field",
+      "kind": "input",
+      "description": "Single-choice select with the field shape, 40px end padding and a drawn 16px muted chevron 12px from the edge. Hover strengthens the border to muted.",
+      "html": "<select class=\"ds-select\"><option>Default order</option></select>",
+      "css": ".ds-select{-webkit-appearance:none;appearance:none;width:100%;min-height:44px;padding:11px 40px 11px 12px;border:1px solid var(--control-border,#93796c);border-radius:8px;background:var(--paper,#fffdf9) url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%23746057' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E\") no-repeat right 12px center/16px;color:var(--text,#2b201d);font:inherit}.ds-select:hover{border-color:var(--muted,#746057)}"
     }
   ],
   "narrative": {

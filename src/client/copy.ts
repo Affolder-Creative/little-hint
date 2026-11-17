@@ -15,3 +15,13 @@ export const contributionStatus = {
   received: "Received",
   cancelled: "Cancelled",
 } as const;
+
+const dateTimeFormat = new Intl.DateTimeFormat(undefined, {
+  dateStyle: "medium",
+  timeStyle: "short",
+});
+/** Readable timestamps everywhere people read them: written month, no seconds. */
+export function formatDateTime(value: string | number | Date): string {
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? "" : dateTimeFormat.format(date);
+}

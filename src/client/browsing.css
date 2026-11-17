@@ -7,11 +7,19 @@
   align-items: center;
   gap: 12px;
 }
+/* Search takes the row; Sort & filter stays content-sized beside it down to
+   360px, and narrower screens wrap it below at full touch height. */
 .browse-toolbar > .search {
-  min-width: min(180px, 100%);
+  flex: 1 1 160px;
+  min-width: min(160px, 100%);
 }
 .browse-toolbar > .button {
-  flex-shrink: 0;
+  flex: 0 0 auto;
+  gap: 6px;
+  padding-inline: 14px;
+}
+.browse-toolbar > .button > span {
+  font-variant-numeric: tabular-nums;
 }
 .browse-toolbar .search input::placeholder {
   font-size: 13px;
@@ -50,9 +58,12 @@
   font-size: 14px;
   font-weight: 550;
 }
+/* Helper copy is supporting type, not an inherited field-label weight. */
 .people-filter .purchase-hint {
   margin: 8px 0 0;
   font-size: 13px;
+  font-weight: 400;
+  line-height: 1.5;
   color: var(--muted);
 }
 .browse-options .sort-control select {
@@ -65,23 +76,12 @@
   display: flex;
   justify-content: space-between;
   gap: 16px;
-  margin-top: 24px;
+  margin-top: var(--space-controls);
 }
 .browse-options input,
 .browse-options select {
   font-size: 16px;
   font-weight: 400;
-}
-.managed-list-row:has(.entry-actions-label) {
-  display: block;
-  padding-bottom: 16px;
-}
-.managed-list-row:has(.entry-actions-label) > .list-row {
-  padding-bottom: 12px;
-}
-.managed-list-row:has(.entry-actions-label) > .entry-actions {
-  margin-inline-start: 64px;
-  width: fit-content;
 }
 .event-entry {
   display: grid;
@@ -150,9 +150,6 @@
     position: static;
     margin: 0;
   }
-  .event-entry-actions {
-    margin-inline-start: 0;
-  }
   .group-events-section > .section-heading {
     flex-wrap: wrap;
     align-items: start;
@@ -162,11 +159,16 @@
     flex: 1 1 220px;
   }
 }
-/* Privacy belongs below the title, never in competition with its text column. */
+/* List rows share the event-row anatomy at every width: a 52px tile top-aligned
+   with the title, a 16px gap (68px text inset), privacy below the text, and
+   row actions indented to the text column below 1101px. This is the only
+   definition; do not repeat it in other stylesheets. */
 .managed-list-row > .list-row {
   display: grid;
   grid-template-columns: 52px minmax(0, 1fr) 18px;
-  gap: 8px 12px;
+  align-items: start;
+  gap: 8px 16px;
+  padding-block: 20px;
 }
 .managed-list-row .list-symbol {
   grid-column: 1;
@@ -186,7 +188,45 @@
 .managed-list-row .list-row > svg {
   grid-column: 3;
   grid-row: 1 / span 2;
+  align-self: center;
   margin: 0;
+}
+.managed-list-row .list-row:hover h3 {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.managed-list-row:has(.entry-actions-label) {
+  display: block;
+  padding-bottom: 20px;
+}
+.managed-list-row:has(.entry-actions-label) > .list-row {
+  padding-bottom: 12px;
+}
+.managed-list-row:has(.entry-actions-label) > .entry-actions {
+  margin-inline-start: 68px;
+  width: fit-content;
+}
+/* Wide rows match event rows: the list link, then its actions, centered. The
+   labeled actions replace the bare arrow; the title and tile remain the link. */
+@media (min-width: 1101px) {
+  .managed-list-row:has(.entry-actions-label) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: 24px;
+    padding-bottom: 0;
+  }
+  .managed-list-row:has(.entry-actions-label) > .list-row {
+    grid-template-columns: 52px minmax(0, 1fr);
+    padding-bottom: 20px;
+  }
+  .managed-list-row:has(.entry-actions-label) > .list-row > svg {
+    display: none;
+  }
+  .managed-list-row:has(.entry-actions-label) > .entry-actions {
+    margin-inline-start: 0;
+  }
 }
 
 @media (max-width: 650px) {

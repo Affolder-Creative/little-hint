@@ -16,6 +16,7 @@ import {
   type GiftCandidate,
   type GiftDiscoveryJob,
 } from "../shared/gift-discovery";
+import { formatDateTime } from "./copy";
 
 export function GiftDiscoveryPage() {
   const { id = "" } = useParams();
@@ -327,14 +328,14 @@ function DiscoveryFlow({
           <p className="muted">
             {context.allowance.weeklyRemaining === null
               ? "No weekly search limit."
-              : `${context.allowance.weeklyRemaining} new searches left this week. Resets ${new Date(context.allowance.weekResetsAt).toLocaleString()}.`}
+              : `${context.allowance.weeklyRemaining} new searches left this week. Resets ${formatDateTime(context.allowance.weekResetsAt)}.`}
             {context.allowance.monthlyRemaining === null &&
               " Your searches are exempt from the shared monthly allowance."}
           </p>
           {noAllowance && (
             <p role="status">
               {context.allowance.monthlyRemaining === 0
-                ? `The app's monthly allowance is used. It resets ${new Date(context.allowance.monthResetsAt).toLocaleString()}.`
+                ? `The app's monthly allowance is used. It resets ${formatDateTime(context.allowance.monthResetsAt)}.`
                 : "Your weekly allowance is used."}{" "}
               You can still browse available recent results.
             </p>
@@ -357,8 +358,7 @@ function DiscoveryFlow({
                     {job.input.maxPriceCents
                       ? `${dollars(job.input.maxPriceCents)} or less per gift`
                       : "a mix of prices up to $200"}
-                    . Unsaved results expire{" "}
-                    {new Date(job.expiresAt).toLocaleString()}.
+                    . Unsaved results expire {formatDateTime(job.expiresAt)}.
                   </p>
                   {!job.candidates.length && (
                     <p>
