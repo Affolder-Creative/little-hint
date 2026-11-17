@@ -204,5 +204,30 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ github.token }}
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      # Runtime inventories can omit build-only dependencies still listed in an
+      # older tag's shared bundle lock. Restore those exact reviewed bytes so
+      # draft retries work without changing the tag or its publishing scripts.
+      - name: Restore shared source archives expected by the tagged publisher
+        run: |
+          python3 - <<'PYTHON'
+          import hashlib, json, pathlib, subprocess
+          destination = pathlib.Path('.local/artifacts/release-amd64')
+          locked = json.loads(pathlib.Path('compliance/source-bundles.lock.json').read_text())
+          materials = json.loads(pathlib.Path('compliance/source-materials.json').read_text())['artifacts']
+          missing = [b for b in locked if not (destination / b['file']).exists()]
+          if missing:
+              plan = [next(a for a in materials if a['file'] == b['file']) for b in missing]
+              output = pathlib.Path('.local/restored-source-bundles')
+              output.mkdir(parents=True, exist_ok=True)
+              plan_path = output / 'plan.json'
+              plan_path.write_text(json.dumps(plan))
+              subprocess.run(['python3', 'scripts/bundle-sources.py', str(plan_path), str(output)], check=True)
+              for bundle in missing:
+                  source = output / bundle['file']
+                  data = source.read_bytes()
+                  if len(data) != bundle['size'] or hashlib.sha256(data).hexdigest() != bundle['sha256']:
+                      raise ValueError('Restored source bundle differs from reviewed bytes: ' + bundle['file'])
+                  source.replace(destination / bundle['file'])
+          PYTHON
       - name: Publish verified images and release downloads
         run: bash scripts/publish-release.sh
