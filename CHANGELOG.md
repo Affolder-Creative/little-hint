@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.6.1](https://github.com/Affolder-Creative/little-hint/compare/v1.6.0...v1.6.1) (2026-11-17)
+
+
+### Fixes
+
+* allow release retry to read drafts ([#235](https://github.com/Affolder-Creative/little-hint/issues/235)) ([1358c1a](https://github.com/Affolder-Creative/little-hint/commit/1358c1a1811a182ee933a849e0e4fa563a4de689))
+* restore omitted release source archives ([#233](https://github.com/Affolder-Creative/little-hint/issues/233)) ([f39d5de](https://github.com/Affolder-Creative/little-hint/commit/f39d5de7c3fa84f7853d9d3cbb8d8e3020b35c5f))
+
 ## [1.6.0](https://github.com/Affolder-Creative/little-hint/compare/v1.5.0...v1.6.0) (2026-11-17)
 
 
