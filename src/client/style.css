@@ -504,8 +504,10 @@ main:focus {
   align-items: center;
   gap: 15px;
   color: var(--muted);
+  flex-wrap: wrap;
 }
 .sidebar-note p {
+  flex: 1 1 8em;
   font-size: 12px;
   line-height: 1.6;
   margin: 0;
@@ -659,6 +661,9 @@ main {
   row-gap: 0;
   min-width: 0;
 }
+.gift-card > .gift-photo {
+  align-self: stretch;
+}
 .gift-card:hover .gift-title {
   text-decoration: underline;
   text-underline-offset: 4px;
@@ -771,8 +776,8 @@ main {
   border-radius: 4px;
 }
 .avatar {
-  height: 48px;
-  width: 48px;
+  height: 3.2em;
+  width: 3.2em;
   display: inline-flex;
   flex-shrink: 0;
   align-items: center;
@@ -784,8 +789,8 @@ main {
   font-weight: 550;
 }
 .avatar.small {
-  height: 29px;
-  width: 29px;
+  height: 2.9em;
+  width: 2.9em;
   font-size: 10px;
 }
 .avatar.color-1 {
@@ -1076,7 +1081,7 @@ main {
 .reserve-panel {
   border-top: 1px solid var(--border);
   align-self: stretch;
-  margin-top: var(--space-prose);
+  margin-top: var(--space-section);
   padding-top: 24px;
 }
 .reserve-panel > .form-row {
@@ -2142,8 +2147,13 @@ main {
   .mobile-settings {
     display: inline-flex;
   }
+  .mobile-settings.active {
+    color: var(--text);
+    background: var(--soft);
+  }
   .mobile-nav {
     display: flex;
+    flex-wrap: wrap;
     position: fixed;
     bottom: 0;
     left: 0;
@@ -2158,7 +2168,7 @@ main {
   }
   .mobile-nav a {
     display: flex;
-    flex: 1 1 auto;
+    flex: 1 0 auto;
     align-items: center;
     gap: 5px;
     flex-direction: column;
@@ -2169,8 +2179,7 @@ main {
     text-align: center;
   }
   .mobile-nav a span {
-    max-width: 100%;
-    overflow-wrap: anywhere;
+    white-space: nowrap;
   }
   .mobile-nav a.active {
     color: var(--text);
@@ -2331,8 +2340,8 @@ main {
     margin-bottom: 8px;
   }
   .gift-recipient .avatar {
-    width: 23px;
-    height: 23px;
+    width: 2.875em;
+    height: 2.875em;
     font-size: 8px;
   }
   .gift-card .gift-title {
@@ -2400,8 +2409,8 @@ main {
     font-size: 12px;
   }
   .gift-detail .gift-recipient .avatar {
-    width: 29px;
-    height: 29px;
+    width: 3.625em;
+    height: 3.625em;
   }
   .reserve-panel {
     margin-top: var(--space-prose);
@@ -2852,15 +2861,15 @@ main {
 .notification-count {
   position: absolute;
   right: -3px;
-  top: -3px;
+  bottom: calc(50% + 6px);
   min-width: 18px;
   padding: 1px 4px;
-  border-radius: 8px;
+  border-radius: 0.727em;
   background: var(--accent);
   color: var(--on-accent);
   font-size: 11px;
   font-weight: 700;
-  line-height: 16px;
+  line-height: 1.2;
   text-align: center;
 }
 /* Filters use the shared tab pattern. On wider screens the filters and the
@@ -3198,6 +3207,11 @@ main {
   font-size: 13px;
 }
 @media (max-width: 700px) {
+  .selected-group-heading > .async-control {
+    margin-inline-start: 0;
+    flex-basis: 100%;
+    align-items: flex-start;
+  }
   .settings-layout[data-section="groups"] .settings-navigation {
     margin-bottom: 16px;
   }
@@ -4478,7 +4492,7 @@ a.button:is(:hover, :focus, :active),
     -webkit-line-clamp: 2;
     overflow: hidden;
   }
-  .gift-card .gift-meta > span:first-child {
+  .gift-card .gift-meta > .item-price {
     flex-basis: 100%;
   }
   .gift-card .gift-meta {
@@ -4564,7 +4578,7 @@ a.button:is(:hover, :focus, :active),
   max-width: 32rem;
   margin-block: 16px;
 }
-.shopping-context > p {
+.shopping-context .field > small {
   font-size: 13px;
   line-height: 1.5;
   margin: 0.5rem 0 0;
@@ -5243,4 +5257,17 @@ a.button:is(:hover, :focus, :active),
 }
 .reorder-form > .form-actions > .button {
   width: auto;
+}
+
+/* Compact headers retain the approved symbol at a readable size. */
+@media (max-width: 360px) {
+  .mobile-brand .logo {
+    width: 44px;
+    height: 44px;
+  }
+  .mobile-brand .logo img {
+    width: 44px;
+    height: 44px;
+    object-fit: contain;
+  }
 }

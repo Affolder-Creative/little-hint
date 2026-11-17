@@ -32,6 +32,13 @@ JS
 import assert from "node:assert/strict";
 import sharp from "sharp";
 assert.notEqual(process.getuid(), 0);
+for (const name of ["vite", "vitest"]) {
+  assert.throws(() => import.meta.resolve(name), { code: "ERR_MODULE_NOT_FOUND" });
+}
+await import("better-auth");
+await import("better-auth/plugins");
+await import("better-auth/adapters/drizzle");
+await import("@better-auth/passkey");
 assert.equal((await fetch("http://localhost:3000/api/health")).status, 200);
 const notices = await fetch("http://localhost:3000/third-party-notices.txt");
 assert.equal(notices.status, 200);
