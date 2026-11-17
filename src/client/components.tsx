@@ -71,12 +71,20 @@ export function MobileNavigation({ children }: { children: ReactNode }) {
 export function Logo({
   tagline = false,
   dark = false,
+  compact = false,
 }: {
   tagline?: boolean;
   dark?: boolean;
+  compact?: boolean;
 }) {
   return (
     <picture className={tagline ? "logo tagline" : "logo"}>
+      {compact && (
+        <source
+          media="(max-width: 360px)"
+          srcSet={`/brand/little-hint/symbols/little-hint-tag-${dark ? "dark" : "color"}.svg`}
+        />
+      )}
       {tagline && (
         <source
           media="(max-width: 460px)"

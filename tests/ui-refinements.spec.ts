@@ -237,14 +237,20 @@ for (const [width, theme] of [
       page.getByText("Price not yet checked", { exact: true }),
     ).toHaveCount(0);
     await expect(page.locator(".price-controls")).toHaveCount(0);
-    const gap = await page
-      .locator(".description")
-      .evaluate(
-        (el) =>
-          el.getBoundingClientRect().top -
-          document.querySelector(".item-price")!.getBoundingClientRect().bottom,
-      );
-    expect(gap).toBeLessThanOrEqual(20);
+    const metadata = await page.locator(".description").evaluate((el) => {
+      const price = document
+        .querySelector(".item-price")!
+        .getBoundingClientRect();
+      const status = document
+        .querySelector(".gift-detail-info > .status")!
+        .getBoundingClientRect();
+      return {
+        priceBeforeStatus: price.bottom <= status.top,
+        descriptionGap: el.getBoundingClientRect().top - status.bottom,
+      };
+    });
+    expect(metadata.priceBeforeStatus).toBe(true);
+    expect(metadata.descriptionGap).toBeLessThanOrEqual(20);
     await capture("missing-price");
     gift.priceCents = 4500;
     await page.reload();
@@ -365,6 +371,9 @@ for (const [width, kind] of [
       .locator(".reserve-panel")
       .getByLabel("Buying for", { exact: true });
     await expect(selector).toBeVisible();
+    await expect(selector).toHaveAccessibleDescription(
+      "Choose an exchange or a separate gift to set who can read your private notes.",
+    );
     await expect(page.locator(".back-link + .gift-detail")).toBeVisible();
     await selector.selectOption("ordinary");
     await selector.scrollIntoViewIfNeeded();
@@ -989,5 +998,72 @@ for (const [width, theme] of [
       path: info.outputPath("spending-scope.png"),
       fullPage: true,
     });
+  });
+}
+
+for (const width of [320, 390]) {
+  test(`enlarged navigation preserves whole labels and settings location at ${width}px`, async ({
+    page,
+  }) => {
+    await setup(page);
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/settings");
+    const settings = page.locator(".mobile-settings");
+    await expect(settings).toHaveAttribute("aria-current", "page");
+    const nav = page.locator(".mobile-nav");
+    await expect(nav).toBeVisible();
+    const normalHeight = (await nav.boundingBox())!.height;
+    await page.evaluate(() => {
+      const sizes = [...document.querySelectorAll<HTMLElement>("body *")].map(
+        (element) => ({
+          element,
+          size: parseFloat(getComputedStyle(element).fontSize),
+        }),
+      );
+      for (const { element, size } of sizes)
+        element.style.fontSize = `${size * 2}px`;
+    });
+    await expect
+      .poll(async () => (await nav.boundingBox())!.height)
+      .toBeGreaterThan(normalHeight);
+    const layout = await nav.locator("a").evaluateAll((links) =>
+      links.map((link) => {
+        const label = link.querySelector("span")!;
+        const range = document.createRange();
+        range.selectNodeContents(label);
+        const lines = [...range.getClientRects()];
+        const box = link.getBoundingClientRect();
+        return {
+          lines: lines.length,
+          width: box.width,
+          height: box.height,
+          left: box.left,
+          right: box.right,
+        };
+      }),
+    );
+    for (const link of layout) {
+      expect(link.lines).toBe(1);
+      expect(link.width).toBeGreaterThanOrEqual(44);
+      expect(link.height).toBeGreaterThanOrEqual(44);
+      expect(link.left).toBeGreaterThanOrEqual(0);
+      expect(link.right).toBeLessThanOrEqual(width);
+    }
+    await expect
+      .poll(async () => {
+        const measuredHeight = await page.evaluate(() =>
+          parseFloat(
+            getComputedStyle(document.documentElement).getPropertyValue(
+              "--mobile-nav-height",
+            ),
+          ),
+        );
+        return measuredHeight === Math.ceil((await nav.boundingBox())!.height);
+      })
+      .toBe(true);
+    await nav.getByRole("link", { name: "People", exact: true }).focus();
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(/\/people$/);
+    await expect(settings).not.toHaveAttribute("aria-current", "page");
   });
 }

@@ -405,7 +405,7 @@ export function App() {
           <div className="main-wrap">
             <header className="topbar">
               <Link to="/" className="mobile-brand">
-                <Logo dark={dark} />
+                <Logo dark={dark} compact />
               </Link>
               <span className="topbar-message">
                 Gift ideas, shared thoughtfully.
@@ -421,13 +421,13 @@ export function App() {
                 >
                   {dark ? <Sun size={20} /> : <Moon size={20} />}
                 </button>
-                <Link
+                <NavLink
                   className="mobile-settings icon-button"
                   to="/settings"
                   aria-label="Settings"
                 >
                   <Settings size={20} />
-                </Link>
+                </NavLink>
                 <button
                   aria-label="Add item"
                   className="button small"
@@ -1273,12 +1273,20 @@ function GiftDetail() {
         recipientId: selectedExchange.recipient,
       }
     : eventSpendingContext(world, gift);
+  const contextInNotes =
+    !gift.available &&
+    !!gift.comments &&
+    !gift.archived &&
+    (gift.canShop ?? !gift.isRecipient);
   const contextSelector = (choices.length > 0 ||
     exchange ||
     gift.comments?.some((c) => c.needsPrivacyReview) ||
     gift.reservations?.some((r) => r.needsPrivacyReview)) && (
     <div className="shopping-context">
-      <Field label="Buying for">
+      <Field
+        label="Buying for"
+        hint="Choose an exchange or a separate gift to set who can read your private notes."
+      >
         <select
           value={exchange}
           onChange={(e) => {
@@ -1305,9 +1313,6 @@ function GiftDetail() {
           ))}
         </select>
       </Field>
-      <p className="muted">
-        Link this gift to an exchange, or keep it separate.
-      </p>
     </div>
   );
   return (
@@ -1354,6 +1359,8 @@ function GiftDetail() {
               {priorityLabels[gift.priority]}
             </span>
           )}
+          <Price gift={gift} />
+          <PriceControls gift={gift} />
           <p
             className={
               gift.publicationState !== "draft" &&
@@ -1385,8 +1392,6 @@ function GiftDetail() {
                 : "Manage reservations"}
             </Link>
           )}
-          <Price gift={gift} />
-          <PriceControls gift={gift} />
           <GuidelineLabel
             amount={
               spendingContext ? spendingGuideline(world, spendingContext) : null
@@ -1449,94 +1454,92 @@ function GiftDetail() {
             gift.canShop === false ||
             (gift.canShop === undefined && gift.isRecipient)) &&
             contextSelector}
-          {gift.archived ? (
-            <p className="notice">
-              {gift.listId
-                ? "This item is archived."
-                : "This gift idea is archived."}
-            </p>
-          ) : gift.canShop === false ||
-            (gift.canShop === undefined && gift.isRecipient) ? (
-            <p className="privacy-note">
-              <LockKeyhole size={18} />
-              {gift.publicationState === "draft"
-                ? "Publish this draft when you’re ready to share it with your wish-list viewers."
-                : gift.mode === "surprise"
-                  ? "The rest is a surprise. Your people will take it from here."
-                  : "You can see who is reserving and buying this gift below."}
-            </p>
-          ) : (
-            <div className="reserve-panel">
-              <h2>{gift.available ? "Make their day" : "Taken care of"}</h2>
-              {gift.listId && world.lists.find((l) => l.id === gift.listId) && (
-                <RevealPolicy
-                  list={world.lists.find((l) => l.id === gift.listId)!}
-                />
-              )}
-              <p>
-                {isPrivateIdea(gift)
-                  ? privateIdeaDescription
-                  : gift.available
-                    ? `${gift.available} available to reserve. Let your people know you have this one covered.`
-                    : "All requested items have been reserved."}
-              </p>
-              {contextSelector}
-              {!!gift.available && (
-                <>
-                  <div className="form-row">
-                    <Field
-                      label={
-                        myReserved > 0 ? "Additional quantity" : "Quantity"
-                      }
-                    >
-                      <input
-                        type="number"
-                        min="1"
-                        max={gift.available}
-                        value={quantity}
-                        onChange={(e) => setQuantity(Number(e.target.value))}
-                      />
-                    </Field>
-                  </div>
-                  <SpendingGuidance
-                    context={spendingContext}
-                    preview={{ itemId: gift.id, quantity }}
-                  />
-                  <Action
-                    onClick={async () => {
-                      if (choices.length && !exchange)
-                        throw new Error("Choose who this gift is for.");
-                      const c = choices.find((c) => c.key === exchange);
-                      if (exchange && exchange !== "ordinary" && !c)
-                        throw new Error(
-                          "This assignment is unavailable. Choose again.",
-                        );
-                      await mutate("reservations", {
-                        itemId: gift.id,
-                        ordinary: exchange === "ordinary",
-                        quantity,
-                        exchangeId: c?.id,
-                        giverId: c?.giver,
-                        exchangeRecipientId: c?.recipient,
-                      });
-                      toast(
-                        "Gift reserved. Mark it as purchased or cancel your reservation in Buying.",
-                        {
-                          action: { label: "Open Buying", to: "/buying" },
-                          duration: 10000,
-                        },
-                      );
-                    }}
-                  >
-                    <ShoppingBag size={16} />
-                    {myReserved > 0 ? "Reserve more" : "Reserve gift"}
-                  </Action>
-                </>
-              )}
-            </div>
-          )}
         </section>
       </div>
+      {gift.archived ? (
+        <p className="notice">
+          {gift.listId
+            ? "This item is archived."
+            : "This gift idea is archived."}
+        </p>
+      ) : gift.canShop === false ||
+        (gift.canShop === undefined && gift.isRecipient) ? (
+        <p className="privacy-note">
+          <LockKeyhole size={18} />
+          {gift.publicationState === "draft"
+            ? "Publish this draft when you’re ready to share it with your wish-list viewers."
+            : gift.mode === "surprise"
+              ? "The rest is a surprise. Your people will take it from here."
+              : "You can see who is reserving and buying this gift below."}
+        </p>
+      ) : (
+        <div className="reserve-panel">
+          <h2>{gift.available ? "Make their day" : "Reservation status"}</h2>
+          <p>
+            {isPrivateIdea(gift)
+              ? privateIdeaDescription
+              : gift.available
+                ? "Let your people know you have this one covered."
+                : "All requested items have been reserved."}
+          </p>
+          {gift.listId && world.lists.find((l) => l.id === gift.listId) && (
+            <RevealPolicy
+              list={world.lists.find((l) => l.id === gift.listId)!}
+            />
+          )}
+          {!contextInNotes && contextSelector}
+          {!!gift.available && (
+            <>
+              <div className="form-row">
+                <Field
+                  label={myReserved > 0 ? "Additional quantity" : "Quantity"}
+                >
+                  <input
+                    type="number"
+                    min="1"
+                    max={gift.available}
+                    value={quantity}
+                    onChange={(e) => setQuantity(Number(e.target.value))}
+                  />
+                </Field>
+              </div>
+              <SpendingGuidance
+                context={spendingContext}
+                preview={{ itemId: gift.id, quantity }}
+              />
+              <Action
+                onClick={async () => {
+                  if (choices.length && !exchange)
+                    throw new Error("Choose who this gift is for.");
+                  const c = choices.find((c) => c.key === exchange);
+                  if (exchange && exchange !== "ordinary" && !c)
+                    throw new Error(
+                      "This assignment is unavailable. Choose again.",
+                    );
+                  await mutate("reservations", {
+                    itemId: gift.id,
+                    ordinary: exchange === "ordinary",
+                    quantity,
+                    exchangeId: c?.id,
+                    giverId: c?.giver,
+                    exchangeRecipientId: c?.recipient,
+                  });
+                  toast(
+                    "Gift reserved. Mark it as purchased or cancel your reservation in Buying.",
+                    {
+                      action: { label: "Open Buying", to: "/buying" },
+                      duration: 10000,
+                    },
+                  );
+                }}
+              >
+                <ShoppingBag size={16} />
+                {myReserved > 0 ? "Reserve more" : "Reserve gift"}
+              </Action>
+            </>
+          )}
+        </div>
+      )}
       {gift.reservations && gift.reservations.length > 0 && (
         <section className="detail-section">
           <h2>Gift plans</h2>
@@ -1617,14 +1620,22 @@ function GiftDetail() {
       {gift.comments && (
         <section className="detail-section discussion">
           <h2>Private notes</h2>
-          <p className="muted">
-            {selectedExchange
-              ? `New notes are visible only to ${world.people.find((p) => p.id === selectedExchange.giver)?.name ?? "this giver"} and people managing their profile. Recipients cannot read them.`
-              : (choices.length && !exchange) ||
-                  (exchange !== "ordinary" && exchange && !selectedExchange)
-                ? "Choose who this gift is for before writing a note."
-                : "New notes are visible to other shoppers with access to this gift. Recipients cannot read them."}
-          </p>
+          {contextInNotes && contextSelector}
+          {!(
+            contextInNotes &&
+            contextSelector &&
+            !selectedExchange &&
+            exchange !== "ordinary"
+          ) && (
+            <p className="muted">
+              {selectedExchange
+                ? `New notes are visible only to ${world.people.find((p) => p.id === selectedExchange.giver)?.name ?? "this giver"} and people managing their profile. Recipients cannot read them.`
+                : (choices.length && !exchange) ||
+                    (exchange !== "ordinary" && exchange && !selectedExchange)
+                  ? "Choose a gift context under Buying for before writing a note."
+                  : "New notes are visible to other shoppers with access to this gift. Recipients cannot read them."}
+            </p>
+          )}
           {noteLocation.hash.startsWith("#note-") &&
             !gift.comments.some(
               (c) => `#note-${c.id}` === noteLocation.hash,
