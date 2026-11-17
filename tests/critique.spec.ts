@@ -3350,7 +3350,7 @@ for (const width of [1440, 390]) {
   });
 }
 
-for (const width of [320, 390, 650, 900, 1440]) {
+for (const width of [320, 360, 389, 390, 650, 900, 1440]) {
   test(`compact list headers keep privacy and navigation usable at ${width}px`, async ({
     page,
   }, testInfo) => {
@@ -3446,6 +3446,23 @@ for (const width of [320, 390, 650, 900, 1440]) {
       await page.keyboard.press("Enter");
       await expect(privacy.locator(".privacy-note")).not.toBeVisible();
       const menu = page.locator(".list-heading .entry-actions > summary");
+      await expect(menu).toHaveAccessibleName(`List actions for ${list.name}`);
+      const menuBox = (await menu.boundingBox())!;
+      expect(menuBox.width).toBeGreaterThanOrEqual(44);
+      expect(menuBox.height).toBeGreaterThanOrEqual(44);
+      if (width < 390) {
+        await expect(menu.locator(".entry-actions-label")).not.toBeVisible();
+        const heading = await page
+          .locator(".list-heading h1")
+          .evaluate((el) => {
+            const range = document.createRange();
+            range.selectNodeContents(el);
+            return range.getBoundingClientRect().right;
+          });
+        expect(heading).toBeLessThan(menuBox.x);
+      } else {
+        await expect(menu.locator(".entry-actions-label")).toBeVisible();
+      }
       await menu.click();
       await page
         .getByRole("button", { name: "Edit list", exact: true })

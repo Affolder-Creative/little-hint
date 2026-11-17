@@ -1098,7 +1098,7 @@
       }
     },
     "maintenancePatterns": {
-      "listActions": "Neutral icon-and-label actions; destructive color and divider for Trash.",
+      "listActions": "Neutral icon-and-label actions; destructive color and divider for Trash. Phone list actions have 12px separation from heading metadata and 8px between controls. List-page headers below 390px use a 44px icon-only corner menu with its accessible name retained and 56px reserved beside the heading, avoiding an extra action row above the gift grid.",
       "privacyDisclosure": {
         "gap": "6px",
         "iconMotion": "none",

@@ -3700,14 +3700,6 @@ main {
     position: relative;
     margin-bottom: 8px;
   }
-  .list-heading:has(.entry-actions) h1 {
-    padding-inline-end: 56px;
-  }
-  .list-heading > .actions > .entry-actions {
-    position: absolute;
-    inset-block-start: 0;
-    inset-inline-end: 0;
-  }
   .list-heading ~ .tabs {
     margin-bottom: 12px;
   }

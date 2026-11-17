@@ -143,13 +143,6 @@
   }
 }
 @media (max-width: 650px) {
-  .page-heading.list-heading:has(.entry-actions) h1 {
-    padding-inline-end: 0;
-  }
-  .page-heading.list-heading > .actions > .entry-actions {
-    position: static;
-    margin: 0;
-  }
   .group-events-section > .section-heading {
     flex-wrap: wrap;
     align-items: start;
@@ -230,7 +223,31 @@
 }
 
 @media (max-width: 650px) {
+  .page-heading.list-heading > .actions {
+    margin-top: 12px;
+    gap: 8px;
+  }
   .list-heading ~ .browse-tools {
     margin-block: 8px 12px;
+  }
+}
+
+/* Narrow phones need the first gift title above the bottom navigation.
+   A corner menu avoids a second action row while retaining a 44px target. */
+@media (max-width: 389px) {
+  .list-heading:has(.entry-actions) h1 {
+    padding-inline-end: 56px;
+  }
+  .list-heading > .actions > .entry-actions {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-end: 0;
+  }
+  .list-heading > .actions > .entry-actions > summary {
+    width: 44px;
+    padding: 8px;
+  }
+  .list-heading > .actions > .entry-actions .entry-actions-label {
+    display: none;
   }
 }
