@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.6.0](https://github.com/Affolder-Creative/little-hint/compare/v1.5.0...v1.6.0) (2026-11-17)
+
+
+### Features
+
+* UI polish overhaul ([#229](https://github.com/Affolder-Creative/little-hint/issues/229)) ([9f89cb6](https://github.com/Affolder-Creative/little-hint/commit/9f89cb6a1ebae3183053dabac71d7107eca7dea3))
+
+
+### Fixes
+
+* refine responsive gift flows ([#231](https://github.com/Affolder-Creative/little-hint/issues/231)) ([c98a7a4](https://github.com/Affolder-Creative/little-hint/commit/c98a7a4dcb91af023dd41d8356df0b380fb89cdc))
+
 ## [1.5.0](https://github.com/Affolder-Creative/little-hint/compare/v1.4.0...v1.5.0) (2026-11-16)
 
 
