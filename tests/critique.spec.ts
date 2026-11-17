@@ -1319,15 +1319,16 @@ test("person pages link accessible wish lists and keep all items with their sour
     name: "Wish lists for Jamie Chen",
   });
   await expect(links.getByRole("link")).toHaveCount(3);
-  await expect(
-    links.getByRole("link", { name: "Birthday plans", exact: true }),
-  ).toHaveAttribute("href", `/lists/${empty.id}`);
-  await expect(
-    links.getByRole("link", { name: "Birthday plans", exact: true }),
-  ).toHaveAccessibleDescription("Wish list");
+  // The accessible name carries every visible label word: list name, then type.
+  const birthday = links.getByRole("link", {
+    name: "Birthday plans Wish list",
+    exact: true,
+  });
+  await expect(birthday).toHaveAttribute("href", `/lists/${empty.id}`);
+  await expect(birthday).toHaveAccessibleDescription("");
   for (const list of [privateList, pending, archived])
     await expect(
-      links.getByRole("link", { name: list.name, exact: true }),
+      links.getByRole("link", { name: `${list.name} Wish list`, exact: true }),
     ).toHaveCount(0);
   const card = (title: string) =>
     page
@@ -1348,9 +1349,7 @@ test("person pages link accessible wish lists and keep all items with their sour
     .getByRole("searchbox", { name: "Search items", exact: true })
     .fill("");
   await expect(page.locator(".gift-card")).toHaveCount(2);
-  await links
-    .getByRole("link", { name: "Birthday plans", exact: true })
-    .press("Enter");
+  await birthday.press("Enter");
   await expect(
     page.getByRole("heading", { name: "Birthday plans", exact: true }),
   ).toBeVisible();
@@ -1403,7 +1402,7 @@ test("person lists include private owned and managed lists and explain empty lis
       name: `Wish lists for ${person.name}`,
     });
     await expect(
-      nav.getByRole("link", { name: list.name, exact: true }),
+      nav.getByRole("link", { name: `${list.name} Wish list`, exact: true }),
     ).toHaveAttribute("href", `/lists/${list.id}`);
     if (person.id === managed.id) {
       await expect(
@@ -2543,7 +2542,7 @@ test("adding a saved draft refreshes the device list", async ({ page }) => {
   );
 });
 
-test("compact missing photos preserve mixed grids, real photos, and reading order", async ({
+test("consistent image frames preserve mixed grids, real photos, and reading order", async ({
   page,
 }, testInfo) => {
   const { state, actor } = await preview(page);
@@ -2653,6 +2652,8 @@ test("compact missing photos preserve mixed grids, real photos, and reading orde
             contentBottom: content.bottom,
             contentTop: content.y,
             mediaHeight: media.height,
+            priceTop: el.querySelector(".item-price")!.getBoundingClientRect()
+              .top,
             realPhoto:
               !el.firstElementChild!.classList.contains("without-photo"),
           };
@@ -2669,12 +2670,11 @@ test("compact missing photos preserve mixed grids, real photos, and reading orde
         for (const other of row) {
           expect(other.mediaHeight).toBeCloseTo(bounds[i].mediaHeight, 0);
           expect(other.contentTop).toBeCloseTo(bounds[i].contentTop, 0);
+          expect(other.priceTop).toBeCloseTo(bounds[i].priceTop, 0);
           expect(other.bottom).toBeCloseTo(bounds[i].bottom, 0);
         }
-        if (row.every((other) => !other.realPhoto))
-          expect(bounds[i].mediaHeight).toBeLessThanOrEqual(
-            enlarged ? 120 : 96,
-          );
+        if (!enlarged)
+          expect(bounds[i].mediaHeight).toBeCloseTo(realBounds!.height, 0);
       }
       await missing.focus();
       await expect(missing).toBeFocused();
@@ -2688,7 +2688,7 @@ test("compact missing photos preserve mixed grids, real photos, and reading orde
         });
     }
   }
-  // Every card is compact when a list has no photos, and shared surfaces use the same treatment.
+  // Removing every photo keeps the same image proportions across shared collections.
   photoGift.image = "";
   for (const route of [
     "/",
@@ -2700,8 +2700,10 @@ test("compact missing photos preserve mixed grids, real photos, and reading orde
     // Navigation can finish before the world query renders the cards.
     await expect(cards.first()).toBeVisible();
     await expect(cards.locator("img")).toHaveCount(0);
-    for (const area of await cards.locator(".without-photo").all())
-      expect((await area.boundingBox())!.height).toBeLessThanOrEqual(96);
+    for (const area of await cards.locator(".without-photo").all()) {
+      const bounds = (await area.boundingBox())!;
+      expect(bounds.width / bounds.height).toBeCloseTo(1, 1);
+    }
   }
 });
 
@@ -3348,7 +3350,7 @@ for (const width of [1440, 390]) {
   });
 }
 
-for (const width of [320, 390, 650, 900, 1440]) {
+for (const width of [320, 360, 389, 390, 650, 900, 1440]) {
   test(`compact list headers keep privacy and navigation usable at ${width}px`, async ({
     page,
   }, testInfo) => {
@@ -3444,6 +3446,23 @@ for (const width of [320, 390, 650, 900, 1440]) {
       await page.keyboard.press("Enter");
       await expect(privacy.locator(".privacy-note")).not.toBeVisible();
       const menu = page.locator(".list-heading .entry-actions > summary");
+      await expect(menu).toHaveAccessibleName(`List actions for ${list.name}`);
+      const menuBox = (await menu.boundingBox())!;
+      expect(menuBox.width).toBeGreaterThanOrEqual(44);
+      expect(menuBox.height).toBeGreaterThanOrEqual(44);
+      if (width < 390) {
+        await expect(menu.locator(".entry-actions-label")).not.toBeVisible();
+        const heading = await page
+          .locator(".list-heading h1")
+          .evaluate((el) => {
+            const range = document.createRange();
+            range.selectNodeContents(el);
+            return range.getBoundingClientRect().right;
+          });
+        expect(heading).toBeLessThan(menuBox.x);
+      } else {
+        await expect(menu.locator(".entry-actions-label")).toBeVisible();
+      }
       await menu.click();
       await page
         .getByRole("button", { name: "Edit list", exact: true })

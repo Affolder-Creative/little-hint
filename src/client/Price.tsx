@@ -3,6 +3,7 @@ import { useState } from "react";
 import type { GiftView } from "../shared/model";
 import { dollars } from "./api";
 import { useApp } from "./context";
+import { formatDateTime } from "./copy";
 export function Price({
   gift,
   compact = false,
@@ -43,7 +44,7 @@ export function Price({
           ) : p?.checkedAt ? (
             <small>
               {stale ? "Last verified price" : "Price checked"} ·{" "}
-              {new Date(p.checkedAt).toLocaleString()}
+              {formatDateTime(p.checkedAt)}
             </small>
           ) : (
             <small>

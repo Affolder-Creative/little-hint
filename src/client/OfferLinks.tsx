@@ -1,6 +1,7 @@
 import { ExternalLink } from "lucide-react";
 import { dollars } from "./api";
 import type { GiftCandidate } from "../shared/gift-discovery";
+import { formatDateTime } from "./copy";
 export function OfferLinks({
   candidate,
 }: {
@@ -14,7 +15,7 @@ export function OfferLinks({
             {offer.retailer} · {dollars(offer.priceCents)}{" "}
             <ExternalLink size={14} aria-hidden="true" />
           </a>
-          <small>Checked {new Date(offer.checkedAt).toLocaleString()}</small>
+          <small>Checked {formatDateTime(offer.checkedAt)}</small>
         </li>
       ))}
     </ul>

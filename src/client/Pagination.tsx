@@ -79,6 +79,15 @@ export function Pagination({
   position: string;
 }) {
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  // A single page needs one result count; repeating it below the collection is noise.
+  if (position !== "above" && pages <= 1) return null;
+  // With no results the empty state says so; keep the count for screen readers only.
+  if (!total)
+    return (
+      <p className="sr-only" role="status">
+        0 results
+      </p>
+    );
   return (
     <nav
       className="collection-pagination"

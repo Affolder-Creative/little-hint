@@ -124,7 +124,7 @@ export function Buying() {
       <div
         ref={pagination.target}
         tabIndex={-1}
-        className="collection-results"
+        className="collection-results buying-results"
         role="region"
         aria-label="Gift plans"
       >

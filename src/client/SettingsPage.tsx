@@ -59,6 +59,7 @@ import { AccountExport } from "./AccountExport";
 import { Install } from "./pwa";
 import { GroupEventSettings } from "./GroupEvents";
 import { Action } from "./Action";
+import { formatDateTime } from "./copy";
 export default function SettingsPage({
   theme,
   setTheme,
@@ -396,6 +397,7 @@ export default function SettingsPage({
                       ? "You own this group"
                       : "You’re a member"}
                   </span>
+                  <FollowButton target="group" targetId={g.id} compact />
                 </div>
                 <div className="group-settings-controls">
                   <nav
@@ -416,7 +418,6 @@ export default function SettingsPage({
                       </Link>
                     ))}
                   </nav>
-                  <FollowButton target="group" targetId={g.id} compact />
                 </div>
                 <div hidden={groupView !== "households"}>
                   <HouseholdSettings group={g} />
@@ -1215,10 +1216,10 @@ function Security() {
               {s.id === current.data?.session.id ? " · This device" : ""}
             </strong>
             <p>
-              Started {new Date(s.createdAt).toLocaleString()} · Expires{" "}
+              Started {formatDateTime(s.createdAt)} · Expires{" "}
               {new Date(s.expiresAt).toLocaleDateString()}
             </p>
-            <details>
+            <details className="session-details">
               <summary>Browser details</summary>
               <p className="session-agent">
                 {s.userAgent || "Browser details unavailable"}
@@ -1227,7 +1228,7 @@ function Security() {
           </div>
           <Action
             secondary
-            label={`Sign out ${sessionName(s.userAgent)}, signed in ${new Date(s.createdAt).toLocaleString()}${s.id === current.data?.session.id ? " on this device" : ""}`}
+            label={`Sign out ${sessionName(s.userAgent)}, signed in ${formatDateTime(s.createdAt)}${s.id === current.data?.session.id ? " on this device" : ""}`}
             onClick={async () => {
               const r = await authClient.revokeSession({ token: s.token });
               if (r.error)
@@ -1378,7 +1379,7 @@ function Admin() {
                     <dt>Last run started</dt>
                     <dd>
                       {jobs.data.prices.lastRun > 0
-                        ? new Date(jobs.data.prices.lastRun).toLocaleString()
+                        ? formatDateTime(jobs.data.prices.lastRun)
                         : "Not run yet"}
                     </dd>
                   </div>
@@ -1429,8 +1430,7 @@ function Admin() {
                 {jobs.data.workerLastSeen ? (
                   <>
                     <br />
-                    Last reported{" "}
-                    {new Date(jobs.data.workerLastSeen).toLocaleString()}
+                    Last reported {formatDateTime(jobs.data.workerLastSeen)}
                   </>
                 ) : null}
               </p>

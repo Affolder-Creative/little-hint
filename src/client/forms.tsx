@@ -11,7 +11,7 @@ import { DiscoveryLink } from "./GiftPreferences";
 import { GuidelineField, guidelineValue } from "./SpendingGuidance";
 import { PrioritySelect } from "./Management";
 import type { ImportJob, ItemPriority } from "../shared/model";
-import { actionError } from "./copy";
+import { actionError, formatDateTime } from "./copy";
 import { useNavigate } from "react-router-dom";
 import { familyGroupLabel } from "../shared/households";
 import { canManageGroupEvents } from "../shared/group-events";
@@ -1488,7 +1488,7 @@ function GiftEditor({
               type="url"
               value={data.url}
               onChange={(e) => change("url", e.target.value)}
-              placeholder="Paste a link from your favorite shop"
+              placeholder="Paste a shop link"
             />
           </Field>
           {world.productLookupEnabled !== false &&
@@ -1664,10 +1664,7 @@ function GiftEditor({
               data.image && "Photo added",
             ]
               .filter(Boolean)
-              .join(" · ") ||
-              (idea
-                ? "Note, price, quantity, tags & photo"
-                : "Note, price, quantity, priority, tags & photo")}
+              .join(" · ") || "Price, photos & more"}
           </small>
         </summary>
         <HelpfulNoteEditor
@@ -1819,8 +1816,7 @@ function GiftEditor({
         {job?.result?.importedAt && (
           <small className="muted">
             From {job.result.source}, checked{" "}
-            {new Date(job.result.importedAt).toLocaleString()}. Prices can
-            change.
+            {formatDateTime(job.result.importedAt)}. Prices can change.
           </small>
         )}
       </details>

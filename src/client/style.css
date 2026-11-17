@@ -21,6 +21,10 @@
   --space-prose: 12px;
   --space-controls: 16px;
   --space-section: 32px;
+  --selection: rgba(170, 77, 55, 0.2);
+  --scrollbar: #d3c1b5;
+  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%23746057' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E");
+  --chevron-right: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%23000' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 4 4 4-4 4'/%3E%3C/svg%3E");
   --mobile-nav-height: 0px;
   --safe-area-top: env(safe-area-inset-top, 0px);
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
@@ -53,6 +57,96 @@ summary {
 
 summary::marker {
   color: var(--muted);
+}
+
+/* One disclosure affordance everywhere: a drawn chevron that turns when open.
+   Action menus draw their own trigger and keep the native marker hidden. */
+details:not(.entry-actions) > summary {
+  position: relative;
+  display: block;
+  list-style: none;
+  padding-inline-start: 26px;
+}
+details:not(.entry-actions) > summary::-webkit-details-marker {
+  display: none;
+}
+details:not(.entry-actions) > summary::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: 0;
+  top: var(--disclosure-cue-top, 50%);
+  width: 16px;
+  height: 16px;
+  background: currentColor;
+  opacity: 0.72;
+  -webkit-mask: var(--chevron-right) center / contain no-repeat;
+  mask: var(--chevron-right) center / contain no-repeat;
+  transform: translateY(-50%);
+}
+/* Multi-line summaries keep the cue beside the title line, so it stays in
+   view when the summary is partly scrolled. */
+.gift-form .optional-fields > summary,
+.exchange-matching > summary,
+.notification-disclosure > summary {
+  --disclosure-cue-top: calc(var(--disclosure-pad, 10px) + 0.5lh);
+}
+.gift-form .optional-fields > summary {
+  --disclosure-pad: 12px;
+}
+
+/* Disclosures have two title roles. Section disclosures stand in for a
+   section heading; inline disclosures reveal optional detail inside a task. */
+details:is(.detail-section, .discovery-search, .settings-section > *)
+  > summary {
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--text);
+}
+details:is(
+    .optional-fields,
+    .notification-disclosure,
+    .policy-options,
+    .exchange-notifications,
+    .purchase-details,
+    .usage-details,
+    .admin-provider-details,
+    .session-details
+  )
+  > summary {
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--text);
+}
+details[open]:not(.entry-actions) > summary::before {
+  transform: translateY(-50%) rotate(90deg);
+}
+details:not(.entry-actions) > summary:hover::before {
+  opacity: 1;
+}
+@media (prefers-reduced-motion: no-preference) {
+  details:not(.entry-actions) > summary::before {
+    transition: transform 160ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+}
+
+/* Browser-drawn surfaces carry the palette too. */
+::selection {
+  background: var(--selection);
+  color: var(--text);
+}
+html {
+  scrollbar-color: var(--scrollbar) transparent;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+input,
+textarea {
+  caret-color: var(--accent);
+}
+:where(.price, .detail-price, .money, .amount, [class*="total"]) {
+  font-variant-numeric: tabular-nums;
 }
 
 :where(p, small, li) > a:not([class]),
@@ -153,6 +247,32 @@ input[type="file"] {
 }
 select {
   cursor: pointer;
+}
+/* Single-choice selects share the field shape with a drawn chevron. */
+select:not([multiple], [size]) {
+  -webkit-appearance: none;
+  appearance: none;
+  padding-inline-end: 40px;
+  background-image: var(--select-chevron);
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+  text-overflow: ellipsis;
+}
+select:not([multiple], [size]):hover:not(:disabled),
+input:not(
+    [type="checkbox"],
+    [type="radio"],
+    [type="file"],
+    [type="range"]
+  ):hover:not(:disabled, :focus),
+textarea:hover:not(:disabled, :focus) {
+  border-color: var(--muted);
+}
+select:disabled,
+input:disabled,
+textarea:disabled {
+  cursor: not-allowed;
 }
 fieldset {
   border: 0;
@@ -261,8 +381,12 @@ main:focus {
 }
 .button.secondary {
   background: var(--paper);
-  border-color: var(--border);
+  border-color: var(--control-border);
   color: var(--text);
+}
+.button.secondary:hover:not(:disabled) {
+  filter: none;
+  background: var(--soft);
 }
 .button.small {
   padding: 9px 13px;
@@ -578,7 +702,15 @@ main {
   color: #906b68;
 }
 .gift-card-content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
   padding: 16px 2px 0;
+}
+.gift-card-content > .gift-meta {
+  width: 100%;
+  margin-top: auto;
+  padding-top: 4px;
 }
 .gift-recipient {
   display: flex;
@@ -587,9 +719,6 @@ main {
   font-size: 11px;
   color: var(--muted);
   margin-bottom: 11px;
-}
-.gift-recipient > svg:last-child {
-  margin-left: auto;
 }
 .gift-card .gift-title {
   font-size: 16px;
@@ -794,8 +923,9 @@ main {
   max-width: 65ch;
   color: var(--muted);
 }
+/* The final list divider closes the section; browsing tools start a new one. */
 .person-lists {
-  margin-bottom: 12px;
+  margin-bottom: var(--space-section);
 }
 .person-lists ul {
   display: flex;
@@ -920,8 +1050,9 @@ main {
   line-height: 1.7;
   color: var(--muted);
 }
+/* Quantity and source facts share the 13px price-check metadata role. */
 .gift-detail-info > .muted {
-  font-size: 12px;
+  font-size: 13px;
 }
 .gift-detail section > .text-button {
   margin: 0;
@@ -950,6 +1081,8 @@ main {
 }
 .reserve-panel > .form-row {
   margin-block: var(--space-controls);
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 32rem;
 }
 .reserve-panel h2,
 .detail-section h2 {
@@ -976,10 +1109,22 @@ main {
   padding-top: 24px;
   border-top: 1px solid var(--border);
 }
-.detail-section h2 {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+/* Section headings sit 8px above prose and 12px above row lists. The first
+   row drops most of its top padding so the heading gap is not compounded. */
+.detail-section > h2 + .reservation-row {
+  padding-top: 4px;
+}
+/* The next section's divider closes the list; never stack two rules. */
+.detail-section > .reservation-row:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+/* Avatars and row actions align with the buyer name, not the whole block. */
+.detail-section > .reservation-row {
+  align-items: flex-start;
+}
+.detail-section > .reservation-row > .avatar {
+  margin-top: -6px;
 }
 .reservation-row,
 .setting-row {
@@ -1157,6 +1302,7 @@ main {
   gap: 8px;
 }
 .choice-group legend {
+  padding: 0;
   font-weight: 550;
   font-size: 13px;
   margin-bottom: 13px;
@@ -1429,17 +1575,21 @@ main {
 .settings-subsection > .field + .action-wrap {
   margin-top: var(--space-controls);
 }
-.settings-sign-out {
+/* Following and Sign out close their views with the same divided subsection. */
+.settings-sign-out,
+.settings-section > .following-settings {
   margin-top: 40px;
   padding-top: 24px;
   border-top: 1px solid var(--border);
 }
-.settings-sign-out h2 {
+.settings-sign-out h2,
+.settings-section > .following-settings > h3 {
   font-size: 17px;
-  margin-bottom: 8px;
+  margin: 0 0 8px;
 }
 .settings-sign-out p {
-  font-size: 13px;
+  font-size: 14px;
+  line-height: 1.5;
   color: var(--muted);
   max-width: 65ch;
   margin-bottom: 16px;
@@ -1507,8 +1657,10 @@ main {
   .settings-mobile-navigation {
     display: block;
   }
-  .settings-mobile-navigation .field {
-    max-width: 100%;
+  /* Section and family-group selectors share one comfortable field width. */
+  .settings-mobile-navigation .field,
+  .settings-section.family-groups-section > .field {
+    max-width: 32rem;
   }
 }
 .settings-section {
@@ -1526,8 +1678,18 @@ main {
   margin-top: 24px;
   margin-bottom: var(--space-related);
 }
-.settings-section > p {
-  font-size: 13px;
+/* Settings prose uses the supporting role and a 65ch measure; components may
+   still opt into larger text. */
+.settings-section :where(p) {
+  font-size: 14px;
+  line-height: 1.5;
+  max-width: 65ch;
+}
+/* Section introductions share the supporting role across every settings view. */
+.settings-section > p,
+.settings-section :is(h3, h4) + p.muted {
+  font-size: 14px;
+  line-height: 1.5;
   color: var(--muted);
 }
 .settings-section > .actions {
@@ -1540,11 +1702,17 @@ main {
 .settings-section > .section-heading {
   margin: 0 0 var(--space-related);
 }
+/* On a person page, a collapsed co-management offer is one quiet 44px row
+   between the page actions and the gift tabs; expanded keeps section spacing. */
+.person-co-management:not(:has(> details[open])) {
+  padding-block: var(--space-controls);
+}
 .group-settings {
   padding: 18px 0;
 }
 .group-settings > p {
-  font-size: 13px;
+  font-size: 14px;
+  line-height: 1.5;
   color: var(--muted);
 }
 .member-list {
@@ -1833,6 +2001,9 @@ main {
   --soft: #49332b;
   --green: #bdd0aa;
   --error: #ffb1a2;
+  --selection: rgba(241, 190, 173, 0.3);
+  --scrollbar: #6b5348;
+  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%23cbb6aa' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E");
   color-scheme: dark;
   background: var(--bg);
   color: var(--text);
@@ -2163,9 +2334,6 @@ main {
     width: 23px;
     height: 23px;
     font-size: 8px;
-  }
-  .gift-recipient > svg:last-child {
-    display: none;
   }
   .gift-card .gift-title {
     font-size: 14px;
@@ -2583,7 +2751,6 @@ main {
 .policy-options > summary {
   cursor: pointer;
   padding-block: 12px;
-  color: var(--accent);
 }
 .form-review {
   outline-offset: 4px;
@@ -2604,7 +2771,6 @@ main {
 /* Keep optional input and service settings in readable task groups. */
 .optional-fields > summary {
   cursor: pointer;
-  font-weight: 550;
   padding-block: 10px;
 }
 .optional-fields[open] > :not(summary) {
@@ -2657,7 +2823,6 @@ main {
   cursor: pointer;
   min-height: 44px;
   padding-block: 10px;
-  font-weight: 550;
 }
 .notification-disclosure > summary > span {
   display: block;
@@ -2674,6 +2839,9 @@ main {
 
 .notification-settings > section {
   margin-top: var(--space-section);
+}
+.notification-settings > p + form {
+  margin-top: var(--space-controls);
 }
 
 /* Notification history follows the same flat rows as gift plans and settings. */
@@ -2695,13 +2863,39 @@ main {
   line-height: 16px;
   text-align: center;
 }
+/* Filters use the shared tab pattern. On wider screens the filters and the
+   bulk action share one centered row and the toolbar owns the divider, so the
+   active underline sits on it. Narrow screens give the tabs their own divider
+   and move the bulk action to a compact row below; DOM order is unchanged. */
 .notification-toolbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  flex-wrap: wrap;
   gap: 16px;
   margin-bottom: 24px;
+  border-bottom: 1px solid var(--border);
+}
+.notification-toolbar > .tabs {
+  flex-wrap: nowrap;
+  margin-bottom: -1px;
+  border-bottom: 0;
+}
+@media (max-width: 420px) {
+  .notification-toolbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: start;
+    gap: 12px;
+    border-bottom: 0;
+  }
+  .notification-toolbar > .tabs {
+    justify-self: stretch;
+    margin-bottom: 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .notification-toolbar .button {
+    padding: 10px 14px;
+  }
 }
 .notification-list,
 .push-devices {
@@ -2859,15 +3053,31 @@ main {
   margin-block: var(--space-related) var(--space-controls);
 }
 @media (max-width: 650px) {
+  /* Phones keep Mark read on the trailing edge, level with the timestamp,
+     instead of wrapping it below the row. */
   .notification-list > li {
-    gap: 10px;
-    flex-wrap: wrap;
-  }
-  .notification-list > li > .async-control {
-    margin-left: 29px;
+    display: grid;
+    grid-template-columns: 19px minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 0 10px;
   }
   .notification-content {
-    flex-basis: calc(100% - 40px);
+    display: contents;
+  }
+  .notification-symbol {
+    grid-row: 1 / span 2;
+  }
+  .notification-content > .async-control {
+    grid-column: 2 / -1;
+  }
+  .notification-content > time {
+    grid-column: 2;
+    align-self: center;
+  }
+  .notification-list > li > .async-control {
+    grid-column: 3;
+    grid-row: 2;
+    align-self: center;
   }
   .topbar .actions {
     gap: 6px;
@@ -2912,16 +3122,21 @@ main {
   }
 }
 
-/* Missing photos support the gift information without reserving a full image area. */
+/* Every grid image has the same proportions, including missing photos. */
 .gift-card > .gift-photo.without-photo,
 .gift-detail > .gift-photo.without-photo {
-  aspect-ratio: auto;
   min-height: 80px;
   padding: 12px;
   flex-direction: column;
   gap: 8px;
 }
-.gift-card > .gift-photo.without-photo > svg,
+.gift-card > .gift-photo.without-photo > svg {
+  width: 28%;
+  height: auto;
+  max-width: 88px;
+  min-width: 36px;
+  flex-shrink: 0;
+}
 .gift-detail > .gift-photo.without-photo > svg {
   width: 32px;
   height: 32px;
@@ -2933,11 +3148,23 @@ main {
   text-align: center;
   overflow-wrap: anywhere;
 }
+/* Recipient names move to the next line whole instead of splitting a first
+   and last name; a name wider than the column still wraps inside itself. */
+.gift-recipient-name {
+  display: inline-block;
+  max-width: 100%;
+}
+@media (max-width: 480px) {
+  .gift-card-entry:has(> .entry-actions) > .gift-card > .without-photo {
+    padding-top: 44px;
+  }
+}
 .gift-detail:has(> .gift-photo.without-photo) {
   grid-template-columns: 144px minmax(0, 1fr);
   gap: 24px;
 }
 .gift-detail > .gift-photo.without-photo {
+  aspect-ratio: auto;
   position: static;
   min-height: 96px;
 }
@@ -2951,12 +3178,16 @@ main {
   }
 }
 
-/* Keep the active family group and its navigation together. */
+/* Keep the active family group and its navigation together. Follow is a
+   group-level action beside the name, never a fourth tab. */
 .selected-group-heading {
   display: flex;
   align-items: baseline;
   flex-wrap: wrap;
   gap: 4px 12px;
+}
+.selected-group-heading > .async-control {
+  margin-inline-start: auto;
 }
 .selected-group-heading h3 {
   min-width: 0;
@@ -2975,7 +3206,6 @@ main {
   }
   .family-groups-section > .field {
     margin-top: 0;
-    max-width: 100%;
   }
   .family-groups-section .group-settings {
     padding-block: 12px;
@@ -3117,7 +3347,7 @@ main {
   flex-shrink: 0;
 }
 .event-entry {
-  padding: 16px 0;
+  padding: 20px 0;
   border-bottom: 1px solid var(--border);
 }
 .event-entry-heading h3 {
@@ -3164,10 +3394,18 @@ main {
 }
 .gift-card-entry > .entry-actions {
   position: absolute;
-  inset-inline-end: 0;
-  top: 0;
+  inset-inline-end: 8px;
+  top: 8px;
+}
+.gift-card-entry > .entry-actions > summary {
   background: var(--paper);
-  border-radius: 8px;
+  border: 1px solid var(--control-border);
+  border-radius: 999px;
+}
+.gift-card-entry > .entry-actions > summary:hover,
+.gift-card-entry > .entry-actions[open] > summary {
+  background: var(--soft);
+  border-color: var(--control-border);
 }
 .gift-card-entry:has(.entry-actions[open]) {
   z-index: 7;
@@ -3252,9 +3490,6 @@ main {
     align-items: start;
     flex-direction: column;
   }
-  .managed-list-row > .list-row {
-    gap: 12px;
-  }
   .exchange-panel > .section-heading {
     flex-wrap: wrap;
   }
@@ -3335,9 +3570,7 @@ main {
 .discovery-search > summary {
   cursor: pointer;
   min-height: 44px;
-  font-size: 20px;
-  font-weight: 550;
-  padding: 8px 0;
+  padding-block: 8px;
 }
 .discovery-search .form {
   margin-top: 20px;
@@ -3448,8 +3681,9 @@ main {
 .list-heading .actions {
   justify-content: flex-start;
 }
+/* List actions stay grouped with Add item instead of drifting to the far edge. */
 .list-heading .entry-actions {
-  margin-inline-start: auto;
+  margin-inline-start: 0;
 }
 .list-heading .entry-actions-content .button {
   width: 100%;
@@ -3465,14 +3699,6 @@ main {
   .page-heading.list-heading {
     position: relative;
     margin-bottom: 8px;
-  }
-  .list-heading:has(.entry-actions) h1 {
-    padding-inline-end: 56px;
-  }
-  .list-heading > .actions > .entry-actions {
-    position: absolute;
-    inset-block-start: 0;
-    inset-inline-end: 0;
   }
   .list-heading ~ .tabs {
     margin-bottom: 12px;
@@ -3565,21 +3791,14 @@ main {
   }
 }
 
-/* Follow is an action alongside the group's local navigation. */
+/* The group's local navigation owns its divider. */
 .group-settings-controls {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 32px;
-  margin: 20px 0 24px;
+  margin: 12px 0 24px;
   border-bottom: 1px solid var(--border);
 }
 .group-settings-controls .group-settings-nav {
   margin: 0;
   border: 0;
-}
-.group-settings-controls > button {
-  margin-left: auto;
 }
 .about-story {
   max-width: 62ch;
@@ -3604,7 +3823,6 @@ main {
 .usage-details > summary {
   min-height: 44px;
   padding-block: 10px;
-  font-size: 14px;
 }
 .usage-details > h5 {
   margin: 20px 0 8px;
@@ -3654,14 +3872,10 @@ main {
 }
 @media (max-width: 650px) {
   .group-settings-controls {
-    margin-block: 12px 16px;
-    gap: 8px 32px;
+    margin-block: 8px 16px;
   }
   .family-groups-section .group-settings-controls .group-settings-nav {
     margin: 0;
-  }
-  .group-settings-controls > button {
-    margin-left: 0;
   }
 }
 @media (max-width: 360px) {
@@ -3972,7 +4186,7 @@ main {
   margin-inline-start: 16px;
 }
 .event-entry-links .event-wishlist-link {
-  border: 1px solid var(--border);
+  border: 1px solid var(--control-border);
   border-radius: 8px;
   padding: 12px 16px;
   background: var(--paper);
@@ -3995,6 +4209,7 @@ main {
 }
 .person-list-link small {
   display: block;
+  margin-top: var(--space-metadata);
   color: var(--muted);
 }
 .person-list-link > span {
@@ -4063,6 +4278,11 @@ main {
 }
 .list-gift-ideas + .browser .empty {
   padding-block: 32px;
+}
+/* Buying's empty views keep the recovery action close to the tabs; the
+   cancelled-reservations disclosure follows on the section rhythm. */
+.buying-results > .empty {
+  padding-block: var(--space-section);
 }
 
 /* Event lists keep identity, context, and item actions in distinct rows. */
@@ -4504,8 +4724,6 @@ a.button:is(:hover, :focus, :active),
   padding-block: 10px;
   min-height: 44px;
   cursor: pointer;
-  font-size: 13px;
-  color: var(--accent);
 }
 .admin-provider-details .admin-job-facts {
   margin-block: 4px 8px;

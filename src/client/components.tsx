@@ -17,6 +17,7 @@ import {
   cloneElement,
   createContext,
   useContext,
+  Fragment,
   type ReactElement,
   type ReactNode,
   type FormEvent,
@@ -31,7 +32,6 @@ import {
   Mountain,
   Heart,
   Plus,
-  ArrowUpRight,
   LockKeyhole,
   Eye,
 } from "lucide-react";
@@ -656,19 +656,24 @@ export function GiftCard({
             <span className="gift-kind">
               {gift.listId ? "Wish" : "Gift idea"}
             </span>{" "}
-            for {gift.recipientNames.join(" & ")}
+            for{" "}
+            {gift.recipientNames.map((name, index) => (
+              <Fragment key={index}>
+                {index > 0 && " & "}
+                <span className="gift-recipient-name">{name}</span>
+              </Fragment>
+            ))}
           </span>
-          <ArrowUpRight size={15} />
         </div>
         <Heading className="gift-title">{gift.title}</Heading>
 
+        {sourceListName && (
+          <p className="gift-source-list">From {sourceListName}</p>
+        )}
         {gift.listId && gift.priority && (
           <span className={`item-priority priority-${gift.priority}`}>
             {priorityLabels[gift.priority]}
           </span>
-        )}
-        {sourceListName && (
-          <p className="gift-source-list">From {sourceListName}</p>
         )}
         <div className="gift-meta">
           <Price gift={gift} compact />

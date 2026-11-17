@@ -57,7 +57,7 @@ import {
   clearPushBinding,
 } from "./Notifications";
 import { MentionNote } from "./MentionNote";
-import { actionError } from "./copy";
+import { actionError, formatDateTime } from "./copy";
 /* Little Hint operates as a quiet, practical gift notebook. Approved heart-tag artwork anchors the shell; product content leads. */
 import {
   lazy,
@@ -91,7 +91,6 @@ import {
   Check,
   ExternalLink,
   LockKeyhole,
-  MessageCircle,
   Sun,
   Moon,
   Gift,
@@ -1030,6 +1029,21 @@ function PersonPage() {
             Add gift idea
           </button>
         )}
+        {/* The page's primary gift action leads; quieter actions follow. */}
+        {!own && !archivedFriend && (
+          <button
+            className="button"
+            onClick={() =>
+              open(
+                `Gift idea for ${person.name}`,
+                <GiftForm recipientId={id} />,
+              )
+            }
+          >
+            <Plus size={17} />
+            Add gift idea
+          </button>
+        )}
         <DiscoveryLink personId={person.id} />
         {person.userId && <FollowButton target="person" targetId={person.id} />}
         {own ? (
@@ -1044,19 +1058,6 @@ function PersonPage() {
             </button>
             <GiftPreferencesShortcut personId={person.id} name={person.name} />
           </>
-        ) : !archivedFriend ? (
-          <button
-            className="button"
-            onClick={() =>
-              open(
-                `Gift idea for ${person.name}`,
-                <GiftForm recipientId={id} />,
-              )
-            }
-          >
-            <Plus size={17} />
-            Add gift idea
-          </button>
         ) : null}
       </Header>
       {!person.userId && own && (
@@ -1135,13 +1136,12 @@ function PersonPage() {
                         `/lists/${list.id}`,
                         shoppingLocation.search,
                       )}
-                      aria-labelledby={`person-list-name-${list.id}`}
-                      aria-describedby={`person-list-type-${list.id}`}
+                      aria-labelledby={`person-list-name-${list.id} person-list-type-${list.id}`}
                     >
                       <span>
                         <strong id={`person-list-name-${list.id}`}>
                           {list.name}
-                        </strong>
+                        </strong>{" "}
                         <small id={`person-list-type-${list.id}`}>
                           {list.groupEventId
                             ? "Group event wish list"
@@ -1295,7 +1295,7 @@ function GiftDetail() {
           }}
         >
           <option value="" disabled>
-            Choose an exchange or separate gift
+            Choose gift context
           </option>
           <option value="ordinary">Not part of an exchange</option>
           {choices.map((c) => (
@@ -1354,7 +1354,16 @@ function GiftDetail() {
               {priorityLabels[gift.priority]}
             </span>
           )}
-          <p className="status">
+          <p
+            className={
+              gift.publicationState !== "draft" &&
+              !gift.archived &&
+              !(gift.isRecipient && !gift.canShop) &&
+              gift.available
+                ? "status available"
+                : "status"
+            }
+          >
             {gift.publicationState === "draft"
               ? "Draft · Not yet published"
               : gift.archived
@@ -1567,9 +1576,9 @@ function GiftDetail() {
                 </p>
                 {r.reservedAt && (
                   <p className="muted">
-                    Reserved {new Date(r.reservedAt).toLocaleString()}
+                    Reserved {formatDateTime(r.reservedAt)}
                     {r.purchasedAt &&
-                      ` · Purchase updated ${new Date(r.purchasedAt).toLocaleString()}`}
+                      ` · Purchase updated ${formatDateTime(r.purchasedAt)}`}
                   </p>
                 )}
                 {r.poolTargetCents && (
@@ -1607,10 +1616,7 @@ function GiftDetail() {
       )}
       {gift.comments && (
         <section className="detail-section discussion">
-          <h2>
-            <MessageCircle size={21} />
-            Private notes
-          </h2>
+          <h2>Private notes</h2>
           <p className="muted">
             {selectedExchange
               ? `New notes are visible only to ${world.people.find((p) => p.id === selectedExchange.giver)?.name ?? "this giver"} and people managing their profile. Recipients cannot read them.`

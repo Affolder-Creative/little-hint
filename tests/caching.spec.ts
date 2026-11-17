@@ -6,7 +6,7 @@ async function openImport(page: Page) {
   await login(page, "alex@example.test");
   await page.getByRole("button", { name: "Add item", exact: true }).click();
   await page
-    .getByPlaceholder("Paste a link from your favorite shop")
+    .getByPlaceholder("Paste a shop link")
     .fill("https://shop.example/product");
 }
 const job = (id: string, status = "running") => ({
@@ -151,7 +151,7 @@ test("retries status failures and ignores late results after the product URL cha
   await page.getByRole("button", { name: "Retry status" }).click();
   await expect.poll(() => !!finish).toBe(true);
   await page
-    .getByPlaceholder("Paste a link from your favorite shop")
+    .getByPlaceholder("Paste a shop link")
     .fill("https://shop.example/different");
   finish!();
   await expect(
