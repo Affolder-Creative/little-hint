@@ -7,7 +7,7 @@ COPY src ./src
 COPY scripts ./scripts
 COPY compliance ./compliance
 COPY public ./public
-RUN npm run build
+RUN npm run build && node scripts/runtime-dependencies.mjs
 
 FROM node:24-alpine@sha256:116b800c3754b440ee0aa3ed2f20f5bf3d99a554bfd9adeea09ea8017f6e85f5 AS runtime-files
 # The pinned base already includes the reviewed CA bundle. Avoid fetching
@@ -15,7 +15,7 @@ FROM node:24-alpine@sha256:116b800c3754b440ee0aa3ed2f20f5bf3d99a554bfd9adeea09ea
 RUN test -s /etc/ssl/certs/ca-certificates.crt
 WORKDIR /app
 ENV NODE_ENV=production PORT=3000 UPLOAD_DIR=/data/uploads
-COPY package.json package-lock.json ./
+COPY --from=build /app/.local/runtime-dependencies/package*.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 COPY LICENSE ./LICENSE
 COPY compliance ./compliance
