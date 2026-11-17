@@ -17,6 +17,7 @@
 
 ### Dependencies
 
+* bump @playwright/test from 1.65.0 to 1.65.1 ([#228](https://github.com/Affolder-Creative/little-hint/pull/228)) ([297ff1a](https://github.com/Affolder-Creative/little-hint/commit/297ff1a9a97be3bfac016bd4185448434f9e1345))
 * bump the development group with 4 updates ([#226](https://github.com/Affolder-Creative/little-hint/issues/226)) ([25ea128](https://github.com/Affolder-Creative/little-hint/commit/25ea1283672300c849553fe1d64a0bd7fb60188a))
 * bump the runtime group with 12 updates ([#225](https://github.com/Affolder-Creative/little-hint/issues/225)) ([80aa277](https://github.com/Affolder-Creative/little-hint/commit/80aa2773405eef5dea4210ec9f52be5e39c93efc))
 
