@@ -127,14 +127,27 @@ test("mobile shell clears safe areas, resizing, and date dialogs", async ({
         .evaluateAll((elements) =>
           elements.map((el) => {
             const rect = el.getBoundingClientRect();
-            return { left: rect.left, right: rect.right };
+            return {
+              left: rect.left,
+              right: rect.right,
+              top: rect.top,
+              bottom: rect.bottom,
+            };
           }),
         );
       for (let i = 0; i < labels.length; i++) {
         expect(labels[i].left).toBeGreaterThanOrEqual(0);
         expect(labels[i].right).toBeLessThanOrEqual(width);
-        if (i)
-          expect(labels[i].left).toBeGreaterThanOrEqual(labels[i - 1].right);
+        // Enlarged navigation wraps whole links onto additional rows. Labels
+        // must remain separate in both dimensions, not all share one row.
+        for (const previous of labels.slice(0, i)) {
+          expect(
+            labels[i].left >= previous.right ||
+              labels[i].right <= previous.left ||
+              labels[i].top >= previous.bottom ||
+              labels[i].bottom <= previous.top,
+          ).toBe(true);
+        }
       }
       await page
         .locator(".mobile-nav a")
