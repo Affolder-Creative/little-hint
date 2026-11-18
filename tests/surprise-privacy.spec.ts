@@ -192,7 +192,9 @@ for (const width of [1440, 393]) {
         .getByRole("button", { name: "Add note", exact: true })
         .click();
       await expect(
-        giver.getByText("Still private after release", { exact: true }),
+        giver
+          .locator(".comment")
+          .getByText("Still private after release", { exact: true }),
       ).toBeVisible();
       expect(
         (await (await observer.request.get(`/api/v1/items/${item.id}`)).json())
