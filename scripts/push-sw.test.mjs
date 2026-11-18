@@ -105,7 +105,7 @@ for (const [category, title] of Object.entries({
   invitation: "New invitation",
   "ownership-request": "Ownership request",
   mention: "You were mentioned",
-  discussion: "New private note",
+  discussion: "New discussion note",
   contribution: "Contribution update",
   wishlist: "Wish list update",
   exchange: "Exchange update",
