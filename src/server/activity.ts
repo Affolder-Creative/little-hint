@@ -1,7 +1,8 @@
+import { noteVisible } from "./discussion-access";
 import { listCanEdit } from "./co-management";
 import { selfRecipient } from "./domain-access";
 import { buyingDestination } from "./gift-lifecycle";
-import { noteNeedsReview, reservationNeedsReview } from "./privacy-review";
+import { reservationNeedsReview } from "./privacy-review";
 import type { Comment } from "../shared/model";
 import {
   resolveShoppingContext,
@@ -53,20 +54,7 @@ const actor = (s: State, id: string): Actor => ({
 export const accountIds = (s: State) => [
   ...new Set(s.people.flatMap((p) => controllers(p))),
 ];
-export const noteVisible = (
-  s: State,
-  a: Actor,
-  item: Item,
-  giverId?: string,
-  comment?: Comment,
-) =>
-  item.publicationState !== "draft" &&
-  itemVisible(s, a, item) &&
-  !recipient(s, a, item) &&
-  (!giverId || controls(s, a, giverId)) &&
-  (!comment ||
-    !(comment.authorOnly || noteNeedsReview(s, comment)) ||
-    comment.authorId === a.id);
+export { noteVisible } from "./discussion-access";
 export function mentionCandidates(
   s: State,
   a: Actor,
@@ -82,7 +70,7 @@ export function mentionCandidates(
     item.archived ||
     s.lists.some((l) => l.id === item.listId && listIsArchived(l))
   )
-    fail(404, "Private notes are not available for this item.");
+    fail(404, "Discussion is not available for this item.");
   const comment = commentId
     ? s.comments.find(
         (c) => c.id === commentId && c.itemId === itemId && c.authorId === a.id,
@@ -96,6 +84,8 @@ export function mentionCandidates(
   const giverId = comment
     ? comment.giverId
     : resolveShoppingContext(s, a, item, context)?.giverId;
+  if (!noteVisible(s, a, item, giverId, comment))
+    fail(403, "You cannot participate in this discussion audience.");
   const people = s.people
     .filter(
       (p, index, people) =>
@@ -529,8 +519,8 @@ function renderActivity(s: State, n: Notice): NotificationView {
   const list = s.lists.find((l) => l.id === n.listId);
   const messages: Record<string, string> = {
     import: "Your product details are ready to review",
-    mention: `${who} mentioned you in a private note`,
-    discussion: `${who} added a private note`,
+    mention: `${who} mentioned you in a note`,
+    discussion: `${who} added a note`,
     wishlist: wishlistMessage(s, [n]),
     reservation: `${who} updated a reservation`,
     purchase: `${who} marked a gift as purchased`,
@@ -745,7 +735,7 @@ export function activityCommand(
       .parse(raw);
     const item = s.items.find((i) => i.id === p.itemId);
     if (!item || !noteVisible(s, a, item))
-      fail(404, "Private notes are not available for this item.");
+      fail(404, "Discussion is not available for this item.");
     s.watches = s.watches.filter(
       (w) => !(w.userId === a.id && w.itemId === p.itemId),
     );

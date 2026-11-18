@@ -611,8 +611,14 @@ test("gift summaries are owner-only, omit financial data, and remain available i
       purchased: 1,
       poolTargetCents: 9900,
     });
+    const audience = await (
+      await bp.request.get(
+        `/api/v1/items/${gift.id}/discussion-audience?ordinary=true`,
+      )
+    ).json();
     await post(bp, "comments", {
       itemId: gift.id,
+      audienceToken: audience.token,
       body: "A private note that must never appear to Alex",
     });
     await login(cp, "jamie@example.test");

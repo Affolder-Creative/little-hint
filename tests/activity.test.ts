@@ -6,7 +6,8 @@ import {
   type Reservation,
   type Contribution,
 } from "../src/shared/model";
-import { stamp, command, giftView, noticeAllowed } from "../src/server/domain";
+import { stamp, giftView, noticeAllowed } from "../src/server/domain";
+import { commandWithAudience as command } from "./discussion-command";
 import {
   activityAllowed,
   inbox,
@@ -201,12 +202,12 @@ describe("notification inbox and audiences", () => {
     expect(inbox(f.s, f.actors[1]).entries[0].event).toBe("discussion");
     expect(inbox(f.s, f.actors[0]).entries).toHaveLength(0);
   });
-  it("excludes recipients and their managers from suggestions and rejects forged mentions", () => {
+  it("excludes recipients but includes their managers and rejects forged mentions", () => {
     const f = fixture();
     f.people[0].guardians = [f.actors[3].id];
     expect(
       mentionCandidates(f.s, f.actors[1], f.item.id).map((p) => p.userId),
-    ).toEqual([f.actors[2].id]);
+    ).toEqual([f.actors[2].id, f.actors[3].id]);
     expect(() =>
       command(f.s, f.actors[1], "comments.create", {
         itemId: f.item.id,

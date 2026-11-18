@@ -244,7 +244,7 @@ test("real email-code sign-in, gift creation, buyer reservation, and surprise pr
     .getByLabel("Your note", { exact: true })
     .fill("Please keep this private.");
   await sp
-    .getByRole("button", { name: "Add private note", exact: true })
+    .getByRole("button", { name: "Add note", exact: true })
     .click();
   await expect(
     sp.getByText("Please keep this private.", { exact: true }),

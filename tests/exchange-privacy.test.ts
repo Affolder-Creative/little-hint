@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { fixture, draw } from "./privacy-fixture";
-import { command, giftView, giftSummary } from "../src/server/domain";
+import { giftView, giftSummary } from "../src/server/domain";
+import { commandWithAudience as command } from "./discussion-command";
 import { mentionCandidates } from "../src/server/activity";
 describe("explicit exchange privacy", () => {
   it("requires deliberate classification and excludes exchange gifts from summaries", () => {

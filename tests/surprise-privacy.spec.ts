@@ -128,7 +128,7 @@ for (const width of [1440, 393]) {
         "Audit note: I drew this person in the secret exchange.",
       );
       await giver
-        .getByRole("button", { name: "Add private note", exact: true })
+        .getByRole("button", { name: "Add note", exact: true })
         .click();
       await observer.goto(`/gift/${item.id}`);
       await expect(
@@ -174,7 +174,7 @@ for (const width of [1440, 393]) {
       await giver.reload();
       await giver.locator("textarea").fill("Still private after release");
       await giver
-        .getByRole("button", { name: "Add private note", exact: true })
+        .getByRole("button", { name: "Add note", exact: true })
         .click();
       await expect(
         giver.getByText("Still private after release", { exact: true }),

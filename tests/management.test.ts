@@ -6,13 +6,8 @@ import {
   type Exchange,
   type GroupEvent,
 } from "../src/shared/model";
-import {
-  command,
-  stamp,
-  world,
-  giftSummary,
-  idempotent,
-} from "../src/server/domain";
+import { stamp, world, giftSummary, idempotent } from "../src/server/domain";
+import { commandWithAudience as command } from "./discussion-command";
 import { trash } from "../src/server/management";
 import { ordered, orderedArchivedItems } from "../src/shared/organization";
 import { activityAllowed } from "../src/server/activity";

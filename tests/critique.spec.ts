@@ -1,3 +1,6 @@
+import { command as rawCommand, DomainError } from "../src/server/domain";
+import { mentionCandidates } from "../src/server/activity";
+import { discussionAudience } from "../src/server/discussion-access";
 import { notificationTopics } from "../src/shared/notifications";
 import { itemPage } from "../src/server/collections";
 import {
@@ -15,7 +18,8 @@ import {
 } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { stagingFixtures } from "../src/server/staging-fixtures";
-import { command, world } from "../src/server/domain";
+import { world } from "../src/server/domain";
+import { commandWithAudience as command } from "./discussion-command";
 import { emptyState, type List, type Group } from "../src/shared/model";
 import { discoveryConfig } from "./gift-discovery-fixture";
 import { smsInfo } from "../src/server/sms-provider";
@@ -196,6 +200,38 @@ async function preview(
     const url = new URL(route.request().url());
     const path = url.pathname;
     const query = Object.fromEntries(url.searchParams);
+    if (/^\/api\/v1\/items\/[^/]+\/mention-candidates$/.test(path)) {
+      return route.fulfill({
+        json: mentionCandidates(
+          fixture.state,
+          actor,
+          path.split("/")[4],
+          query.q,
+          query.commentId,
+          { ...query, ordinary: query.ordinary === "true" },
+        ),
+      });
+    }
+    if (/^\/api\/v1\/items\/[^/]+\/discussion-audience$/.test(path)) {
+      try {
+        return route.fulfill({
+          json: discussionAudience(
+            fixture.state,
+            actor,
+            path.split("/")[4],
+            query.commentId,
+            { ...query, ordinary: query.ordinary === "true" },
+          ),
+        });
+      } catch (error) {
+        return route.fulfill({
+          status: 409,
+          json: {
+            error: error instanceof Error ? error.message : "Unavailable",
+          },
+        });
+      }
+    }
     if (path === "/api/v1/items" && route.request().method() === "GET")
       return route.fulfill({
         json: await itemPage(fixture.state, actor, query, async () => {}),
@@ -254,7 +290,7 @@ async function preview(
     if (action && route.request().method() === "POST") {
       try {
         return route.fulfill({
-          json: command(
+          json: rawCommand(
             fixture.state,
             actor,
             action,
@@ -263,7 +299,7 @@ async function preview(
         });
       } catch (error) {
         return route.fulfill({
-          status: 400,
+          status: error instanceof DomainError ? error.status : 400,
           json: { error: (error as Error).message },
         });
       }
@@ -2236,7 +2272,7 @@ test("private note success clears the composer and offline actions are disabled"
   await page.goto(`/gift/${gift.id}`);
   await page.getByLabel("Buying for", { exact: true }).selectOption("ordinary");
   await page.getByLabel("Your note").fill("A useful private detail");
-  await page.getByRole("button", { name: "Add private note" }).click();
+  await page.getByRole("button", { name: "Add note" }).click();
   await expect(
     page.getByText("A useful private detail", { exact: true }),
   ).toBeVisible();
@@ -2245,9 +2281,7 @@ test("private note success clears the composer and offline actions are disabled"
   await expect(
     page.getByRole("button", { name: "Reserve more", exact: true }),
   ).toBeDisabled();
-  await expect(
-    page.getByRole("button", { name: "Add private note" }),
-  ).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Add note" })).toBeDisabled();
   await expect(
     page.getByText("Reconnect to save these changes."),
   ).toBeVisible();
@@ -5822,4 +5856,96 @@ test("event dates, linked calendar icons and archive guidance retain their conte
     path: testInfo.outputPath("event-list.png"),
     fullPage: true,
   });
+});
+
+test("discussion audience changes preserve drafts and require review", async ({
+  page,
+}) => {
+  const { state, actor, actors } = await preview(page, 1);
+  const people = actors.map((a) =>
+    state.people.find((p) => p.userId === a.id)!,
+  );
+  const family = state.groups.find((g) => g.name === "Morgan family")!;
+  const created = command(state, actor, "items.create", {
+    title: "Audience review gift",
+    recipientIds: [people[0].id],
+    groupIds: [family.id],
+    visibility: "hidden",
+  }) as { id: string };
+  const item = state.items.find((i) => i.id === created.id)!;
+  await page.goto(`/gift/${item.id}`);
+  await expect(
+    page.getByRole("heading", { name: "Discussion", exact: true }),
+  ).toBeVisible();
+  const context = page.getByLabel("Buying for", { exact: true });
+  if (await context.count()) await context.selectOption("ordinary");
+  await expect(page.locator(".discussion form")).toContainText(
+    "excluding recipients",
+  );
+  await page
+    .getByLabel("Your note", { exact: true })
+    .fill("My carefully preserved draft");
+  command(state, actor, "items.update", { ...item, visibility: "visible" });
+  await page.getByRole("button", { name: "Add note", exact: true }).click();
+  await expect(page.getByLabel("Your note", { exact: true })).toHaveValue(
+    "My carefully preserved draft",
+  );
+  await expect(page.locator(".discussion form")).toContainText(
+    "including recipients",
+  );
+  await expect(
+    page.getByRole("button", { name: "Add note", exact: true }),
+  ).toBeDisabled();
+  expect(state.comments.filter((c) => c.itemId === item.id)).toHaveLength(0);
+  await page
+    .getByRole("button", { name: "I’ve reviewed the audience" })
+    .click();
+  await page.getByRole("button", { name: "Add note", exact: true }).click();
+  await expect(page.getByLabel("Your note", { exact: true })).toHaveValue("");
+  expect(
+    world(state, actors[0]).items.find((i) => i.id === item.id)?.comments?.[0]
+      .body,
+  ).toBe("My carefully preserved draft");
+});
+
+test("recipient discussion shows shared notes and protects earlier surprise history", async ({
+  page,
+}) => {
+  const { state, actors } = await preview(page, 0);
+  const people = actors.map((a) =>
+    state.people.find((p) => p.userId === a.id)!,
+  );
+  const family = state.groups.find((g) => g.name === "Morgan family")!;
+  people[1].guardians = [actors[0].id];
+  const created = command(state, actors[1], "items.create", {
+    title: "Shared discussion gift",
+    recipientIds: [people[0].id],
+    groupIds: [family.id],
+    visibility: "hidden",
+  }) as { id: string };
+  const item = state.items.find((i) => i.id === created.id)!;
+  command(state, actors[1], "comments.create", {
+    itemId: item.id,
+    ordinary: true,
+    body: "Secret purchase plan",
+  });
+  command(state, actors[1], "items.update", { ...item, visibility: "visible" });
+  command(state, actors[1], "comments.create", {
+    itemId: item.id,
+    ordinary: true,
+    body: "Which color do you prefer?",
+  });
+  await page.goto(`/gift/${item.id}`);
+  await expect(
+    page.getByRole("heading", { name: "Discussion", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Which color do you prefer?", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Secret purchase plan", { exact: true }),
+  ).toHaveCount(0);
+  await page.getByLabel("Your note", { exact: true }).fill("Blue please");
+  await page.getByRole("button", { name: "Add note", exact: true }).click();
+  await expect(page.getByText("Blue please", { exact: true })).toBeVisible();
 });

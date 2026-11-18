@@ -10,13 +10,13 @@ import {
 } from "../src/shared/model";
 import {
   archiveDueLists,
-  command,
   giftSummary,
   giftView,
   idempotent,
   stamp,
   world,
 } from "../src/server/domain";
+import { commandWithAudience as command } from "./discussion-command";
 import {
   canManageGroupEvents,
   peopleForGroup,
@@ -267,11 +267,11 @@ describe("event lists and permissions", () => {
         expect(after.available).toBe(0);
         expect(after.reservations).toEqual([]);
         expect(after.purchased).toBe(0);
-        expect(after.comments).toBeUndefined();
+        expect(after.comments).toEqual([
+          expect.objectContaining({ body: "Hidden planning" }),
+        ]);
       } else expect(after).toEqual(before);
-      expect(JSON.stringify(world(f.state, f.actors[2]))).not.toContain(
-        "Hidden planning",
-      );
+      if (!before.canShop) expect(after.comments).toBeUndefined();
       expect(() => giftSummary(f.state, f.actors[0], list.id)).toThrow();
     }
   });

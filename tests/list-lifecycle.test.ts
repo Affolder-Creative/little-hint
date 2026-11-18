@@ -2,12 +2,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { emptyState, type List } from "../src/shared/model";
 import {
   archiveDueLists,
-  command,
   giftSummary,
   giftView,
   stamp,
   world,
 } from "../src/server/domain";
+import { commandWithAudience as command } from "./discussion-command";
 import { dateHasElapsed, validCalendarDate } from "../src/shared/list-dates";
 
 function fixture(options: Partial<List> = {}, shared = true) {

@@ -1,4 +1,9 @@
 import {
+  discussionProtection,
+  discussionLabel,
+  checkDiscussionAudience,
+} from "./discussion-access";
+import {
   listCanEdit,
   coManagementCommand,
   coManagementView,
@@ -332,7 +337,7 @@ export function giftView(s: State, a: Actor, i: Item): GiftView {
   const own = recipient(s, a, i);
   const view: GiftView = {
     ...fields,
-    watchingNotes: !own && watchesItem(s, a.id, i.id),
+    watchingNotes: noteVisible(s, a, i) && watchesItem(s, a.id, i.id),
     priceWatching: s.priceWatches.some(
       (w) => w.userId === a.id && w.itemId === i.id,
     ),
@@ -433,19 +438,19 @@ export function giftView(s: State, a: Actor, i: Item): GiftView {
       0,
     );
   }
-  if (!own)
+  if (noteVisible(s, a, i))
     view.comments = s.comments
       .filter((c) => c.itemId === i.id && noteVisible(s, a, i, c.giverId, c))
       .map((c) => ({
         id: c.id,
         revision: c.revision,
         needsPrivacyReview: c.authorId === a.id && noteNeedsReview(s, c),
-        audience:
-          c.authorOnly || noteNeedsReview(s, c)
-            ? "Only you"
-            : c.giverId
-              ? "Giver and profile managers"
-              : "Other shoppers",
+        audience: discussionLabel(s, i, c.giverId, c),
+        protectedHistory:
+          !c.giverId &&
+          ((!!c.authorOnly && !discussionProtection(s, i).authorOnly) ||
+            ((c.excludeRecipients ?? true) &&
+              !discussionProtection(s, i).excludeRecipients)),
         canEdit: c.authorId === a.id && !archived(s, i),
         canDelete: c.authorId === a.id || isAdmin(s, a),
         editedAt: c.editedAt,
@@ -1116,7 +1121,12 @@ function commandCore(
       if (!r) fail(404, "Review is no longer available.");
       checkRevision(r, p.revision);
       const item = getItem(s, a, r.itemId);
-      if (recipient(s, a, item)) fail(403, "This review is unavailable.");
+      if (
+        p.kind === "note"
+          ? !("body" in r && noteVisible(s, a, item, r.giverId, r))
+          : recipient(s, a, item)
+      )
+        fail(403, "This review is unavailable.");
       if (!p.ordinary && !p.exchangeId && !(p.kind === "note" && p.authorOnly))
         fail(400, "Choose an audience before confirming.");
       if (p.kind === "note" && p.authorOnly) {
@@ -2056,6 +2066,7 @@ function commandCore(
         .object({
           id,
           revision,
+          audienceToken: z.string().max(128).optional(),
           body: z
             .string()
             .min(1)
@@ -2092,6 +2103,7 @@ function commandCore(
       }
       if (archived(s, i)) fail(403, "Archived notes cannot be edited.");
       if (!p.body) fail(400, "Write a note.");
+      checkDiscussionAudience(s, a, i, p.audienceToken, c);
       validateMentions(s, a, i, p.body, p.mentions, c.giverId, true, c);
       const previous = new Set(c.mentions?.map((m) => m.userId));
       if (
@@ -2119,6 +2131,7 @@ function commandCore(
           exchangeId: id.optional(),
           giverId: id.optional(),
           exchangeRecipientId: id.optional(),
+          audienceToken: z.string().max(128).optional(),
           body: z
             .string()
             .min(1)
@@ -2137,13 +2150,16 @@ function commandCore(
         })
         .parse(b);
       const i = getItem(s, a, p.itemId);
-      if (recipient(s, a, i) || archived(s, i))
-        fail(403, "Private notes are not available for this item.");
+      if (!noteVisible(s, a, i) || archived(s, i))
+        fail(403, "Discussion is not available for this item.");
       const context = resolveShoppingContext(s, a, i, p);
+      checkDiscussionAudience(s, a, i, p.audienceToken, undefined, p);
       validateMentions(s, a, i, p.body, p.mentions, context?.giverId, true);
+      const { audienceToken: _audienceToken, ...fields } = p;
       const comment = {
         ...stamp(),
-        ...p,
+        ...fields,
+        ...discussionProtection(s, i, context?.giverId),
         authorId: a.id,
         giverId: context?.giverId,
         ordinary: !context,

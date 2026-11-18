@@ -54,10 +54,10 @@ test("following, scoped mentions, inbox read controls, and mobile settings", asy
   await note.press("End");
   await note.pressSequentially("Could you check the size?");
   await buyer
-    .getByRole("button", { name: "Add private note", exact: true })
+    .getByRole("button", { name: "Add note", exact: true })
     .click();
   await expect(
-    buyer.getByText("Private note added.", { exact: true }),
+    buyer.getByText("Note added.", { exact: true }),
   ).toBeVisible();
   await helper.goto("/notifications");
   const mention = helper.getByRole("button", {

@@ -1,7 +1,7 @@
 export const notificationTopics = [
   { id: "price-drop", label: "Price drops on items I follow" },
   { id: "mention", label: "Mentions" },
-  { id: "discussion", label: "Private notes I follow" },
+  { id: "discussion", label: "Discussions I follow" },
   { id: "contribution", label: "Cost sharing" },
   { id: "wishlist", label: "New items on followed wish lists" },
   { id: "invitation", label: "Invitations & ownership requests" },

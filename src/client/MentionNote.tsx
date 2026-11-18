@@ -1,6 +1,7 @@
 import { moveMentions } from "./mention-state";
 import {
   useId,
+  useEffect,
   useLayoutEffect,
   useRef,
   useState,
@@ -11,6 +12,12 @@ import { useApp } from "./context";
 import { api, ApiError } from "./api";
 import { Form } from "./components";
 import type { GiftView, Mention, World } from "../shared/model";
+
+type Audience = {
+  token: string;
+  label: string;
+  readers: Array<{ userId: string; name: string }>;
+};
 
 type Candidate = { userId: string; name: string; detail: string };
 export function MentionNote({
@@ -33,6 +40,24 @@ export function MentionNote({
   const contextQuery = new URLSearchParams(
     Object.entries(context).map(([k, v]) => [k, String(v)]),
   ).toString();
+  const audience = useQuery({
+    queryKey: ["discussion-audience", itemId, note?.id, contextQuery],
+    queryFn: () =>
+      api<Audience>(
+        `items/${itemId}/discussion-audience?${note ? `commentId=${note.id}` : contextQuery}`,
+      ),
+    refetchInterval: 30000,
+  });
+  const [reviewedAudience, setReviewedAudience] = useState<Audience>();
+  const [audienceConflict, setAudienceConflict] = useState(false);
+  useEffect(() => {
+    if (audience.data && !reviewedAudience) setReviewedAudience(audience.data);
+  }, [audience.data, reviewedAudience]);
+  const audienceChanged =
+    audienceConflict ||
+    (!!reviewedAudience &&
+      !!audience.data &&
+      reviewedAudience.token !== audience.data.token);
   const [revision, setRevision] = useState(note?.revision);
   const [conflict, setConflict] = useState(false);
   const [reloadError, setReloadError] = useState("");
@@ -162,7 +187,13 @@ export function MentionNote({
   };
   return (
     <Form
-      submit={note ? "Save changes" : "Add private note"}
+      submit={note ? "Save changes" : "Add note"}
+      disabled={
+        !reviewedAudience ||
+        !audience.data ||
+        audienceChanged ||
+        audience.isError
+      }
       cancel={onDone}
       dirty={
         note
@@ -177,11 +208,17 @@ export function MentionNote({
             ...context,
             body,
             mentions,
+            audienceToken: reviewedAudience?.token,
             ...(note ? { id: note.id, revision } : {}),
           });
         } catch (error) {
-          if (error instanceof ApiError && error.status === 409)
-            setConflict(true);
+          if (error instanceof ApiError && error.status === 409) {
+            if (error.message.startsWith("The discussion audience changed")) {
+              setAudienceConflict(true);
+              await audience.refetch();
+            } else if (note && !error.message.includes("mentioned"))
+              setConflict(true);
+          }
           throw error;
         }
         if (note) {
@@ -192,9 +229,53 @@ export function MentionNote({
         setBody("");
         setMentions([]);
         setCaret(0);
-        toast("Private note added.");
+        toast("Note added.");
       }}
     >
+      <div aria-live="polite">
+        {audience.data && (
+          <p className="muted">
+            Visible to: {audience.data.label}.{" "}
+            {audience.data.readers.map((p) => p.name).join(", ")}.
+          </p>
+        )}
+        {audience.isPending && (
+          <p role="status">Checking who can read this note…</p>
+        )}
+        {audience.isError && (
+          <p role="alert">
+            Could not verify the audience. Your draft is still here.{" "}
+            <button
+              type="button"
+              className="text-button"
+              onClick={() => audience.refetch()}
+            >
+              Retry audience check
+            </button>
+          </p>
+        )}
+        {audienceChanged && (
+          <div role="alert">
+            <p>
+              The audience changed. Your draft is still here. Review who can
+              read it before posting.
+            </p>
+            <button
+              type="button"
+              className="button secondary"
+              disabled={
+                !audience.data || audience.isFetching || audience.isError
+              }
+              onClick={() => {
+                setReviewedAudience(audience.data);
+                setAudienceConflict(false);
+              }}
+            >
+              I’ve reviewed the audience
+            </button>
+          </div>
+        )}
+      </div>
       {conflict && (
         <div>
           <p>
