@@ -1,3 +1,4 @@
+import { discussionAudience } from "../src/server/discussion-access";
 import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { activateAccount, command, stamp, world } from "../src/server/domain";
@@ -8,11 +9,21 @@ async function fixture(page: Page) {
   const f = discoveryFixture();
   let actor = f.actors[0];
   await page.route("**/api/**", async (route) => {
-    const path = new URL(route.request().url()).pathname.replace(
-      "/api/v1/",
-      "",
-    );
+    const url = new URL(route.request().url());
+    const path = url.pathname.replace("/api/v1/", "");
     try {
+      if (/^items\/[^/]+\/discussion-audience$/.test(path)) {
+        const q = Object.fromEntries(url.searchParams);
+        return route.fulfill({
+          json: discussionAudience(
+            f.state,
+            actor,
+            path.split("/")[1],
+            q.commentId,
+            { ...q, ordinary: q.ordinary === "true" },
+          ),
+        });
+      }
       if (path === "world")
         return route.fulfill({
           json: {
@@ -317,6 +328,9 @@ test("a private friend idea can be reserved and marked purchased", async ({
     recipientIds: [friend.personId],
   }) as { id: string };
   await page.goto(`/gift/${idea.id}`);
+  await expect(page.locator(".discussion form")).toContainText(
+    "Visible to: Only you",
+  );
   await page.getByRole("button", { name: "Reserve gift", exact: true }).click();
   await expect(
     page.getByRole("status").filter({ hasText: "Gift reserved" }),
