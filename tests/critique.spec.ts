@@ -3584,7 +3584,9 @@ test("privacy popover stays closed when returning from a gift", async ({
   await page.goto(`/lists/${list.id}`);
   const disclosure = page.locator(".list-privacy > .privacy-trigger");
   await disclosure.click();
-  await expect(page.locator(".list-privacy .privacy-note")).toBeVisible();
+  await expect(
+    page.getByRole("dialog", { name: "Gift privacy" }),
+  ).toBeVisible();
   const gift = page.locator(".gift-card").first();
   await gift.scrollIntoViewIfNeeded();
   await page.evaluate(() => new Promise(requestAnimationFrame));
@@ -3592,7 +3594,9 @@ test("privacy popover stays closed when returning from a gift", async ({
   await gift.click();
   await expect(page.locator(".gift-detail")).toBeVisible();
   await page.goBack();
-  await expect(page.locator(".list-privacy .privacy-note")).not.toBeVisible();
+  await expect(
+    page.getByRole("dialog", { name: "Gift privacy" }),
+  ).not.toBeVisible();
   await expect(gift).toBeFocused();
   await expect
     .poll(() => page.evaluate(() => scrollY))
@@ -3625,7 +3629,7 @@ test("scheduled summaries open on request in both privacy modes without moving c
     await page.keyboard.press("Enter");
     await expect(panel).toBeVisible();
     await expect(trigger).toHaveAttribute("aria-expanded", "true");
-    await expect(panel).toContainText("2099-12-25");
+    await expect(panel).toContainText("Dec 25, 2099");
     await expect(panel).toContainText(
       "Contribution amounts and private notes stay private.",
     );
@@ -5679,7 +5683,7 @@ for (const width of [320, 768, 1440]) {
     const before = await participants.boundingBox();
     await page.locator(".privacy-trigger").click();
     await expect(panel).toBeVisible();
-    await expect(panel).toContainText("2099-12-26");
+    await expect(panel).toContainText("Dec 26, 2099");
     expect(await participants.boundingBox()).toEqual(before);
     expect(
       (await new AxeBuilder({ page }).include("main").analyze()).violations,
@@ -5866,7 +5870,7 @@ test("event dates, linked calendar icons and archive guidance retain their conte
   await page.locator(".privacy-trigger").click();
   await expect(
     page.getByRole("dialog", { name: "Gift privacy" }),
-  ).toContainText("You can view");
+  ).toContainText("you can see purchased gifts");
   await page.getByRole("button", { name: "Close privacy details" }).click();
   await page
     .getByRole("button", { name: "Archived items", exact: true })

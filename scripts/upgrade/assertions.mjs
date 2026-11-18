@@ -21,6 +21,38 @@ function currentViewContract(value, records) {
       (r) => r.kind === "items" && r.id === view.id,
     )?.data;
     if (item) {
+      if (!Object.hasOwn(view, "visibilityScope")) {
+        if (
+          !item.listId &&
+          ["private", "hidden", "visible"].includes(item.visibility)
+        )
+          view.visibilityScope =
+            item.visibility === "private" ? "only-me" : "shared";
+        else if (item.listId) {
+          const list = records.find(
+            (r) => r.kind === "lists" && r.id === item.listId,
+          )?.data;
+          // The pinned fixture's wishes have groups with multiple account holders.
+          // Prove another reader from retained records; do not guess for other lists.
+          const readers = new Set(
+            records
+              .filter(
+                (r) => r.kind === "groups" && list?.groupIds?.includes(r.id),
+              )
+              .flatMap((r) => r.data.memberIds)
+              .filter((id) =>
+                records.some(
+                  (r) =>
+                    r.kind === "people" &&
+                    r.data.userId === id &&
+                    !r.data.mergedIntoId,
+                ),
+              ),
+          );
+          if (!list?.deletedAt && readers.size > 1)
+            view.visibilityScope = "shared";
+        }
+      }
       // Recipient-visible content now exposes a discussion. For the pinned
       // fixture, which has no notes on these items, derive only an empty list.
       // Never discard candidate notes or allow this on surprise content.
