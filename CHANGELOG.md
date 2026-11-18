@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.7.0](https://github.com/Affolder-Creative/little-hint/compare/v1.6.1...v1.7.0) (2026-11-18)
+
+
+### Features
+
+* let discussion access determine who can be mentioned ([#236](https://github.com/Affolder-Creative/little-hint/issues/236)) ([443d4dd](https://github.com/Affolder-Creative/little-hint/commit/443d4dd44a43f71c04f7b9a992a9d6020eea9cf2))
+
+
+### Fixes
+
+* unify connected-account sharing and clarify gift controls ([#239](https://github.com/Affolder-Creative/little-hint/issues/239)) ([6896ac9](https://github.com/Affolder-Creative/little-hint/commit/6896ac90ebcf9002a54c880a7627b12cc80448a9))
+
 ## [1.6.1](https://github.com/Affolder-Creative/little-hint/compare/v1.6.0...v1.6.1) (2026-11-17)
 
 
