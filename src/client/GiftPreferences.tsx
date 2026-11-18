@@ -292,8 +292,18 @@ export function PreferenceSummary({ personId }: { personId: string }) {
           </ul>
         )}
         {p.interests && <p>{p.interests}</p>}
-        {p.likes && <p>Likes: {p.likes}</p>}
-        {p.avoid && <p>Things to avoid: {p.avoid}</p>}
+        {p.likes && (
+          <div className="preference-note">
+            <h3>Likes</h3>
+            <p>{p.likes}</p>
+          </div>
+        )}
+        {p.avoid && (
+          <div className="preference-note">
+            <h3>Things to avoid</h3>
+            <p>{p.avoid}</p>
+          </div>
+        )}
       </>
     </section>
   );

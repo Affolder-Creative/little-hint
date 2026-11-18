@@ -1,3 +1,4 @@
+import { newPreference } from "../src/server/gift-discovery";
 import { command as rawCommand, DomainError } from "../src/server/domain";
 import { mentionCandidates } from "../src/server/activity";
 import { discussionAudience } from "../src/server/discussion-access";
@@ -5983,5 +5984,194 @@ test("recipient discussion shows shared notes and protects earlier surprise hist
   await page.getByRole("button", { name: "Add note", exact: true }).click();
   await expect(
     page.locator(".comment").getByText("Blue please", { exact: true }),
+  ).toBeVisible();
+});
+
+test("people directory searches, jumps, and restores profile navigation", async ({
+  page,
+}, testInfo) => {
+  const { state, actor } = await preview(page);
+  const base = state.people[0];
+  for (let index = 0; index < 500; index++)
+    state.people.push({
+      ...base,
+      id: crypto.randomUUID(),
+      userId: undefined,
+      guardians: [actor.id],
+      name: `${String.fromCharCode(65 + (index % 26))} Person ${index}`,
+    });
+  state.people.push({
+    ...base,
+    id: crypto.randomUUID(),
+    userId: undefined,
+    guardians: [actor.id],
+    name: "Émilie Morgan",
+  });
+  await page.goto("/people");
+  await expect(
+    page.getByText("Inviting and managing people", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Invite someone to Little Hint", { exact: true }),
+  ).not.toBeVisible();
+  const search = page.getByRole("searchbox", { name: "Search people" });
+  await search.fill("  MOR émili  ");
+  await expect(page.locator(".people-directory .person-row")).toHaveCount(1);
+  await expect(page.locator(".person-row h3")).toHaveText("Émilie Morgan");
+  await page.locator(".person-row").click();
+  await page.goBack();
+  await expect(search).toHaveValue("  MOR émili  ");
+  await search.fill("no such person");
+  await expect(
+    page.getByRole("heading", { name: "No people found" }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Clear search", exact: true })
+    .first()
+    .click();
+  await page
+    .getByRole("button", { name: "Jump to letter", exact: true })
+    .click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Jump to M", exact: true })
+    .click();
+  await expect(page.locator("#directory-M")).toBeInViewport();
+  await expect(page.locator("#directory-M")).toBeFocused();
+  for (const [width, theme] of [
+    [1440, "light"],
+    [768, "dark"],
+    [390, "light"],
+    [320, "dark"],
+  ] as const) {
+    await page.setViewportSize({ width, height: 1000 });
+    await page.evaluate(
+      (theme) => (document.documentElement.dataset.theme = theme),
+      theme,
+    );
+    await search.fill("person 12");
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth - innerWidth,
+      ),
+    ).toBeLessThanOrEqual(1);
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.screenshot({
+      path: testInfo.outputPath(`directory-${width}-${theme}.png`),
+      fullPage: true,
+    });
+  }
+});
+
+test("profile hides self follow and labels preferences and sorted list types", async ({
+  page,
+}) => {
+  const { state, actor, actors } = await preview(page);
+  const person = state.people.find((p) => p.userId === actor.id)!;
+  command(state, actor, "follows.update", {
+    target: "person",
+    targetId: person.id,
+    following: true,
+  });
+  command(state, actor, "lists.create", {
+    name: "Aardvark wishes",
+    ownerIds: [person.id],
+    groupIds: [],
+    mode: "surprise",
+  });
+  await page.goto(`/people/${person.id}`);
+  await expect(
+    page.getByRole("button", { name: /^(Follow person|Following)$/ }),
+  ).toHaveCount(0);
+  state.giftPreferences = state.giftPreferences.filter(
+    (p) => p.personId !== person.id,
+  );
+  const preference = {
+    ...newPreference(person.id),
+    likes: "Music",
+    avoid: "Clutter",
+    setup: "done" as const,
+  };
+  state.giftPreferences.push(preference);
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { name: "Likes", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Things to avoid", exact: true }),
+  ).toBeVisible();
+  preference.avoid = "";
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { name: "Things to avoid", exact: true }),
+  ).toHaveCount(0);
+  const links = page.locator(".person-list-link");
+  await expect(links.first()).toContainText("Aardvark wishes");
+  await expect(links.first().locator(".list-symbol")).toHaveAttribute(
+    "aria-hidden",
+    "true",
+  );
+  const other = state.people.find((p) => p.userId === actors[1].id)!;
+  await page.goto(`/people/${other.id}`);
+  await expect(
+    page.getByRole("button", { name: "Follow person", exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Follow person", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Following", exact: true }),
+  ).toBeVisible();
+});
+
+test("people letter rail supports dragging and short-screen fallback", async ({
+  page,
+}, testInfo) => {
+  const { state, actor } = await preview(page);
+  const base = state.people[0];
+  for (const letter of ["A", "C", "K", "M", "Z"])
+    for (let i = 0; i < 12; i++)
+      state.people.push({
+        ...base,
+        id: crypto.randomUUID(),
+        userId: undefined,
+        guardians: [actor.id],
+        name: `${letter} Sample ${i}`,
+      });
+  await page.setViewportSize({ width: 390, height: 1000 });
+  await page.goto("/people");
+  await page
+    .getByRole("button", { name: "Jump to letter", exact: true })
+    .click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Jump to K", exact: true })
+    .click();
+  const rail = page.locator(".directory-rail");
+  await expect(rail).toBeVisible();
+  const bounds = (await rail.boundingBox())!;
+  await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + 5);
+  await page.mouse.down();
+  await page.mouse.move(
+    bounds.x + bounds.width / 2,
+    bounds.y + (bounds.height * 25.5) / 27,
+  );
+  await page.mouse.up();
+  await expect(page.locator("#directory-Z")).toBeInViewport();
+  await expect(rail.locator(".active")).toHaveText("Z");
+  const searchBox = await page
+    .getByRole("searchbox", { name: "Search people" })
+    .boundingBox();
+  const topbar = await page.locator(".topbar").boundingBox();
+  expect(searchBox!.y).toBeGreaterThanOrEqual(topbar!.y + topbar!.height);
+  await page.screenshot({
+    path: testInfo.outputPath("directory-rail-mobile.png"),
+  });
+  const audit = await new AxeBuilder({ page }).analyze();
+  expect(audit.violations).toEqual([]);
+  await page.setViewportSize({ width: 320, height: 500 });
+  await expect(rail).not.toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Jump to letter", exact: true }),
   ).toBeVisible();
 });

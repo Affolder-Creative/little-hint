@@ -1,8 +1,13 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-18T17:01:28.606323+00:00",
+  "generatedAt": "2026-11-18T18:09:48.277790+00:00",
   "title": "Design System: Little Hint",
   "extensions": {
+    "peopleDirectory": {
+      "layout": "Single column, first-initial sections; flat name-search matches; 40px avatars; 17px headings; 12px row padding.",
+      "navigation": "Sticky search clears the sticky mobile header. Desktop alphabet wraps; mobile rail fits available height; Jump to letter dialog remains accessible. History-entry state preserves query and disclosure.",
+      "profiles": "Self-follow hidden; conditional preference subheadings; alphabetical wish-list rows with existing calendar/checklist tiles."
+    },
     "enlargedNavigation": "Whole mobile navigation links wrap to additional rows at enlarged text sizes; measured height reserves content clearance. Sidebar note reflows; all avatars scale with their text, and notification counts retain content-driven width and a text-relative line height above the bell. Settings gear exposes its active route.",
     "compactBrand": "At 360px and below the mobile header uses the approved 44px heart-tag symbol and Little Hint accessible name.",
     "giftDetailOrder": "Price and tracking precede availability. Reservation controls, Gift plans and Private notes share the full-width leading edge below the hero. Buying for associates its private-note audience hint with the select. On fully reserved gifts it moves into Private notes, beside the remaining action without duplicate guidance. Reservation status precedes a short gift-summary sentence and InfoHelp popover.",
