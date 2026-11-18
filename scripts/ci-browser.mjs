@@ -149,7 +149,10 @@ try {
         ]
       : []),
     ...(suite === "notifications"
-      ? ["tests/channel-availability.spec.ts"]
+      ? [
+          "tests/channel-availability.spec.ts",
+          "tests/collaboration-refinements.spec.ts",
+        ]
       : []),
     ...(suite === "sign-in"
       ? ["tests/sms.spec.ts", "tests/account-email.spec.ts"]
