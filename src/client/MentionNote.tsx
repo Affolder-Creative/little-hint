@@ -1,3 +1,4 @@
+import { InfoHelp } from "./InfoHelp";
 import { moveMentions } from "./mention-state";
 import {
   useId,
@@ -67,7 +68,36 @@ export function MentionNote({
   const [dismissed, setDismissed] = useState(false);
   const [selected, setSelected] = useState(0);
   const [composing, setComposing] = useState(false);
+  const mirror = useRef<HTMLDivElement>(null);
   const textarea = useRef<HTMLTextAreaElement>(null);
+  useLayoutEffect(() => {
+    const input = textarea.current;
+    const layer = mirror.current;
+    if (!input || !layer) return;
+    const sync = () => {
+      const style = getComputedStyle(input);
+      for (const key of [
+        "fontFamily",
+        "fontSize",
+        "fontWeight",
+        "lineHeight",
+        "letterSpacing",
+        "wordSpacing",
+        "padding",
+        "borderWidth",
+        "boxSizing",
+        "tabSize",
+      ] as const)
+        layer.style[key] = style[key];
+      layer.style.width = `${input.offsetWidth}px`;
+      layer.style.height = `${input.offsetHeight}px`;
+      layer.scrollTop = input.scrollTop;
+    };
+    sync();
+    const observer = new ResizeObserver(sync);
+    observer.observe(input);
+    return () => observer.disconnect();
+  }, [body]);
   const pendingCaret = useRef<number | null>(null);
   const listId = useId();
   const [menuStyle, setMenuStyle] = useState<CSSProperties>({});
@@ -156,9 +186,11 @@ export function MentionNote({
       window.visualViewport?.removeEventListener("resize", measure);
     };
   }, [active, body, caret]);
+  const excludedIds = [...new Set(mentions.map((m) => m.userId))];
   const candidates = useQuery({
     queryKey: [
       "mention-candidates",
+      excludedIds.join(","),
       itemId,
       note?.id,
       match?.[1],
@@ -166,13 +198,16 @@ export function MentionNote({
     ],
     queryFn: () =>
       api<Candidate[]>(
-        `items/${itemId}/mention-candidates?q=${encodeURIComponent(match?.[1] ?? "")}${note ? `&commentId=${note.id}` : `&${contextQuery}`}`,
+        `items/${itemId}/mention-candidates?exclude=${encodeURIComponent(excludedIds.join(","))}&q=${encodeURIComponent(match?.[1] ?? "")}${note ? `&commentId=${note.id}` : `&${contextQuery}`}`,
       ),
     enabled: active,
   });
-  const choices = candidates.data ?? [];
+  const choices = (candidates.data ?? []).filter(
+    (c) => !excludedIds.includes(c.userId),
+  );
   const index = Math.min(selected, Math.max(0, choices.length - 1));
   const choose = (c: Candidate) => {
+    if (excludedIds.includes(c.userId)) return;
     const text = `@${c.name}`;
     const next = body.slice(0, start) + text + " " + body.slice(caret);
     if (next.length > 4000) return;
@@ -234,10 +269,13 @@ export function MentionNote({
     >
       <div aria-live="polite">
         {audience.data && (
-          <p className="muted">
-            Visible to: {audience.data.label}.{" "}
-            {audience.data.readers.map((p) => p.name).join(", ")}.
-          </p>
+          <div className="discussion-audience">
+            <span>{shortAudience(audience.data.label)}</span>
+            <InfoHelp title="Who can read this note?">
+              <p>{audience.data.label}.</p>
+              <p>{audience.data.readers.map((p) => p.name).join(", ")}.</p>
+            </InfoHelp>
+          </div>
         )}
         {audience.isPending && (
           <p role="status">Checking who can read this note…</p>
@@ -314,7 +352,16 @@ export function MentionNote({
       <div className="field">
         <label htmlFor={`${listId}-input`}>Your note</label>
         <div className="mention-composer">
+          <div className="mention-highlight" aria-hidden="true" ref={mirror}>
+            <MentionText body={body + "\n"} mentions={mentions} />
+          </div>
           <textarea
+            onScroll={(e) => {
+              if (mirror.current) {
+                mirror.current.scrollTop = e.currentTarget.scrollTop;
+                mirror.current.scrollLeft = e.currentTarget.scrollLeft;
+              }
+            }}
             id={`${listId}-input`}
             ref={textarea}
             autoFocus={!!note}
@@ -395,7 +442,11 @@ export function MentionNote({
                   ))}
                 </ul>
               ) : (
-                <p role="status">No matching people can read this note.</p>
+                <p role="status">
+                  {excludedIds.length
+                    ? "No more matching people to mention."
+                    : "No matching people can read this note."}
+                </p>
               )}
             </div>
           )}
@@ -434,4 +485,14 @@ export function MentionText({
       {body.slice(end)}
     </>
   );
+}
+
+export function shortAudience(label: string) {
+  if (label === "People with access, excluding recipients")
+    return "Hidden from recipients";
+  if (label === "People with access, including recipients")
+    return "Includes recipients";
+  if (label === "Giver and profile managers; recipients excluded")
+    return "Exchange discussion";
+  return label;
 }

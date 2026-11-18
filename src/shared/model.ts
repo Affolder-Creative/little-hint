@@ -337,6 +337,8 @@ export interface Notice extends Base {
   reservationId?: string;
   contributionId?: string;
   linkId?: string;
+  dismissedAt?: string;
+  dismissalId?: string;
   readAt?: string;
   pushDueAt?: string;
   pushComplete?: boolean;
@@ -399,6 +401,7 @@ export interface NotificationView {
   readAt?: string;
 }
 export interface NotificationPage {
+  readCount: number;
   entries: NotificationView[];
   unreadCount: number;
   nextCursor?: string;
@@ -699,6 +702,7 @@ export interface GiftView extends Omit<
   }>;
   comments?: Array<{
     audience?: string;
+    audienceKey?: string;
     protectedHistory?: boolean;
     needsPrivacyReview?: boolean;
     revision: number;

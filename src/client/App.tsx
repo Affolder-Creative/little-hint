@@ -56,7 +56,8 @@ import {
   PushLifecycle,
   clearPushBinding,
 } from "./Notifications";
-import { MentionNote } from "./MentionNote";
+import { InfoHelp } from "./InfoHelp";
+import { MentionNote, shortAudience } from "./MentionNote";
 import { actionError, formatDateTime } from "./copy";
 /* Little Hint operates as a quiet, practical gift notebook. Approved heart-tag artwork anchors the shell; product content leads. */
 import {
@@ -164,6 +165,8 @@ export function App() {
     [message, setMessage] = useState<({ text: string } & ToastOptions) | null>(
       null,
     );
+  const [toastBusy, setToastBusy] = useState(false);
+  const [toastError, setToastError] = useState("");
   const [toastHovered, setToastHovered] = useState(false);
   const [toastFocused, setToastFocused] = useState(false);
   const authenticatedAccount = useRef<string | null | undefined>(undefined);
@@ -234,10 +237,10 @@ export function App() {
       setToastFocused(false);
       return;
     }
-    if (toastHovered || toastFocused) return;
+    if (toastHovered || toastFocused || toastBusy || toastError) return;
     const timer = setTimeout(() => setMessage(null), message.duration ?? 5000);
     return () => clearTimeout(timer);
-  }, [message, toastHovered, toastFocused]);
+  }, [message, toastHovered, toastFocused, toastBusy, toastError]);
   useEffect(() => {
     if (query.data === null) void clearPushBinding().catch(() => {});
     if (query.data)
@@ -348,7 +351,10 @@ export function App() {
         mutate,
         open: (title, body) => setModal({ title, body }),
         close: () => setModal(null),
-        toast: (text, options) => setMessage({ text, ...options }),
+        toast: (text, options) => {
+          setToastError("");
+          setMessage({ text, ...options });
+        },
         dark,
       }}
     >
@@ -596,16 +602,46 @@ export function App() {
               {message.action && (
                 <>
                   {" "}
-                  <Link
-                    to={message.action.to}
-                    onClick={() => {
-                      setMessage(null);
-                      setToastHovered(false);
-                      setToastFocused(false);
-                    }}
-                  >
-                    {message.action.label}
-                  </Link>
+                  {"to" in message.action ? (
+                    <Link
+                      to={message.action.to}
+                      onClick={() => {
+                        setMessage(null);
+                        setToastHovered(false);
+                        setToastFocused(false);
+                      }}
+                    >
+                      {message.action.label}
+                    </Link>
+                  ) : (
+                    <button
+                      type="button"
+                      className="toast-action"
+                      disabled={toastBusy}
+                      onClick={async () => {
+                        const current = message;
+                        if (!current.action || !("onClick" in current.action))
+                          return;
+                        setToastBusy(true);
+                        setToastError("");
+                        try {
+                          await current.action.onClick();
+                          setMessage((previous) =>
+                            previous === current ? null : previous,
+                          );
+                        } catch (error) {
+                          setToastError(actionError(error));
+                        } finally {
+                          setToastBusy(false);
+                        }
+                      }}
+                    >
+                      {toastBusy ? "Restoring…" : message.action.label}
+                    </button>
+                  )}
+                  {toastError && (
+                    <span role="alert">{toastError} Try Undo again.</span>
+                  )}
                 </>
               )}
             </span>
@@ -1350,6 +1386,14 @@ function GiftDetail() {
             <ItemActions gift={gift} />
           </div>
           <PrivateIdeaBadge gift={gift} />
+          {!gift.listId &&
+            gift.visibilityScope === "shared" &&
+            gift.creatorName && (
+              <p className="gift-attribution">
+                <Users size={15} aria-hidden="true" /> Added by{" "}
+                {gift.creatorName}
+              </p>
+            )}
           {gift.listId && (gift.creatorName || gift.lastEditorName) && (
             <p className="muted">
               {gift.creatorName && `Added by ${gift.creatorName}`}
@@ -1638,20 +1682,18 @@ function GiftDetail() {
               const notes = gift.comments!.filter(
                 (c) => !!c.protectedHistory === protectedHistory,
               );
+              const mixedAudiences =
+                new Set(notes.map((note) => note.audienceKey)).size > 1;
               return notes.length ? (
                 <div key={String(protectedHistory)}>
-                  <h3>
-                    {protectedHistory
-                      ? "Earlier private notes"
-                      : "Conversation"}
-                  </h3>
+                  {protectedHistory && <h3>Earlier private notes</h3>}
                   {protectedHistory && (
                     <p className="muted">
                       These notes keep their original privacy. Sharing this gift
                       does not reveal them to recipients.
                     </p>
                   )}
-                  {notes.map((c) => (
+                  {notes.map((c, index) => (
                     <div key={c.id}>
                       {c.needsPrivacyReview && (
                         <div>
@@ -1686,7 +1728,19 @@ function GiftDetail() {
                           </Action>
                         </div>
                       )}
-                      <p className="muted">Visible to: {c.audience}</p>
+                      {(protectedHistory ||
+                        gift.archived ||
+                        c.audience?.startsWith("Giver") ||
+                        mixedAudiences) &&
+                        (index === 0 ||
+                          notes[index - 1].audienceKey !== c.audienceKey) && (
+                          <div className="discussion-audience">
+                            <span>{shortAudience(c.audience ?? "")}</span>
+                            <InfoHelp title="Who can read these notes?">
+                              <p>{c.audience}.</p>
+                            </InfoHelp>
+                          </div>
+                        )}
                       <PrivateNote
                         note={c}
                         itemId={gift.id}

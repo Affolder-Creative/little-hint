@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-18T15:14:17.030582+00:00",
+  "generatedAt": "2026-11-18T17:01:28.606323+00:00",
   "title": "Design System: Little Hint",
   "extensions": {
     "enlargedNavigation": "Whole mobile navigation links wrap to additional rows at enlarged text sizes; measured height reserves content clearance. Sidebar note reflows; all avatars scale with their text, and notification counts retain content-driven width and a text-relative line height above the bell. Settings gear exposes its active route.",
@@ -1063,7 +1063,8 @@
       "src/client/Action.tsx",
       "src/client/ItemPhotoGallery.tsx",
       "src/client/item-photo-gallery.css",
-      "src/client/ArchivePrivacySettings.tsx"
+      "src/client/ArchivePrivacySettings.tsx",
+      "src/client/MentionNote.tsx"
     ],
     "tonalRampNote": "Synthesized OKLCH previews at constant hue/chroma; these ramps are panel metadata, not additional application tokens.",
     "layout": {
@@ -1183,7 +1184,15 @@
     "connectedAccounts": "Connected accounts omit friend status and entry-wide management. Individual authors use the ordinary gift-idea sharing editor.",
     "visibilityFilter": "All visibility, Only me, and Shared with others appear in Sort & filter, with active choice summarized beside results.",
     "linkActions": "Filled Apply link, outlined neutral Cancel, and destructive Remove link with an unlink icon; Remove link appears only for an existing link.",
-    "eventCreationIcon": "Create event uses Lucide CalendarPlus, 17px in My lists and 16px in group settings."
+    "eventCreationIcon": "Create event uses Lucide CalendarPlus, 17px in My lists and 16px in group settings.",
+    "discussionAndNotifications": {
+      "mode": "Operate",
+      "attribution": "Shared ideas show a decorative person icon and 13px muted creator text; Only me omits it.",
+      "audience": "One compact label and InfoHelp at the composer; protected and exchange audiences remain distinct.",
+      "mentions": "Accent-colored inline mentions use native textarea metrics; selected accounts are excluded from suggestions.",
+      "notifications": "Unread first; flat divided rows with read/dismiss actions; timestamp above actions on phones; ten-second Undo pauses for hover, focus and pending work.",
+      "coManagement": "Stable 16px outer padding in open and closed states."
+    }
   },
   "components": [
     {
@@ -1455,6 +1464,13 @@
       "description": "Primary apply, neutral cancel, and destructive unlink for an existing link.",
       "html": "<div class=\"ds-link-actions\"><button class=\"ds-apply\">Apply link</button><button class=\"ds-cancel\">Cancel</button><button class=\"ds-remove\">Remove link</button></div>",
       "css": ".ds-link-actions{display:flex;flex-wrap:wrap;align-items:center;gap:12px}.ds-link-actions button{min-height:44px;border-radius:8px;font:600 14px/1.25 -apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;padding:12px 18px;cursor:pointer}.ds-apply{background:var(--accent);color:var(--on-accent);border:0}.ds-cancel{background:var(--paper);color:var(--text);border:1px solid var(--control-border)}.ds-remove{background:transparent;color:var(--error);border:0}.ds-apply:hover{opacity:.9}.ds-cancel:hover{background:var(--soft)}.ds-remove:hover{background:var(--soft)}.ds-link-actions button:focus-visible{outline:3px solid var(--accent);outline-offset:3px}"
+    },
+    {
+      "name": "Discussion audience",
+      "kind": "custom",
+      "description": "Compact privacy label with contextual help beside the note composer.",
+      "html": "<div class=\"ds-audience\"><span>Hidden from recipients</span><button aria-label=\"Who can read this note?\"><svg width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"M12 16v-4m0-4h.01\"/></svg></button></div>",
+      "css": ".ds-audience {display:flex;align-items:center;gap:6px;color:var(--muted);font-size:13px}.ds-audience button {border:0;background:none;color:inherit;min-height:44px;min-width:44px;cursor:pointer}.ds-audience button:hover {background:var(--soft)}.ds-audience button:focus-visible {outline:3px solid var(--accent);outline-offset:3px}"
     }
   ],
   "narrative": {

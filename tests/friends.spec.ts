@@ -328,9 +328,7 @@ test("a private friend idea can be reserved and marked purchased", async ({
     recipientIds: [friend.personId],
   }) as { id: string };
   await page.goto(`/gift/${idea.id}`);
-  await expect(page.locator(".discussion form")).toContainText(
-    "Visible to: Only you",
-  );
+  await expect(page.locator(".discussion form")).toContainText("Only you");
   await page.getByRole("button", { name: "Reserve gift", exact: true }).click();
   await expect(
     page.getByRole("status").filter({ hasText: "Gift reserved" }),

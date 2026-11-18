@@ -1,3 +1,4 @@
+import { discussionKey } from "./discussion-access";
 import { visibilityScope } from "./visibility";
 import {
   discussionProtection,
@@ -448,6 +449,7 @@ export function giftView(s: State, a: Actor, i: Item): GiftView {
         revision: c.revision,
         needsPrivacyReview: c.authorId === a.id && noteNeedsReview(s, c),
         audience: discussionLabel(s, i, c.giverId, c),
+        audienceKey: discussionKey(s, i, c.giverId, c),
         protectedHistory:
           !c.giverId &&
           ((!!c.authorOnly && !discussionProtection(s, i).authorOnly) ||
@@ -1091,7 +1093,13 @@ function commandCore(
   if (action.startsWith("prices.")) return priceCommand(s, a, action, raw);
   const b = raw as Record<string, unknown>;
   if (
-    ["notifications.read", "follows.update", "watches.update"].includes(action)
+    [
+      "notifications.read",
+      "notifications.dismiss",
+      "notifications.undo",
+      "follows.update",
+      "watches.update",
+    ].includes(action)
   )
     return activityCommand(s, a, action, raw);
   switch (action) {

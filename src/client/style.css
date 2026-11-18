@@ -1707,9 +1707,8 @@ main {
 .settings-section > .section-heading {
   margin: 0 0 var(--space-related);
 }
-/* On a person page, a collapsed co-management offer is one quiet 44px row
-   between the page actions and the gift tabs; expanded keeps section spacing. */
-.person-co-management:not(:has(> details[open])) {
+/* Keep the disclosure heading stationary in both states. */
+.person-co-management {
   padding-block: var(--space-controls);
 }
 .group-settings {
@@ -5280,4 +5279,81 @@ a.button:is(:hover, :focus, :active),
   font-size: 14px;
   max-width: 65ch;
   margin-block: 12px 16px;
+}
+
+/* Mention rendering retains native text editing and identical glyph metrics. */
+.mention-highlight {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  padding: 11px 12px;
+  border: 1px solid transparent;
+  font: inherit;
+  line-height: normal;
+  border-radius: 8px;
+}
+.mention-highlight .note-mention {
+  font-weight: inherit;
+}
+.mention-composer textarea {
+  position: relative;
+  background: transparent;
+  color: transparent;
+  caret-color: var(--accent);
+}
+.mention-composer {
+  background: var(--paper);
+  border-radius: 8px;
+}
+.discussion-audience,
+.gift-attribution {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 13px;
+}
+@media (forced-colors: active) {
+  .mention-highlight {
+    display: none;
+  }
+  .mention-composer textarea {
+    color: CanvasText;
+  }
+}
+.notification-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: center;
+}
+.notification-row-actions .text-button {
+  font-size: 13px;
+}
+@media (max-width: 650px) {
+  .notification-content > time {
+    grid-column: 2 / -1;
+  }
+  .notification-row-actions {
+    grid-column: 2 / -1;
+    grid-row: 3;
+    margin: 0;
+    width: auto;
+  }
+}
+.notification-toolbar {
+  flex-wrap: wrap;
+}
+
+.toast-action {
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  min-height: 44px;
+  cursor: pointer;
 }

@@ -8,7 +8,12 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import {
+  Link,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
 import { Bell, BellOff, Check, CheckCheck } from "lucide-react";
 import { api } from "./api";
 import { useApp } from "./context";
@@ -108,8 +113,42 @@ export function NotificationBell() {
   );
 }
 export function NotificationCenter() {
-  const { mutate, world } = useApp();
-  const [unread, setUnread] = useState(false);
+  const { mutate, world, toast } = useApp();
+  const [params, setParams] = useSearchParams();
+  const unread = params.get("view") !== "all";
+  const setUnread = (value: boolean) =>
+    setParams(value ? {} : { view: "all" }, { replace: true });
+  const dismiss = async (
+    selection: { ids: string[] } | { through: string },
+  ) => {
+    const focused = document.activeElement as HTMLElement | null;
+    const result = await mutate<{ dismissalId: string; count: number }>(
+      "notifications/dismiss",
+      selection,
+    );
+    if (focused && !focused.isConnected)
+      requestAnimationFrame(() =>
+        document
+          .querySelector<HTMLElement>(
+            '.notification-toolbar button[aria-pressed="true"]',
+          )
+          ?.focus(),
+      );
+    if (!result.count) return;
+    toast(
+      result.count === 1
+        ? "Notification dismissed."
+        : `${result.count} notifications dismissed.`,
+      {
+        duration: 10000,
+        action: {
+          label: "Undo",
+          onClick: () =>
+            mutate("notifications/undo", { dismissalId: result.dismissalId }),
+        },
+      },
+    );
+  };
   const navigate = useNavigate();
   const query = useInfiniteQuery({
     queryKey: ["notifications", world.me.id, unread],
@@ -138,13 +177,24 @@ export function NotificationCenter() {
       </Header>
       <div className="notification-toolbar">
         <div className="tabs" role="group" aria-label="Filter notifications">
+          <button aria-pressed={unread} onClick={() => setUnread(true)}>
+            Unread
+            {query.data?.pages[0].unreadCount
+              ? ` (${query.data.pages[0].unreadCount})`
+              : ""}
+          </button>
           <button aria-pressed={!unread} onClick={() => setUnread(false)}>
             All
           </button>
-          <button aria-pressed={unread} onClick={() => setUnread(true)}>
-            Unread
-          </button>
         </div>
+        {!unread && !!query.data?.pages[0].readCount && (
+          <AsyncButton
+            className="text-button"
+            action={() => dismiss({ through: query.data!.pages[0].asOf })}
+          >
+            Dismiss all read
+          </AsyncButton>
+        )}
         {!!query.data?.pages[0].unreadCount && (
           <AsyncButton
             action={() =>
@@ -195,23 +245,47 @@ export function NotificationCenter() {
                   })}
                 </time>
               </div>
-              <AsyncButton
-                className="text-button"
-                label={`${n.readAt ? "Mark unread" : "Mark read"}: ${n.message}`}
-                action={() =>
-                  mutate("notifications/read", { ids: [n.id], read: !n.readAt })
-                }
-              >
-                {n.readAt ? "Mark unread" : "Mark read"}
-              </AsyncButton>
+              <div className="notification-row-actions">
+                <AsyncButton
+                  className="text-button"
+                  label={`${n.readAt ? "Mark unread" : "Mark read"}: ${n.message}`}
+                  action={() =>
+                    mutate("notifications/read", {
+                      ids: [n.id],
+                      read: !n.readAt,
+                    })
+                  }
+                >
+                  {n.readAt ? "Mark unread" : "Mark read"}
+                </AsyncButton>
+                <AsyncButton
+                  className="text-button"
+                  label={`Dismiss: ${n.message}`}
+                  action={() => dismiss({ ids: [n.id] })}
+                >
+                  Dismiss
+                </AsyncButton>
+              </div>
             </li>
           ))}
         </ul>
       ) : (
-        <Empty title={unread ? "You’re all caught up" : "No updates yet"}>
+        <Empty
+          title={unread ? "You’re all caught up" : "No notifications to show"}
+          action={
+            unread ? (
+              <button
+                className="button secondary"
+                onClick={() => setUnread(false)}
+              >
+                View all notifications
+              </button>
+            ) : undefined
+          }
+        >
           {unread
             ? "New unread updates will appear here."
-            : "Follow a person or wish list, or join a gift conversation to get updates here."}
+            : "New updates from your people and gift plans will appear here."}
         </Empty>
       )}
       {query.hasNextPage && (
