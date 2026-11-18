@@ -6015,7 +6015,22 @@ test("people directory searches, jumps, and restores profile navigation", async 
     page.getByText("Invite someone to Little Hint", { exact: true }),
   ).not.toBeVisible();
   const search = page.getByRole("searchbox", { name: "Search people" });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  const alphabet = page.getByRole("navigation", { name: "People by letter" });
+  await expect(alphabet).toBeVisible();
+  await expect(alphabet.getByRole("button")).toHaveCount(27);
+  const letters = await alphabet.getByRole("button").all();
+  const firstLetter = (await letters[0].boundingBox())!;
+  const lastLetter = (await letters[26].boundingBox())!;
+  expect(firstLetter.y).toBe(lastLetter.y);
+  expect(firstLetter.y).toBeGreaterThanOrEqual(
+    (await search.boundingBox())!.y + (await search.boundingBox())!.height,
+  );
+  await page.screenshot({
+    path: testInfo.outputPath("directory-desktop-alphabet.png"),
+  });
   await search.fill("  MOR émili  ");
+  await expect(alphabet).toHaveCount(0);
   await expect(page.locator(".people-directory .person-row")).toHaveCount(1);
   await expect(page.locator(".person-row h3")).toHaveText("Émilie Morgan");
   await page.locator(".person-row").click();

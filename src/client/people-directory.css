@@ -1,5 +1,12 @@
 .directory-help {
   margin-bottom: 16px;
+  padding: 0 16px;
+}
+.directory-help summary {
+  font-weight: 600;
+}
+.directory-help[open] {
+  padding-bottom: 16px;
 }
 .directory-help p {
   margin: 8px 0 0;
@@ -19,17 +26,25 @@
   margin-bottom: 8px;
 }
 .directory-search {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 8px;
 }
 .directory-search > svg {
-  flex-shrink: 0;
+  position: absolute;
+  left: 12px;
+  pointer-events: none;
+}
+.directory-search .icon-button {
+  position: absolute;
+  right: 4px;
 }
 .directory-search input {
   min-width: 0;
   flex: 1;
   width: 100%;
+  padding-inline: 40px 48px;
 }
 .directory-search input::-webkit-search-cancel-button {
   display: none;
@@ -166,4 +181,20 @@
 
 .directory-search-anchor {
   scroll-margin-top: var(--directory-top, 0px);
+}
+
+@media (min-width: 651px) {
+  .directory-toolbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 16px;
+    align-items: center;
+  }
+  .directory-toolbar > label,
+  .directory-alphabet {
+    grid-column: 1 / -1;
+  }
+  .directory-status {
+    margin-top: 0;
+  }
 }
