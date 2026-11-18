@@ -1,3 +1,4 @@
+import { PeopleDirectory } from "./PeopleDirectory";
 import { PersonCoManagement } from "./CoManagement";
 import { ItemPhotoDetail } from "./ItemPhotoDetail";
 import { HelpfulNote } from "./HelpfulNoteView";
@@ -45,7 +46,7 @@ import {
   eventSpendingContext,
   spendingGuideline,
 } from "../shared/spending-guidance";
-import { priorityLabels } from "../shared/organization";
+import { priorityLabels, ordered } from "../shared/organization";
 import { ItemActions } from "./Management";
 import {
   NotificationBell,
@@ -80,6 +81,7 @@ import {
   useSearchParams,
 } from "react-router-dom";
 import {
+  CalendarDays,
   Heart,
   Users,
   ListChecks,
@@ -847,7 +849,7 @@ function Home() {
   );
 }
 function People() {
-  const { world, open } = useApp();
+  const { open } = useApp();
   return (
     <>
       <Header
@@ -868,49 +870,7 @@ function People() {
           Managed profile
         </button>
       </Header>
-      <p className="notice">
-        <Link to="/settings?section=invitations">
-          Invite someone to Little Hint
-        </Link>{" "}
-        so they can manage their own wishes. To share lists, send a separate{" "}
-        <Link to="/settings?section=groups&view=members">
-          family-group invitation
-        </Link>
-        . Create a managed profile for someone whose wishes you’ll look after.
-      </p>
-      <div className="people-list">
-        {world.people.map((p) => (
-          <Link
-            className="person-row"
-            key={p.id}
-            to={`/people/${p.id}${world.friendEntries?.some((f) => f.personId === p.id && !f.connectedAt) ? "?tab=ideas" : ""}`}
-          >
-            <Avatar name={p.name} />
-            <div>
-              <h2>{p.name}</h2>
-              <p>
-                {p.userId === world.me.id
-                  ? "Your wish lists"
-                  : p.guardians.includes(world.me.id)
-                    ? "Managed by you"
-                    : world.coManagement?.arrangements.some(
-                          (r) =>
-                            r.personId === p.id &&
-                            r.helperId === world.me.id &&
-                            r.status === "active",
-                        )
-                      ? "Wishes co-managed by you"
-                      : world.friendEntries?.some(
-                            (f) => f.personId === p.id && !f.connectedAt,
-                          )
-                        ? "Gift ideas · Not connected"
-                        : "Wishes & gift ideas"}
-              </p>
-            </div>
-            <ArrowRight size={19} />
-          </Link>
-        ))}
-      </div>
+      <PeopleDirectory />
     </>
   );
 }
@@ -976,14 +936,17 @@ function PersonPage() {
   const unconnectedFriend = friendEntries.some((f) => !f.connectedAt);
   const archivedFriend =
     unconnectedFriend && friendEntries.every((f) => f.archived);
-  const lists = world.lists.filter(
-    (list) =>
-      !list.archived &&
-      list.ownerIds.includes(person.id) &&
-      // Pending ownership invitations also appear in world.lists, but do not
-      // grant access to the list's contents until accepted.
-      (list.canEdit ||
-        world.groups.some((group) => list.groupIds.includes(group.id))),
+  const lists = ordered(
+    world.lists.filter(
+      (list) =>
+        !list.archived &&
+        list.ownerIds.includes(person.id) &&
+        // Pending ownership invitations also appear in world.lists, but do not
+        // grant access to the list's contents until accepted.
+        (list.canEdit ||
+          world.groups.some((group) => list.groupIds.includes(group.id))),
+    ),
+    "name-asc",
   );
   const editableLists = lists.filter((l) => l.canEdit);
   const addWish = () =>
@@ -1081,7 +1044,9 @@ function PersonPage() {
           </button>
         )}
         <DiscoveryLink personId={person.id} />
-        {person.userId && <FollowButton target="person" targetId={person.id} />}
+        {person.userId && person.userId !== world.me.id && (
+          <FollowButton target="person" targetId={person.id} />
+        )}
         {own ? (
           <>
             <button
@@ -1174,7 +1139,14 @@ function PersonPage() {
                       )}
                       aria-labelledby={`person-list-name-${list.id} person-list-type-${list.id}`}
                     >
-                      <span>
+                      <span className="list-symbol" aria-hidden="true">
+                        {list.groupEventId ? (
+                          <CalendarDays size={24} />
+                        ) : (
+                          <ListChecks size={24} />
+                        )}
+                      </span>
+                      <span className="person-list-copy">
                         <strong id={`person-list-name-${list.id}`}>
                           {list.name}
                         </strong>{" "}

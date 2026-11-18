@@ -1,0 +1,200 @@
+.directory-help {
+  margin-bottom: 16px;
+  padding: 0 16px;
+}
+.directory-help summary {
+  font-weight: 600;
+}
+.directory-help[open] {
+  padding-bottom: 16px;
+}
+.directory-help p {
+  margin: 8px 0 0;
+  max-width: 75ch;
+}
+.directory-toolbar {
+  position: sticky;
+  top: var(--directory-top, 0px);
+  z-index: 2;
+  background: var(--bg);
+  padding: 12px 0 8px;
+}
+.directory-toolbar > label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.directory-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.directory-search > svg {
+  position: absolute;
+  left: 12px;
+  pointer-events: none;
+}
+.directory-search .icon-button {
+  position: absolute;
+  right: 4px;
+}
+.directory-search input {
+  min-width: 0;
+  flex: 1;
+  width: 100%;
+  padding-inline: 40px 48px;
+}
+.directory-search input::-webkit-search-cancel-button {
+  display: none;
+}
+.directory-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.directory-alphabet {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.directory-alphabet button {
+  min-width: 32px;
+  min-height: 44px;
+  padding: 6px;
+  border: 0;
+  background: none;
+  color: var(--text);
+  border-radius: 4px;
+}
+.directory-alphabet button[aria-current],
+.directory-alphabet button:hover:not(:disabled) {
+  background: var(--soft);
+  color: var(--accent);
+}
+.directory-alphabet button:disabled {
+  opacity: 0.45;
+}
+.directory-section {
+  margin-top: 16px;
+}
+.directory-section > h2 {
+  font-size: 14px;
+  padding: 4px 8px;
+  background: var(--soft);
+  margin-bottom: 0;
+  scroll-margin-top: calc(var(--directory-toolbar-height, 180px) + 8px);
+}
+.people-directory .person-row {
+  padding: 12px 0;
+}
+.people-directory .person-row .avatar {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+}
+.people-directory .person-row h3 {
+  font-size: 17px;
+  margin-bottom: 3px;
+}
+.people-directory .person-row:hover h3 {
+  color: var(--accent);
+}
+.people-directory .person-row > svg {
+  flex-shrink: 0;
+}
+.directory-letter-dialog {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(44px, 1fr));
+  gap: 8px;
+}
+.directory-letter-dialog button {
+  padding: 8px;
+}
+.directory-rail {
+  display: none;
+}
+@media (pointer: coarse) {
+  .directory-alphabet button {
+    min-width: 44px;
+  }
+}
+@media (max-width: 650px) {
+  .directory-alphabet {
+    display: none;
+  }
+  .directory-rail {
+    display: flex;
+    visibility: hidden;
+    position: fixed;
+    right: 4px;
+    width: 44px;
+    flex-direction: column;
+    align-items: center;
+    touch-action: none;
+    user-select: none;
+    z-index: 3;
+  }
+  .has-letter-rail .directory-rail {
+    visibility: visible;
+  }
+  .directory-rail span {
+    font-size: 12px;
+    line-height: 1.4;
+    min-height: 16px;
+    width: 24px;
+    text-align: center;
+    color: var(--accent);
+  }
+  .directory-rail .unavailable {
+    color: var(--muted);
+    opacity: 0.45;
+  }
+  .directory-rail .active {
+    color: var(--on-accent);
+    background: var(--accent);
+    border-radius: 4px;
+  }
+  .has-letter-rail .directory-section {
+    margin-right: 32px;
+  }
+}
+.preference-note {
+  margin-top: 16px;
+}
+.preference-note p {
+  max-width: 68ch;
+}
+.person-list-link {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) 16px;
+}
+.person-list-link .list-symbol {
+  align-self: start;
+}
+
+.directory-search-anchor {
+  scroll-margin-top: var(--directory-top, 0px);
+}
+
+@media (min-width: 651px) {
+  .directory-toolbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 16px;
+    align-items: center;
+  }
+  .directory-toolbar > label,
+  .directory-alphabet {
+    grid-column: 1 / -1;
+  }
+  .directory-status {
+    margin-top: 0;
+  }
+}
