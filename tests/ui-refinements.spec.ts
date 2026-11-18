@@ -1,3 +1,4 @@
+import { discussionAudience } from "../src/server/discussion-access";
 import { test, expect, webkit, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { spendingHistory, spendingView } from "../src/server/spending";
@@ -45,6 +46,18 @@ async function setup(page: Page) {
   await page.route("**/api/**", async (route) => {
     const url = new URL(route.request().url());
     const path = url.pathname.replace("/api/v1/", "");
+    if (/^items\/[^/]+\/discussion-audience$/.test(path)) {
+      const q = Object.fromEntries(url.searchParams);
+      return route.fulfill({
+        json: discussionAudience(
+          state,
+          actor,
+          path.split("/")[1],
+          q.commentId,
+          { ...q, ordinary: q.ordinary === "true" },
+        ),
+      });
+    }
     if (path === "items" && route.request().method() === "GET")
       return route.fulfill({
         json: await itemPage(
@@ -372,7 +385,7 @@ for (const [width, kind] of [
       .getByLabel("Buying for", { exact: true });
     await expect(selector).toBeVisible();
     await expect(selector).toHaveAccessibleDescription(
-      "Choose an exchange or a separate gift to set who can read your private notes.",
+      "Choose an exchange or a separate gift to set who can read your notes.",
     );
     await expect(page.locator(".back-link + .gift-detail")).toBeVisible();
     await selector.selectOption("ordinary");

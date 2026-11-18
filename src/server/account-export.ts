@@ -1,3 +1,4 @@
+import { noteVisible } from "./discussion-access";
 import { listCanEdit } from "./co-management";
 import { draftAccess } from "./domain-access";
 import type { FastifyInstance, FastifyRequest } from "fastify";
@@ -79,7 +80,13 @@ export function accountExport(s: State, a: Actor) {
           (r) => r.id === c.reservationId && r.buyerId === a.id,
         ),
     ),
-    comments: s.comments.filter((c) => c.authorId === a.id),
+    comments: s.comments.filter(
+      (c) =>
+        c.authorId === a.id &&
+        s.items.some(
+          (i) => i.id === c.itemId && noteVisible(s, a, i, c.giverId, c),
+        ),
+    ),
     friends: s.friendEntries.filter((f) => f.creatorId === a.id),
     spending: {
       records: s.spendingRecords.filter((r) => r.ownerId === a.id),

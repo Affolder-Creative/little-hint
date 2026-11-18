@@ -132,7 +132,7 @@ function itemSharedWith(s: State, a: Actor, i: Item): boolean {
   }
   if (i.creatorId === a.id) return true;
   if (i.visibility === "private") return false;
-  if (recipient(s, a, i)) return i.visibility === "visible";
+  if (selfRecipient(s, a, i.recipientIds)) return i.visibility === "visible";
   return i.groupIds.some(
     (g) =>
       groupAccess(s, a, g) &&

@@ -270,6 +270,7 @@ export interface Contribution extends Base {
   status: "pledged" | "sent" | "received" | "cancelled";
 }
 export interface Comment extends Base {
+  excludeRecipients?: boolean;
   privacyReview?: boolean;
   authorOnly?: boolean;
   ordinary?: boolean;
@@ -697,6 +698,7 @@ export interface GiftView extends Omit<
   }>;
   comments?: Array<{
     audience?: string;
+    protectedHistory?: boolean;
     needsPrivacyReview?: boolean;
     revision: number;
     canEdit: boolean;

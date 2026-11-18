@@ -8,7 +8,6 @@ import {
 } from "../src/shared/model";
 import {
   stamp,
-  command,
   giftView,
   giftSummary,
   itemVisible,
@@ -16,6 +15,7 @@ import {
   idempotent,
   noticeAllowed,
 } from "../src/server/domain";
+import { commandWithAudience as command } from "./discussion-command";
 import { matchExchange } from "../src/server/exchange";
 function fixture() {
   const s = emptyState();
@@ -90,7 +90,7 @@ describe("surprise privacy", () => {
     expect(Object.keys(before)).not.toContain("reservations");
     expect(f.s.notices.some((n) => n.userId === f.actors[0].id)).toBe(false);
   });
-  it("allows transparent status but excludes private conversation and pool details", () => {
+  it("allows transparent discussion but excludes pool details", () => {
     const f = fixture();
     f.list.mode = "transparent";
     const r = reserve(f);
@@ -102,7 +102,9 @@ describe("surprise privacy", () => {
     const dto = giftView(f.s, f.actors[0], f.item);
     expect(dto.reserved).toBe(1);
     expect(dto.reservations![0].buyerName).toBe("Sam");
-    expect(dto).not.toHaveProperty("comments");
+    expect(dto.comments).toEqual([
+      expect.objectContaining({ body: "Private plans" }),
+    ]);
     expect(dto.reservations![0]).not.toHaveProperty("poolTargetCents");
     expect(dto.reservations![0]).not.toHaveProperty("contributions");
   });
@@ -138,7 +140,7 @@ describe("surprise privacy", () => {
     const guardian = giftView(f.s, f.actors[0], f.item);
     expect(guardian.available).toBe(1);
     expect(guardian.reservations).toEqual([]);
-    expect(guardian.comments).toBeUndefined();
+    expect(guardian.comments).toEqual([]);
   });
   it("keeps privacy mode locked after unsharing", () => {
     const f = fixture();

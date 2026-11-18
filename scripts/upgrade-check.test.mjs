@@ -280,3 +280,37 @@ test("schema 9 accepts only the exact lifecycle baseline and preserves legacy ev
     assert.throws(() => assertPreserved(changed, baseline));
   }
 });
+
+test("upgrade permits empty discussions for recipient-visible content without weakening surprise checks", () => {
+  for (const listed of [false, true]) {
+    const baseline = structuredClone(original);
+    const item = {
+      id: "gift",
+      visibility: "visible",
+      publicationState: "published",
+      ...(listed ? { listId: "list" } : {}),
+    };
+    baseline.records = [
+      { id: "gift", kind: "items", data: item },
+      { id: "list", kind: "lists", data: { mode: "transparent" } },
+    ];
+    baseline.views = {
+      recipient: { items: [{ id: "gift", isRecipient: true }] },
+    };
+    const candidate = structuredClone(baseline);
+    candidate.views.recipient.items[0].comments = [];
+    assertPreserved(candidate, baseline);
+    assertPreserved(baseline, baseline);
+    candidate.views.recipient.items[0].comments = [{ body: "Secret plan" }];
+    assert.throws(() => assertPreserved(candidate, baseline));
+    candidate.views.recipient.items[0].comments = [];
+    if (listed) {
+      baseline.records[1].data.mode = "surprise";
+      candidate.records[1].data.mode = "surprise";
+    } else {
+      item.visibility = "hidden";
+      candidate.records[0].data.visibility = "hidden";
+    }
+    assert.throws(() => assertPreserved(candidate, baseline));
+  }
+});

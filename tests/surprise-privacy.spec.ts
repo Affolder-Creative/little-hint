@@ -93,9 +93,9 @@ for (const width of [1440, 393]) {
       await expect(giver.getByLabel("Buying for", { exact: true })).toHaveValue(
         `${e.id}:${e.myAssignments[0][0]}:${recipientId}`,
       );
-      await expect(
-        giver.getByText("New notes are visible only to", { exact: false }),
-      ).toBeVisible();
+      await expect(giver.locator(".discussion form")).toContainText(
+        "Giver and profile managers; recipients excluded",
+      );
       await giver
         .locator("textarea")
         .fill("Unsent note survives audience selection");
@@ -105,14 +105,29 @@ for (const width of [1440, 393]) {
       await expect(giver.locator("textarea")).toHaveValue(
         "Unsent note survives audience selection",
       );
+      await expect(giver.locator(".discussion form")).toContainText(
+        "People with access, excluding recipients",
+      );
+      await expect(
+        giver.getByRole("button", { name: "Add note", exact: true }),
+      ).toBeDisabled();
       await giver.locator("textarea").fill("");
       await giver.reload();
       await expect(giver.getByLabel("Buying for", { exact: true })).toHaveValue(
         "ordinary",
       );
+      await expect(giver.locator(".discussion form")).toContainText(
+        "People with access, excluding recipients",
+      );
       await giver
         .getByLabel("Buying for", { exact: true })
         .selectOption(`${e.id}:${e.myAssignments[0][0]}:${recipientId}`);
+      await expect(giver.locator(".discussion form")).toContainText(
+        "Giver and profile managers; recipients excluded",
+      );
+      await giver
+        .getByRole("button", { name: "I’ve reviewed the audience" })
+        .click();
       const extraTab = await contexts[1].newPage();
       await extraTab.goto(giver.url());
       await expect(
@@ -128,7 +143,7 @@ for (const width of [1440, 393]) {
         "Audit note: I drew this person in the secret exchange.",
       );
       await giver
-        .getByRole("button", { name: "Add private note", exact: true })
+        .getByRole("button", { name: "Add note", exact: true })
         .click();
       await observer.goto(`/gift/${item.id}`);
       await expect(
@@ -174,7 +189,7 @@ for (const width of [1440, 393]) {
       await giver.reload();
       await giver.locator("textarea").fill("Still private after release");
       await giver
-        .getByRole("button", { name: "Add private note", exact: true })
+        .getByRole("button", { name: "Add note", exact: true })
         .click();
       await expect(
         giver.getByText("Still private after release", { exact: true }),

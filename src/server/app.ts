@@ -1,3 +1,4 @@
+import { discussionAudience } from "./discussion-access";
 import { itemPhotoLimit } from "./photo-config";
 import { itemPhotos } from "../shared/item-photos";
 import { priceReport } from "./price-report";
@@ -396,6 +397,28 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
         a,
         req.params.id,
         q.q,
+        q.commentId,
+        { ...q, ordinary: q.ordinary === "true" },
+      );
+    },
+  );
+  app.get<{ Params: { id: string } }>(
+    "/api/v1/items/:id/discussion-audience",
+    async (req) => {
+      const a = await actor(req);
+      const q = z
+        .object({
+          commentId: z.string().uuid().optional(),
+          ordinary: z.enum(["true", "false"]).optional(),
+          exchangeId: z.string().uuid().optional(),
+          giverId: z.string().uuid().optional(),
+          exchangeRecipientId: z.string().uuid().optional(),
+        })
+        .parse(req.query);
+      return discussionAudience(
+        await readState(),
+        a,
+        req.params.id,
         q.commentId,
         { ...q, ordinary: q.ordinary === "true" },
       );

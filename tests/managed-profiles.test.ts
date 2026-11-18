@@ -1,13 +1,13 @@
 import { describe, expect, it, afterEach, vi } from "vitest";
 import { stagingFixtures } from "../src/server/staging-fixtures";
 import {
-  command,
   giftView,
   world,
   signupAllowed,
   activateAccount,
   stamp,
 } from "../src/server/domain";
+import { commandWithAudience as command } from "./discussion-command";
 import { peopleForGroup } from "../src/shared/group-events";
 import { itemVisible, personVisible } from "../src/server/domain-access";
 import { encrypt } from "../src/server/settings";
@@ -104,7 +104,9 @@ describe("managed profiles", () => {
     expect(before.canShop).toBe(true);
     expect(before.available).toBe(1);
     expect(before.reservations).toEqual([]);
-    expect(before.comments).toBeUndefined();
+    expect(before.comments).toEqual([
+      expect.objectContaining({ body: "Private plan" }),
+    ]);
     const r = command(f.state, f.guardian, "reservations.create", {
       itemId: f.item.id,
       quantity: 1,

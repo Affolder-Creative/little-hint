@@ -1263,7 +1263,10 @@ function GiftDetail() {
     (total, reservation) => total + (reservation.purchased ?? 0),
     0,
   );
-  const choices = shoppingChoices(world, gift);
+  const actualRecipient = gift.recipientIds.some((id) =>
+    world.people.some((p) => p.id === id && p.userId === world.me.id),
+  );
+  const choices = actualRecipient ? [] : shoppingChoices(world, gift);
   const selectedExchange = choices.find((c) => c.key === exchange);
   const spendingContext = selectedExchange
     ? {
@@ -1274,10 +1277,10 @@ function GiftDetail() {
       }
     : eventSpendingContext(world, gift);
   const contextInNotes =
-    !gift.available &&
+    (!gift.available || !(gift.canShop ?? !gift.isRecipient)) &&
     !!gift.comments &&
     !gift.archived &&
-    (gift.canShop ?? !gift.isRecipient);
+    !actualRecipient;
   const contextSelector = (choices.length > 0 ||
     exchange ||
     gift.comments?.some((c) => c.needsPrivacyReview) ||
@@ -1285,7 +1288,7 @@ function GiftDetail() {
     <div className="shopping-context">
       <Field
         label="Buying for"
-        hint="Choose an exchange or a separate gift to set who can read your private notes."
+        hint="Choose an exchange or a separate gift to set who can read your notes."
       >
         <select
           value={exchange}
@@ -1619,23 +1622,8 @@ function GiftDetail() {
       )}
       {gift.comments && (
         <section className="detail-section discussion">
-          <h2>Private notes</h2>
+          <h2>Discussion</h2>
           {contextInNotes && contextSelector}
-          {!(
-            contextInNotes &&
-            contextSelector &&
-            !selectedExchange &&
-            exchange !== "ordinary"
-          ) && (
-            <p className="muted">
-              {selectedExchange
-                ? `New notes are visible only to ${world.people.find((p) => p.id === selectedExchange.giver)?.name ?? "this giver"} and people managing their profile. Recipients cannot read them.`
-                : (choices.length && !exchange) ||
-                    (exchange !== "ordinary" && exchange && !selectedExchange)
-                  ? "Choose a gift context under Buying for before writing a note."
-                  : "New notes are visible to other shoppers with access to this gift. Recipients cannot read them."}
-            </p>
-          )}
           {noteLocation.hash.startsWith("#note-") &&
             !gift.comments.some(
               (c) => `#note-${c.id}` === noteLocation.hash,
@@ -1645,61 +1633,86 @@ function GiftDetail() {
               </p>
             )}
           {gift.comments.length ? (
-            gift.comments.map((c) => (
-              <div key={c.id}>
-                {c.needsPrivacyReview && (
-                  <div>
-                    <p>
-                      This older note may describe an exchange. Only you can
-                      read it until you choose its audience.
+            [false, true].map((protectedHistory) => {
+              const notes = gift.comments!.filter(
+                (c) => !!c.protectedHistory === protectedHistory,
+              );
+              return notes.length ? (
+                <div key={String(protectedHistory)}>
+                  <h3>
+                    {protectedHistory
+                      ? "Earlier private notes"
+                      : "Conversation"}
+                  </h3>
+                  {protectedHistory && (
+                    <p className="muted">
+                      These notes keep their original privacy. Sharing this gift
+                      does not reveal them to recipients.
                     </p>
-                    <Action
-                      secondary
-                      onClick={() =>
-                        mutate("privacy/review", {
-                          id: c.id,
-                          revision: c.revision,
-                          kind: "note",
-                          authorOnly: true,
-                        })
-                      }
-                    >
-                      Keep note private
-                    </Action>
-                    <Action
-                      onClick={() =>
-                        mutate("privacy/review", {
-                          id: c.id,
-                          revision: c.revision,
-                          kind: "note",
-                          ...shoppingPayload(exchange),
-                        })
-                      }
-                    >
-                      Confirm selected audience
-                    </Action>
-                  </div>
-                )}
-                <p className="muted">Visible to: {c.audience}</p>
-                <PrivateNote
-                  note={c}
-                  itemId={gift.id}
-                  targeted={noteLocation.hash === `#note-${c.id}`}
-                />
-              </div>
-            ))
+                  )}
+                  {notes.map((c) => (
+                    <div key={c.id}>
+                      {c.needsPrivacyReview && (
+                        <div>
+                          <p>
+                            This older note may describe an exchange. Only you
+                            can read it until you choose its audience.
+                          </p>
+                          <Action
+                            secondary
+                            onClick={() =>
+                              mutate("privacy/review", {
+                                id: c.id,
+                                revision: c.revision,
+                                kind: "note",
+                                authorOnly: true,
+                              })
+                            }
+                          >
+                            Keep note private
+                          </Action>
+                          <Action
+                            onClick={() =>
+                              mutate("privacy/review", {
+                                id: c.id,
+                                revision: c.revision,
+                                kind: "note",
+                                ...shoppingPayload(exchange),
+                              })
+                            }
+                          >
+                            Confirm selected audience
+                          </Action>
+                        </div>
+                      )}
+                      <p className="muted">Visible to: {c.audience}</p>
+                      <PrivateNote
+                        note={c}
+                        itemId={gift.id}
+                        targeted={noteLocation.hash === `#note-${c.id}`}
+                      />
+                    </div>
+                  ))}
+                </div>
+              ) : null;
+            })
           ) : (
             <p>No notes yet. Sizes, plans, and helpful details go here.</p>
           )}
           <WatchButton itemId={gift.id} />
           {!gift.archived &&
-            ((!choices.length && !exchange) ||
+            (actualRecipient ||
+              (!choices.length && !exchange) ||
               exchange === "ordinary" ||
               selectedExchange) && (
               <MentionNote
                 key={gift.id}
                 itemId={gift.id}
-                context={shoppingPayload(exchange)}
+                context={
+                  actualRecipient
+                    ? { ordinary: true }
+                    : shoppingPayload(exchange)
+                }
               />
             )}
         </section>
