@@ -450,3 +450,155 @@ test("long friend names and enlarged text fit a narrow phone", async ({
     ),
   ).toBe(true);
 });
+
+test("connected account sharing and gift controls polish", async ({
+  page,
+}, info) => {
+  const f = await fixture(page);
+  const entry = command(f.state, f.actor, "friends.create", {
+    name: "Taylor",
+  }) as any;
+  const privateIdea = command(f.state, f.actor, "items.create", {
+    title: "Private book",
+    recipientIds: [entry.personId],
+  }) as any;
+  const inv = command(f.state, f.actor, "friends.invite", {
+    id: entry.id,
+    email: f.actors[2].email,
+  }) as any;
+  command(f.state, f.actors[2], "invitations.accept", { id: inv.id });
+  await page.goto(`/people/${entry.personId}?tab=ideas`);
+  await expect(
+    page.getByRole("region", { name: "Friend planning" }),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: /^Sort & filter/ }).click();
+  await page
+    .getByRole("combobox", { name: "Visibility", exact: true })
+    .selectOption("shared");
+  await page.getByRole("button", { name: "Done", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "No matches found" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: /^Sort & filter/ }).click();
+  await page
+    .getByRole("combobox", { name: "Visibility", exact: true })
+    .selectOption("only-me");
+  await page.getByRole("button", { name: "Done", exact: true }).click();
+  await expect(page.getByText("Private book", { exact: true })).toBeVisible();
+  for (const width of [390, 768, 1280])
+    for (const theme of ["light", "dark"]) {
+      await page.setViewportSize({ width, height: 950 });
+      await page
+        .locator("html")
+        .evaluate((el, t) => (el.dataset.theme = t), theme);
+      await page.screenshot({
+        path: info.outputPath(`connected-${width}-${theme}.png`),
+        fullPage: true,
+      });
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+      ).toBe(true);
+    }
+  await page
+    .getByRole("button", { name: "Add gift idea", exact: true })
+    .first()
+    .click();
+  await expect(
+    page
+      .getByLabel("Who can see this idea?")
+      .locator('option[value="visible"]'),
+  ).toHaveCount(1);
+  await page.getByRole("button", { name: "Close dialog", exact: true }).click();
+  await page.goto(`/gift/${privateIdea.id}`);
+  await page
+    .getByRole("button", { name: "Edit gift idea", exact: true })
+    .click();
+  const note = page.getByRole("textbox", {
+    name: "A helpful note",
+    exact: true,
+  });
+  await note.fill("A useful book");
+  await note.press("ControlOrMeta+a");
+  await page
+    .getByRole("button", { name: "Add or edit link", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Remove link", exact: true }),
+  ).toHaveCount(0);
+  await page.getByLabel("Link address").fill("https://example.com/book");
+  await page.getByRole("button", { name: "Apply link", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Add or edit link", exact: true })
+    .click();
+  for (const width of [320, 390, 768, 1280])
+    for (const theme of ["light", "dark"]) {
+      await page.setViewportSize({ width, height: 950 });
+      await page
+        .locator("html")
+        .evaluate((el, t) => (el.dataset.theme = t), theme);
+      await page
+        .getByRole("button", { name: "Remove link", exact: true })
+        .scrollIntoViewIfNeeded();
+      await page.screenshot({
+        path: info.outputPath(`link-${width}-${theme}.png`),
+        fullPage: true,
+      });
+      expect(
+        await page
+          .getByRole("dialog")
+          .evaluate((el) => el.scrollWidth <= el.clientWidth),
+      ).toBe(true);
+    }
+  await page.getByRole("button", { name: "Remove link", exact: true }).click();
+  await expect(note.locator("a")).toHaveCount(0);
+  await expect(note).toHaveText("A useful book");
+});
+
+test("reservation summary help and event icon polish", async ({
+  page,
+}, info) => {
+  const f = await fixture(page);
+  f.list.revealAfter = "2030-12-26";
+  f.list.timeZone = "America/Indiana/Indianapolis";
+  f.setActor(f.actors[1]);
+  await page.goto(`/gift/${f.wish.id}`);
+  await expect(
+    page.getByText(
+      "List owners can view the gift summary after Dec 26, 2030.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  for (const width of [390, 1280])
+    for (const theme of ["light", "dark"]) {
+      await page.setViewportSize({ width, height: 950 });
+      await page
+        .locator("html")
+        .evaluate((el, t) => (el.dataset.theme = t), theme);
+      const trigger = page.getByRole("button", {
+        name: "About gift summary privacy",
+      });
+      await trigger.click();
+      await expect(
+        page.getByRole("dialog", { name: "Gift summary privacy", exact: true }),
+      ).toBeVisible();
+      await page.screenshot({
+        path: info.outputPath(`reservation-${width}-${theme}.png`),
+        fullPage: true,
+      });
+      await page.keyboard.press("Escape");
+      await expect(trigger).toBeFocused();
+    }
+  f.setActor(f.actors[0]);
+  await page.goto("/lists");
+  await expect(
+    page
+      .getByRole("button", { name: "Create event", exact: true })
+      .locator("svg.lucide-calendar-plus"),
+  ).toBeVisible();
+  await page.screenshot({
+    path: info.outputPath("create-event.png"),
+    fullPage: true,
+  });
+});

@@ -16,8 +16,9 @@ import {
   type Kind,
   type Setting,
   type ImportJob,
+  type FriendEntry,
 } from "../shared/model";
-const supportedSchemaVersion = 9;
+const supportedSchemaVersion = 10;
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   max: 10,
@@ -248,6 +249,41 @@ INSERT INTO schema_migration(version) VALUES (2);`);
           r.id,
         ]);
       await client.query("INSERT INTO schema_migration(version) VALUES (9)");
+    }
+    const connectedMigration = await client.query(
+      "SELECT 1 FROM schema_migration WHERE version=10",
+    );
+    if (!connectedMigration.rowCount) {
+      const result = await client.query(
+        "SELECT kind,data FROM app_record WHERE kind IN ('friendEntries','items','imports')",
+      );
+      const entries = new Map<string, FriendEntry>(
+        result.rows
+          .filter((r) => r.kind === "friendEntries" && r.data.connectedAt)
+          .map((r) => [r.data.id, r.data]),
+      );
+      for (const row of result.rows) {
+        const target =
+          row.kind === "items"
+            ? row.data
+            : row.kind === "imports"
+              ? row.data.draft
+              : undefined;
+        const entry = target && entries.get(target.friendEntryId);
+        if (!entry) continue;
+        target.groupIds = entry.archived
+          ? []
+          : (target.groupIds ?? []).filter((id: string) =>
+              entry.groupIds.includes(id),
+            );
+        if (!target.groupIds.length) target.visibility = "private";
+        target.revision = (target.revision ?? 0) + 1;
+        await client.query("UPDATE app_record SET data=$1 WHERE id=$2", [
+          JSON.stringify(row.data),
+          row.data.id,
+        ]);
+      }
+      await client.query("INSERT INTO schema_migration(version) VALUES (10)");
     }
     await client.query("COMMIT");
   } catch (e) {

@@ -314,3 +314,32 @@ test("upgrade permits empty discussions for recipient-visible content without we
     assert.throws(() => assertPreserved(candidate, baseline));
   }
 });
+
+test("upgrade derives visibility metadata from retained audiences without accepting changed values", () => {
+  for (const [listId, visibility, scope] of [
+    [undefined, "private", "only-me"],
+    [undefined, "hidden", "shared"],
+    ["list", "private", "shared"],
+  ]) {
+    const baseline = structuredClone(original);
+    baseline.records = [
+      { id: "gift", kind: "items", data: { id: "gift", listId, visibility } },
+      { id: "list", kind: "lists", data: { id: "list", groupIds: ["family"] } },
+      {
+        id: "family",
+        kind: "groups",
+        data: { id: "family", memberIds: ["a", "b"] },
+      },
+      { id: "a", kind: "people", data: { userId: "a" } },
+      { id: "b", kind: "people", data: { userId: "b" } },
+    ];
+    baseline.views.recipient.items = [{ id: "gift", isRecipient: false }];
+    const candidate = structuredClone(baseline);
+    candidate.views.recipient.items[0].visibilityScope = scope;
+    assertPreserved(candidate, baseline);
+    assertPreserved(baseline, baseline);
+    candidate.views.recipient.items[0].visibilityScope =
+      scope === "shared" ? "only-me" : "shared";
+    assert.throws(() => assertPreserved(candidate, baseline));
+  }
+});

@@ -3,6 +3,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import {
+  Unlink,
   Bold,
   Italic,
   Strikethrough,
@@ -197,6 +198,7 @@ export function HelpfulNoteEditor({
               if (e.key === "Escape") {
                 e.stopPropagation();
                 setLinkOpen(false);
+                setError("");
                 editor?.commands.focus();
               }
             }}
@@ -245,30 +247,35 @@ export function HelpfulNoteEditor({
               </button>
               <button
                 type="button"
-                className="text-button"
-                disabled={disabled}
-                onClick={() => {
-                  editor
-                    ?.chain()
-                    .focus()
-                    .extendMarkRange("link")
-                    .unsetLink()
-                    .run();
-                  setLinkOpen(false);
-                }}
-              >
-                Remove link
-              </button>
-              <button
-                type="button"
-                className="text-button"
+                className="button secondary small"
                 onClick={() => {
                   setLinkOpen(false);
+                  setError("");
                   editor?.commands.focus();
                 }}
               >
                 Cancel
               </button>
+              {editor?.isActive("link") && (
+                <button
+                  type="button"
+                  className="text-button danger"
+                  disabled={disabled}
+                  onClick={() => {
+                    editor
+                      .chain()
+                      .focus()
+                      .extendMarkRange("link")
+                      .unsetLink()
+                      .run();
+                    setError("");
+                    setLinkOpen(false);
+                  }}
+                >
+                  <Unlink size={16} aria-hidden="true" />
+                  Remove link
+                </button>
+              )}
             </div>
           </div>
         )}

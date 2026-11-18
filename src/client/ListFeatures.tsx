@@ -1,3 +1,4 @@
+import { InfoHelp } from "./InfoHelp";
 import { dateHasElapsed } from "../shared/list-dates";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
@@ -8,18 +9,55 @@ import { useApp } from "./context";
 export function RevealPolicy({
   list,
   own = false,
+  compact = false,
 }: {
   own?: boolean;
-  list: Pick<List, "revealAfter" | "timeZone" | "revealExchangeGivers">;
+  compact?: boolean;
+  list: Pick<List, "revealAfter" | "timeZone" | "revealExchangeGivers"> & {
+    mode?: List["mode"];
+  };
 }) {
   const revealed = dateHasElapsed(list.revealAfter, list.timeZone);
-  return (
-    <p className="privacy-note">
-      {list.revealAfter
-        ? `${revealed ? `${own ? "You" : "List owners"} can now see purchased gifts, who bought them, and who contributed, even with Keep it a surprise.` : `${own ? "You" : "List owners"} can view purchased gifts, buyers, and contributors after ${list.revealAfter} ends (${list.timeZone ?? "UTC"}), even with Keep it a surprise.`} ${list.revealExchangeGivers ? "Secret exchange purchases and giver names are also included." : "Secret exchange purchases and giver names stay hidden; other purchased gifts are included."}`
-        : "No gift summary is scheduled. Secret exchange giver names stay hidden."}{" "}
-      Contribution amounts and private notes stay private.
-    </p>
+  const audience = own ? "You" : "List owners";
+  const date = list.revealAfter
+    ? new Intl.DateTimeFormat("en-US", {
+        dateStyle: "medium",
+        timeZone: "UTC",
+      }).format(new Date(`${list.revealAfter}T00:00:00Z`))
+    : "";
+  const summary = !date
+    ? "No gift summary is scheduled."
+    : revealed
+      ? `${audience} can now view the gift summary.`
+      : `${audience} can view the gift summary after ${date}.`;
+  const details = (
+    <div className="text-stack">
+      {list.mode === "transparent" && (
+        <p>List owners can already see ordinary gift plans.</p>
+      )}
+      <p>
+        {!date
+          ? "No gift summary is scheduled."
+          : revealed
+            ? `${audience} can now see purchased gifts, who bought them, and who contributed.`
+            : `After ${date} ends in ${list.timeZone ?? "UTC"}, ${own ? "you" : "list owners"} can see purchased gifts, who bought them, and who contributed.`}
+      </p>
+      {date && <p>This summary is available even with Keep it a surprise.</p>}
+      <p>
+        {date && list.revealExchangeGivers
+          ? "Secret exchange gifts and giver names are included."
+          : "Secret exchange gifts and giver names stay hidden."}
+      </p>
+      <p>Contribution amounts and private notes stay private.</p>
+    </div>
+  );
+  return compact ? (
+    <div className="reservation-privacy">
+      <span>{summary}</span>
+      <InfoHelp title="Gift summary privacy">{details}</InfoHelp>
+    </div>
+  ) : (
+    details
   );
 }
 

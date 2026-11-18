@@ -66,6 +66,10 @@ export function Browser({
     [],
   );
   const [itemType, setItemType] = useNavigationState<string>("itemType", "all");
+  const [visibility, setVisibility] = useNavigationState<string>(
+    "visibility",
+    "all",
+  );
   const [peopleSearch, setPeopleSearch] = useState("");
   const { world, open, mutate, toast } = useApp();
   const itemScope = useItemScope(listId);
@@ -93,6 +97,7 @@ export function Browser({
     ...(tab ? { tab } : {}),
     search: debounced,
     tag,
+    visibility,
     people: selectedPeople.join(","),
     available: String(availableOnly),
     type: itemType,
@@ -145,6 +150,7 @@ export function Browser({
           .includes(debounced.trim().toLowerCase()) &&
         (itemType === "all" || !!i.listId === (itemType === "wish")) &&
         (!tag || i.tags.includes(tag)) &&
+        (visibility === "all" || i.visibilityScope === visibility) &&
         (!chosenPeople.length ||
           chosenPeople.some((person) => i.recipientIds.includes(person.id))) &&
         (!showAvailability ||
@@ -215,6 +221,7 @@ export function Browser({
             }
             searchHint="Search by name, person, or tag"
             activeCount={
+              Number(visibility !== "all") +
               Number(!!tag) +
               Number(showAvailability && availableOnly) +
               Number(itemType !== "all") +
@@ -223,6 +230,9 @@ export function Browser({
             summary={[
               ...(sort !== "manual" ? [sortLabels[sort]] : []),
               ...(tag ? [tag] : []),
+              ...(visibility !== "all"
+                ? [visibility === "only-me" ? "Only me" : "Shared with others"]
+                : []),
               ...(chosenPeople.length
                 ? [
                     `For ${chosenPeople.map((person) => person.name).join(", ")}`,
@@ -240,6 +250,7 @@ export function Browser({
             ]}
             clear={() => {
               setTag("");
+              setVisibility("all");
               setAvailable(false);
               setSelectedPeople([]);
               setItemType("all");
@@ -374,6 +385,17 @@ export function Browser({
                 )}
               </div>
             )}
+            <label>
+              Visibility
+              <select
+                value={visibility}
+                onChange={(e) => setVisibility(e.target.value)}
+              >
+                <option value="all">All visibility</option>
+                <option value="only-me">Only me</option>
+                <option value="shared">Shared with others</option>
+              </select>
+            </label>
             {showAvailability && (
               <label className="check filter-check">
                 <input
@@ -429,6 +451,7 @@ export function Browser({
                   onClick={() => {
                     setSearch("");
                     setTag("");
+                    setVisibility("all");
                     setAvailable(false);
                     setSelectedPeople([]);
                     setItemType("all");

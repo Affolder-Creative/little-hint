@@ -672,7 +672,8 @@ function GiftEditor({
     (entry) =>
       (!gift || !!gift.friendEntryId) &&
       entry.personId === (gift?.recipientIds[0] ?? recipientId) &&
-      !entry.archived,
+      !entry.archived &&
+      !entry.connectedAt,
   );
   const preferredFriend =
     friendEntries.find((entry) => entry.creatorId === world.me.id) ??
@@ -680,7 +681,12 @@ function GiftEditor({
   const [chosenFriend, setChosenFriend] = useState(
     importDraft?.draft?.friendEntryId ?? gift?.friendEntryId ?? "",
   );
-  const friendEntryId = chosenFriend || preferredFriend?.id;
+  const candidateFriendId = chosenFriend || preferredFriend?.id;
+  const friendEntryId = world.friendEntries?.some(
+    (entry) => entry.id === candidateFriendId && entry.connectedAt,
+  )
+    ? undefined
+    : candidateFriendId;
   const friendEntry = (world.friendEntries ?? []).find(
     (entry) => entry.id === friendEntryId,
   );

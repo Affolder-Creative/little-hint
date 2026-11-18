@@ -1,3 +1,4 @@
+import { visibilityScope } from "./visibility";
 import { listCanEdit } from "./co-management";
 import { itemPhotos } from "../shared/item-photos";
 import { sourceView } from "./gift-lifecycle";
@@ -48,6 +49,7 @@ export const browseQuery = z.object({
   page,
   search: z.string().max(500).default(""),
   tag: z.string().max(200).default(""),
+  visibility: z.enum(["all", "only-me", "shared"]).default("all"),
   people: z.string().max(10000).default(""),
   available: z.enum(["true", "false"]).default("true"),
   type: z.enum(["all", "wish", "idea"]).default("all"),
@@ -129,6 +131,7 @@ export async function itemPage(
         .includes(q.search.trim().toLowerCase()) &&
       (q.type === "all" || !!i.listId === (q.type === "wish")) &&
       (!q.tag || i.tags.includes(q.tag)) &&
+      (q.visibility === "all" || visibilityScope(s, a, i) === q.visibility) &&
       (!chosen.length || i.recipientIds.some((id) => chosen.includes(id))) &&
       (!showAvailability ||
         q.available !== "true" ||

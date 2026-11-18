@@ -31,7 +31,11 @@ export function friendContext(
   editing = false,
 ) {
   const entries = s.friendEntries.filter(
-    (f) => f.personId === personId && !f.archived && friendVisible(s, a, f),
+    (f) =>
+      f.personId === personId &&
+      !f.connectedAt &&
+      !f.archived &&
+      friendVisible(s, a, f),
   );
   if (supplied) {
     const f = s.friendEntries.find(
@@ -50,7 +54,7 @@ export function friendContext(
             ))))
     )
       fail(404, "Friend entry not available.");
-    return f;
+    return f.connectedAt ? undefined : f;
   }
   const own = entries.find((f) => f.creatorId === a.id);
   if (own) return own;
@@ -158,6 +162,11 @@ export function friendCommand(
     });
     return inv;
   }
+  if (f.connectedAt)
+    fail(
+      400,
+      "This person has connected. Edit sharing on each gift idea instead.",
+    );
   const v = z.object({ revision }).parse(raw);
   checkRevision(f, v.revision);
   if (action === "friends.archive") {
@@ -297,6 +306,8 @@ export function acceptFriend(s: State, a: Actor, inv: Invitation) {
       touch(o);
     }
   }
+  // Freeze the old audience before the entry stops governing idea sharing.
+  removeAudience(s, f, f.groupIds);
   f.personId = person.id;
   f.connectedAt = new Date().toISOString();
   touch(f);

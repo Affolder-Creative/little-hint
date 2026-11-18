@@ -219,7 +219,7 @@ function FriendArchiveButton({ entry }: { entry: FriendEntry }) {
 export function FriendManagement({ personId }: { personId: string }) {
   const { world, open, mutate, toast } = useApp();
   const entries = (world.friendEntries ?? []).filter(
-    (f) => f.personId === personId,
+    (f) => f.personId === personId && !f.connectedAt,
   );
   if (!entries.length) return null;
   return (

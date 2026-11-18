@@ -85,7 +85,7 @@ function DiscoveryFlow({
     lists.find((l) => l.id === params.get("list"))?.id ?? lists[0]?.id ?? "",
   );
   const friendEntries = (world.friendEntries ?? []).filter(
-    (f) => f.personId === personId && !f.archived,
+    (f) => f.personId === personId && !f.archived && !f.connectedAt,
   );
   const preferredFriend =
     friendEntries.find((f) => f.creatorId === world.me.id) ??

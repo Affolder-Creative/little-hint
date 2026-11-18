@@ -19,7 +19,13 @@ import { familyGroupLabel } from "../shared/households";
    recipients once; families open individual wish lists. Keep gift activity private. */
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, CalendarDays, Plus } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  CalendarDays,
+  CalendarPlus,
+  Plus,
+} from "lucide-react";
 import type { Group, GroupEvent, List } from "../shared/model";
 import {
   canManageGroupEvents,
@@ -372,7 +378,7 @@ export function GroupEventSettings({ group }: { group: Group }) {
               )
             }
           >
-            <Plus size={16} />
+            <CalendarPlus size={16} aria-hidden="true" />
             Create event
           </button>
         )}
@@ -442,7 +448,7 @@ export function GroupEventsSection({ archived }: { archived: boolean }) {
             className="button secondary small"
             onClick={() => open("Create a family group event", <EventForm />)}
           >
-            <Plus size={17} />
+            <CalendarPlus size={17} aria-hidden="true" />
             Create event
           </button>
         )}
