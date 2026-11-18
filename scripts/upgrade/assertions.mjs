@@ -21,6 +21,21 @@ function currentViewContract(value, records) {
       (r) => r.kind === "items" && r.id === view.id,
     )?.data;
     if (item) {
+      // Recipient-visible content now exposes a discussion. For the pinned
+      // fixture, which has no notes on these items, derive only an empty list.
+      // Never discard candidate notes or allow this on surprise content.
+      const recipientVisible = item.listId
+        ? records.find((r) => r.kind === "lists" && r.id === item.listId)?.data
+            .mode === "transparent"
+        : item.visibility === "visible";
+      if (
+        view.isRecipient === true &&
+        recipientVisible &&
+        item.publicationState !== "draft" &&
+        !Object.hasOwn(view, "comments") &&
+        !records.some((r) => r.kind === "comments" && r.data.itemId === item.id)
+      )
+        view.comments = [];
       if (
         !Object.hasOwn(view, "individuallyArchived") &&
         typeof item.archived === "boolean"
