@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.8.0](https://github.com/Affolder-Creative/little-hint/compare/v1.7.0...v1.8.0) (2026-11-18)
+
+
+### Features
+
+* clarify gift discussions and tidy notifications ([#241](https://github.com/Affolder-Creative/little-hint/issues/241)) ([11f26b4](https://github.com/Affolder-Creative/little-hint/commit/11f26b4f335bfea655aabd67b9a1aa5225295f03))
+* make people easier to find and profiles easier to scan ([#244](https://github.com/Affolder-Creative/little-hint/issues/244)) ([8896681](https://github.com/Affolder-Creative/little-hint/commit/88966813ba97847d7d980fdce18280dcba6bf1ae))
+
 ## [1.7.0](https://github.com/Affolder-Creative/little-hint/compare/v1.6.1...v1.7.0) (2026-11-18)
 
 
