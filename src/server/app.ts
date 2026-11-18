@@ -385,6 +385,7 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
       const q = z
         .object({
           q: z.string().max(160).default(""),
+          exclude: z.string().max(40000).optional(),
           commentId: z.string().uuid().optional(),
           ordinary: z.enum(["true", "false"]).optional(),
           exchangeId: z.string().uuid().optional(),
@@ -399,6 +400,7 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
         q.q,
         q.commentId,
         { ...q, ordinary: q.ordinary === "true" },
+        q.exclude?.split(",").filter(Boolean),
       );
     },
   );
@@ -577,6 +579,8 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
     "comments/update": "comments.update",
     "comments/delete": "comments.delete",
     "notifications/read": "notifications.read",
+    "notifications/dismiss": "notifications.dismiss",
+    "notifications/undo": "notifications.undo",
     follows: "follows.update",
     watches: "watches.update",
     "prices/watch": "prices.watch",

@@ -2302,7 +2302,9 @@ test("private note success clears the composer and offline actions are disabled"
     .click();
   await page.getByRole("button", { name: "Add note" }).click();
   await expect(
-    page.getByText("A useful private detail", { exact: true }),
+    page
+      .locator(".comment")
+      .getByText("A useful private detail", { exact: true }),
   ).toBeVisible();
   await expect(page.getByLabel("Your note")).toHaveValue("");
   await context.setOffline(true);
@@ -5979,5 +5981,7 @@ test("recipient discussion shows shared notes and protects earlier surprise hist
   ).toHaveCount(0);
   await page.getByLabel("Your note", { exact: true }).fill("Blue please");
   await page.getByRole("button", { name: "Add note", exact: true }).click();
-  await expect(page.getByText("Blue please", { exact: true })).toBeVisible();
+  await expect(
+    page.locator(".comment").getByText("Blue please", { exact: true }),
+  ).toBeVisible();
 });

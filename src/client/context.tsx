@@ -1,7 +1,9 @@
 import { createContext, useContext, type ReactNode } from "react";
 import type { World } from "../shared/model";
 export interface ToastOptions {
-  action?: { label: string; to: string };
+  action?:
+    | { label: string; to: string }
+    | { label: string; onClick: () => Promise<unknown> };
   duration?: number;
 }
 export interface AppContextValue {

@@ -53,12 +53,8 @@ test("following, scoped mentions, inbox read controls, and mobile settings", asy
   await expect(note).toHaveValue("@Sam Morgan ");
   await note.press("End");
   await note.pressSequentially("Could you check the size?");
-  await buyer
-    .getByRole("button", { name: "Add note", exact: true })
-    .click();
-  await expect(
-    buyer.getByText("Note added.", { exact: true }),
-  ).toBeVisible();
+  await buyer.getByRole("button", { name: "Add note", exact: true }).click();
+  await expect(buyer.getByText("Note added.", { exact: true })).toBeVisible();
   await helper.goto("/notifications");
   const mention = helper.getByRole("button", {
     name: new RegExp(`Jamie Chen mentioned you.*${item.title}`),
@@ -99,8 +95,9 @@ test("following, scoped mentions, inbox read controls, and mobile settings", asy
     helper.getByRole("button", { name: "Stop watching notes", exact: true }),
   ).toBeVisible();
   await helper.goto("/notifications");
+  await helper.getByRole("button", { name: "All", exact: true }).click();
   await helper.getByRole("button", { name: /Mark unread: Jamie Chen/ }).click();
-  await helper.getByRole("button", { name: "Unread", exact: true }).click();
+  await helper.getByRole("button", { name: /^Unread/ }).click();
   await expect(mention).toBeVisible();
   await helper.getByRole("button", { name: "Mark all as read" }).click();
   await expect(

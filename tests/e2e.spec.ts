@@ -243,11 +243,11 @@ test("real email-code sign-in, gift creation, buyer reservation, and surprise pr
   await sp
     .getByLabel("Your note", { exact: true })
     .fill("Please keep this private.");
-  await sp
-    .getByRole("button", { name: "Add note", exact: true })
-    .click();
+  await sp.getByRole("button", { name: "Add note", exact: true }).click();
   await expect(
-    sp.getByText("Please keep this private.", { exact: true }),
+    sp
+      .locator(".comment")
+      .getByText("Please keep this private.", { exact: true }),
   ).toBeVisible();
   const after = (
     await (await ap.request.get("/api/v1/world")).json()

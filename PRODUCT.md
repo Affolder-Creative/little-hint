@@ -224,3 +224,9 @@ The global setting requires hiding for everyone; disabling it lets personal choi
 apply. Wishes follow any current joint owner's choice; unsigned managed profiles
 follow their designated owner's choice. Ideas follow their creator. Ownership
 changes use the new owner's preference. Personal settings never force disclosure.
+
+## Discussion and notification cleanup
+
+Shared gift ideas show creator attribution. Selected mentions are colored while composing and are excluded from subsequent suggestions until removed. Discussion audience details use one compact label with contextual help; protected history and exchange restrictions retain their distinct audiences.
+
+Notifications open on Unread. Each account can dismiss notifications or dismiss all read entries through the displayed snapshot, with a brief Undo restoring the original read state. Dismissal persists across devices, affects inbox lists and counts only, and preserves authorized source links and external delivery behavior. There is no automatic purge or separate archive.

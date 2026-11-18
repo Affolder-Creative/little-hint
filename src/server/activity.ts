@@ -62,6 +62,7 @@ export function mentionCandidates(
   query = "",
   commentId?: string,
   context: ShoppingContext = {},
+  excludedIds: string[] = [],
 ) {
   const item = s.items.find((i) => i.id === itemId);
   if (
@@ -96,6 +97,7 @@ export function mentionCandidates(
       (p) =>
         p.userId &&
         p.userId !== a.id &&
+        !excludedIds.includes(p.userId) &&
         noteVisible(s, actor(s, p.userId), item, giverId, comment),
     )
     .filter((p) =>
@@ -623,7 +625,8 @@ export function inbox(
   options: { unread?: boolean; cursor?: string } = {},
 ): NotificationPage {
   const all = s.notices.filter(
-    (n) => n.inbox && n.userId === a.id && activityAllowed(s, n),
+    (n) =>
+      n.inbox && !n.dismissedAt && n.userId === a.id && activityAllowed(s, n),
   );
   const sorted = all
     .filter((n) => !options.unread || !n.readAt)
@@ -638,6 +641,7 @@ export function inbox(
   return {
     entries: entries.slice(0, 30).map((n) => renderActivity(s, n)),
     unreadCount: all.filter((n) => !n.readAt).length,
+    readCount: all.filter((n) => !!n.readAt).length,
     ...(entries.length > 30 ? { nextCursor: key(entries[29]) } : {}),
   };
 }
@@ -647,6 +651,50 @@ export function activityCommand(
   action: string,
   raw: unknown,
 ) {
+  if (action === "notifications.dismiss" || action === "notifications.undo") {
+    const eligible = s.notices.filter(
+      (n) => n.inbox && n.userId === a.id && activityAllowed(s, n),
+    );
+    if (action === "notifications.undo") {
+      const { dismissalId } = z
+        .object({ dismissalId: z.string().uuid() })
+        .parse(raw);
+      let count = 0;
+      for (const n of eligible.filter((n) => n.dismissalId === dismissalId)) {
+        delete n.dismissedAt;
+        delete n.dismissalId;
+        n.revision++;
+        count++;
+      }
+      return { count, unreadCount: inbox(s, a).unreadCount };
+    }
+    const p = z
+      .object({
+        ids: z.array(z.string().uuid()).min(1).max(100).optional(),
+        through: z.iso.datetime().optional(),
+      })
+      .parse(raw);
+    if (!!p.ids === !!p.through)
+      fail(400, "Choose the notifications to dismiss.");
+    const dismissalId = stamp().id;
+    const selected = eligible.filter(
+      (n) =>
+        !n.dismissedAt &&
+        (p.ids
+          ? p.ids.includes(n.id)
+          : !!n.readAt && n.createdAt <= p.through!),
+    );
+    for (const n of selected) {
+      n.dismissedAt = new Date().toISOString();
+      n.dismissalId = dismissalId;
+      n.revision++;
+    }
+    return {
+      dismissalId,
+      count: selected.length,
+      unreadCount: inbox(s, a).unreadCount,
+    };
+  }
   if (action === "notifications.read") {
     const p = z
       .object({

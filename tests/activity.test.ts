@@ -559,3 +559,62 @@ it("shows an authenticated friend connection request only while it remains actio
   f.s.friendEntries.find((row) => row.id === entry.id)!.archived = true;
   expect(activityAllowed(f.s, notice)).toBe(false);
 });
+
+it("dismisses across pages, preserves unread state on Undo, and scopes operations to the account", () => {
+  const f = fixture();
+  command(f.s, f.actors[1], "follows.update", {
+    target: "list",
+    targetId: f.list.id,
+    following: true,
+  });
+  for (let i = 0; i < 35; i++)
+    command(f.s, f.actors[0], "items.create", {
+      listId: f.list.id,
+      title: `Update ${i}`,
+    });
+  const allIds = f.s.notices.map((n) => n.id);
+  command(f.s, f.actors[1], "notifications.read", {
+    ids: allIds.slice(0, 33),
+    read: true,
+  });
+  const result = command(f.s, f.actors[1], "notifications.dismiss", {
+    through: new Date().toISOString(),
+  }) as { dismissalId: string; count: number };
+  expect(result.count).toBe(33);
+  expect(inbox(f.s, f.actors[1]).entries).toHaveLength(2);
+  command(f.s, f.actors[2], "notifications.undo", {
+    dismissalId: result.dismissalId,
+  });
+  expect(inbox(f.s, f.actors[1]).entries).toHaveLength(2);
+  command(f.s, f.actors[1], "notifications.undo", {
+    dismissalId: result.dismissalId,
+  });
+  expect(inbox(f.s, f.actors[1]).readCount).toBe(33);
+  const single = command(f.s, f.actors[1], "notifications.dismiss", {
+    ids: [allIds[34]],
+  }) as { dismissalId: string };
+  expect(inbox(f.s, f.actors[1]).unreadCount).toBe(1);
+  command(f.s, f.actors[1], "notifications.undo", {
+    dismissalId: single.dismissalId,
+  });
+  expect(inbox(f.s, f.actors[1]).unreadCount).toBe(2);
+  f.group.memberIds = f.group.memberIds.filter((id) => id !== f.actors[1].id);
+  expect(inbox(f.s, f.actors[1]).entries).toHaveLength(0);
+});
+
+it("excludes selected accounts before applying the mention result limit", () => {
+  const f = fixture();
+  const choices = mentionCandidates(f.s, f.actors[1], f.item.id);
+  expect(choices.length).toBeGreaterThan(0);
+  expect(
+    mentionCandidates(
+      f.s,
+      f.actors[1],
+      f.item.id,
+      "",
+      undefined,
+      {},
+      choices.map((c) => c.userId),
+    ),
+  ).toEqual([]);
+});

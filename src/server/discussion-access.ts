@@ -52,6 +52,31 @@ export function noteVisible(
   );
 }
 
+export function discussionKey(
+  s: State,
+  item: Item,
+  giverId?: string,
+  comment?: Comment,
+) {
+  const protection = discussionProtection(s, item, giverId);
+  return createHash("sha256")
+    .update(
+      JSON.stringify([
+        item.id,
+        giverId ?? null,
+        comment?.exchangeId ?? null,
+        protection.authorOnly ||
+        comment?.authorOnly ||
+        (comment && noteNeedsReview(s, comment))
+          ? (comment?.authorId ?? item.creatorId)
+          : null,
+        protection.excludeRecipients ||
+          (comment ? (comment.excludeRecipients ?? true) : false),
+      ]),
+    )
+    .digest("hex");
+}
+
 export function discussionLabel(
   s: State,
   item: Item,
@@ -131,7 +156,12 @@ export function discussionAudience(
       }),
     )
     .digest("hex");
-  return { token, label, readers };
+  return {
+    token,
+    label,
+    readers,
+    key: discussionKey(s, item, giverId, comment),
+  };
 }
 
 export function checkDiscussionAudience(
