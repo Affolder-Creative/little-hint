@@ -139,7 +139,8 @@ function itemSharedWith(s: State, a: Actor, i: Item): boolean {
       (!i.friendEntryId ||
         s.friendEntries.some(
           (f) =>
-            f.id === i.friendEntryId && !f.archived && f.groupIds.includes(g),
+            f.id === i.friendEntryId &&
+            (!!f.connectedAt || (!f.archived && f.groupIds.includes(g))),
         )),
   );
 }

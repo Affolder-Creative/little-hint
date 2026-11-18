@@ -847,7 +847,7 @@ function People() {
           <Link
             className="person-row"
             key={p.id}
-            to={`/people/${p.id}${world.friendEntries?.some((f) => f.personId === p.id) ? "?tab=ideas" : ""}`}
+            to={`/people/${p.id}${world.friendEntries?.some((f) => f.personId === p.id && !f.connectedAt) ? "?tab=ideas" : ""}`}
           >
             <Avatar name={p.name} />
             <div>
@@ -939,7 +939,7 @@ function PersonPage() {
   );
   const unconnectedFriend = friendEntries.some((f) => !f.connectedAt);
   const archivedFriend =
-    friendEntries.length > 0 && friendEntries.every((f) => f.archived);
+    unconnectedFriend && friendEntries.every((f) => f.archived);
   const lists = world.lists.filter(
     (list) =>
       !list.archived &&
@@ -1487,6 +1487,7 @@ function GiftDetail() {
           </p>
           {gift.listId && world.lists.find((l) => l.id === gift.listId) && (
             <RevealPolicy
+              compact
               list={world.lists.find((l) => l.id === gift.listId)!}
             />
           )}

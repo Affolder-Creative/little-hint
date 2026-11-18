@@ -667,6 +667,7 @@ export interface GiftView extends Omit<
   "creatorId" | "draftOwnerId" | "lastEditorId"
 > {
   /** Unlike archived, this excludes archive status inherited from a wish list. */
+  visibilityScope?: "only-me" | "shared";
   individuallyArchived?: boolean;
   watchingNotes?: boolean;
   priceWatching?: boolean;

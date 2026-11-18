@@ -135,8 +135,10 @@ Private gift ideas and manual spending records may be explicitly assigned to an 
 ## Friends before signup
 
 Your people offers Add a friend separately from Managed profile. A friend needs
-only a name and starts private. The creator manages its name, selected family
-groups, connection invitation, and archive state. Collaborators own their own
+only a name and starts private. Before connection, the creator manages its name, selected family
+groups, connection invitation, and archive state. After connection, each gift idea
+author manages that idea through the ordinary sharing choices. Earlier audiences
+are preserved and the entry no longer limits sharing or controls other authors’ ideas. Collaborators own their own
 ideas and use normal purchase, contribution, and discussion permissions. Sharing
 a friend never publishes existing private ideas. Ideas saved through a friend
 entry offer Only me or selected groups, hidden from the recipient.

@@ -5271,3 +5271,13 @@ a.button:is(:hover, :focus, :active),
     object-fit: contain;
   }
 }
+
+.reservation-privacy {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 14px;
+  max-width: 65ch;
+  margin-block: 12px 16px;
+}

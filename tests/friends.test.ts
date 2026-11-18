@@ -401,3 +401,41 @@ describe("friend planning", () => {
     expect(world(f.s, f.actors[1]).invitations).toEqual([]);
   });
 });
+
+it("connected entries leave sharing with each idea author", () => {
+  const f = fixture();
+  f.share();
+  const item = f.idea(f.actors[1], "hidden");
+  const inv = f.invite();
+  command(f.s, f.actors[2], "invitations.accept", { id: inv.id });
+  expect(world(f.s, f.actors[2]).items.some((i) => i.id === item.id)).toBe(
+    false,
+  );
+  expect(() =>
+    command(f.s, f.actors[0], "friends.archive", {
+      id: f.f.id,
+      revision: f.f.revision,
+      archived: true,
+    }),
+  ).toThrow("Edit sharing");
+  expect(() =>
+    command(f.s, f.actors[0], "items.update", {
+      ...item,
+      visibility: "visible",
+    }),
+  ).toThrow("cannot edit");
+  command(f.s, f.actors[1], "items.update", {
+    ...f.s.items.find((i) => i.id === item.id)!,
+    visibility: "visible",
+  });
+  expect(world(f.s, f.actors[2]).items.some((i) => i.id === item.id)).toBe(
+    true,
+  );
+  const next = command(f.s, f.actors[0], "items.create", {
+    title: "New ordinary idea",
+    recipientIds: [f.f.personId],
+    visibility: "visible",
+    groupIds: [f.group.id],
+  }) as Item;
+  expect(next.friendEntryId).toBeUndefined();
+});

@@ -379,3 +379,81 @@ it("Home uses others before filters and falls back to owned wishes only when oth
   const fallback = await itemPage(state, actor, { scope: "home" });
   expect(fallback.rows.map((i) => i.id)).toEqual([own.id]);
 });
+
+it("filters list visibility before pagination and accounts for other managers", async () => {
+  const { state, listId } = fixture(49);
+  const list = state.lists.find((l) => l.id === listId)!;
+  const person = state.people.find((p) => p.id === list.ownerIds[0])!;
+  const owner = {
+    id: person.userId!,
+    name: person.name,
+    email: "owner@example.test",
+  };
+  list.ownerIds = [person.id];
+  list.groupIds = [];
+  person.guardians = [];
+  state.coManagement = [];
+  const privatePage = await itemPage(state, owner, {
+    scope: "list",
+    id: listId,
+    visibility: "only-me",
+  });
+  expect(privatePage.total).toBe(49);
+  expect(privatePage.rows).toHaveLength(24);
+  expect(
+    (
+      await itemPage(state, owner, {
+        scope: "list",
+        id: listId,
+        visibility: "shared",
+      })
+    ).total,
+  ).toBe(0);
+  person.guardians.push(
+    state.people.find((p) => p.userId && p.userId !== owner.id)!.userId!,
+  );
+  expect(
+    (
+      await itemPage(state, owner, {
+        scope: "list",
+        id: listId,
+        visibility: "shared",
+        page: 3,
+      })
+    ).rows,
+  ).toHaveLength(1);
+});
+
+it("filters private and shared ideas across pages without exposing other authors' private ideas", async () => {
+  const { state, actor } = fixture(51);
+  const group = state.groups.find((g) => g.memberIds.includes(actor.id))!;
+  state.items.forEach((i, n) => {
+    delete i.listId;
+    i.creatorId = actor.id;
+    i.visibility = n < 25 ? "private" : "hidden";
+    i.groupIds = n < 25 ? [] : [group.id];
+  });
+  const privatePage = await itemPage(state, actor, {
+    visibility: "only-me",
+    available: "false",
+    page: 2,
+  });
+  expect(privatePage.total).toBe(25);
+  expect(privatePage.rows).toHaveLength(1);
+  const shared = await itemPage(state, actor, {
+    visibility: "shared",
+    available: "false",
+    page: 2,
+  });
+  expect(shared.total).toBe(26);
+  expect(shared.rows).toHaveLength(2);
+  state.items[0].creatorId = "someone-else";
+  expect(
+    (
+      await itemPage(state, actor, {
+        visibility: "only-me",
+        available: "false",
+      })
+    ).total,
+  ).toBe(24);
+});

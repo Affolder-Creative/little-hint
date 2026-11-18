@@ -1,3 +1,4 @@
+import { visibilityScope } from "./visibility";
 import {
   discussionProtection,
   discussionLabel,
@@ -337,6 +338,7 @@ export function giftView(s: State, a: Actor, i: Item): GiftView {
   const own = recipient(s, a, i);
   const view: GiftView = {
     ...fields,
+    visibilityScope: visibilityScope(s, a, i),
     watchingNotes: noteVisible(s, a, i) && watchesItem(s, a.id, i.id),
     priceWatching: s.priceWatches.some(
       (w) => w.userId === a.id && w.itemId === i.id,
@@ -582,7 +584,7 @@ export function world(
           f.creatorId === a.id
             ? f.groupIds
             : f.groupIds.filter((g) => groupAccess(s, a, g)),
-        canManage: f.creatorId === a.id,
+        canManage: f.creatorId === a.id && !f.connectedAt,
       })),
     personRedirects: {
       ...Object.fromEntries(
@@ -1822,7 +1824,9 @@ function commandCore(
         checkRecipients(s, a, recipients);
         if (
           recipients.length !== 1 &&
-          recipients.some((r) => s.friendEntries.some((f) => f.personId === r))
+          recipients.some((r) =>
+            s.friendEntries.some((f) => f.personId === r && !f.connectedAt),
+          )
         )
           fail(400, "Choose one friend for this idea.");
         const context = friendContext(s, a, recipients[0], p.friendEntryId);
