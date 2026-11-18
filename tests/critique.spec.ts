@@ -2269,9 +2269,37 @@ test("private note success clears the composer and offline actions are disabled"
   const gift = world(state, actor).items.find(
     (i) => !i.isRecipient && !i.archived && i.available && i.comments,
   )!;
+  // Keep this context-switch test independent of the random exchange draw.
+  const giverId = state.people.find((p) => p.userId === actor.id)!.id;
+  const assignment = state.exchanges
+    .flatMap((e) => e.assignments)
+    .find(([g]) => g === giverId)!;
+  assignment[1] = gift.recipientIds[0];
   await page.goto(`/gift/${gift.id}`);
-  await page.getByLabel("Buying for", { exact: true }).selectOption("ordinary");
+  const selector = page.getByLabel("Buying for", { exact: true });
+  const exchangeOption = selector
+    .locator("option")
+    .filter({ hasText: "Family gift exchange" })
+    .first();
+  await expect(exchangeOption).toHaveCount(1);
+  await selector.selectOption((await exchangeOption.getAttribute("value"))!);
+  await expect(page.locator(".discussion form")).toContainText(
+    "Giver and profile managers; recipients excluded",
+  );
   await page.getByLabel("Your note").fill("A useful private detail");
+  await selector.selectOption("ordinary");
+  await expect(page.locator(".discussion form")).toContainText(
+    "People with access, excluding recipients",
+  );
+  await expect(page.getByLabel("Your note")).toHaveValue(
+    "A useful private detail",
+  );
+  await expect(
+    page.getByRole("button", { name: "Add note", exact: true }),
+  ).toBeDisabled();
+  await page
+    .getByRole("button", { name: "I’ve reviewed the audience" })
+    .click();
   await page.getByRole("button", { name: "Add note" }).click();
   await expect(
     page.getByText("A useful private detail", { exact: true }),
