@@ -21,7 +21,8 @@ export function ImportDrafts({
     (j) =>
       j.draft?.state === "active" &&
       (!listId || j.draft.listId === listId) &&
-      (!recipientId || j.draft.recipientId === recipientId),
+      (!recipientId ||
+        (j.draft.recipientIds ?? [j.draft.recipientId]).includes(recipientId)),
   );
   const requested = params.get("draft");
   useEffect(() => {
@@ -77,8 +78,13 @@ function DraftRow({ initial }: { initial: ImportJob }) {
         {job.draft.kind === "idea" && (
           <p>
             Gift idea for{" "}
-            {world.people.find((p) => p.id === job.draft?.recipientId)?.name ??
-              "an unavailable person"}
+            {(job.draft.recipientIds ?? [job.draft.recipientId])
+              .map(
+                (id) =>
+                  world.people.find((p) => p.id === id)?.name ??
+                  "an unavailable person",
+              )
+              .join(" & ")}
           </p>
         )}
         <p role="status" className="draft-status">

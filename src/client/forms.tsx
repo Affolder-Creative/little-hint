@@ -1,3 +1,4 @@
+import { IdeaPeople } from "./IdeaPeople";
 import { itemPhotos } from "../shared/item-photos";
 import { HelpfulNoteEditor } from "./NoteEditor";
 import type { NoteDocument } from "../shared/helpful-note";
@@ -613,11 +614,22 @@ function GiftEditor({
     (person) =>
       recipientOptions?.includes(person.id) && person.userId !== world.me.id,
   );
-  const [recipientId, setRecipientId] = useState(
-    importDraft?.draft?.recipientId ??
-      initialRecipientId ??
-      (recipients.length === 1 ? recipients[0].id : ""),
+  const [recipientIds, setRecipientIds] = useState<string[]>(
+    gift?.recipientIds ??
+      importDraft?.draft?.recipientIds ??
+      (importDraft?.draft?.recipientId
+        ? [importDraft.draft.recipientId]
+        : initialRecipientId
+          ? [initialRecipientId]
+          : recipients.length === 1
+            ? [recipients[0].id]
+            : []),
   );
+  const recipientId = recipientIds[0] ?? "";
+  const [excludedUserIds, setExcludedUserIds] = useState<string[]>(
+    importDraft?.draft?.excludedUserIds ?? gift?.excludedUserIds ?? [],
+  );
+
   const idea =
     importDraft?.draft?.kind === "idea" ||
     !!initialRecipientId ||
@@ -659,9 +671,12 @@ function GiftEditor({
       }>(`spending/assignment-preview?item=${gift!.id}&list=${spendingListId}`),
     enabled: needsAssignmentPreview,
   });
-  const recipientName =
-    gift?.recipientNames.join(" & ") ??
-    world.people.find((person) => person.id === recipientId)?.name;
+  const recipientName = recipientIds
+    .map(
+      (id) =>
+        world.people.find((person) => person.id === id)?.name ?? "Recipient",
+    )
+    .join(" & ");
   const [visibility, setVisibility] = useState(
     importDraft?.draft?.visibility ?? gift?.visibility ?? "private",
   );
@@ -670,10 +685,7 @@ function GiftEditor({
   );
   const friendEntries = (world.friendEntries ?? []).filter(
     (entry) =>
-      (!gift || !!gift.friendEntryId) &&
-      entry.personId === (gift?.recipientIds[0] ?? recipientId) &&
-      !entry.archived &&
-      !entry.connectedAt,
+      entry.personId === recipientId && !entry.archived && !entry.connectedAt,
   );
   const preferredFriend =
     friendEntries.find((entry) => entry.creatorId === world.me.id) ??
@@ -701,6 +713,8 @@ function GiftEditor({
       ? {
           kind: "idea",
           recipientId,
+          recipientIds,
+          excludedUserIds,
           visibility,
           groupIds,
           friendEntryId,
@@ -812,6 +826,8 @@ function GiftEditor({
                 ? {
                     kind: "idea" as const,
                     recipientId,
+                    recipientIds,
+                    excludedUserIds,
                     visibility,
                     groupIds,
                     spendingListId: spendingListId || null,
@@ -1027,6 +1043,38 @@ function GiftEditor({
             editSnapshot !== originalEditSnapshot.current ||
             photosChanged
       }
+      review={
+        idea &&
+        visibility !== "private" &&
+        (!gift ||
+          gift.visibility !== visibility ||
+          JSON.stringify(gift.groupIds) !== JSON.stringify(groupIds) ||
+          JSON.stringify(gift.excludedUserIds ?? []) !==
+            JSON.stringify(excludedUserIds) ||
+          JSON.stringify(gift.recipientIds) !== JSON.stringify(recipientIds))
+          ? () => (
+              <div className="text-stack">
+                <h3>Review who can see this idea</h3>
+                <p>
+                  For {recipientName}. Shared with{" "}
+                  {audienceGroups.map((g) => g.name).join(", ")}.
+                </p>
+                <p>
+                  {visibility === "visible"
+                    ? "Recipients can see this idea."
+                    : "Hidden from all recipients."}
+                  {excludedUserIds.length > 0 &&
+                    ` Also hidden from ${excludedUserIds.map((id) => world.people.find((p) => p.userId === id)?.name ?? "an unavailable person").join(", ")}.`}
+                </p>
+                <p>
+                  Earlier protected discussion stays private. Removing access
+                  releases unpurchased reservations and unsent pledges; personal
+                  financial history is kept.
+                </p>
+              </div>
+            )
+          : undefined
+      }
       onBusyChange={setNoteBusy}
       onBeforeClose={savedDraft.current?.draft ? saveBeforeClose : undefined}
       onBeforeCloseError={() => {}}
@@ -1042,7 +1090,8 @@ function GiftEditor({
           (!assignmentPreview.data || assignmentPreview.isFetching)) ||
         (idea && !gift && !recipientId) ||
         (!!duplicate && !allowDuplicate) ||
-        (sharingIdea && !audienceGroups.length)
+        (sharingIdea && !audienceGroups.length) ||
+        (idea && visibility === "restricted" && !excludedUserIds.length)
       }
       allowOffline={
         !idea &&
@@ -1087,10 +1136,11 @@ function GiftEditor({
               }
             : {
                 listId: idea ? undefined : value(f, "listId"),
-                recipientIds: idea ? [recipientId] : [],
+                recipientIds: idea ? recipientIds : [],
                 allowDuplicate,
               }),
           visibility,
+          ...(idea ? { recipientIds, excludedUserIds } : {}),
           ...(idea && friendEntryId ? { friendEntryId } : {}),
           groupIds: sharingIdea ? audienceGroups.map((group) => group.id) : [],
           importId:
@@ -1232,38 +1282,6 @@ function GiftEditor({
             )}
           </div>
         )}
-      {idea && importDraft && (
-        <Field label="Who is this idea for?">
-          <select
-            value={recipientId}
-            onChange={(e) => {
-              setRecipientId(e.target.value);
-              setSpendingListId((current) =>
-                world.lists.some(
-                  (list) =>
-                    list.id === current &&
-                    list.ownerIds.includes(e.target.value),
-                )
-                  ? current
-                  : "",
-              );
-              setChosenFriend("");
-              setGroupIds([]);
-              setVisibility("private");
-            }}
-            required
-          >
-            <option value="">Choose a person</option>
-            {world.people
-              .filter((p) => p.userId !== world.me.id)
-              .map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-          </select>
-        </Field>
-      )}
       {idea && (
         <>
           {!gift &&
@@ -1295,38 +1313,28 @@ function GiftEditor({
                 </select>
               </Field>
             )}
-          {recipientOptions && !gift && recipients.length > 1 && (
-            <Field label="Who is this idea for?">
-              <select
-                required
-                value={recipientId}
-                onChange={(event) => {
-                  setRecipientId(event.target.value);
-                  setSpendingListId((current) =>
-                    world.lists.some(
-                      (list) =>
-                        list.id === current &&
-                        list.ownerIds.includes(event.target.value),
-                    )
-                      ? current
-                      : "",
-                  );
-                  setChosenFriend("");
-                  setGroupIds([]);
-                  setVisibility("private");
-                  setDuplicate(null);
-                  setAllowDuplicate(false);
-                }}
-              >
-                <option value="">Choose a recipient</option>
-                {recipients.map((person) => (
-                  <option key={person.id} value={person.id}>
-                    {person.name}
-                  </option>
-                ))}
-              </select>
-            </Field>
-          )}
+          <IdeaPeople
+            label="Who is this idea for?"
+            selected={recipientIds}
+            disabled={!!gift && !gift.canEditRecipients}
+            onChange={(ids) => {
+              setRecipientIds(ids);
+              setChosenFriend("");
+              if (
+                spendingListId &&
+                !world.lists.some(
+                  (l) =>
+                    l.id === spendingListId &&
+                    ids.every((id) => l.ownerIds.includes(id)),
+                )
+              ) {
+                setSpendingListId("");
+                toast(
+                  "The wish list for spending was cleared because its recipients changed.",
+                );
+              }
+            }}
+          />
           <p className="muted">
             {recipientName
               ? `Saved under Gift ideas for ${recipientName}, separately from their wish lists.`
@@ -1337,17 +1345,21 @@ function GiftEditor({
               <select
                 name="visibility"
                 value={visibility}
-                onChange={(e) =>
-                  setVisibility(e.target.value as typeof visibility)
-                }
+                onChange={(e) => {
+                  setVisibility(e.target.value as typeof visibility);
+                  if (e.target.value !== "restricted") setExcludedUserIds([]);
+                }}
               >
                 <option value="private">Only me</option>
                 <option value="hidden">
-                  Selected family groups, but not the recipient
+                  Selected family groups, excluding recipients
+                </option>
+                <option value="restricted">
+                  Selected family groups, with exceptions
                 </option>
                 {!friendEntries.length && !friendEntry && (
                   <option value="visible">
-                    Selected family groups and the recipient
+                    Selected family groups, including recipients
                   </option>
                 )}
               </select>
@@ -1377,6 +1389,15 @@ function GiftEditor({
                 </label>
               ))}
             </fieldset>
+            {visibility === "restricted" && (
+              <IdeaPeople
+                label="Also hide from"
+                selected={excludedUserIds}
+                onChange={setExcludedUserIds}
+                groups={groupIds}
+                recipients={recipientIds}
+              />
+            )}
             <p className="muted" role="status">
               {!sharingIdea
                 ? privateIdeaDescription
@@ -1386,9 +1407,9 @@ function GiftEditor({
                     : friendEntries.length || friendEntry
                       ? "Share this friend with a group first, or choose Only me."
                       : "Join a family group to share this idea, or choose Only me."
-                  : visibility === "hidden"
-                    ? `Visible to you and members of ${audienceGroups.map((g) => familyGroupLabel(g, world)).join(", ")}. Hidden from the recipient and anyone managing their profile.`
-                    : `Visible to you, members of ${audienceGroups.map((g) => familyGroupLabel(g, world)).join(", ")}, the recipient and anyone managing their profile.`}
+                  : visibility !== "visible"
+                    ? `Visible to you and members of ${audienceGroups.map((g) => familyGroupLabel(g, world)).join(", ")}. Hidden from all recipients${excludedUserIds.length ? " and the selected people" : ""}.`
+                    : `Visible to you, members of ${audienceGroups.map((g) => familyGroupLabel(g, world)).join(", ")}, all recipients.`}
             </p>
             {sharingIdea && (
               <p className="muted">
@@ -1402,9 +1423,7 @@ function GiftEditor({
       {idea && world.spendingEnabled && (
         <>
           <PurchaseListField
-            recipientIds={
-              gift?.recipientIds ?? (recipientId ? [recipientId] : [])
-            }
+            recipientIds={recipientIds}
             value={spendingListId}
             onChange={setSpendingListId}
           />

@@ -1,3 +1,4 @@
+import { IdeaPeople } from "./IdeaPeople";
 import { HelpfulNoteEditor } from "./NoteEditor";
 import { OfferLinks } from "./OfferLinks";
 import { useEffect, useRef, useState } from "react";
@@ -141,8 +142,6 @@ function DiscoveryFlow({
     refetchIntervalInBackground: false,
   });
   const job = jobQuery.data;
-  const sharingFriend =
-    friendEntries.find((f) => f.id === job?.input.friendEntryId) ?? friendEntry;
   const working =
     !!job && ["pending", "running", "reviewing"].includes(job.status);
   useEffect(() => {
@@ -476,6 +475,21 @@ function DiscoveryFlow({
                         </p>
                       )}
                       {Object.values(selected).map((selection) => {
+                        const recipientFriends = world.friendEntries?.filter(
+                          (entry) =>
+                            entry.personId ===
+                              (selection.recipientIds ?? [personId])[0] &&
+                            !entry.connectedAt &&
+                            !entry.archived,
+                        );
+                        const sharingFriend =
+                          recipientFriends?.find(
+                            (entry) => entry.id === job.input.friendEntryId,
+                          ) ??
+                          recipientFriends?.find(
+                            (entry) => entry.creatorId === world.me.id,
+                          ) ??
+                          recipientFriends?.[0];
                         const candidate = job.candidates.find(
                           (c) => c.id === selection.candidateId,
                         )!;
@@ -554,6 +568,15 @@ function DiscoveryFlow({
                               </Field>
                             ) : (
                               <>
+                                <IdeaPeople
+                                  label="Who is this idea for?"
+                                  selected={
+                                    selection.recipientIds ?? [personId]
+                                  }
+                                  onChange={(recipientIds) =>
+                                    change(candidate.id, { recipientIds })
+                                  }
+                                />
                                 <Field label="Who can see this gift idea?">
                                   <select
                                     value={selection.visibility}
@@ -562,12 +585,16 @@ function DiscoveryFlow({
                                         visibility: e.target
                                           .value as DiscoverySelection["visibility"],
                                         groupIds: [],
+                                        excludedUserIds: [],
                                       })
                                     }
                                   >
                                     <option value="private">Only me</option>
                                     <option value="hidden">
                                       Selected groups, hidden from recipient
+                                    </option>
+                                    <option value="restricted">
+                                      Selected family groups, with exceptions
                                     </option>
                                     {!sharingFriend && (
                                       <option value="visible">
@@ -576,6 +603,19 @@ function DiscoveryFlow({
                                     )}
                                   </select>
                                 </Field>
+                                {selection.visibility === "restricted" && (
+                                  <IdeaPeople
+                                    label="Also hide from"
+                                    selected={selection.excludedUserIds ?? []}
+                                    onChange={(excludedUserIds) =>
+                                      change(candidate.id, { excludedUserIds })
+                                    }
+                                    groups={selection.groupIds}
+                                    recipients={
+                                      selection.recipientIds ?? [personId]
+                                    }
+                                  />
+                                )}
                                 {selection.visibility !== "private" && (
                                   <fieldset className="gift-interests">
                                     <legend>Share with family groups</legend>
@@ -726,7 +766,15 @@ function DiscoveryFlow({
                   </>
                 ) : (
                   <p>
-                    Gift idea for {name}.{" "}
+                    Gift idea for{" "}
+                    {(selection.recipientIds ?? [personId])
+                      .map(
+                        (id) =>
+                          world.people.find((p) => p.id === id)?.name ??
+                          "Recipient",
+                      )
+                      .join(" & ")}
+                    .{" "}
                     {selection.visibility === "private"
                       ? "Only you can see this idea."
                       : `Shared with ${world.groups
@@ -734,7 +782,9 @@ function DiscoveryFlow({
                           .map((g) => g.name)
                           .join(
                             ", ",
-                          )}; ${selection.visibility === "hidden" ? "hidden from" : "visible to"} the recipient.`}
+                          )}; ${selection.visibility !== "visible" ? "hidden from" : "visible to"} all recipients.`}
+                    {!!selection.excludedUserIds?.length &&
+                      ` Also hidden from ${selection.excludedUserIds.map((id) => world.people.find((p) => p.userId === id)?.name ?? "an unavailable person").join(", ")}.`}
                   </p>
                 )}
                 {selection.allowDuplicate && (

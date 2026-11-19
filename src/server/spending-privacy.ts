@@ -17,6 +17,7 @@ export function protectedSpending(
   const parent = s.spendingRecords.find((v) => v.id === r.sourceId);
   return (
     !!r.protected ||
+    !!item?.excludedUserIds?.some((id) => c?.users.includes(id)) ||
     !!reservation?.exchangeId ||
     !!(reservation && reservationNeedsReview(s, reservation)) ||
     !!(r.reservationId && (!reservation || !item)) ||

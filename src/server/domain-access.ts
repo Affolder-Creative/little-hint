@@ -30,7 +30,7 @@ export const personVisible = (s: State, a: Actor, p: Person) =>
       (j) =>
         j.userId === a.id &&
         !!j.draft?.friendEntryId &&
-        j.draft?.recipientId === p.id,
+        (j.draft?.recipientIds ?? [j.draft?.recipientId]).includes(p.id),
     ) ||
     s.spendingRecords.some(
       (r) =>
@@ -131,7 +131,8 @@ function itemSharedWith(s: State, a: Actor, i: Item): boolean {
     return !!l && listVisible(s, a, l);
   }
   if (i.creatorId === a.id) return true;
-  if (i.visibility === "private") return false;
+  if (i.visibility === "private" || i.excludedUserIds?.includes(a.id))
+    return false;
   if (selfRecipient(s, a, i.recipientIds)) return i.visibility === "visible";
   return i.groupIds.some(
     (g) =>
@@ -159,6 +160,19 @@ export const name = (s: State, userId: string) =>
 export const mode = (s: State, i: Item) =>
   s.lists.find((l) => l.id === i.listId)?.mode ?? "surprise";
 export function reconcileAccess(s: State) {
+  for (const c of s.contributions) {
+    const r = s.reservations.find((r) => r.id === c.reservationId);
+    const i = s.items.find((i) => i.id === r?.itemId);
+    if (
+      c.status === "pledged" &&
+      i &&
+      !itemTrashed(s, i) &&
+      !itemSharedWith(s, { id: c.userId, email: "", name: "" }, i)
+    ) {
+      c.status = "cancelled";
+      touch(c);
+    }
+  }
   for (const r of s.reservations) {
     const i = s.items.find((i) => i.id === r.itemId);
     if (

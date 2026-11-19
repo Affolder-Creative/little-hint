@@ -67,6 +67,7 @@ export function accountExport(s: State, a: Actor) {
         recipientIds: i.recipientIds,
         publicationState: i.publicationState ?? "published",
         visibility: i.visibility,
+        excludedUserIds: i.excludedUserIds,
         groupIds: i.groupIds,
         archived: i.archived,
         deletedAt: i.deletedAt,
@@ -80,13 +81,21 @@ export function accountExport(s: State, a: Actor) {
           (r) => r.id === c.reservationId && r.buyerId === a.id,
         ),
     ),
-    comments: s.comments.filter(
-      (c) =>
-        c.authorId === a.id &&
-        s.items.some(
-          (i) => i.id === c.itemId && noteVisible(s, a, i, c.giverId, c),
-        ),
-    ),
+    comments: s.comments
+      .filter(
+        (c) =>
+          c.authorId === a.id &&
+          s.items.some(
+            (i) => i.id === c.itemId && noteVisible(s, a, i, c.giverId, c),
+          ),
+      )
+      .map(
+        ({
+          excludedUserIds: _excluded,
+          protectedRecipientIds: _recipients,
+          ...comment
+        }) => comment,
+      ),
     friends: s.friendEntries.filter((f) => f.creatorId === a.id),
     spending: {
       records: s.spendingRecords.filter((r) => r.ownerId === a.id),

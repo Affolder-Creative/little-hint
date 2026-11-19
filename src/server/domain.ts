@@ -1,3 +1,9 @@
+import {
+  excludedAccounts,
+  checkIdeaExclusions,
+  ideaRecipientsLocked,
+  lockIdeaRecipients,
+} from "./idea-audience";
 import { discussionKey } from "./discussion-access";
 import { visibilityScope } from "./visibility";
 import {
@@ -334,8 +340,15 @@ export function giftSummary(s: State, a: Actor, listId: string): GiftSummary {
   };
 }
 export function giftView(s: State, a: Actor, i: Item): GiftView {
-  const { creatorId, spendingListId, draftOwnerId, lastEditorId, ...fields } =
-    i;
+  const {
+    creatorId,
+    spendingListId,
+    draftOwnerId,
+    lastEditorId,
+    excludedUserIds,
+    recipientsLocked,
+    ...fields
+  } = i;
   const own = recipient(s, a, i);
   const view: GiftView = {
     ...fields,
@@ -354,7 +367,11 @@ export function giftView(s: State, a: Actor, i: Item): GiftView {
     canShop: canShop(s, a, i),
     mode: mode(s, i),
   };
-  if (!i.listId && creatorId === a.id) view.spendingListId = spendingListId;
+  if (!i.listId && creatorId === a.id) {
+    view.spendingListId = spendingListId;
+    view.excludedUserIds = excludedUserIds ?? [];
+    view.canEditRecipients = !ideaRecipientsLocked(s, i);
+  }
   if (!i.listId || canEdit(s, a, i)) view.creatorName = name(s, creatorId);
   if (i.listId && canEdit(s, a, i) && lastEditorId)
     view.lastEditorName = name(s, lastEditorId);
@@ -452,7 +469,13 @@ export function giftView(s: State, a: Actor, i: Item): GiftView {
         audienceKey: discussionKey(s, i, c.giverId, c),
         protectedHistory:
           !c.giverId &&
-          ((!!c.authorOnly && !discussionProtection(s, i).authorOnly) ||
+          (!!c.excludedUserIds?.some(
+            (id) => !i.excludedUserIds?.includes(id),
+          ) ||
+            !!c.protectedRecipientIds?.some(
+              (id) => !i.recipientIds.includes(id),
+            ) ||
+            (!!c.authorOnly && !discussionProtection(s, i).authorOnly) ||
             ((c.excludeRecipients ?? true) &&
               !discussionProtection(s, i).excludeRecipients)),
         canEdit: c.authorId === a.id && !archived(s, i),
@@ -967,6 +990,7 @@ export function command(
   reconcilePrivacyReview(s);
   reconcileSpendingPrivacy(s);
   lifecycleBaseline(s);
+  lockIdeaRecipients(s);
   reconcileGiftLifecycle(s);
   const beforeLists = new Map(
     s.lists.map((l) => [
@@ -1069,6 +1093,7 @@ export function command(
       });
     }
   }
+  lockIdeaRecipients(s);
   reconcileGiftLifecycle(s);
   reconcilePrivacyReview(s);
   reconcileSpendingPrivacy(s);
@@ -1788,9 +1813,10 @@ function commandCore(
           listId: id.optional(),
           friendEntryId: id.optional(),
           recipientIds: ids.default([]),
+          excludedUserIds: excludedAccounts.default([]),
           groupIds: ids.default([]),
           visibility: z
-            .enum(["private", "hidden", "visible"])
+            .enum(["private", "hidden", "visible", "restricted"])
             .default("private"),
           allowDuplicate: z.boolean().default(false),
           importId: id.optional(),
@@ -1829,7 +1855,21 @@ function commandCore(
           ) ?? fail(404, "List not found.");
         recipients = l.ownerIds;
       } else {
+        if (recipients.length > 20) fail(400, "Choose at most 20 recipients.");
         checkRecipients(s, a, recipients);
+        checkIdeaExclusions(
+          s,
+          a,
+          p.visibility,
+          p.groupIds,
+          p.excludedUserIds,
+          s.imports.find(
+            (j) =>
+              j.id === p.importId &&
+              j.userId === a.id &&
+              j.draft?.state === "active",
+          )?.draft?.excludedUserIds,
+        );
         if (
           recipients.length !== 1 &&
           recipients.some((r) =>
@@ -1909,7 +1949,15 @@ function commandCore(
           fail(409, "This draft changed. Reopen it before saving.");
         if (
           draftImport.draft!.kind === "idea"
-            ? !!p.listId || p.recipientIds[0] !== draftImport.draft!.recipientId
+            ? !!p.listId ||
+              [...p.recipientIds].sort().join() !==
+                [
+                  ...(draftImport.draft!.recipientIds ?? [
+                    draftImport.draft!.recipientId!,
+                  ]),
+                ]
+                  .sort()
+                  .join()
             : p.listId !== draftImport.draft!.listId
         )
           fail(409, "The draft destination changed. Reopen it before saving.");
@@ -1955,8 +2003,11 @@ function commandCore(
           id,
           revision,
           archived: z.boolean(),
-          visibility: z.enum(["private", "hidden", "visible"]),
+          visibility: z.enum(["private", "hidden", "visible", "restricted"]),
           groupIds: ids,
+          recipientIds: ids.optional(),
+          friendEntryId: id.optional(),
+          excludedUserIds: excludedAccounts.optional(),
           importId: id.optional(),
           importDraftRevision: z.number().int().optional(),
         })
@@ -1973,18 +2024,60 @@ function commandCore(
       if (!p.image) p.image = p.images[0] ?? "";
       checkPhotos(s, a, p, i);
       if (!i.listId) {
-        checkFriendAudience(
+        const recipients = p.recipientIds ?? i.recipientIds;
+        const changed =
+          [...recipients].sort().join() !== [...i.recipientIds].sort().join();
+        if (changed && ideaRecipientsLocked(s, i))
+          fail(409, "Recipients can no longer be changed for this idea.");
+        if (changed) {
+          checkRecipients(s, a, recipients);
+          if (recipients.length > 20 || selfRecipient(s, a, recipients))
+            fail(400, "Choose up to 20 other recipients.");
+          if (
+            recipients.length > 1 &&
+            recipients.some((id) =>
+              s.friendEntries.some((f) => f.personId === id && !f.connectedAt),
+            )
+          )
+            fail(400, "Unconnected friends need their own gift idea.");
+          if (
+            p.spendingListId !== undefined ? p.spendingListId : i.spendingListId
+          )
+            listContext(
+              s,
+              a,
+              (p.spendingListId !== undefined
+                ? p.spendingListId
+                : i.spendingListId)!,
+              recipients,
+            );
+        }
+        p.excludedUserIds ??= i.excludedUserIds ?? [];
+        checkIdeaExclusions(
           s,
           a,
-          i.friendEntryId
-            ? friendContext(s, a, i.recipientIds[0], i.friendEntryId, true)
-            : undefined,
           p.visibility,
           p.groupIds,
+          p.excludedUserIds,
+          i.excludedUserIds,
         );
+        const context = friendContext(
+          s,
+          a,
+          recipients[0],
+          changed ? p.friendEntryId : (p.friendEntryId ?? i.friendEntryId),
+          !changed,
+        );
+        p.friendEntryId = context?.id;
+        checkFriendAudience(s, a, context, p.visibility, p.groupIds);
         checkGroups(s, a, p.groupIds);
         if (p.visibility !== "private" && !p.groupIds.length)
           fail(400, "Select a family group to share this idea.");
+      }
+      if (i.listId) {
+        delete p.recipientIds;
+        delete p.friendEntryId;
+        delete p.excludedUserIds;
       }
       if (!i.listId && p.priority)
         fail(400, "Only wish-list items have a recipient priority.");
@@ -1993,7 +2086,12 @@ function commandCore(
         p.spendingListId !== i.spendingListId
       ) {
         if (i.listId) fail(400, "Wish-list items use their source list.");
-        if (p.spendingListId)
+        if (
+          p.spendingListId &&
+          (!p.recipientIds ||
+            [...p.recipientIds].sort().join() ===
+              [...i.recipientIds].sort().join())
+        )
           assignIdeaSpending(
             s,
             a,
@@ -2123,6 +2221,18 @@ function commandCore(
         JSON.stringify(c.mentions ?? []) === JSON.stringify(p.mentions)
       )
         return { ok: true };
+      c.excludedUserIds = [
+        ...new Set([
+          ...(c.excludedUserIds ?? []),
+          ...(i.excludedUserIds ?? []),
+        ]),
+      ];
+      c.protectedRecipientIds = [
+        ...new Set([
+          ...(c.protectedRecipientIds ?? []),
+          ...discussionProtection(s, i, c.giverId).protectedRecipientIds,
+        ]),
+      ];
       c.body = p.body;
       c.mentions = p.mentions;
       c.editedAt = new Date().toISOString();
@@ -2331,7 +2441,11 @@ function commandCore(
           kind: z.enum(["item", "idea"]).optional(),
           friendEntryId: id.optional(),
           recipientId: id.optional(),
-          visibility: z.enum(["private", "hidden", "visible"]).optional(),
+          recipientIds: ids.optional(),
+          excludedUserIds: excludedAccounts.optional(),
+          visibility: z
+            .enum(["private", "hidden", "visible", "restricted"])
+            .optional(),
           groupIds: ids.optional(),
         })
         .parse(b);
@@ -2388,7 +2502,42 @@ function commandCore(
       )
         fail(404, "List not found.");
       if (j.draft!.kind === "idea") {
-        const recipientId = p.recipientId ?? j.draft!.recipientId!;
+        if (
+          !p.recipientIds &&
+          p.recipientId &&
+          p.recipientId !== j.draft!.recipientId &&
+          (j.draft!.recipientIds?.length ?? 1) > 1
+        )
+          fail(409, "Reopen this joint draft before changing its recipients.");
+        const recipientIds =
+          p.recipientIds ??
+          (p.recipientId && p.recipientId !== j.draft!.recipientId
+            ? [p.recipientId]
+            : (j.draft!.recipientIds ?? [j.draft!.recipientId!]));
+        const recipientId = recipientIds[0];
+        if (recipientIds.length > 20)
+          fail(400, "Choose at most 20 recipients.");
+        checkRecipients(s, a, recipientIds);
+        if (selfRecipient(s, a, recipientIds))
+          fail(400, "Choose other recipients.");
+        if (
+          recipientIds.length > 1 &&
+          recipientIds.some((id) =>
+            s.friendEntries.some((f) => f.personId === id && !f.connectedAt),
+          )
+        )
+          fail(400, "Unconnected friends need their own gift idea.");
+        const excludedUserIds =
+          p.excludedUserIds ?? j.draft!.excludedUserIds ?? [];
+        checkIdeaExclusions(
+          s,
+          a,
+          p.visibility ?? j.draft!.visibility ?? "private",
+          p.groupIds ?? j.draft!.groupIds ?? [],
+          excludedUserIds,
+          j.draft!.excludedUserIds,
+          true,
+        );
         checkRecipients(s, a, [recipientId]);
         if (selfRecipient(s, a, [recipientId]))
           fail(400, "Choose another recipient.");
@@ -2413,11 +2562,13 @@ function commandCore(
           p.spendingListId !== undefined
             ? p.spendingListId
             : j.draft!.spendingListId;
-        if (spendingListId) listContext(s, a, spendingListId, [recipientId]);
+        if (spendingListId) listContext(s, a, spendingListId, recipientIds);
         Object.assign(j.draft!, {
           spendingListId,
           friendEntryId: context?.id,
           recipientId,
+          recipientIds,
+          excludedUserIds,
           visibility: p.visibility ?? j.draft!.visibility,
           groupIds: p.groupIds ?? j.draft!.groupIds,
         });
@@ -2463,7 +2614,11 @@ function commandCore(
               kind: z.enum(["item", "idea"]).optional(),
               friendEntryId: id.optional(),
               recipientId: id.optional(),
-              visibility: z.enum(["private", "hidden", "visible"]).optional(),
+              recipientIds: ids.optional(),
+              excludedUserIds: excludedAccounts.optional(),
+              visibility: z
+                .enum(["private", "hidden", "visible", "restricted"])
+                .optional(),
               groupIds: ids.optional(),
               descriptionRich: noteDocumentSchema.nullable().optional(),
               fields: draftFieldsInput,
@@ -2488,6 +2643,31 @@ function commandCore(
         fail(404, "List not found.");
       if (p.draft) checkPhotos(s, a, p.draft.fields);
       if (p.draft?.kind === "idea") {
+        const recipients =
+          p.draft.recipientIds ??
+          (p.draft.recipientId ? [p.draft.recipientId] : []);
+        if (recipients.length > 20) fail(400, "Choose at most 20 recipients.");
+        checkRecipients(s, a, recipients);
+        if (selfRecipient(s, a, recipients))
+          fail(400, "Choose other recipients.");
+        if (
+          recipients.length > 1 &&
+          recipients.some((id) =>
+            s.friendEntries.some((f) => f.personId === id && !f.connectedAt),
+          )
+        )
+          fail(400, "Unconnected friends need their own gift idea.");
+        p.draft.recipientIds = recipients;
+        p.draft.recipientId = recipients[0];
+        checkIdeaExclusions(
+          s,
+          a,
+          p.draft.visibility ?? "private",
+          p.draft.groupIds ?? [],
+          p.draft.excludedUserIds ?? [],
+          [],
+          true,
+        );
         if (!p.draft.recipientId) fail(400, "Choose a recipient.");
         checkRecipients(s, a, [p.draft.recipientId]);
         const context = friendContext(
@@ -2508,7 +2688,7 @@ function commandCore(
           fail(400, "Choose another recipient.");
         checkGroups(s, a, p.draft.groupIds ?? []);
         if (p.draft.spendingListId)
-          listContext(s, a, p.draft.spendingListId, [p.draft.recipientId]);
+          listContext(s, a, p.draft.spendingListId, recipients);
         delete p.draft.listId;
       }
       if (p.draft?.descriptionRich)

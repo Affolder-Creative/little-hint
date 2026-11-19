@@ -80,6 +80,8 @@ export interface DiscoveryInput {
   maxPriceCents: number | null;
 }
 export interface DiscoverySelection {
+  recipientIds?: string[];
+  excludedUserIds?: string[];
   descriptionRich?: NoteDocument | null;
   candidateId: string;
   offerUrl: string;

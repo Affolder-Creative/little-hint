@@ -106,7 +106,10 @@ describe.skipIf(!url)("persisted surprise privacy", () => {
     await storage.migrate();
     await storage.migrate();
     const before = await storage.readState();
-    expect(before.comments[0]).toEqual(note);
+    expect(before.comments[0]).toEqual({
+      ...note,
+      protectedRecipientIds: f.item.recipientIds,
+    });
     expect(before.spendingRecords).toEqual(f.state.spendingRecords);
     expect(privacyPreflight(before)).toMatchObject({
       reservationsNeedingOwnerReview: 1,

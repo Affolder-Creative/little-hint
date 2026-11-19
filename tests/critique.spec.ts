@@ -3007,9 +3007,7 @@ test("idea audience controls match the saved privacy choice", async ({
     page
       .getByRole("status")
       .filter({ hasText: "Visible to you and members of Morgan family." }),
-  ).toContainText(
-    "Hidden from the recipient and anyone managing their profile.",
-  );
+  ).toContainText("Hidden from all recipients.");
   await expect(save).toBeEnabled();
   await audience.selectOption("private");
   await expect(groups).toBeHidden();
@@ -3036,6 +3034,10 @@ test("idea audience controls match the saved privacy choice", async ({
   await audience.selectOption("hidden");
   await groups.getByLabel("Morgan family", { exact: true }).check();
   await page.getByRole("button", { name: "Save changes", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Review who can see this idea" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: /Confirm/ }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   expect(idea.visibility).toBe("hidden");
   expect(
@@ -3055,11 +3057,15 @@ test("idea audience controls match the saved privacy choice", async ({
   await audience.selectOption("visible");
   await expect(
     page.getByText(
-      "Visible to you, members of Morgan family, the recipient and anyone managing their profile.",
+      "Visible to you, members of Morgan family, all recipients.",
       { exact: true },
     ),
   ).toBeVisible();
   await page.getByRole("button", { name: "Save changes", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Review who can see this idea" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: /Confirm/ }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   expect(
     world(state, actors[1]).items.some((item) => item.id === idea.id),
@@ -4789,7 +4795,12 @@ test("joint-list shortcut requires an explicit recipient and respects list owner
   await expect(
     page.getByRole("button", { name: "Save gift idea", exact: true }),
   ).toBeDisabled();
-  await page.getByLabel("Who is this idea for?").selectOption(people[1].id);
+  await page
+    .getByRole("combobox", { name: "Who is this idea for?", exact: true })
+    .fill(people[1].name);
+  await page
+    .getByRole("combobox", { name: "Who is this idea for?", exact: true })
+    .press("Enter");
   await page
     .getByRole("button", { name: "Save gift idea", exact: true })
     .click();
@@ -5530,8 +5541,8 @@ test("gift idea draft restores recipient, audience and manual fields", async ({
     dialog.getByLabel("Gift idea name", { exact: true }),
   ).toHaveValue("My manual name");
   await expect(
-    dialog.getByLabel("Who is this idea for?", { exact: true }),
-  ).toHaveValue(person.id);
+    dialog.getByRole("button", { name: `Remove ${person.name}`, exact: true }),
+  ).toBeVisible();
   await dialog
     .getByRole("button", { name: "Save gift idea", exact: true })
     .click();

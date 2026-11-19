@@ -170,7 +170,6 @@ Recorded spending remains separate from changing listed-price estimates.
 
 Gift idea creators can choose a private default wish list for spending. Their new plans inherit the choice; saving a changed assignment previews and updates their existing unassigned plans and purchases, including related refunds. Already assigned records and other buyers' records retain their context. Clearing the default affects future plans only. Assignment never publishes the idea or changes its audience. The Purchased view offers a combined status and recorded-spending editor. Occasion and wish-list filters count explicitly linked or assigned gifts; guided review helps organize unassigned entries.
 
-
 ## Managed profiles and account administration
 
 Managed profiles start private. Their manager can enable family-group sharing, then select specific groups from their current memberships. Those groups can discover the profile and enroll it in group events. New wish lists created from the managed profile start with those groups selected and retain the normal sharing review. Existing list audiences stay independent, and gift ideas stay private until explicitly shared. Existing managed profiles retain their previous group visibility during migration.
@@ -230,3 +229,20 @@ changes use the new owner's preference. Personal settings never force disclosure
 Shared gift ideas show creator attribution. Selected mentions are colored while composing and are excluded from subsequent suggestions until removed. Discussion audience details use one compact label with contextual help; protected history and exchange restrictions retain their distinct audiences.
 
 Notifications open on Unread. Each account can dismiss notifications or dismiss all read entries through the displayed snapshot, with a brief Undo restoring the original read state. Dismissal persists across devices, affects inbox lists and counts only, and preserves authorized source links and external delivery behavior. There is no automatic purge or separate archive.
+
+## Joint gift ideas and audience exceptions
+
+One gift idea can have up to twenty connected or managed recipients. It appears
+on each recipient's Gift ideas page for authorized viewers while sharing one
+quantity, discussion and set of plans. Unconnected friend entries remain singular.
+Recipients become permanently fixed when gift planning first begins, including
+when plans are later cancelled. Existing joint spending allocations apply.
+
+Only me remains the default. Selected groups can see an idea with all recipients
+hidden, with additional account exclusions, or with recipients included. Explicit
+exclusions override every selected group and persist across membership changes.
+Profile managers participate through their independent access. Notes preserve
+account exclusions and historical surprise recipients when written or edited.
+Restoring access never publishes protected earlier notes. Revocation releases
+unpurchased reservations and unsent pledges, preserves financial history and
+settlement, and prevents spending-partner sharing from bypassing exclusions.
