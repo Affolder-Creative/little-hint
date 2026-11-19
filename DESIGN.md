@@ -377,6 +377,8 @@ The editor groups its photo count, Add photos control, feedback, and thumbnail r
 
 ### Saved wish-list drafts
 
+Item and gift-idea forms place the shared 44px checkbox row below More details and above the fixed action footer. Use Archive this item or Archive this gift idea. New entries start unchecked; draft review restores the saved selection. Archived additions name Archived items in the success confirmation without navigating away.
+
 Saved drafts use the existing compact divided draft rows, 15px medium titles,
 muted destination labels, and wrapping 44px action targets. Keep them in a
 separate Saved drafts section in My lists and the destination list. Loading and
@@ -388,8 +390,7 @@ the secondary Save draft or Publish action in both reading and keyboard order.
 Enter saves edits without publishing. A full-width audience note sits above the
 paired actions and states guardian access where applicable. Save draft and Publish
 use the existing outlined secondary button. Actions align right on desktop and
-stack at full width on phones. The fixed dialog footer remains intact. Archived
-drafts disable Publish. Wish-list imports show automatic-save guidance and a
+stack at full width on phones. The fixed dialog footer remains intact. Archived destination lists disable Publish; individually archived drafts can publish directly into Archived items. Wish-list imports show automatic-save guidance and a
 save/error feedback in the form content after a real edit; closing saves unfinished
 lookup progress. While a lookup runs, the primary action is disabled and Save for later preserves the lookup. After completion or failure, Save draft returns. Enter details manually retires the lookup and preserves local fields.
 Gift-idea imports pair the primary action with an outlined Save for later button.

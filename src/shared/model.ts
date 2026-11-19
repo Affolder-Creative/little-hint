@@ -432,6 +432,7 @@ export interface Preferences extends Base {
   smsConsentedDailyLimit?: number;
 }
 export interface ImportDraft {
+  archived?: boolean;
   recipientIds?: string[];
   excludedUserIds?: string[];
   descriptionRich?: NoteDocument | null;

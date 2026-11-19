@@ -203,7 +203,7 @@ destination wish list. Drafts are visible only to their owner while they retain
 list-editing access, and to current guardians of managed recipients on that list.
 Joint ownership alone grants no draft access. Published items retain the list's
 normal audience. Drafts cannot be bought, discussed, or automatically price-checked.
-Publishing is explicit and one-way, and emits the usual new-item notification once.
+Publishing is explicit and one-way. Active publication emits the usual new-item notification once; archived publication does not.
 Profile takeover transfers guardian-created drafts to the incoming account holder.
 Unfinished product lookups remain creator-private until explicitly saved; offline
 drafts remain device-only. Saved drafts are available in My lists and the destination list.
@@ -250,3 +250,5 @@ settlement, and prevents spending-partner sharing from bypassing exclusions.
 ## Joint-gift spending assignments
 
 A gift idea may have one private spending-list default per recipient and equal or custom relative shares. These defaults belong to its creator and pass to their new plans and purchases. List and event totals count only matching recipient shares; an overall total counts each payment once. Shares use exact cents, including odd amounts. Unassigned shares remain in person and overall totals. Changing idea defaults previews missing assignments on the creator's existing records without changing saved shares or assigned destinations. Purchase edits propagate allocations to refunds. Existing scalar assignments are read as equivalent per-recipient snapshots; schema 12 prevents older runtimes from ignoring new allocations.
+
+New items and gift ideas offer an unchecked archive checkbox. The choice survives import autosaving, saved wish-list drafts and local personal drafts. Publishing an individually archived draft places it directly in Archived items; archived destination lists still block publication.

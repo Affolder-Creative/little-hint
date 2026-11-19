@@ -1815,6 +1815,7 @@ function commandCore(
       const p = itemInput
         .extend({
           publicationState: z.enum(["draft", "published"]).default("published"),
+          archived: z.boolean().default(false),
           listId: id.optional(),
           friendEntryId: id.optional(),
           recipientIds: ids.default([]),
@@ -1980,9 +1981,10 @@ function commandCore(
         draftImport.draft!.state = "published";
         touch(draftImport);
       }
+      setItemArchived(i, p.archived);
       priceBaseline(i, "when added");
       s.items.push(i);
-      if (i.listId && i.publicationState !== "draft")
+      if (i.listId && i.publicationState !== "draft" && !i.archived)
         emitActivity(
           s,
           "wishlist",
@@ -1996,19 +1998,29 @@ function commandCore(
       const i = getItem(s, a, p.id);
       if (!canEdit(s, a, i)) fail(404, "Item not found.");
       checkRevision(i, p.revision);
-      if (!i.listId || i.publicationState !== "draft" || archived(s, i))
-        fail(409, "Only active drafts can be published.");
-      commandCore(s, a, "items.update", { ...b, archived: false });
+      if (
+        !i.listId ||
+        i.publicationState !== "draft" ||
+        !s.lists.some(
+          (l) => l.id === i.listId && !l.deletedAt && !listIsArchived(l),
+        )
+      )
+        fail(409, "Only drafts on active wish lists can be published.");
+      commandCore(s, a, "items.update", {
+        ...b,
+        archived: b.archived ?? i.archived,
+      });
       i.publicationState = "published";
       delete i.draftOwnerId;
       touch(i);
       priceBaseline(i, "when added");
-      emitActivity(
-        s,
-        "wishlist",
-        accountIds(s).filter((userId) => followsItem(s, userId, i)),
-        { itemId: i.id, listId: i.listId, actorId: a.id },
-      );
+      if (!i.archived)
+        emitActivity(
+          s,
+          "wishlist",
+          accountIds(s).filter((userId) => followsItem(s, userId, i)),
+          { itemId: i.id, listId: i.listId, actorId: a.id },
+        );
       return giftView(s, a, i);
     }
     case "items.update": {
@@ -2471,6 +2483,7 @@ function commandCore(
           id,
           revision: z.number().int().optional(),
           descriptionRich: noteDocumentSchema.nullable().optional(),
+          archived: z.boolean().optional(),
           fields: draftFieldsInput.optional(),
           touched: z.array(z.string().max(40)).max(20).optional(),
           listId: id.optional(),
@@ -2638,6 +2651,7 @@ function commandCore(
           description: "",
           descriptionRich: j.draft!.descriptionRich,
         }).description;
+      if (p.archived !== undefined) j.draft!.archived = p.archived;
       if (p.touched) j.draft!.touched = p.touched;
       j.draft!.revision++;
       touch(j);
@@ -2665,6 +2679,7 @@ function commandCore(
                 .optional(),
               groupIds: ids.optional(),
               descriptionRich: noteDocumentSchema.nullable().optional(),
+              archived: z.boolean().optional(),
               fields: draftFieldsInput,
               touched: z.array(z.string().max(40)).max(20),
             })
