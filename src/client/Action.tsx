@@ -13,7 +13,7 @@ export function Action({
 }: {
   label?: string;
   disabled?: boolean;
-  onClick: () => Promise<unknown>;
+  onClick: (button: HTMLButtonElement) => Promise<unknown>;
   children: ReactNode;
   secondary?: boolean;
   danger?: boolean;
@@ -32,11 +32,14 @@ export function Action({
         aria-busy={busy}
         onClick={async (event) => {
           const button = event.currentTarget;
+          const trigger = button
+            .closest("details.entry-actions")
+            ?.querySelector("summary");
           setBusy(true);
           setError("");
           try {
-            await onClick();
-            dismissActionMenu(button);
+            await onClick(button);
+            dismissActionMenu(trigger ?? button);
           } catch (e) {
             setError(actionError(e));
           } finally {
