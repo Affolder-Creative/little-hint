@@ -58,7 +58,9 @@ function MoneyField({
   value,
   label = "Amount paid in USD, optional",
   required = false,
+  onChange,
 }: {
+  onChange?: (value: number | null) => void;
   value?: number | null;
   label?: string;
   required?: boolean;
@@ -73,6 +75,13 @@ function MoneyField({
         min="0"
         max="1000000"
         step="0.01"
+        onChange={(e) =>
+          onChange?.(
+            e.target.value === ""
+              ? null
+              : Math.round(Number(e.target.value) * 100),
+          )
+        }
         defaultValue={value == null ? "" : value / 100}
       />
     </Field>
@@ -311,6 +320,7 @@ export function RecordForm({
   const { mutate, close } = useApp();
   const [listId, setListId] = useState(r.listId ?? "");
   const [allocations, setAllocations] = useState(recordAllocations(r));
+  const [previewAmount, setPreviewAmount] = useState(r.amountCents);
   return (
     <SpendingDialogForm
       submit="Save changes"
@@ -342,6 +352,7 @@ export function RecordForm({
       </div>
       <MoneyField
         value={r.amountCents}
+        onChange={setPreviewAmount}
         label={
           r.kind === "plan"
             ? "Estimated total in USD"
@@ -367,7 +378,7 @@ export function RecordForm({
         <SpendingAllocations
           value={allocations}
           onChange={setAllocations}
-          amountCents={r.amountCents}
+          amountCents={previewAmount}
         />
       )}
       {!r.canAssignList && r.recipientIds.length > 1 && (

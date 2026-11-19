@@ -143,6 +143,18 @@ export function PurchaseForm({
     (overridesAssignment
       ? assignmentList?.groupEventId
       : (plan?.eventId ?? (linked ? undefined : event)));
+  const allocationEvents = [
+    ...new Set(
+      allocations.flatMap((v) => {
+        const name =
+          world.groupEvents.find(
+            (e) =>
+              e.id === world.lists.find((l) => l.id === v.listId)?.groupEventId,
+          )?.name ?? v.eventName;
+        return name ? [name] : [];
+      }),
+    ),
+  ];
   const occasionId = occasion ?? plan?.occasionId ?? "";
   const price = item?.priceCents ?? plan?.unitEstimateCents ?? null;
   const maxQuantity = reservation
@@ -514,7 +526,14 @@ export function PurchaseForm({
             ))}
           </select>
         </Field>
-        {linked || assignmentList?.groupEventId ? (
+        {allocations.some((v) => v.listId) ? (
+          allocationEvents.length > 0 && (
+            <p className="purchase-hint">
+              Group events from selected wish lists:{" "}
+              {allocationEvents.join(", ")}
+            </p>
+          )
+        ) : linked || assignmentList?.groupEventId ? (
           (eventId || assignmentList?.groupEventId) && (
             <p className="purchase-hint">
               Group event:{" "}

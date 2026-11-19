@@ -586,6 +586,13 @@ try {
     .selectOption("custom");
   await page.getByLabel("Jamie's share", { exact: true }).fill("2");
   await page.getByLabel("Emma's share", { exact: true }).fill("1");
+  await page
+    .getByLabel("Total paid in USD, optional", { exact: true })
+    .fill("120");
+  await expect(page.locator(".spending-allocations")).toContainText("$80");
+  await page
+    .getByLabel("Total paid in USD, optional", { exact: true })
+    .fill("90");
   await page.screenshot({
     path: out + "/edit-multiple-desktop.png",
   });

@@ -62,6 +62,9 @@ function PurchaseEditor({
   const [records] = useState(loadedRecords);
   const { mutate, close } = useApp();
   const dismiss = useModalDismiss();
+  const [previewAmounts, setPreviewAmounts] = useState<
+    Record<string, number | null>
+  >({});
   const [assignments, setAssignments] = useState<
     Record<string, SpendingAllocation[]>
   >({});
@@ -137,6 +140,15 @@ function PurchaseEditor({
             <>
               <Field label="Amount paid in USD, optional">
                 <input
+                  onChange={(e) =>
+                    setPreviewAmounts((values) => ({
+                      ...values,
+                      [record.id]:
+                        e.target.value === ""
+                          ? null
+                          : Math.round(Number(e.target.value) * 100),
+                    }))
+                  }
                   name={`amount-${record.id}`}
                   type="number"
                   min="0"
@@ -158,7 +170,11 @@ function PurchaseEditor({
               {record.canAssignList ? (
                 <SpendingAllocations
                   value={assignments[record.id] ?? recordAllocations(record)}
-                  amountCents={record.amountCents}
+                  amountCents={
+                    previewAmounts[record.id] !== undefined
+                      ? previewAmounts[record.id]
+                      : record.amountCents
+                  }
                   onChange={(value) =>
                     setAssignments((previous) => ({
                       ...previous,
