@@ -123,12 +123,12 @@ for (const [width, theme] of [
       theme,
     );
     await page.goto("/people");
-    await expect(page.locator(".directory-section").first()).toBeVisible();
-    for (const section of await page.locator(".directory-section").all())
-      await expect(section.locator(".person-row").last()).toHaveCSS(
-        "border-bottom-width",
-        "0px",
-      );
+    const directory = page.locator(".directory-results");
+    await expect(directory.locator(".person-row")).toHaveCount(f.people.length);
+    await expect(directory.locator(".person-row").last()).toHaveCSS(
+      "border-bottom-width",
+      "0px",
+    );
     await page.screenshot({
       path: info.outputPath("people.png"),
       fullPage: true,
