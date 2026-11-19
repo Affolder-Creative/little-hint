@@ -142,8 +142,6 @@ function DiscoveryFlow({
     refetchIntervalInBackground: false,
   });
   const job = jobQuery.data;
-  const sharingFriend =
-    friendEntries.find((f) => f.id === job?.input.friendEntryId) ?? friendEntry;
   const working =
     !!job && ["pending", "running", "reviewing"].includes(job.status);
   useEffect(() => {
@@ -477,6 +475,21 @@ function DiscoveryFlow({
                         </p>
                       )}
                       {Object.values(selected).map((selection) => {
+                        const recipientFriends = world.friendEntries?.filter(
+                          (entry) =>
+                            entry.personId ===
+                              (selection.recipientIds ?? [personId])[0] &&
+                            !entry.connectedAt &&
+                            !entry.archived,
+                        );
+                        const sharingFriend =
+                          recipientFriends?.find(
+                            (entry) => entry.id === job.input.friendEntryId,
+                          ) ??
+                          recipientFriends?.find(
+                            (entry) => entry.creatorId === world.me.id,
+                          ) ??
+                          recipientFriends?.[0];
                         const candidate = job.candidates.find(
                           (c) => c.id === selection.candidateId,
                         )!;

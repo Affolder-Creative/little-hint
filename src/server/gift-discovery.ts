@@ -439,7 +439,11 @@ function itemPayload(
     listId: own ? selection.listId : undefined,
     recipientIds: own ? [] : (selection.recipientIds ?? [j.input.personId]),
     excludedUserIds: own ? [] : (selection.excludedUserIds ?? []),
-    friendEntryId: own ? undefined : j.input.friendEntryId,
+    friendEntryId:
+      !own &&
+      (selection.recipientIds ?? [j.input.personId])[0] === j.input.personId
+        ? j.input.friendEntryId
+        : undefined,
     visibility: own ? "private" : selection.visibility,
     groupIds: own ? [] : selection.groupIds,
     allowDuplicate: selection.allowDuplicate,

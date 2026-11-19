@@ -233,6 +233,33 @@ describe("bounded searches", () => {
 });
 
 describe("review and atomic save", () => {
+  it("saves a searched friend's suggestion for different joint recipients", () => {
+    const f = discoveryFixture(),
+      a = f.actors[1];
+    const friend = command(f.state, a, "friends.create", {
+      name: "Neighbor",
+    }) as { id: string; personId: string };
+    const j = createDiscovery(f.state, a, cfg, {
+      ...f.input,
+      personId: friend.personId,
+      friendEntryId: friend.id,
+    });
+    j.status = "complete";
+    j.candidates = [candidate()];
+    const recipients = [f.people[0].id, f.people[2].id];
+    prepareDiscoveryReview(f.state, a, cfg, j.id, [
+      { ...selection(j.candidates[0]), recipientIds: recipients },
+    ]);
+    const saved = saveDiscoveryReview(f.state, a, cfg, j.id, {
+      reviewId: j.review!.id,
+    });
+    const item = f.state.items.find((i) =>
+      Object.values(saved.saved).includes(i.id),
+    )!;
+    expect(item.recipientIds).toEqual(recipients);
+    expect(item.friendEntryId).toBeUndefined();
+  });
+
   function ready(own = false) {
     const f = discoveryFixture(),
       a = f.actors[own ? 0 : 1];
