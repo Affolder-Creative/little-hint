@@ -5251,6 +5251,7 @@ for (const engine of ["chromium", "webkit"] as const) {
       await page
         .getByLabel("Item name", { exact: true })
         .fill("My chosen headphones");
+      await page.getByText("More details", { exact: true }).click();
       await page
         .getByRole("checkbox", { name: "Archive this item", exact: true })
         .check();
@@ -5265,6 +5266,10 @@ for (const engine of ["chromium", "webkit"] as const) {
       state.imports[0].result = { title: "Shop title", priceCents: 2500 };
       await page.reload();
       await page.getByRole("button", { name: "Review and add" }).click();
+      await expect(
+        page.locator("details.optional-fields summary"),
+      ).toContainText("Will save to archive");
+      await page.getByText("More details", { exact: true }).click();
       await expect(
         page.getByRole("checkbox", { name: "Archive this item", exact: true }),
       ).toBeChecked();
@@ -6215,54 +6220,91 @@ test("people letter rail supports dragging and short-screen fallback", async ({
 });
 
 for (const width of [390, 1280]) {
-  test(`archive on creation stays accessible at ${width}px`, async ({
-    page,
-  }, testInfo) => {
-    const { state, actor } = await preview(page);
-    await page.setViewportSize({ width, height: 850 });
-    const list = world(state, actor).lists.find(
-      (l) => l.canEdit && !l.archived && !l.groupEventId,
-    )!;
-    await page.goto(`/lists/${list.id}`);
-    await page
-      .locator("#main")
-      .getByRole("button", { name: "Add item", exact: true })
-      .click();
-    const dialog = page.getByRole("dialog");
-    const checkbox = dialog.getByRole("checkbox", {
-      name: "Archive this item",
-      exact: true,
-    });
-    await expect(checkbox).not.toBeChecked();
-    await dialog
-      .getByLabel("Item name", { exact: true })
-      .fill("Archived coffee grinder");
-    await checkbox.focus();
-    await page.keyboard.press("Space");
-    await expect(checkbox).toBeChecked();
-    for (const theme of ["light", "dark"]) {
-      await page.evaluate(
-        (theme) => (document.documentElement.dataset.theme = theme),
-        theme,
-      );
+  for (const idea of [false, true]) {
+    test(`archive on creation stays accessible for ${idea ? "idea" : "item"} at ${width}px`, async ({
+      page,
+    }, testInfo) => {
+      const { state, actor } = await preview(page);
+      await page.setViewportSize({ width, height: 850 });
+      const list = world(state, actor).lists.find(
+        (l) => l.canEdit && !l.archived && !l.groupEventId,
+      )!;
+      const recipient = world(state, actor).people.find(
+        (p) => p.userId !== actor.id,
+      )!;
+      await page.goto(idea ? `/people/${recipient.id}` : `/lists/${list.id}`);
+      await page
+        .locator("#main")
+        .getByRole("button", {
+          name: idea ? "Add gift idea" : "Add item",
+          exact: true,
+        })
+        .click();
+      const dialog = page.getByRole("dialog");
+      const checkbox = dialog.getByRole("checkbox", {
+        name: idea ? "Archive this gift idea" : "Archive this item",
+        exact: true,
+      });
+      const details = dialog.locator("details.optional-fields");
+      const summary = details.locator("summary");
+      await expect(details).not.toHaveAttribute("open");
+      await summary.focus();
+      await page.keyboard.press("Enter");
+      await expect(checkbox).not.toBeChecked();
+      await dialog
+        .getByLabel(idea ? "Gift idea name" : "Item name", { exact: true })
+        .fill("Archived coffee grinder");
+      await checkbox.focus();
+      await page.keyboard.press("Space");
+      await expect(checkbox).toBeChecked();
+      await summary.click();
+      await expect(summary).toContainText("Will save to archive");
+      await summary.click();
+      await checkbox.uncheck();
+      await expect(summary).not.toContainText("Will save to archive");
+      await checkbox.check();
+      await checkbox.scrollIntoViewIfNeeded();
       await page.screenshot({
-        path: testInfo.outputPath(`archive-${width}-${theme}.png`),
+        path: testInfo.outputPath(
+          `archive-expanded-${idea ? "idea" : "item"}-${width}.png`,
+        ),
         fullPage: true,
       });
-    }
-    await dialog
-      .getByRole("button", { name: "Add to wish list", exact: true })
-      .click();
-    await expect(dialog).not.toBeVisible();
-    const saved = state.items.find(
-      (i) => i.title === "Archived coffee grinder",
-    )!;
-    expect(saved.archived).toBe(true);
-    expect(saved.archivedAt).toBeTruthy();
-    await expect(
-      page.getByText("Item saved to Archived items.", { exact: true }),
-    ).toBeVisible();
-  });
+      await summary.click();
+      for (const theme of ["light", "dark"]) {
+        await page.evaluate(
+          (theme) => (document.documentElement.dataset.theme = theme),
+          theme,
+        );
+        await page.screenshot({
+          path: testInfo.outputPath(
+            `archive-${idea ? "idea" : "item"}-${width}-${theme}.png`,
+          ),
+          fullPage: true,
+        });
+      }
+      await dialog
+        .getByRole("button", {
+          name: idea ? "Save gift idea" : "Add to wish list",
+          exact: true,
+        })
+        .click();
+      await expect(dialog).not.toBeVisible();
+      const saved = state.items.find(
+        (i) => i.title === "Archived coffee grinder",
+      )!;
+      expect(saved.archived).toBe(true);
+      expect(saved.archivedAt).toBeTruthy();
+      await expect(
+        page.getByText(
+          idea
+            ? "Gift idea saved to Archived items."
+            : "Item saved to Archived items.",
+          { exact: true },
+        ),
+      ).toBeVisible();
+    });
+  }
 }
 
 async function sizedDirectory(page: Page, initialCount: number) {

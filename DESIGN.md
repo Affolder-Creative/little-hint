@@ -574,6 +574,9 @@ photo, shop, and current editable price. Lookup completion never opens optional
 fields or overwrites manual edits. New entries and import drafts start collapsed;
 existing items and recovered offline drafts start expanded. The disclosure
 summarizes populated fields and reveals invalid controls before focusing them.
+Archive selection sits at the bottom of More details. When checked, Will save to
+archive leads the summary, including while collapsed. New entries default to
+unchecked; saved choices and disclosure defaults remain intact.
 
 The dialog heading and action footer stay fixed around one scrollable content
 area. Content uses 24px padding, reduced to 20px vertically and 18px horizontally

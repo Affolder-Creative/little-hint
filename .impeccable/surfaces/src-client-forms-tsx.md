@@ -21,4 +21,4 @@ Lookup actions disable final saving until completion, failure, or explicit manua
 
 Recipient spending allocations use one optional list per person and an equal/custom split selector. Custom shares reveal labeled relative weights and exact dollar previews. Retain flat rows, existing field styling, mobile scrolling and fixed actions. Validate joint idea save, inheritance, purchase, refund, private defaults, and scoped totals. The polish pass removed duplicate helper copy and corrected clearing guidance.
 
-Archive selection uses the existing checkbox below More details in every editor mode. It survives draft saves and reopening. Individually archived drafts can publish; archived destinations cannot. Success names Archived items without changing pages.
+Archive selection uses the existing checkbox at the bottom of More details in every editor mode. The summary starts with Will save to archive when checked, including while collapsed. It survives draft saves and reopening. Individually archived drafts can publish; archived destinations cannot. Success names Archived items without changing pages.

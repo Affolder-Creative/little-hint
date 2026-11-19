@@ -1707,6 +1707,7 @@ function GiftEditor({
           <span>More details</span>
           <small className="muted">
             {[
+              archived && "Will save to archive",
               data.description && "Note added",
               data.price !== "" &&
                 new Intl.NumberFormat("en-US", {
@@ -1874,16 +1875,16 @@ function GiftEditor({
             {formatDateTime(job.result.importedAt)}. Prices can change.
           </small>
         )}
+        <label className="check">
+          <input
+            type="checkbox"
+            name="archived"
+            checked={archived}
+            onChange={(event) => setArchived(event.target.checked)}
+          />
+          {idea ? "Archive this gift idea" : "Archive this item"}
+        </label>
       </details>
-      <label className="check">
-        <input
-          type="checkbox"
-          name="archived"
-          checked={archived}
-          onChange={(event) => setArchived(event.target.checked)}
-        />
-        {idea ? "Archive this gift idea" : "Archive this item"}
-      </label>
       {duplicate && (
         <div className="duplicate">
           <strong>
