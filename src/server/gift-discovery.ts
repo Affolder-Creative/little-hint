@@ -1,3 +1,4 @@
+import { excludedAccounts } from "./idea-audience";
 import { itemPhotos } from "../shared/item-photos";
 import { noteDocumentSchema, normalizeNote } from "../shared/helpful-note";
 import { friendContext } from "./friends";
@@ -58,13 +59,17 @@ export const discoveryInputSchema = z
     "Choose an interest first.",
   );
 const selectionSchema = z.object({
+  recipientIds: ids.optional(),
+  excludedUserIds: excludedAccounts.optional(),
   candidateId: uuid,
   offerUrl: z.url().max(2048),
   listId: uuid.optional(),
   title: z.string().trim().min(1).max(160),
   description: z.string().trim().max(5000),
   descriptionRich: noteDocumentSchema.nullable().optional(),
-  visibility: z.enum(["private", "hidden", "visible"]).default("private"),
+  visibility: z
+    .enum(["private", "hidden", "visible", "restricted"])
+    .default("private"),
   groupIds: ids.default([]),
   allowDuplicate: z.boolean().default(false),
 });
@@ -432,7 +437,8 @@ function itemPayload(
     quantity: 1,
     tags: candidate.categoryIds,
     listId: own ? selection.listId : undefined,
-    recipientIds: own ? [] : [j.input.personId],
+    recipientIds: own ? [] : (selection.recipientIds ?? [j.input.personId]),
+    excludedUserIds: own ? [] : (selection.excludedUserIds ?? []),
     friendEntryId: own ? undefined : j.input.friendEntryId,
     visibility: own ? "private" : selection.visibility,
     groupIds: own ? [] : selection.groupIds,

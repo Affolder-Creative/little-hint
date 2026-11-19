@@ -1018,10 +1018,7 @@ function PersonPage() {
           <button
             className="button"
             onClick={() =>
-              open(
-                `Gift idea for ${person.name}`,
-                <GiftForm recipientId={person.id} />,
-              )
+              open("Add gift idea", <GiftForm recipientId={person.id} />)
             }
           >
             <Plus size={17} />
@@ -1032,12 +1029,7 @@ function PersonPage() {
         {!own && !archivedFriend && (
           <button
             className="button"
-            onClick={() =>
-              open(
-                `Gift idea for ${person.name}`,
-                <GiftForm recipientId={id} />,
-              )
-            }
+            onClick={() => open("Add gift idea", <GiftForm recipientId={id} />)}
           >
             <Plus size={17} />
             Add gift idea
@@ -1205,10 +1197,7 @@ function PersonPage() {
               <button
                 className="button"
                 onClick={() =>
-                  open(
-                    `Gift idea for ${person.name}`,
-                    <GiftForm recipientId={id} />,
-                  )
+                  open("Add gift idea", <GiftForm recipientId={id} />)
                 }
               >
                 Add gift idea
@@ -1661,8 +1650,9 @@ function GiftDetail() {
                   {protectedHistory && <h3>Earlier private notes</h3>}
                   {protectedHistory && (
                     <p className="muted">
-                      These notes keep their original privacy. Sharing this gift
-                      does not reveal them to recipients.
+                      These notes keep their original privacy. People who were
+                      excluded when these notes were written still cannot read
+                      them.
                     </p>
                   )}
                   {notes.map((c, index) => (

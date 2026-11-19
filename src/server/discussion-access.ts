@@ -16,6 +16,14 @@ import {
 
 export function discussionProtection(s: State, item: Item, giverId?: string) {
   return {
+    excludedUserIds: [...(item.excludedUserIds ?? [])],
+    protectedRecipientIds:
+      giverId ||
+      (item.listId
+        ? mode(s, item) === "surprise"
+        : item.visibility !== "visible")
+        ? [...item.recipientIds]
+        : [],
     authorOnly: !item.listId && item.visibility === "private",
     excludeRecipients:
       !!giverId ||
@@ -37,6 +45,8 @@ export function noteVisible(
     s.people.some((p) => p.userId === a.id) &&
     item.publicationState !== "draft" &&
     itemVisible(s, a, item) &&
+    !comment?.excludedUserIds?.includes(a.id) &&
+    !selfRecipient(s, a, comment?.protectedRecipientIds ?? []) &&
     (!(
       current.excludeRecipients ||
       (comment && (comment.excludeRecipients ?? true))
@@ -63,6 +73,13 @@ export function discussionKey(
     .update(
       JSON.stringify([
         item.id,
+        [
+          ...new Set([
+            ...(item.excludedUserIds ?? []),
+            ...(comment?.excludedUserIds ?? []),
+          ]),
+        ].sort(),
+        [...(comment?.protectedRecipientIds ?? [])].sort(),
         giverId ?? null,
         comment?.exchangeId ?? null,
         protection.authorOnly ||
@@ -91,6 +108,13 @@ export function discussionLabel(
   )
     return "Only you";
   if (giverId) return "Giver and profile managers; recipients excluded";
+  if (
+    comment?.excludedUserIds?.length ||
+    comment?.protectedRecipientIds?.some(
+      (id) => !item.recipientIds.includes(id),
+    )
+  )
+    return "People with access who were not excluded when this note was written";
   if (
     current.excludeRecipients ||
     (comment && (comment.excludeRecipients ?? true))

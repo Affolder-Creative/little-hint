@@ -78,9 +78,7 @@ export function Lists() {
               className="button secondary"
               onClick={() =>
                 open(
-                  ideaRecipients.length === 1
-                    ? `Gift idea for ${ideaRecipients[0].name}`
-                    : "Add gift idea",
+                  "Add gift idea",
                   <GiftForm
                     initialSpendingListId={list.id}
                     recipientOptions={ideaRecipients.map((person) => person.id)}

@@ -1,12 +1,12 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-18T18:15:56.772593+00:00",
+  "generatedAt": "2026-11-19T02:33:17.318439+00:00",
   "title": "Design System: Little Hint",
   "extensions": {
     "peopleDirectory": {
-      "layout": "Single column, first-initial sections; flat name-search matches; 40px avatars; 17px headings; 12px row padding.",
+      "layout": "Single column with soft letter headings; dividers only between people within each section or flat search results; 40px avatars; 17px names; 12px row padding.",
       "navigation": "Sticky search clears the sticky mobile header. Desktop search and count share a row with the horizontal alphabet directly below; letters wrap when needed; mobile rail fits available height; Jump to letter dialog remains accessible. History-entry state preserves query and disclosure.",
-      "profiles": "Self-follow hidden; conditional preference subheadings; alphabetical wish-list rows with existing calendar/checklist tiles."
+      "profiles": "Person wish-list links use 52px icons, a 16px gap, flexible left-aligned names/subtext, and a trailing arrow."
     },
     "enlargedNavigation": "Whole mobile navigation links wrap to additional rows at enlarged text sizes; measured height reserves content clearance. Sidebar note reflows; all avatars scale with their text, and notification counts retain content-driven width and a text-relative line height above the bell. Settings gear exposes its active route.",
     "compactBrand": "At 360px and below the mobile header uses the approved 44px heart-tag symbol and Little Hint accessible name.",
@@ -1197,7 +1197,10 @@
       "mentions": "Accent-colored inline mentions use native textarea metrics; selected accounts are excluded from suggestions.",
       "notifications": "Unread first; flat divided rows with read/dismiss actions; timestamp above actions on phones; ten-second Undo pauses for hover, focus and pending work.",
       "coManagement": "Stable 16px outer padding in open and closed states."
-    }
+    },
+    "giftIdeaAudience": "SearchSelect and SelectionTags choose one or more recipients and optional account exclusions. First sharing and audience changes show recipient/group/exclusion review. Fixed recipient summary after planning begins.",
+    "notificationTabs": "Visible active underline follows label width; button retains 44px minimum dimensions.",
+    "actionMenus": "Destructive separators appear only after another rendered action. Delete-only menus have no separator or extra top margin."
   },
   "components": [
     {

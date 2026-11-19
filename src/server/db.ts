@@ -18,7 +18,7 @@ import {
   type ImportJob,
   type FriendEntry,
 } from "../shared/model";
-const supportedSchemaVersion = 10;
+const supportedSchemaVersion = 11;
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   max: 10,
@@ -284,6 +284,21 @@ INSERT INTO schema_migration(version) VALUES (2);`);
         ]);
       }
       await client.query("INSERT INTO schema_migration(version) VALUES (10)");
+    }
+    const audienceMigration = await client.query(
+      "SELECT 1 FROM schema_migration WHERE version=11",
+    );
+    if (!audienceMigration.rowCount) {
+      await client.query(
+        `UPDATE app_record i SET data = jsonb_set(i.data, '{recipientsLocked}', 'true') WHERE kind='items' AND NOT (data ? 'listId') AND EXISTS (SELECT 1 FROM app_record r WHERE r.kind='reservations' AND r.data->>'itemId'=i.id)`,
+      );
+      await client.query(
+        `UPDATE app_record SET data=jsonb_set(data, '{draft,recipientIds}', jsonb_build_array(data->'draft'->>'recipientId')) WHERE kind='imports' AND data->'draft'->>'kind'='idea' AND data->'draft' ? 'recipientId' AND NOT (data->'draft' ? 'recipientIds')`,
+      );
+      await client.query(
+        `UPDATE app_record c SET data=jsonb_set(c.data, '{protectedRecipientIds}', i.data->'recipientIds') FROM app_record i WHERE c.kind='comments' AND i.kind='items' AND c.data->>'itemId'=i.id AND COALESCE((c.data->>'excludeRecipients')::boolean, true) AND NOT (c.data ? 'protectedRecipientIds')`,
+      );
+      await client.query("INSERT INTO schema_migration(version) VALUES (11)");
     }
     await client.query("COMMIT");
   } catch (e) {

@@ -4048,7 +4048,8 @@ main {
   display: grid;
   gap: 12px;
 }
-.entry-actions-content .danger {
+.entry-actions-content > :not(:first-child).danger,
+.entry-actions-content > :not(:first-child) .danger {
   border-block-start: 1px solid var(--border);
   border-radius: 0;
   margin-block-start: 4px;
@@ -4212,10 +4213,11 @@ main {
 .person-lists li {
   border-bottom: 1px solid var(--border);
 }
-.person-list-link {
-  display: flex;
+.person-lists .person-list-link {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) 16px;
   align-items: center;
-  justify-content: space-between;
+  text-align: start;
   gap: 16px;
   padding: 16px 0;
   color: var(--text);
@@ -5356,4 +5358,32 @@ a.button:is(:hover, :focus, :active),
   text-decoration: underline;
   min-height: 44px;
   cursor: pointer;
+}
+
+.people-directory .person-row {
+  border-bottom: 0;
+}
+.people-directory .person-row + .person-row {
+  border-top: 1px solid var(--border);
+}
+.notification-toolbar .tabs button {
+  position: relative;
+  border-bottom-color: transparent;
+}
+.notification-toolbar .tabs button > span {
+  position: relative;
+  display: inline-block;
+}
+.notification-toolbar .tabs button[aria-pressed="true"] > span::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  bottom: -16px;
+  border-bottom: 2px solid var(--accent);
+}
+
+.idea-people .purchase-hint {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--muted);
 }

@@ -163,6 +163,7 @@ try {
           "tests/managed-profiles.spec.ts",
           "tests/account-export.spec.ts",
           "tests/ui-refinements.spec.ts",
+          "tests/idea-audience.spec.ts",
         ]
       : []),
     ...(suite === "gift-discovery"

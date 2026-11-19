@@ -25,3 +25,18 @@ Special note restrictions remain stronger than general item sharing. Exchange-sp
 Mention eligibility is checked at posting and notification delivery. Reject stale mentions with an explanation when a tagged account loses access before submission. Access loss also removes access to the discussion and its in-app notifications, and queued notifications must recheck access before delivery. Already-delivered email and push notifications cannot be recalled.
 
 If the discussion audience changes during composition, preserve the draft and require the author to review the changed audience before posting, even when all mentions remain valid. This prevents a privately composed note from being submitted to a newly expanded audience.
+
+## Audience exceptions and joint ideas
+
+Gift ideas may name several recipients. A shared surprise excludes every actual
+recipient; optional account exclusions override group membership. Notes capture
+explicit excluded accounts and surprise-recipient identities when created. Editing
+can add current restrictions but cannot remove historical ones. Restored item
+access therefore permits new discussion without publishing earlier protected
+notes. Connection and profile takeover remap historical recipient identities.
+
+Recipient changes stop permanently when the first gift plan exists. This avoids
+reassigning financial commitments or accidentally revealing a buyer's surprise.
+Removing audience access releases unpurchased reservations and unsent pledges,
+but retains purchases, payments and settlement. The implementation specification
+is tracked in [issue #245](https://github.com/Affolder-Creative/little-hint/issues/245).

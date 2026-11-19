@@ -178,13 +178,15 @@ export function NotificationCenter() {
       <div className="notification-toolbar">
         <div className="tabs" role="group" aria-label="Filter notifications">
           <button aria-pressed={unread} onClick={() => setUnread(true)}>
-            Unread
-            {query.data?.pages[0].unreadCount
-              ? ` (${query.data.pages[0].unreadCount})`
-              : ""}
+            <span>
+              Unread
+              {query.data?.pages[0].unreadCount
+                ? ` (${query.data.pages[0].unreadCount})`
+                : ""}
+            </span>
           </button>
           <button aria-pressed={!unread} onClick={() => setUnread(false)}>
-            All
+            <span>All</span>
           </button>
         </div>
         {!unread && !!query.data?.pages[0].readCount && (

@@ -238,8 +238,27 @@ export function acceptFriend(s: State, a: Actor, inv: Invitation) {
     ];
     touch(i);
   }
-  for (const j of s.imports.filter((j) => j.draft?.recipientId === old)) {
-    j.draft!.recipientId = person.id;
+  for (const c of s.comments.filter((c) =>
+    c.protectedRecipientIds?.includes(old),
+  )) {
+    c.protectedRecipientIds = [
+      ...new Set(
+        c.protectedRecipientIds!.map((id) => (id === old ? person.id : id)),
+      ),
+    ];
+    touch(c);
+  }
+  for (const j of s.imports.filter(
+    (j) => j.draft?.recipientId === old || j.draft?.recipientIds?.includes(old),
+  )) {
+    j.draft!.recipientIds = [
+      ...new Set(
+        (j.draft!.recipientIds ?? [old]).map((id) =>
+          id === old ? person.id : id,
+        ),
+      ),
+    ];
+    j.draft!.recipientId = j.draft!.recipientIds[0];
     j.draft!.revision++;
     touch(j);
   }

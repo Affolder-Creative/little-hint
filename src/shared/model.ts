@@ -16,7 +16,7 @@ import type {
   DiscoveryConfig,
 } from "./gift-discovery";
 export type Mode = "surprise" | "transparent";
-export type Visibility = "private" | "hidden" | "visible";
+export type Visibility = "private" | "hidden" | "visible" | "restricted";
 export interface Base {
   id: string;
   revision: number;
@@ -216,6 +216,9 @@ export interface Item extends Base {
   listId?: string;
   recipientIds: string[];
   creatorId: string;
+  excludedUserIds?: string[];
+  recipientsLocked?: boolean;
+  canEditRecipients?: boolean;
   visibility: Visibility;
   groupIds: string[];
   archived: boolean;
@@ -270,6 +273,8 @@ export interface Contribution extends Base {
   status: "pledged" | "sent" | "received" | "cancelled";
 }
 export interface Comment extends Base {
+  excludedUserIds?: string[];
+  protectedRecipientIds?: string[];
   excludeRecipients?: boolean;
   privacyReview?: boolean;
   authorOnly?: boolean;
@@ -426,6 +431,8 @@ export interface Preferences extends Base {
   smsConsentedDailyLimit?: number;
 }
 export interface ImportDraft {
+  recipientIds?: string[];
+  excludedUserIds?: string[];
   descriptionRich?: NoteDocument | null;
   spendingListId?: string | null;
   friendEntryId?: string;
