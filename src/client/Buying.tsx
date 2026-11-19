@@ -1,3 +1,4 @@
+import { dismissActionMenu } from "./menu-dismiss";
 import { InfoHelp } from "./InfoHelp";
 import { GiftPlanDetail, sourceLabels } from "./GiftPlanDetail";
 import {
@@ -23,7 +24,15 @@ import { contributionStatus } from "./copy";
 import { Confirm } from "./Confirm";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Gift, Pencil, Users, CircleX } from "lucide-react";
+import {
+  ArrowRight,
+  Gift,
+  Pencil,
+  Users,
+  CircleX,
+  ExternalLink,
+  Check,
+} from "lucide-react";
 import type { Reservation } from "../shared/model";
 import { dollars } from "./api";
 import { useApp } from "./context";
@@ -131,6 +140,60 @@ export function Buying() {
         {visible.length > 0 ? (
           <div className="buying-list">
             {visible.map((r) => {
+              const needsBuying = r.purchased < r.quantity;
+              const quickPurchase =
+                !!r.item && r.quantity === 1 && r.purchased === 0;
+              const shopFirst = needsBuying && !!r.item?.url;
+              const shopAction = r.item?.url ? (
+                <a
+                  className={
+                    shopFirst ? "button secondary small" : "text-button"
+                  }
+                  href={r.item.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`Visit shop for ${r.titleSnapshot} (opens in a new tab)`}
+                  onClick={(event) => dismissActionMenu(event.currentTarget)}
+                >
+                  Visit shop <ExternalLink size={16} aria-hidden="true" />
+                </a>
+              ) : null;
+              const markAction = (
+                <Action
+                  secondary
+                  onClick={async (button) => {
+                    if (world.spendingEnabled) {
+                      dismissActionMenu(button);
+                      open(
+                        "Mark as purchased",
+                        <PurchaseForm
+                          reservation={r}
+                          onSuccess={() => {
+                            toast("Purchase saved.");
+                            focusView();
+                          }}
+                        />,
+                      );
+                      return;
+                    }
+                    await mutate("reservations/update", {
+                      id: r.id,
+                      revision: r.revision,
+                      quantity: 1,
+                      purchased: 1,
+                    });
+                    toast(
+                      view === "needs-buying"
+                        ? "Marked as purchased. Find it in Purchased to update or cancel."
+                        : "Marked as purchased. Use Update purchase if your plans change.",
+                    );
+                    if (view === "needs-buying") focusView();
+                  }}
+                  label={`Mark ${r.titleSnapshot} as purchased`}
+                >
+                  <Check size={16} aria-hidden="true" /> Mark as purchased
+                </Action>
+              );
               const updateAction = (
                 <button
                   className="button secondary small"
@@ -295,48 +358,15 @@ export function Buying() {
                     />
                   </div>
                   <div className="actions">
-                    {r.item && r.quantity === 1 && r.purchased === 0 && (
-                      <Action
-                        secondary
-                        onClick={async () => {
-                          if (world.spendingEnabled) {
-                            open(
-                              "Mark as purchased",
-                              <PurchaseForm
-                                reservation={r}
-                                onSuccess={() => {
-                                  toast("Purchase saved.");
-                                  focusView();
-                                }}
-                              />,
-                            );
-                            return;
-                          }
-                          await mutate("reservations/update", {
-                            id: r.id,
-                            revision: r.revision,
-                            quantity: 1,
-                            purchased: 1,
-                          });
-                          toast(
-                            view === "needs-buying"
-                              ? "Marked as purchased. Find it in Purchased to update or cancel."
-                              : "Marked as purchased. Use Update purchase if your plans change.",
-                          );
-                          if (view === "needs-buying") focusView();
-                        }}
-                        label={`Mark ${r.titleSnapshot} as purchased`}
-                      >
-                        Mark as purchased
-                      </Action>
-                    )}
-                    {!(r.item && r.quantity === 1 && r.purchased === 0) &&
-                      updateAction}
+                    {shopFirst
+                      ? shopAction
+                      : quickPurchase
+                        ? markAction
+                        : updateAction}
                     <ActionMenu name={r.titleSnapshot} label="More actions">
-                      {r.item &&
-                        r.quantity === 1 &&
-                        r.purchased === 0 &&
-                        updateAction}
+                      {shopFirst && quickPurchase && markAction}
+                      {(shopFirst || quickPurchase) && updateAction}
+                      {!needsBuying && shopAction}
                       {!r.exchangeId && r.item && !r.item.archived && (
                         <button
                           className="text-button"

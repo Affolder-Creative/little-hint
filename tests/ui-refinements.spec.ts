@@ -1080,3 +1080,219 @@ for (const width of [320, 390]) {
     await expect(settings).not.toHaveAttribute("aria-current", "page");
   });
 }
+
+for (const width of [320, 393, 1440]) {
+  for (const theme of ["light", "dark"]) {
+    test(`Buying shop links follow purchase state at ${width}px ${theme}`, async ({
+      page,
+    }, info) => {
+      const { state, actor, gift } = await setup(page);
+      await page.setViewportSize({ width, height: 900 });
+      await page.addInitScript(
+        (theme) => localStorage.setItem("little-hint:theme", theme),
+        theme,
+      );
+      state.reservations = state.reservations.filter(
+        (r) => r.itemId !== gift.id,
+      );
+      const reservation = command(state, actor, "reservations.create", {
+        itemId: gift.id,
+        quantity: 1,
+        ordinary: true,
+      }) as { id: string };
+      await page.route("**/api/v1/reservations/update", (route) =>
+        route.fulfill({
+          json: command(
+            state,
+            actor,
+            "reservations.update",
+            route.request().postDataJSON(),
+          ),
+        }),
+      );
+      await page
+        .context()
+        .route("https://shop.example/**", (route) =>
+          route.fulfill({ body: "Shop fixture" }),
+        );
+      await page.goto("/buying");
+      const row = page.locator(".buying-row").filter({ hasText: gift.title });
+      const shop = row.getByRole("link", { name: /^Visit shop/ });
+      const mark = row.getByRole("button", {
+        name: `Mark ${gift.title} as purchased`,
+      });
+      await expect(shop).toBeVisible();
+      await expect(mark).not.toBeVisible();
+      const popupPromise = page.waitForEvent("popup");
+      await shop.click();
+      const popup = await popupPromise;
+      await expect(popup).toHaveURL(gift.url);
+      await popup.close();
+      expect(
+        state.reservations.find((r) => r.id === reservation.id)!.purchased,
+      ).toBe(0);
+      await row.locator("summary").focus();
+      await page.keyboard.press("Enter");
+      await expect(mark).toBeVisible();
+      await page.screenshot({
+        path: info.outputPath("buying-shop-menu.png"),
+        fullPage: true,
+      });
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth - innerWidth,
+        ),
+      ).toBeLessThanOrEqual(1);
+      await mark.click();
+      await expect(row).toHaveCount(0);
+      await expect(
+        page.getByRole("button", { name: /^Needs buying/ }),
+      ).toBeFocused();
+      await page.getByRole("button", { name: /^Purchased \(/ }).click();
+      await expect(
+        row.getByRole("button", { name: "Update purchase", exact: true }),
+      ).toBeVisible();
+      await expect(shop).not.toBeVisible();
+      await row.locator("summary").click();
+      await expect(shop).toBeVisible();
+      await page.keyboard.press("Escape");
+      await expect(row.locator("summary")).toBeFocused();
+      const saved = state.reservations.find((r) => r.id === reservation.id)!;
+      saved.quantity = 3;
+      saved.purchased = 1;
+      gift.quantity = 3;
+      await page.reload();
+      await page.getByRole("button", { name: /^All \(/ }).click();
+      await expect(shop).toBeVisible();
+      const update = row.getByRole("button", {
+        name: "Update purchase",
+        exact: true,
+      });
+      await expect(update).not.toBeVisible();
+      await row.locator("summary").click();
+      await update.click();
+      await expect(
+        page.getByLabel("Quantity purchased", { exact: true }),
+      ).toHaveValue("1");
+      await page.keyboard.press("Escape");
+      gift.url = "";
+      await page.reload();
+      await expect(shop).toHaveCount(0);
+      await expect(update).toBeVisible();
+      saved.quantity = 1;
+      saved.purchased = 0;
+      await page.reload();
+      await expect(mark).toBeVisible();
+      gift.url = "https://shop.example/gift";
+      await page.reload();
+      await row.locator("summary").click();
+      await mark.click();
+      await expect(row.locator("summary")).toBeFocused();
+      gift.deletedAt = new Date().toISOString();
+      await page.reload();
+      await expect(shop).toHaveCount(0);
+    });
+  }
+}
+
+for (const engine of ["chromium", "webkit"]) {
+  test(`Buying shop menu preserves spending and errors in ${engine}`, async ({
+    page: chromiumPage,
+  }, info) => {
+    const browser =
+      engine === "webkit"
+        ? await webkit.launch({
+            executablePath: webkit.executablePath(),
+            channel: "",
+          })
+        : undefined;
+    const page = browser
+      ? await browser.newPage({
+          baseURL: String(info.project.use.baseURL),
+          viewport: { width: 393, height: 852 },
+        })
+      : chromiumPage;
+    try {
+      const { state, actor, gift } = await setup(page);
+      state.reservations = state.reservations.filter(
+        (r) => r.itemId !== gift.id,
+      );
+      const reservation = command(state, actor, "reservations.create", {
+        itemId: gift.id,
+        quantity: 1,
+        ordinary: true,
+      }) as { id: string };
+      const fail = true;
+      await page.route("**/api/v1/spending/history?*", (route) =>
+        route.fulfill({
+          json: spendingHistory(
+            state,
+            actor,
+            Object.fromEntries(new URL(route.request().url()).searchParams),
+          ),
+        }),
+      );
+      await page.route("**/api/v1/buying/reservations/*", (route) =>
+        route.fulfill({
+          json: world(state, actor).buying.find((r) => r.id === reservation.id),
+        }),
+      );
+      await page.route("**/api/v1/reservations/update", (route) =>
+        fail
+          ? route.fulfill({ status: 400, json: { error: "Please try again." } })
+          : route.fulfill({
+              json: command(
+                state,
+                actor,
+                "reservations.update",
+                route.request().postDataJSON(),
+              ),
+            }),
+      );
+      await page.goto("/buying");
+      const row = page.locator(".buying-row").filter({ hasText: gift.title });
+      await row.locator("summary").click();
+      await row
+        .getByRole("button", { name: `Mark ${gift.title} as purchased` })
+        .click();
+      await expect(row.getByRole("alert")).toHaveText("Please try again.");
+      await expect(row.locator("details")).toHaveAttribute("open", "");
+      command(state, actor, "spending.settings", {
+        enabled: true,
+        summaries: true,
+      });
+      await page.reload();
+      await page.route("**/api/v1/spending/purchase", (route) =>
+        route.fulfill({
+          json: command(
+            state,
+            actor,
+            "spending.purchase",
+            route.request().postDataJSON(),
+          ),
+        }),
+      );
+      await row.locator("summary").click();
+      await row
+        .getByRole("button", { name: `Mark ${gift.title} as purchased` })
+        .click();
+      const dialog = page.getByRole("dialog");
+      await expect(dialog).toContainText("Amount paid");
+      await page.keyboard.press("Escape");
+      await expect(row.locator("summary")).toBeFocused();
+      await row.locator("summary").click();
+      await row
+        .getByRole("button", { name: `Mark ${gift.title} as purchased` })
+        .click();
+      await dialog
+        .getByRole("button", { name: "Save purchase", exact: true })
+        .click();
+      await expect(row).toHaveCount(0);
+      expect(
+        state.reservations.find((r) => r.id === reservation.id)!.purchased,
+      ).toBe(1);
+    } finally {
+      await browser?.close();
+    }
+  });
+}
