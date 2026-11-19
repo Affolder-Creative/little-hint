@@ -230,7 +230,21 @@ test("WebKit joint idea search works on a narrow phone", async ({
     channel: "",
     executablePath: webkit.executablePath(),
   });
-  const page = await browser.newPage({ viewport: { width: 320, height: 740 } });
+  const page = await browser.newPage({
+    viewport: { width: 320, height: 740 },
+    serviceWorkers: "block",
+  });
+  await page.route("**/*", async (route) => {
+    if (route.request().resourceType() !== "document") return route.continue();
+    const response = await route.fetch();
+    const headers = response.headers();
+    // The isolated CI server uses HTTP; WebKit otherwise upgrades built assets.
+    if (headers["content-security-policy"])
+      headers["content-security-policy"] = headers[
+        "content-security-policy"
+      ].replace(/upgrade-insecure-requests;?/g, "");
+    await route.fulfill({ response, headers });
+  });
   try {
     const f = await fixture(page);
     await page.goto(`${baseURL}/people/${f.people[1].id}`);

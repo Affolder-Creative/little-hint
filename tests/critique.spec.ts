@@ -3007,9 +3007,7 @@ test("idea audience controls match the saved privacy choice", async ({
     page
       .getByRole("status")
       .filter({ hasText: "Visible to you and members of Morgan family." }),
-  ).toContainText(
-    "Hidden from the recipient and anyone managing their profile.",
-  );
+  ).toContainText("Hidden from all recipients.");
   await expect(save).toBeEnabled();
   await audience.selectOption("private");
   await expect(groups).toBeHidden();
@@ -3036,6 +3034,10 @@ test("idea audience controls match the saved privacy choice", async ({
   await audience.selectOption("hidden");
   await groups.getByLabel("Morgan family", { exact: true }).check();
   await page.getByRole("button", { name: "Save changes", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Review who can see this idea" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: /Confirm/ }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   expect(idea.visibility).toBe("hidden");
   expect(
@@ -3055,11 +3057,15 @@ test("idea audience controls match the saved privacy choice", async ({
   await audience.selectOption("visible");
   await expect(
     page.getByText(
-      "Visible to you, members of Morgan family, the recipient and anyone managing their profile.",
+      "Visible to you, members of Morgan family, all recipients.",
       { exact: true },
     ),
   ).toBeVisible();
   await page.getByRole("button", { name: "Save changes", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Review who can see this idea" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: /Confirm/ }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   expect(
     world(state, actors[1]).items.some((item) => item.id === idea.id),
