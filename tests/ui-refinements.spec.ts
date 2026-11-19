@@ -1212,6 +1212,19 @@ for (const engine of ["chromium", "webkit"]) {
           viewport: { width: 393, height: 852 },
         })
       : chromiumPage;
+    if (browser)
+      await page.route("**/*", async (route) => {
+        if (route.request().resourceType() !== "document")
+          return route.continue();
+        const response = await route.fetch();
+        const headers = response.headers();
+        // CI serves HTTP. Match the existing WebKit fixture's asset handling.
+        if (headers["content-security-policy"])
+          headers["content-security-policy"] = headers[
+            "content-security-policy"
+          ].replace(/upgrade-insecure-requests;?/g, "");
+        await route.fulfill({ response, headers });
+      });
     try {
       const { state, actor, gift } = await setup(page);
       state.reservations = state.reservations.filter(
