@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.10.1](https://github.com/Affolder-Creative/little-hint/compare/v1.10.0...v1.10.1) (2026-11-19)
+
+
+### Fixes
+
+* move archive selection into More details ([#257](https://github.com/Affolder-Creative/little-hint/issues/257)) ([f187660](https://github.com/Affolder-Creative/little-hint/commit/f1876609ec19e1f76853272ba6e967df9cb0161c))
+
 ## [1.10.0](https://github.com/Affolder-Creative/little-hint/compare/v1.9.0...v1.10.0) (2026-11-19)
 
 
