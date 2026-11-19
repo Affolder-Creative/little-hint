@@ -1,3 +1,4 @@
+import { recordAllocations } from "../shared/spending";
 import { listCanEdit } from "./co-management";
 import { draftAccess } from "./domain-access";
 import type { Actor, State } from "../shared/model";
@@ -203,8 +204,19 @@ export function accountCsv(s: State, a: Actor, table: ExportTable) {
           r.kind,
           r.title,
           r.recipientNames.join("; "),
-          r.listName,
-          r.eventName,
+          recordAllocations(r)
+            .map(
+              (v) =>
+                `${r.recipientNames[r.recipientIds.indexOf(v.recipientId)]}: ${v.listName ?? "No wish list"} (${v.share} shares)`,
+            )
+            .join("; "),
+          [
+            ...new Set(
+              recordAllocations(r)
+                .map((v) => v.eventName)
+                .filter(Boolean),
+            ),
+          ].join("; "),
           s.spendingOccasions.find(
             (o) => o.id === r.occasionId && o.ownerId === a.id,
           )?.name,

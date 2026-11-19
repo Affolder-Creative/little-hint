@@ -26,3 +26,5 @@ Buying retains source availability separately from purchase status. A selected p
 Validation: synthetic Chromium desktop/tablet/phone journeys in light and dark themes; return entry and counterparty receipt confirmation; responsive overflow checks; source-state and financial-privacy domain tests. One polish pass corrected control/prose spacing. Existing typography, colors, and navigation remain the visual authority.
 
 Scope summaries use explicit label/value groups and omit redundant sole-owner captions only after matching owner IDs. Budget descriptions use the same labels.
+
+Recipient spending allocations use one optional list per person and an equal/custom split selector. Custom shares reveal labeled relative weights and exact dollar previews. Retain flat rows, existing field styling, mobile scrolling and fixed actions. Validate joint idea save, inheritance, purchase, refund, private defaults, and scoped totals. The polish pass removed duplicate helper copy and corrected clearing guidance.

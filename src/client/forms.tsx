@@ -1,3 +1,4 @@
+import { SpendingAllocations, defaultAllocations } from "./SpendingAllocations";
 import { IdeaPeople } from "./IdeaPeople";
 import { itemPhotos } from "../shared/item-photos";
 import { HelpfulNoteEditor } from "./NoteEditor";
@@ -5,7 +6,6 @@ import type { NoteDocument } from "../shared/helpful-note";
 import { ManagedProfileManagers } from "./ManagedProfileManagers";
 import { ManagedProfileSharing } from "./ManagedProfileSharing";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { PurchaseListField } from "./SpendingPurchase";
 import { dollars } from "./api";
 import { ProductSources } from "./ProductSources";
 import { DiscoveryLink } from "./GiftPreferences";
@@ -635,19 +635,27 @@ function GiftEditor({
     !!initialRecipientId ||
     !!recipientOptions ||
     (!!gift && !gift.listId);
-  const [spendingListId, setSpendingListId] = useState(
+  const [spendingListId] = useState(
     gift?.spendingListId ??
       importDraft?.draft?.spendingListId ??
       initialSpendingListId ??
       "",
   );
+  const [spendingAllocations, setSpendingAllocations] = useState(
+    gift?.spendingAllocations ??
+      importDraft?.draft?.spendingAllocations ??
+      defaultAllocations(recipientIds, spendingListId),
+  );
   const assignmentChanged =
-    !!gift && spendingListId !== (gift.spendingListId ?? "");
+    !!gift &&
+    JSON.stringify(spendingAllocations) !==
+      JSON.stringify(gift.spendingAllocations);
   const needsAssignmentPreview = !!(
     idea &&
     world.spendingEnabled &&
     assignmentChanged &&
-    spendingListId
+    recipientIds.join() === gift?.recipientIds.join() &&
+    spendingAllocations.some((v) => v.listId)
   );
   const assignmentPreview = useQuery({
     queryKey: [
@@ -655,7 +663,7 @@ function GiftEditor({
       world.me.id,
       "assignment-preview",
       gift?.id,
-      spendingListId,
+      spendingAllocations,
     ],
     queryFn: () =>
       api<{
@@ -668,7 +676,10 @@ function GiftEditor({
           amountCents: number | null;
           voided?: boolean;
         }>;
-      }>(`spending/assignment-preview?item=${gift!.id}&list=${spendingListId}`),
+      }>("spending/assignment-preview", {
+        item: gift!.id,
+        allocations: spendingAllocations,
+      }),
     enabled: needsAssignmentPreview,
   });
   const recipientName = recipientIds
@@ -718,7 +729,8 @@ function GiftEditor({
           visibility,
           groupIds,
           friendEntryId,
-          spendingListId: spendingListId || null,
+          spendingListId: null,
+          spendingAllocations,
         }
       : { listId: destination }),
   });
@@ -830,7 +842,8 @@ function GiftEditor({
                     excludedUserIds,
                     visibility,
                     groupIds,
-                    spendingListId: spendingListId || null,
+                    spendingListId: null,
+                    spendingAllocations,
                   }
                 : { listId: destination }),
               fields: { ...data, priority },
@@ -1039,7 +1052,8 @@ function GiftEditor({
       dirty={
         savedDraft.current?.draft
           ? snapshot !== baseline.current
-          : manualLookup ||
+          : assignmentChanged ||
+            manualLookup ||
             editSnapshot !== originalEditSnapshot.current ||
             photosChanged
       }
@@ -1115,7 +1129,8 @@ function GiftEditor({
           ...(!idea ? { priority } : {}),
           ...(idea && world.spendingEnabled
             ? {
-                spendingListId: spendingListId || null,
+                spendingListId: null,
+                spendingAllocations,
                 spendingAssignmentToken: needsAssignmentPreview
                   ? assignmentPreview.data?.token
                   : undefined,
@@ -1319,20 +1334,18 @@ function GiftEditor({
             disabled={!!gift && !gift.canEditRecipients}
             onChange={(ids) => {
               setRecipientIds(ids);
+              setSpendingAllocations(
+                ids.map((recipientId) => ({
+                  recipientId,
+                  share: 1,
+                  listId:
+                    spendingAllocations.find(
+                      (v) => v.recipientId === recipientId,
+                    )?.listId ?? null,
+                })),
+              );
+              toast("Recipient shares reset to an equal split.");
               setChosenFriend("");
-              if (
-                spendingListId &&
-                !world.lists.some(
-                  (l) =>
-                    l.id === spendingListId &&
-                    ids.every((id) => l.ownerIds.includes(id)),
-                )
-              ) {
-                setSpendingListId("");
-                toast(
-                  "The wish list for spending was cleared because its recipients changed.",
-                );
-              }
             }}
           />
           <p className="muted">
@@ -1422,12 +1435,15 @@ function GiftEditor({
       )}
       {idea && world.spendingEnabled && (
         <>
-          <PurchaseListField
-            recipientIds={recipientIds}
-            value={spendingListId}
-            onChange={setSpendingListId}
+          <SpendingAllocations
+            key={recipientIds.join()}
+            value={spendingAllocations}
+            amountCents={
+              data.price === "" ? null : Math.round(Number(data.price) * 100)
+            }
+            onChange={setSpendingAllocations}
           />
-          {assignmentChanged && !spendingListId && (
+          {assignmentChanged && !spendingAllocations.some((v) => v.listId) && (
             <p className="muted">
               This clears the default for future plans. Existing spending
               assignments stay unchanged.

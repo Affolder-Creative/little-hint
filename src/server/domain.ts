@@ -1,3 +1,5 @@
+import { allocationContext } from "./spending";
+import { allocationsInput } from "../shared/spending-input";
 import {
   excludedAccounts,
   checkIdeaExclusions,
@@ -343,6 +345,7 @@ export function giftView(s: State, a: Actor, i: Item): GiftView {
   const {
     creatorId,
     spendingListId,
+    spendingAllocations,
     draftOwnerId,
     lastEditorId,
     excludedUserIds,
@@ -369,6 +372,7 @@ export function giftView(s: State, a: Actor, i: Item): GiftView {
   };
   if (!i.listId && creatorId === a.id) {
     view.spendingListId = spendingListId;
+    view.spendingAllocations = spendingAllocations;
     view.excludedUserIds = excludedUserIds ?? [];
     view.canEditRecipients = !ideaRecipientsLocked(s, i);
   }
@@ -954,6 +958,7 @@ const draftFieldsInput = z
   );
 const itemInput = z.object({
   images: photoUrls.optional(),
+  spendingAllocations: allocationsInput.optional(),
   spendingListId: id.nullable().optional(),
   spendingAssignmentToken: z.string().max(128).optional(),
   priority: z
@@ -1886,6 +1891,15 @@ function commandCore(
         if (p.visibility !== "private" && !p.groupIds.length)
           fail(400, "Select a family group to share this idea.");
       }
+      if (p.spendingAllocations) {
+        if (p.listId) fail(400, "Wish-list items use their source list.");
+        p.spendingAllocations = allocationContext(
+          s,
+          a,
+          p.spendingAllocations,
+          recipients,
+        );
+      }
       if (p.spendingListId) {
         if (p.listId) fail(400, "Wish-list items use their source list.");
         listContext(s, a, p.spendingListId, recipients);
@@ -2098,6 +2112,29 @@ function commandCore(
             i.id,
             p.spendingListId,
             p.spendingAssignmentToken,
+          );
+      }
+      if (p.spendingAllocations) {
+        if (i.listId) fail(400, "Wish-list items use their source list.");
+        p.spendingAllocations = allocationContext(
+          s,
+          a,
+          p.spendingAllocations,
+          p.recipientIds ?? i.recipientIds,
+        );
+        if (
+          JSON.stringify(p.spendingAllocations) !==
+            JSON.stringify(i.spendingAllocations) &&
+          p.spendingAllocations.some((v) => v.listId) &&
+          (!p.recipientIds || p.recipientIds.join() === i.recipientIds.join())
+        )
+          assignIdeaSpending(
+            s,
+            a,
+            i.id,
+            undefined,
+            p.spendingAssignmentToken,
+            p.spendingAllocations,
           );
       }
       const {
@@ -2437,6 +2474,7 @@ function commandCore(
           fields: draftFieldsInput.optional(),
           touched: z.array(z.string().max(40)).max(20).optional(),
           listId: id.optional(),
+          spendingAllocations: allocationsInput.optional(),
           spendingListId: id.nullable().optional(),
           kind: z.enum(["item", "idea"]).optional(),
           friendEntryId: id.optional(),
@@ -2563,7 +2601,12 @@ function commandCore(
             ? p.spendingListId
             : j.draft!.spendingListId;
         if (spendingListId) listContext(s, a, spendingListId, recipientIds);
+        const spendingAllocations =
+          p.spendingAllocations ?? j.draft!.spendingAllocations;
+        if (spendingAllocations)
+          allocationContext(s, a, spendingAllocations, recipientIds);
         Object.assign(j.draft!, {
+          spendingAllocations,
           spendingListId,
           friendEntryId: context?.id,
           recipientId,
@@ -2610,6 +2653,7 @@ function commandCore(
           draft: z
             .object({
               listId: id.optional(),
+              spendingAllocations: allocationsInput.optional(),
               spendingListId: id.nullable().optional(),
               kind: z.enum(["item", "idea"]).optional(),
               friendEntryId: id.optional(),
@@ -2687,6 +2731,8 @@ function commandCore(
         if (selfRecipient(s, a, [p.draft.recipientId]))
           fail(400, "Choose another recipient.");
         checkGroups(s, a, p.draft.groupIds ?? []);
+        if (p.draft.spendingAllocations)
+          allocationContext(s, a, p.draft.spendingAllocations, recipients);
         if (p.draft.spendingListId)
           listContext(s, a, p.draft.spendingListId, recipients);
         delete p.draft.listId;

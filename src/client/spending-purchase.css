@@ -278,3 +278,31 @@ dialog.dialog:has(.spending-purchase) {
 .purchase-estimate .button {
   padding: 8px 12px;
 }
+
+.spending-allocations {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  display: grid;
+  gap: var(--space-controls);
+}
+.spending-allocations legend {
+  font-weight: 550;
+  margin-bottom: var(--space-related);
+}
+.spending-allocation-row {
+  display: grid;
+  gap: var(--space-related);
+  min-width: 0;
+  padding-bottom: var(--space-controls);
+  border-bottom: 1px solid var(--border);
+}
+.spending-allocation-row:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+.spending-allocations p {
+  margin: 0;
+  font-size: 14px;
+}

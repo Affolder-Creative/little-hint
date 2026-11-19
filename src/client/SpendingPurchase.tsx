@@ -1,3 +1,5 @@
+import { SpendingAllocations, defaultAllocations } from "./SpendingAllocations";
+import { recordAllocations, type SpendingAllocation } from "../shared/spending";
 import { SearchSelect, type Choice } from "./SearchSelect";
 import { shoppingChoices, shoppingPayload } from "./shopping-context";
 import { CollectionStatus, useCollection, useDebounced } from "./Pagination";
@@ -67,11 +69,13 @@ export function PurchaseForm({
   const [shopping, setShopping] = useState({ itemId: "", key: "" });
   const [payer, setPayer] = useState(world.me.id);
   const [event, setEvent] = useState(initialEvent ?? params.get("event") ?? "");
-  const [assignedList, setAssignedList] = useState<string | undefined>();
   const [occasion, setOccasion] = useState<string | undefined>(
     initialOccasion ?? params.get("occasion") ?? undefined,
   );
   const [date, setDate] = useState(new Date().toLocaleDateString("en-CA"));
+  const [allocationEdits, setAllocationEdits] = useState<
+    SpendingAllocation[] | null
+  >(null);
   const searchTerm = useDebounced(title);
   const searchQuery = useCollection<
     Array<{ gift: GiftView; reservation?: World["buying"][number] }>
@@ -120,12 +124,20 @@ export function PurchaseForm({
     );
   const linked = !!reservation || !!item;
   const recipientIds = plan?.recipientIds ?? item?.recipientIds ?? recipients;
-  const assignmentId =
-    assignedList ?? (plan ? (plan.listId ?? "") : (item?.spendingListId ?? ""));
+  const assignmentId = plan
+    ? (plan.listId ?? "")
+    : (item?.spendingListId ?? "");
+  const allocations =
+    allocationEdits &&
+    allocationEdits.map((v) => v.recipientId).join() === recipientIds.join()
+      ? allocationEdits
+      : plan
+        ? recordAllocations(plan)
+        : (item?.spendingAllocations ??
+          defaultAllocations(recipientIds, assignmentId));
   const assignmentList = world.lists.find((l) => l.id === assignmentId);
   const sourceList = world.lists.find((l) => l.id === item?.listId);
-  const overridesAssignment =
-    !sourceList && (assignedList !== undefined || (!plan && !!assignmentId));
+  const overridesAssignment = !sourceList && !plan && !!assignmentId;
   const eventId =
     sourceList?.groupEventId ??
     (overridesAssignment
@@ -164,6 +176,12 @@ export function PurchaseForm({
         [
           ...recipientIds.map((id) => `person:${id}`),
           `event:${eventId ?? ""}`,
+          ...allocations.flatMap((v) => {
+            const id =
+              world.lists.find((l) => l.id === v.listId)?.groupEventId ??
+              v.eventId;
+            return id ? [`event:${id}`] : [];
+          }),
           `occasion:${occasionId}`,
         ].some((rule) => c.rules[world.me.id]?.includes(rule)));
   const matches = world.items.filter(
@@ -223,7 +241,7 @@ export function PurchaseForm({
     setSelectedReservation(undefined);
     setQuantity(1);
     setPayer(world.me.id);
-    setAssignedList(undefined);
+    setAllocationEdits(null);
   };
   return (
     <Form
@@ -258,11 +276,7 @@ export function PurchaseForm({
           occasionId: occasionId || undefined,
           eventId: eventId || undefined,
           payerId: payer === world.me.id ? undefined : payer,
-          listId:
-            !sourceList &&
-            (assignedList !== undefined || (!plan && assignmentId))
-              ? assignmentId || null
-              : undefined,
+          allocations: !sourceList ? allocations : undefined,
           planRevision: plan?.revision,
         });
         close();
@@ -332,7 +346,7 @@ export function PurchaseForm({
                 id === (r ? `reservation:${r.id}` : `item:${gift.id}`),
             );
             if (choice) {
-              setAssignedList(undefined);
+              setAllocationEdits(null);
               setSelectedItem(choice.gift);
               setSelectedReservation(choice.reservation);
               setTitle(choice.gift.title);
@@ -409,13 +423,6 @@ export function PurchaseForm({
             </p>
           </>
         )}
-        {recipientIds.length > 1 && (
-          <p className="purchase-hint">
-            {plan
-              ? "Uses the saved recipient shares. You can adjust shares later."
-              : "The amount is split equally. You can adjust shares later."}
-          </p>
-        )}
       </div>
       {linked && maxQuantity > 1 && (
         <Field label="Quantity bought">
@@ -480,10 +487,10 @@ export function PurchaseForm({
         </Field>
       </div>
       {!sourceList && (
-        <PurchaseListField
-          recipientIds={recipientIds}
-          value={assignmentId}
-          onChange={setAssignedList}
+        <SpendingAllocations
+          value={allocations}
+          onChange={setAllocationEdits}
+          amountCents={amount.trim() ? Math.round(Number(amount) * 100) : null}
         />
       )}
       <details className="purchase-details">
@@ -529,7 +536,7 @@ export function PurchaseForm({
               value={event}
               onChange={(e) => {
                 setEvent(e.target.value);
-                setAssignedList(undefined);
+                setAllocationEdits(null);
               }}
             >
               <option value="">No group event</option>
@@ -586,48 +593,5 @@ export function PurchaseForm({
         </p>
       )}
     </Form>
-  );
-}
-
-export function PurchaseListField({
-  recipientIds,
-  value,
-  onChange,
-}: {
-  recipientIds: string[];
-  value: string;
-  onChange: (id: string) => void;
-}) {
-  const { world } = useApp();
-  const choices = world.lists.filter(
-    (l) =>
-      !l.deletedAt &&
-      recipientIds.length > 0 &&
-      recipientIds.every((id) => l.ownerIds.includes(id)),
-  );
-  return (
-    <Field
-      label="Wish list for spending, optional"
-      hint="Includes this gift in the list’s spending totals without adding or sharing the gift. Event lists also include it in that event’s totals."
-    >
-      <select value={value} onChange={(e) => onChange(e.target.value)}>
-        <option value="">No wish list</option>
-        {value && !choices.some((l) => l.id === value) && (
-          <option value={value}>Previously assigned wish list</option>
-        )}
-        {choices.map((l) => (
-          <option key={l.id} value={l.id}>
-            {l.name} •{" "}
-            {l.ownerIds
-              .map(
-                (id) =>
-                  world.people.find((p) => p.id === id)?.name ?? "Recipient",
-              )
-              .join(" & ")}
-            {l.archived ? " · Archived" : ""}
-          </option>
-        ))}
-      </select>
-    </Field>
   );
 }

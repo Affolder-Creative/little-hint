@@ -1,3 +1,4 @@
+import { recordAllocations } from "../src/shared/spending";
 import { existsSync } from "node:fs";
 /** Isolated domain-backed browser verification; never accesses real account data. */
 import { mkdir } from "node:fs/promises";
@@ -105,7 +106,9 @@ try {
           json: spendingAssignmentPreview(
             s,
             a,
-            Object.fromEntries(new URL(route.request().url()).searchParams),
+            route.request().method() === "POST"
+              ? route.request().postDataJSON()
+              : Object.fromEntries(new URL(route.request().url()).searchParams),
           ),
         });
       if (path === "spending/history")
@@ -578,8 +581,11 @@ try {
   await expect(
     page.getByText("Split between recipients", { exact: true }),
   ).toBeVisible();
-  await page.getByLabel("Jamie", { exact: true }).fill("2");
-  await page.getByLabel("Emma", { exact: true }).fill("1");
+  await page
+    .getByLabel("Split between recipients", { exact: true })
+    .selectOption("custom");
+  await page.getByLabel("Jamie's share", { exact: true }).fill("2");
+  await page.getByLabel("Emma's share", { exact: true }).fill("1");
   await page.screenshot({
     path: out + "/edit-multiple-desktop.png",
   });
@@ -650,12 +656,14 @@ try {
     .getByRole("button", { name: "Edit purchase", exact: true })
     .click();
   await page
-    .getByLabel("Wish list for spending, optional", { exact: true })
+    .getByLabel("Emma's wish list", { exact: true })
     .selectOption(list.id);
   await page.getByRole("button", { name: "Save changes", exact: true }).click();
   await expect(page.getByRole("dialog")).toBeHidden();
   expect(
-    s.spendingRecords.find((r) => r.title === "Watercolor set")!.listId,
+    recordAllocations(
+      s.spendingRecords.find((r) => r.title === "Watercolor set")!,
+    )[0].listId,
   ).toBe(list.id);
   await assignmentRow.locator("summary").click();
   for (const button of await assignmentRow
@@ -740,7 +748,7 @@ try {
     .getByRole("button", { name: "Edit gift idea", exact: true })
     .click();
   await page
-    .getByLabel("Wish list for spending, optional", { exact: true })
+    .getByLabel("Emma's wish list", { exact: true })
     .selectOption(list.id);
   await expect(page.getByRole("dialog")).toContainText("existing");
   await page.screenshot({ path: out + "/idea-assignment-review-mobile.png" });
@@ -749,7 +757,9 @@ try {
   const assigned = s.spendingRecords.filter(
     (r) => r.reservationId === reservation.id,
   );
-  expect(assigned.every((r) => r.listId === list.id)).toBe(true);
+  expect(
+    assigned.every((r) => recordAllocations(r)[0].listId === list.id),
+  ).toBe(true);
   expect(assigned.every((r) => r.sharing === "private")).toBe(true);
   expect(s.items.find((i) => i.id === idea.id)!.listId).toBeUndefined();
   expect(
@@ -837,7 +847,7 @@ try {
     .getByRole("button", { name: "Assign wish list" })
     .click();
   await page
-    .getByLabel("Wish list for spending, optional", { exact: true })
+    .getByLabel("Emma's wish list", { exact: true })
     .selectOption(list.id);
   await page.getByRole("button", { name: "Save changes", exact: true }).click();
   await expect(
@@ -845,9 +855,10 @@ try {
       .getByRole("dialog")
       .getByText("Unassigned sketchbook", { exact: true }),
   ).toHaveCount(0);
-  expect(s.spendingRecords.find((r) => r.id === unassigned.id)!.listId).toBe(
-    list.id,
-  );
+  expect(
+    recordAllocations(s.spendingRecords.find((r) => r.id === unassigned.id)!)[0]
+      .listId,
+  ).toBe(list.id);
   await page.keyboard.press("Escape");
   // A native select must not render empty optgroup labels.
   s.spendingOccasions = [];
@@ -855,6 +866,90 @@ try {
   await expect(
     page.getByLabel("Occasion", { exact: true }).locator("optgroup"),
   ).toHaveCount(0);
+  const secondList = command(s, users[1], "lists.create", {
+    name: "Jamie's Christmas",
+    ownerIds: [s.people[1].id],
+    groupIds: [s.groups[0].id],
+    mode: "surprise",
+  }) as { id: string };
+  const jointIdea = run("items.create", {
+    title: "Shared weekend gift",
+    recipientIds: [s.people[1].id, s.people[2].id],
+    visibility: "private",
+    priceCents: 10000,
+  }) as { id: string };
+  await goto(server.resolvedUrls!.local[0] + `gift/${jointIdea.id}`);
+  await page
+    .getByRole("button", { name: "Edit gift idea", exact: true })
+    .click();
+  await page
+    .getByLabel("Jamie's wish list", { exact: true })
+    .selectOption(secondList.id);
+  await page
+    .getByLabel("Emma's wish list", { exact: true })
+    .selectOption(list.id);
+  await page
+    .getByLabel("Split between recipients", { exact: true })
+    .selectOption("custom");
+  await page.getByLabel("Jamie's share", { exact: true }).fill("3");
+  await page.getByLabel("Emma's share", { exact: true }).fill("2");
+  await expect(page.locator(".spending-allocations")).toContainText("$60");
+  for (const theme of ["light", "dark"]) {
+    await page.evaluate(
+      (theme) => (document.documentElement.dataset.theme = theme),
+      theme,
+    );
+    for (const width of [320, 390, 768, 1280]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.locator(".spending-allocations").scrollIntoViewIfNeeded();
+      expect(
+        await page
+          .locator("dialog")
+          .evaluate((el) => el.scrollWidth <= el.clientWidth + 1),
+      ).toBe(true);
+      await page.screenshot({
+        path: out + `/joint-allocations-${theme}-${width}.png`,
+      });
+    }
+  }
+  await page.getByRole("button", { name: "Save changes", exact: true }).click();
+  await expect(page.getByRole("dialog")).toBeHidden();
+  const jointReservation = run("reservations.create", {
+    itemId: jointIdea.id,
+    quantity: 1,
+  }) as { id: string };
+  const jointPlan = s.spendingRecords.find(
+    (r) => r.reservationId === jointReservation.id,
+  )!;
+  expect(jointPlan.splits).toEqual([3, 2]);
+  await goto(server.resolvedUrls!.local[0] + "buying/spending");
+  await page
+    .locator(".spending-row")
+    .filter({
+      has: page.getByRole("heading", {
+        name: "Shared weekend gift",
+        exact: true,
+      }),
+    })
+    .getByRole("button", { name: "Mark purchased", exact: true })
+    .click();
+  await page
+    .getByRole("spinbutton", {
+      name: "Amount paid in USD, optional",
+      exact: true,
+    })
+    .fill("100");
+  await expect(page.getByLabel("Jamie's share", { exact: true })).toHaveValue(
+    "3",
+  );
+  await page
+    .getByRole("button", { name: "Save purchase", exact: true })
+    .click();
+  await expect(page.getByRole("dialog")).toBeHidden();
+  expect(spendingHistory(s, a, { list: secondList.id }).summary.spent).toBe(
+    6000,
+  );
+
   process.env.SPENDING_ENABLED = "false";
   await goto(server.resolvedUrls!.local[0] + "buying/spending");
   await expect(page).toHaveURL(/\/buying$/);

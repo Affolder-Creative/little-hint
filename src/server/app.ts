@@ -506,6 +506,10 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
       records: view.records.filter((r) => r.kind === "plan" && !r.sourceId),
     };
   });
+  app.post("/api/v1/spending/assignment-preview", async (req) => {
+    const a = await actor(req);
+    return spendingAssignmentPreview(await spendingState(a), a, req.body);
+  });
   app.get("/api/v1/spending/assignment-preview", async (req) => {
     const a = await actor(req);
     return spendingAssignmentPreview(await spendingState(a), a, req.query);

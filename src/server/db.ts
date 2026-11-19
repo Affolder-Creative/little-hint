@@ -18,7 +18,7 @@ import {
   type ImportJob,
   type FriendEntry,
 } from "../shared/model";
-const supportedSchemaVersion = 11;
+const supportedSchemaVersion = 12;
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   max: 10,
@@ -299,6 +299,14 @@ INSERT INTO schema_migration(version) VALUES (2);`);
         `UPDATE app_record c SET data=jsonb_set(c.data, '{protectedRecipientIds}', i.data->'recipientIds') FROM app_record i WHERE c.kind='comments' AND i.kind='items' AND c.data->>'itemId'=i.id AND COALESCE((c.data->>'excludeRecipients')::boolean, true) AND NOT (c.data ? 'protectedRecipientIds')`,
       );
       await client.query("INSERT INTO schema_migration(version) VALUES (11)");
+    }
+    const allocationsMigration = await client.query(
+      "SELECT 1 FROM schema_migration WHERE version=12",
+    );
+    if (!allocationsMigration.rowCount) {
+      // Legacy records remain readable through recordAllocations, including removed sources.
+      // The version guard prevents an older runtime from ignoring new allocation data.
+      await client.query("INSERT INTO schema_migration(version) VALUES (12)");
     }
     await client.query("COMMIT");
   } catch (e) {

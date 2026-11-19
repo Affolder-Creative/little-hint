@@ -671,6 +671,8 @@ No chart, new color, font or elevation treatment is introduced.
 
 ### Spending assignment and mobile controls
 
+Joint gift spending uses one flat row per recipient, with a labeled native wish-list select and a quiet percentage and exact dollar preview. Split equally is the default; Adjust shares reveals relative-share inputs. Explain relative shares once beside the split selector. Separate recipient rows with the existing border token and controls spacing, omitting the final divider. Keep these controls outside optional details and within the existing scrolling dialog body. Preserve the fixed heading and Save footer, 44px controls, visible focus, and 16px touch inputs. Clearing guidance appears only when every list choice is empty. Single-recipient forms omit the split selector.
+
 Gift ideas and purchase forms show an optional Wish list for spending field outside collapsed occasion details. Explain that assignment changes spending totals without adding or sharing the gift. An idea assignment preview lists the existing unassigned plans and purchases affected before saving. Guided review uses the existing individual record editor. The Purchased view combines quantity status and separate recorded purchase entries in one dialog, retaining the fixed header and action footer.
 
 Recipient search options use a checkbox, fixed avatar, and one text column. Family groups sit directly below the name; the avatar is centered beside the complete text block. Gift search titles truncate to one line on phones while supporting text wraps. Full titles remain available after selection and to assistive technology. Empty occasion option groups are omitted. Spending status badges contain only the status label, without a leading separator.

@@ -1,3 +1,5 @@
+import { SpendingAllocations } from "./SpendingAllocations";
+import { recordAllocations, type SpendingAllocation } from "../shared/spending";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { World } from "../shared/model";
@@ -5,7 +7,6 @@ import type { SpendingHistoryView, SpendingView } from "../shared/spending";
 import { api, dollars } from "./api";
 import { useApp } from "./context";
 import { Field, Form, useModalDismiss } from "./components";
-import { PurchaseListField } from "./SpendingPurchase";
 
 type Purchase = World["buying"][number];
 export function UpdatePurchase({
@@ -61,7 +62,9 @@ function PurchaseEditor({
   const [records] = useState(loadedRecords);
   const { mutate, close } = useApp();
   const dismiss = useModalDismiss();
-  const [assignments, setAssignments] = useState<Record<string, string>>({});
+  const [assignments, setAssignments] = useState<
+    Record<string, SpendingAllocation[]>
+  >({});
   return (
     <Form
       dialogLayout
@@ -84,11 +87,11 @@ function PurchaseEditor({
                   : Math.round(Number(f.get(`amount-${record.id}`)) * 100),
               date: String(f.get(`date-${record.id}`) ?? "") || null,
               planningYear: record.planningYear,
-              splits: record.splits,
-              ...(record.canAssignList &&
-              assignments[record.id] !== undefined &&
-              assignments[record.id] !== (record.listId ?? "")
-                ? { listId: assignments[record.id] || null }
+              splits: (assignments[record.id] ?? recordAllocations(record)).map(
+                (v) => v.share,
+              ),
+              ...(record.canAssignList && assignments[record.id]
+                ? { allocations: assignments[record.id] }
                 : {}),
             })),
         });
@@ -153,9 +156,9 @@ function PurchaseEditor({
                 />
               </Field>
               {record.canAssignList ? (
-                <PurchaseListField
-                  recipientIds={record.recipientIds}
-                  value={assignments[record.id] ?? record.listId ?? ""}
+                <SpendingAllocations
+                  value={assignments[record.id] ?? recordAllocations(record)}
+                  amountCents={record.amountCents}
                   onChange={(value) =>
                     setAssignments((previous) => ({
                       ...previous,
