@@ -4789,7 +4789,12 @@ test("joint-list shortcut requires an explicit recipient and respects list owner
   await expect(
     page.getByRole("button", { name: "Save gift idea", exact: true }),
   ).toBeDisabled();
-  await page.getByLabel("Who is this idea for?").selectOption(people[1].id);
+  await page
+    .getByRole("combobox", { name: "Who is this idea for?", exact: true })
+    .fill(people[1].name);
+  await page
+    .getByRole("combobox", { name: "Who is this idea for?", exact: true })
+    .press("Enter");
   await page
     .getByRole("button", { name: "Save gift idea", exact: true })
     .click();
@@ -5530,8 +5535,8 @@ test("gift idea draft restores recipient, audience and manual fields", async ({
     dialog.getByLabel("Gift idea name", { exact: true }),
   ).toHaveValue("My manual name");
   await expect(
-    dialog.getByLabel("Who is this idea for?", { exact: true }),
-  ).toHaveValue(person.id);
+    dialog.getByRole("button", { name: `Remove ${person.name}`, exact: true }),
+  ).toBeVisible();
   await dialog
     .getByRole("button", { name: "Save gift idea", exact: true })
     .click();

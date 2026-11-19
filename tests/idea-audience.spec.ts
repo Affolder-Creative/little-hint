@@ -223,7 +223,9 @@ for (const [width, theme] of [
     });
   });
 }
-test("WebKit joint idea search works on a narrow phone", async ({}, info) => {
+test("WebKit joint idea search works on a narrow phone", async ({
+  baseURL,
+}, info) => {
   const browser = await webkit.launch({
     channel: "",
     executablePath: webkit.executablePath(),
@@ -231,7 +233,7 @@ test("WebKit joint idea search works on a narrow phone", async ({}, info) => {
   const page = await browser.newPage({ viewport: { width: 320, height: 740 } });
   try {
     const f = await fixture(page);
-    await page.goto(`http://localhost:5173/people/${f.people[1].id}`);
+    await page.goto(`${baseURL}/people/${f.people[1].id}`);
     await page
       .getByRole("button", { name: "Add gift idea", exact: true })
       .click();

@@ -207,7 +207,7 @@ test("sharing requires review and unsharing preserves private ideas", async ({
   const f = await fixture(page);
   const friend = command(f.state, f.actor, "friends.create", {
     name: "Taylor",
-  }) as { id: string; personId: string };
+  }) as { id: string; personId: string; name: string };
   await page.goto(`/people/${friend.personId}?tab=ideas`);
   await page.getByLabel("Friend actions for Taylor", { exact: true }).click();
 
@@ -263,7 +263,7 @@ for (const accept of [true, false]) {
     const f = await fixture(page);
     const friend = command(f.state, f.actor, "friends.create", {
       name: "Taylor",
-    }) as { id: string; personId: string };
+    }) as { id: string; personId: string; name: string };
     const target = accept
       ? { id: "new-taylor", name: "Taylor", email: "taylor@example.test" }
       : f.actors[2];
@@ -382,10 +382,10 @@ test("recovered friend draft switches recipient without retaining the previous c
   const f = await fixture(page);
   const friend = command(f.state, f.actor, "friends.create", {
     name: "Taylor",
-  }) as { id: string; personId: string };
+  }) as { id: string; personId: string; name: string };
   const next = command(f.state, f.actor, "friends.create", {
     name: "Morgan",
-  }) as { id: string; personId: string };
+  }) as { id: string; personId: string; name: string };
   const draft = {
     ...stamp(),
     userId: f.actor.id,
@@ -409,8 +409,14 @@ test("recovered friend draft switches recipient without retaining the previous c
   f.state.imports.push(draft);
   await page.goto(`/people/${friend.personId}?tab=ideas&draft=${draft.id}`);
   await page
-    .getByLabel("Who is this idea for?", { exact: true })
-    .selectOption(next.personId);
+    .getByRole("button", { name: `Remove ${friend.name}`, exact: true })
+    .click();
+  await page
+    .getByRole("combobox", { name: "Who is this idea for?", exact: true })
+    .fill(next.name);
+  await page
+    .getByRole("combobox", { name: "Who is this idea for?", exact: true })
+    .press("Enter");
   await page
     .getByRole("button", { name: "Save gift idea", exact: true })
     .click();
