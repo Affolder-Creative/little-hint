@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, Search, X } from "lucide-react";
 import { useApp } from "./context";
@@ -10,6 +10,9 @@ import {
   personLetter,
 } from "./people-directory";
 import "./people-directory.css";
+
+const searchThreshold = 10;
+const letterThreshold = 20;
 
 export function PeopleDirectory() {
   const { world, open, close } = useApp();
@@ -25,19 +28,39 @@ export function PeopleDirectory() {
   const rail = useRef<HTMLDivElement>(null);
   const search = useRef<HTMLInputElement>(null);
   const root = useRef<HTMLDivElement>(null);
+  const letterDialog = useRef<HTMLDivElement>(null);
+  const focused = useRef<HTMLElement | null>(null);
+  const showSearch = world.people.length >= searchThreshold;
+  const showLetters = world.people.length >= letterThreshold;
+  const effectiveQuery = showSearch ? query : "";
   const matches = useMemo(
-    () => directoryPeople(world.people, query),
-    [world.people, query],
+    () => directoryPeople(world.people, effectiveQuery),
+    [world.people, effectiveQuery],
   );
-  const searching = !!query.trim();
+  const searching = !!effectiveQuery.trim();
+  const grouped = showLetters && !searching;
   const sections = useMemo(
     () =>
-      directoryLetters.flatMap((letter) => {
+      (grouped ? directoryLetters : []).flatMap((letter) => {
         const people = matches.filter((p) => personLetter(p.name) === letter);
         return people.length ? [{ letter, people }] : [];
       }),
-    [matches],
+    [matches, grouped],
   );
+  useEffect(() => {
+    if (!showSearch && query) setQuery("");
+    if (!showLetters && letterDialog.current) {
+      close();
+      requestAnimationFrame(() => document.getElementById("main")?.focus());
+    }
+  }, [showSearch, showLetters, query, setQuery, close]);
+  useLayoutEffect(() => {
+    if (focused.current && !focused.current.isConnected) {
+      if (document.activeElement === document.body)
+        document.getElementById("main")?.focus({ preventScroll: true });
+      focused.current = null;
+    }
+  });
   const available = sections.map((s) => s.letter);
   const jump = (letter: string, focus = false) => {
     const heading = document.getElementById(`directory-${letter}`);
@@ -110,7 +133,7 @@ export function PeopleDirectory() {
       window.removeEventListener("scroll", schedule);
       window.removeEventListener("resize", schedule);
     };
-  }, [sections]);
+  }, [sections, showSearch]);
   const changeSearch = (value: string) => {
     setQuery(value);
     if ((searchAnchor.current?.getBoundingClientRect().top ?? 0) < 0)
@@ -130,6 +153,7 @@ export function PeopleDirectory() {
       available.at(-1);
     if (letter) jump(letter);
   };
+  const PersonHeading = grouped ? "h3" : "h2";
   const renderPeople = (people: typeof matches) =>
     people.map((p) => (
       <Link
@@ -140,7 +164,7 @@ export function PeopleDirectory() {
       >
         <Avatar name={p.name} />
         <div>
-          <h3>{p.name}</h3>
+          <PersonHeading>{p.name}</PersonHeading>
           <p>
             {p.userId === world.me.id
               ? "Your wish lists"
@@ -166,7 +190,13 @@ export function PeopleDirectory() {
   return (
     <div
       ref={root}
-      className={`people-directory${railFits && !searching ? " has-letter-rail" : ""}`}
+      onFocusCapture={(event) => {
+        focused.current = event.target;
+      }}
+      onBlurCapture={(event) => {
+        if (event.relatedTarget) focused.current = null;
+      }}
+      className={`people-directory${railFits && grouped ? " has-letter-rail" : ""}`}
     >
       <details
         className="directory-help notice"
@@ -185,36 +215,45 @@ export function PeopleDirectory() {
           . Create a managed profile for someone whose wishes you’ll look after.
         </p>
       </details>
-      <div ref={searchAnchor} className="directory-search-anchor" />
-      <div className="directory-toolbar" ref={toolbar}>
-        <label htmlFor="directory-search">Search people</label>
-        <div className="directory-search">
-          <Search size={18} aria-hidden="true" />
-          <input
-            ref={search}
-            id="directory-search"
-            type="search"
-            placeholder="Search by name"
-            value={query}
-            onChange={(e) => changeSearch(e.target.value)}
-          />
-          {query && (
-            <button
-              className="icon-button"
-              aria-label="Clear search"
-              onClick={() => {
-                changeSearch("");
-                search.current?.focus();
-                searchAnchor.current?.scrollIntoView({
-                  block: "start",
-                  behavior: "instant",
-                });
-              }}
-            >
-              <X size={18} aria-hidden="true" />
-            </button>
-          )}
-        </div>
+      {showSearch && (
+        <div ref={searchAnchor} className="directory-search-anchor" />
+      )}
+      <div
+        className={showSearch ? "directory-toolbar" : "directory-summary"}
+        ref={toolbar}
+      >
+        {showSearch && (
+          <>
+            <label htmlFor="directory-search">Search people</label>
+            <div className="directory-search">
+              <Search size={18} aria-hidden="true" />
+              <input
+                ref={search}
+                id="directory-search"
+                type="search"
+                placeholder="Search by name"
+                value={query}
+                onChange={(e) => changeSearch(e.target.value)}
+              />
+              {query && (
+                <button
+                  className="icon-button"
+                  aria-label="Clear search"
+                  onClick={() => {
+                    changeSearch("");
+                    search.current?.focus();
+                    searchAnchor.current?.scrollIntoView({
+                      block: "start",
+                      behavior: "instant",
+                    });
+                  }}
+                >
+                  <X size={18} aria-hidden="true" />
+                </button>
+              )}
+            </div>
+          </>
+        )}
         <div className="directory-status">
           <span role="status">
             {matches.length}{" "}
@@ -226,13 +265,13 @@ export function PeopleDirectory() {
                 ? "person"
                 : "people"}
           </span>
-          {!searching && available.length > 0 && (
+          {grouped && available.length > 0 && (
             <button
               className="button secondary small"
               onClick={() =>
                 open(
                   "Jump to letter",
-                  <div className="directory-letter-dialog">
+                  <div ref={letterDialog} className="directory-letter-dialog">
                     {directoryLetters.map((letter) => (
                       <button
                         key={letter}
@@ -255,7 +294,7 @@ export function PeopleDirectory() {
             </button>
           )}
         </div>
-        {!searching && available.length > 0 && (
+        {grouped && available.length > 0 && (
           <nav className="directory-alphabet" aria-label="People by letter">
             {directoryLetters.map((letter) => (
               <button
@@ -274,7 +313,7 @@ export function PeopleDirectory() {
       {matches.length === 0 ? (
         <div className="empty">
           <h2>No people found</h2>
-          {query && (
+          {searching && (
             <button
               className="text-button"
               onClick={() => {
@@ -286,7 +325,7 @@ export function PeopleDirectory() {
             </button>
           )}
         </div>
-      ) : searching ? (
+      ) : !grouped ? (
         <div className="directory-results">{renderPeople(matches)}</div>
       ) : (
         sections.map(({ letter, people }) => (
@@ -302,7 +341,7 @@ export function PeopleDirectory() {
           </section>
         ))
       )}
-      {!searching && available.length > 0 && (
+      {grouped && available.length > 0 && (
         <div
           ref={rail}
           className="directory-rail"

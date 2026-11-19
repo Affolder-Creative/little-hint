@@ -99,11 +99,11 @@
   height: 40px;
   flex-shrink: 0;
 }
-.people-directory .person-row h3 {
+.people-directory .person-row :is(h2, h3) {
   font-size: 17px;
   margin-bottom: 3px;
 }
-.people-directory .person-row:hover h3 {
+.people-directory .person-row:hover :is(h2, h3) {
   color: var(--accent);
 }
 .people-directory .person-row > svg {
@@ -197,4 +197,9 @@
   .directory-status {
     margin-top: 0;
   }
+}
+
+.directory-summary .directory-status {
+  margin-top: 0;
+  padding-bottom: 8px;
 }

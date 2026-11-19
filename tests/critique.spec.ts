@@ -6053,7 +6053,9 @@ test("people directory searches, jumps, and restores profile navigation", async 
   await search.fill("  MOR émili  ");
   await expect(alphabet).toHaveCount(0);
   await expect(page.locator(".people-directory .person-row")).toHaveCount(1);
-  await expect(page.locator(".person-row h3")).toHaveText("Émilie Morgan");
+  await expect(page.locator(".person-row :is(h2, h3)")).toHaveText(
+    "Émilie Morgan",
+  );
   await page.locator(".person-row").click();
   await page.goBack();
   await expect(search).toHaveValue("  MOR émili  ");
@@ -6262,3 +6264,140 @@ for (const width of [390, 1280]) {
     ).toBeVisible();
   });
 }
+
+async function sizedDirectory(page: Page, initialCount: number) {
+  const { state, actor } = await preview(page, 0, true);
+  const base = state.people[0];
+  for (let index = 1; index < 20; index++)
+    state.people.push({
+      ...base,
+      id: crypto.randomUUID(),
+      userId: undefined,
+      guardians: [actor.id],
+      name: `${String.fromCharCode(65 + index)} Sample ${index}`,
+    });
+  let count = initialCount;
+  await page.route("**/api/v1/world", (route) =>
+    route.fulfill({
+      json: {
+        ...world(state, actor),
+        people: world(state, actor).people.slice(0, count),
+      },
+    }),
+  );
+  return (next: number) => {
+    count = next;
+  };
+}
+
+for (const count of [0, 1, 9, 10, 19, 20]) {
+  test(`people directory shows size-appropriate controls for ${count} people`, async ({
+    page,
+  }, testInfo) => {
+    await sizedDirectory(page, count);
+    await page.goto("/people");
+    const directory = page.locator(".people-directory");
+    await expect(directory.locator(".person-row")).toHaveCount(count);
+    await expect(directory.getByRole("status")).toHaveText(
+      `${count} ${count === 1 ? "person" : "people"}`,
+    );
+    await expect(
+      page.getByRole("searchbox", { name: "Search people" }),
+    ).toHaveCount(count >= 10 ? 1 : 0);
+    await expect(
+      page.getByRole("button", { name: "Jump to letter", exact: true }),
+    ).toHaveCount(count >= 20 ? 1 : 0);
+    await expect(directory.locator(".directory-section")).toHaveCount(
+      count >= 20 ? 20 : 0,
+    );
+    const names = await directory
+      .locator(".person-row :is(h2, h3)")
+      .allTextContents();
+    expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b)));
+    if (count < 10)
+      await expect(directory.locator(".directory-summary")).toHaveCSS(
+        "position",
+        "static",
+      );
+    for (const [width, theme] of [
+      [1440, "light"],
+      [768, "dark"],
+      [390, "light"],
+      [320, "dark"],
+    ] as const) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.reload();
+      await expect(directory.locator(".person-row")).toHaveCount(count);
+      await page.evaluate((theme) => {
+        document.documentElement.dataset.theme = theme;
+      }, theme);
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth - innerWidth,
+        ),
+      ).toBeLessThanOrEqual(1);
+      await page.screenshot({
+        path: testInfo.outputPath(`people-${count}-${width}-${theme}.png`),
+        animations: "disabled",
+      });
+    }
+    expect(
+      (await new AxeBuilder({ page }).include("#main").analyze()).violations,
+    ).toEqual([]);
+  });
+}
+
+test("people directory updates thresholds and clears hidden searches", async ({
+  page,
+}) => {
+  await page.clock.install();
+  const setCount = await sizedDirectory(page, 10);
+  await page.goto("/people");
+  const search = page.getByRole("searchbox", { name: "Search people" });
+  await search.fill("B Sample");
+  await expect(page.locator(".person-row")).toHaveCount(1);
+  await page.locator(".person-row").click();
+  await page.goBack();
+  await expect(search).toHaveValue("B Sample");
+  await page.reload();
+  await expect(search).toHaveValue("B Sample");
+  await search.fill("Nobody matches");
+  await expect(
+    page.getByRole("heading", { name: "No people found" }),
+  ).toBeVisible();
+  await expect(search).toBeVisible();
+  setCount(9);
+  await page.clock.fastForward(21000);
+  await expect(search).toHaveCount(0);
+  await expect(page.locator(".person-row")).toHaveCount(9);
+  await expect(page.getByRole("main")).toBeFocused();
+  setCount(10);
+  await page.clock.fastForward(21000);
+  await expect(search).toHaveValue("");
+  setCount(20);
+  await page.clock.fastForward(21000);
+  const jump = page.getByRole("button", {
+    name: "Jump to letter",
+    exact: true,
+  });
+  await jump.click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  setCount(19);
+  await page.clock.fastForward(21000);
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(jump).toHaveCount(0);
+  await expect(page.locator(".person-row")).toHaveCount(19);
+  await expect(page.locator(".directory-section")).toHaveCount(0);
+  await page.clock.runFor(50);
+  await expect(page.getByRole("main")).toBeFocused();
+  await search.fill("B Sample");
+  await page.locator(".person-row").click();
+  setCount(9);
+  await page.goBack();
+  await page.reload();
+  await expect(search).toHaveCount(0);
+  await expect(page.locator(".person-row")).toHaveCount(9);
+  setCount(10);
+  await page.reload();
+  await expect(search).toHaveValue("");
+});

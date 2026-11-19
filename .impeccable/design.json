@@ -1,11 +1,11 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-19T14:10:07.634823+00:00",
+  "generatedAt": "2026-11-19T14:24:15.294293+00:00",
   "title": "Design System: Little Hint",
   "extensions": {
     "peopleDirectory": {
-      "layout": "Single column with soft letter headings; dividers only between people within each section or flat search results; 40px avatars; 17px names; 12px row padding.",
-      "navigation": "Sticky search clears the sticky mobile header. Desktop search and count share a row with the horizontal alphabet directly below; letters wrap when needed; mobile rail fits available height; Jump to letter dialog remains accessible. History-entry state preserves query and disclosure.",
+      "layout": "Single alphabetical column; flat rows below twenty people and while searching; soft letter headings at twenty or more. Dividers only between adjacent people. 40px avatars, 17px names, 12px vertical row padding. Flat name headings use h2; grouped names use h3.",
+      "navigation": "Below ten people, a compact non-sticky count. Search starts at ten; letter navigation starts at twenty, based on authorized entries before search at every viewport. Sticky search clears the mobile header. Desktop alphabet wraps; mobile rail fits available height with Jump to letter fallback. Search results remain flat. Clear saved searches below ten and dismiss the letter dialog below twenty; restore focus to main content when a focused control disappears. History preserves applicable query and disclosure.",
       "profiles": "Person wish-list links use 52px icons, a 16px gap, flexible left-aligned names/subtext, and a trailing arrow."
     },
     "enlargedNavigation": "Whole mobile navigation links wrap to additional rows at enlarged text sizes; measured height reserves content clearance. Sidebar note reflows; all avatars scale with their text, and notification counts retain content-driven width and a text-relative line height above the bell. Settings gear exposes its active route.",
