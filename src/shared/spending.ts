@@ -17,7 +17,17 @@ export interface SpendingOccasion extends Base {
   name: string;
   connectionId?: string;
 }
+export interface SpendingAllocation {
+  recipientId: string;
+  share: number;
+  listId?: string | null;
+  listName?: string;
+  listOwnerNames?: string[];
+  eventId?: string;
+  eventName?: string;
+}
 export interface SpendingRecord extends Base {
+  allocations?: SpendingAllocation[];
   contributionReturnId?: string;
   contributionId?: string;
   ownerId: string;
@@ -85,11 +95,45 @@ export interface SpendingFilter {
   occasion?: string;
   year?: number;
 }
+export function recordAllocations(r: SpendingRecord): SpendingAllocation[] {
+  return (
+    r.allocations ??
+    r.recipientIds.map((recipientId, i) => ({
+      recipientId,
+      share: r.splits[i],
+      listId: r.listId,
+      listName: r.listName,
+      listOwnerNames: r.listOwnerNames,
+      eventId: r.eventId,
+      eventName: r.eventName,
+    }))
+  );
+}
+export function allocationMatches(a: SpendingAllocation, f: SpendingFilter) {
+  return (
+    (!f.person || a.recipientId === f.person) &&
+    (!f.list || a.listId === f.list) &&
+    (!f.event || a.eventId === f.event)
+  );
+}
+export function scopedCents(r: SpendingRecord, f: SpendingFilter) {
+  if (!f.person && !f.list && !f.event) return r.amountCents;
+  if (r.amountCents === null) return null;
+  const allocations = recordAllocations(r);
+  const amounts = splitCents(
+    r.amountCents,
+    allocations.map((v) => v.share),
+  );
+  return allocations.reduce(
+    (sum, value, index) =>
+      sum + (allocationMatches(value, f) ? amounts[index] : 0),
+    0,
+  );
+}
 export function spendingMatches(r: SpendingRecord, f: SpendingFilter) {
   return (
-    (!f.person || r.recipientIds.includes(f.person)) &&
-    (!f.list || r.listId === f.list) &&
-    (!f.event || r.eventId === f.event) &&
+    ((!f.person && !f.list && !f.event) ||
+      recordAllocations(r).some((a) => allocationMatches(a, f))) &&
     (!f.occasion || r.occasionId === f.occasion) &&
     (!f.year ||
       (r.kind === "plan"
@@ -98,31 +142,32 @@ export function spendingMatches(r: SpendingRecord, f: SpendingFilter) {
   );
 }
 export function allocatedCents(r: SpendingRecord, person?: string) {
-  if (r.amountCents === null) return null;
-  if (!person) return r.amountCents;
-  const i = r.recipientIds.indexOf(person);
-  if (i < 0) return 0;
-  // Largest-remainder allocation keeps the sum exact, including odd cents.
-  const total = r.splits.reduce((a, b) => a + b, 0);
-  const amounts = r.splits.map((v) => Math.floor((r.amountCents! * v) / total));
-  let remainder = r.amountCents - amounts.reduce((a, b) => a + b, 0);
-  const order = r.splits
-    .map((v, index) => ({
+  return scopedCents(r, { person });
+}
+export function splitCents(amountCents: number, shares: number[]) {
+  const total = shares.reduce((a, b) => a + b, 0);
+  if (!total) return shares.map(() => 0);
+  const amounts = shares.map((v) => Math.floor((amountCents * v) / total));
+  let remainder = amountCents - amounts.reduce((a, b) => a + b, 0);
+  const order = shares
+    .map((weight, index) => ({
       index,
-      fraction: (r.amountCents! * v) / total - amounts[index],
-      weight: v,
+      weight,
+      fraction: (amountCents * weight) / total - amounts[index],
     }))
-    .filter((x) => x.weight > 0)
+    .filter((v) => v.weight > 0)
     .sort((a, b) => b.fraction - a.fraction || a.index - b.index);
   for (let n = 0; remainder > 0; n++, remainder--)
     amounts[order[n % order.length].index]++;
-  return amounts[i];
+  return amounts;
 }
+
 export function spendingTotals(
   records: SpendingRecord[],
   person?: string,
   shared = false,
   authorizedRecords = records,
+  scope: SpendingFilter = {},
 ) {
   let spent = 0,
     planned = 0,
@@ -186,7 +231,7 @@ export function spendingTotals(
             ),
           }
         : r;
-    const amount = allocatedCents(estimate, person);
+    const amount = scopedCents(estimate, { ...scope, person });
     if (amount === null) {
       missing++;
       if (r.kind === "plan") missingPlanned++;

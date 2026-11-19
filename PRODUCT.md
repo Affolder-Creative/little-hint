@@ -246,3 +246,7 @@ account exclusions and historical surprise recipients when written or edited.
 Restoring access never publishes protected earlier notes. Revocation releases
 unpurchased reservations and unsent pledges, preserves financial history and
 settlement, and prevents spending-partner sharing from bypassing exclusions.
+
+## Joint-gift spending assignments
+
+A gift idea may have one private spending-list default per recipient and equal or custom relative shares. These defaults belong to its creator and pass to their new plans and purchases. List and event totals count only matching recipient shares; an overall total counts each payment once. Shares use exact cents, including odd amounts. Unassigned shares remain in person and overall totals. Changing idea defaults previews missing assignments on the creator's existing records without changing saved shares or assigned destinations. Purchase edits propagate allocations to refunds. Existing scalar assignments are read as equivalent per-recipient snapshots; schema 12 prevents older runtimes from ignoring new allocations.

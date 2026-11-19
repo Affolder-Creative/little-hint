@@ -233,6 +233,11 @@ export function acceptFriend(s: State, a: Actor, inv: Invitation) {
       "You have saved ideas for this entry. Ask the inviter to check the recipient.",
     );
   for (const i of s.items.filter((i) => i.recipientIds.includes(old))) {
+    if (i.spendingAllocations)
+      i.spendingAllocations = i.spendingAllocations.map((v) => ({
+        ...v,
+        recipientId: v.recipientId === old ? person.id : v.recipientId,
+      }));
     i.recipientIds = [
       ...new Set(i.recipientIds.map((x) => (x === old ? person.id : x))),
     ];
@@ -258,6 +263,11 @@ export function acceptFriend(s: State, a: Actor, inv: Invitation) {
         ),
       ),
     ];
+    if (j.draft!.spendingAllocations)
+      j.draft!.spendingAllocations = j.draft!.spendingAllocations!.map((v) => ({
+        ...v,
+        recipientId: v.recipientId === old ? person.id : v.recipientId,
+      }));
     j.draft!.recipientId = j.draft!.recipientIds[0];
     j.draft!.revision++;
     touch(j);
@@ -265,6 +275,11 @@ export function acceptFriend(s: State, a: Actor, inv: Invitation) {
   for (const r of s.spendingRecords.filter((r) =>
     r.recipientIds.includes(old),
   )) {
+    if (r.allocations)
+      r.allocations = r.allocations.map((v) => ({
+        ...v,
+        recipientId: v.recipientId === old ? person.id : v.recipientId,
+      }));
     r.recipientIds = [...r.recipientIds];
     r.recipientNames = [...r.recipientNames];
     r.splits = [...r.splits];

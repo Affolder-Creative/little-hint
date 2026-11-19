@@ -44,6 +44,7 @@ export function useImportJob(accountId: string, initial?: ImportJob) {
     draft?: Pick<
       NonNullable<ImportJob["draft"]>,
       | "spendingListId"
+      | "spendingAllocations"
       | "listId"
       | "kind"
       | "recipientId"

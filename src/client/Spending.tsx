@@ -1,3 +1,9 @@
+import { SpendingAllocations } from "./SpendingAllocations";
+import {
+  scopedCents,
+  type SpendingFilter,
+  recordAllocations,
+} from "../shared/spending";
 import { useId, useState, type ComponentProps } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
@@ -15,7 +21,7 @@ import { useApp } from "./context";
 import { Form, Field, Header, useModalDismiss } from "./components";
 import { Action } from "./Action";
 import { ActionMenu } from "./Management";
-import { PurchaseForm, PurchaseListField } from "./SpendingPurchase";
+import { PurchaseForm } from "./SpendingPurchase";
 export { PurchaseForm } from "./SpendingPurchase";
 import {
   allocatedCents,
@@ -52,7 +58,9 @@ function MoneyField({
   value,
   label = "Amount paid in USD, optional",
   required = false,
+  onChange,
 }: {
+  onChange?: (value: number | null) => void;
   value?: number | null;
   label?: string;
   required?: boolean;
@@ -67,6 +75,13 @@ function MoneyField({
         min="0"
         max="1000000"
         step="0.01"
+        onChange={(e) =>
+          onChange?.(
+            e.target.value === ""
+              ? null
+              : Math.round(Number(e.target.value) * 100),
+          )
+        }
         defaultValue={value == null ? "" : value / 100}
       />
     </Field>
@@ -304,6 +319,8 @@ export function RecordForm({
 }) {
   const { mutate, close } = useApp();
   const [listId, setListId] = useState(r.listId ?? "");
+  const [allocations, setAllocations] = useState(recordAllocations(r));
+  const [previewAmount, setPreviewAmount] = useState(r.amountCents);
   return (
     <SpendingDialogForm
       submit="Save changes"
@@ -318,8 +335,10 @@ export function RecordForm({
           amountCents: amount(f),
           date: String(f.get("date") ?? "") || null,
           planningYear: Number(f.get("year") ?? r.planningYear),
-          splits:
-            r.recipientIds.length === 1
+          allocations: r.canAssignList ? allocations : undefined,
+          splits: r.canAssignList
+            ? allocations.map((v) => v.share)
+            : r.recipientIds.length === 1
               ? r.splits
               : r.recipientIds.map((_, i) => Number(f.get("split" + i))),
         });
@@ -333,6 +352,7 @@ export function RecordForm({
       </div>
       <MoneyField
         value={r.amountCents}
+        onChange={setPreviewAmount}
         label={
           r.kind === "plan"
             ? "Estimated total in USD"
@@ -355,13 +375,13 @@ export function RecordForm({
         </Field>
       )}
       {r.canAssignList && (
-        <PurchaseListField
-          recipientIds={r.recipientIds}
-          value={listId}
-          onChange={setListId}
+        <SpendingAllocations
+          value={allocations}
+          onChange={setAllocations}
+          amountCents={previewAmount}
         />
       )}
-      {r.recipientIds.length > 1 && (
+      {!r.canAssignList && r.recipientIds.length > 1 && (
         <fieldset className="spending-splits">
           <legend>Split between recipients</legend>
           <p>
@@ -652,10 +672,12 @@ function SpendingRow({
   r,
   data,
   person,
+  scope,
 }: {
   r: SpendingView["records"][number];
   data: SpendingView;
   person?: string;
+  scope?: SpendingFilter;
 }) {
   const { world, open, close, mutate } = useApp();
   const edit = () =>
@@ -836,7 +858,7 @@ function SpendingRow({
             ? r.kind === "plan"
               ? "Estimate not recorded"
               : "Amount not recorded"
-            : dollars(allocatedCents(r, person))}
+            : dollars(scopedCents(r, { ...scope, person }))}
           {r.kind === "plan" && r.amountCents !== null && (
             <small>Estimated</small>
           )}
@@ -1490,7 +1512,13 @@ export function SpendingPage() {
             <p>No purchases or plans match these filters.</p>
           )}
           {history.data!.records.map((r) => (
-            <SpendingRow key={r.id} r={r} data={data} person={filter.person} />
+            <SpendingRow
+              key={r.id}
+              r={r}
+              data={data}
+              person={filter.person}
+              scope={filter}
+            />
           ))}
           <div className="spending-pagination">
             {page > 1 && (

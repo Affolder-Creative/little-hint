@@ -1,9 +1,14 @@
+import { allocationsInput } from "../shared/spending-input";
 import { netContribution } from "../shared/contribution-money";
 import { canShop } from "./domain-access";
 import { protectedSpending } from "./spending-privacy";
 import { createHash } from "node:crypto";
 import { spendingAvailable } from "./deployment";
-import { spendingMatches, spendingTotals } from "../shared/spending";
+import {
+  recordAllocations,
+  spendingMatches,
+  spendingTotals,
+} from "../shared/spending";
 import { z } from "zod";
 import type { Actor, State } from "../shared/model";
 import type {
@@ -21,6 +26,36 @@ import {
   recipient,
 } from "./domain";
 const id = z.string().uuid();
+export function allocationContext(
+  s: State,
+  a: Actor,
+  raw: unknown,
+  recipients: string[],
+  previous?: SpendingRecord["allocations"],
+) {
+  const allocations = allocationsInput.parse(raw);
+  if (
+    allocations.length !== recipients.length ||
+    new Set(allocations.map((v) => v.recipientId)).size !== recipients.length ||
+    allocations.some((v) => !recipients.includes(v.recipientId)) ||
+    !allocations.some((v) => v.share > 0)
+  )
+    fail(400, "Enter a share for every recipient.");
+  return recipients.map((recipientId) => {
+    const value = allocations.find((v) => v.recipientId === recipientId)!;
+    const saved = previous?.find(
+      (v) =>
+        v.recipientId === recipientId &&
+        (v.listId ?? null) === (value.listId ?? null),
+    );
+    return saved
+      ? { ...saved, share: value.share }
+      : {
+          ...value,
+          ...listContext(s, a, value.listId ?? null, [recipientId]),
+        };
+  });
+}
 const accountId = z.string().min(1).max(128);
 const cents = z.number().int().min(0).max(100000000);
 const date = z
@@ -95,7 +130,9 @@ function autoShare(s: State, a: Actor, r: SpendingRecord) {
   if (r.date && r.date.slice(0, 10) < c.createdAt.slice(0, 10)) return;
   const rules = [
     ...r.recipientIds.map((p) => "person:" + p),
-    ...(r.eventId ? ["event:" + r.eventId] : []),
+    ...recordAllocations(r).flatMap((v) =>
+      v.eventId ? ["event:" + v.eventId] : [],
+    ),
     ...(r.occasionId ? ["occasion:" + r.occasionId] : []),
   ];
   const match = rules.find((v) => c.rules[a.id]?.includes(v));
@@ -142,7 +179,30 @@ function snapshot(s: State, a: Actor, reservationId: string): SpendingRecord {
     date: null,
     planningYear: new Date().getFullYear(),
     kind: "plan",
-    splits: recipients.map(() => 1),
+    allocations:
+      !i?.listId && i?.creatorId === a.id && i.spendingAllocations
+        ? allocationContext(
+            s,
+            a,
+            i.spendingAllocations.map((v) => ({
+              ...v,
+              listId: s.lists.some(
+                (l) =>
+                  l.id === v.listId &&
+                  listVisible(s, a, l) &&
+                  l.ownerIds.includes(v.recipientId),
+              )
+                ? v.listId
+                : null,
+            })),
+            recipients,
+          )
+        : undefined,
+    splits: recipients.map((id) =>
+      !i?.listId && i?.creatorId === a.id
+        ? (i.spendingAllocations?.find((v) => v.recipientId === id)?.share ?? 1)
+        : 1,
+    ),
     sharing: "private",
     protected: !!r.exchangeId || (!i?.listId && i?.visibility === "private"),
     history: [],
@@ -184,7 +244,13 @@ export function listContext(
 }
 /** A revision-bound review of the exact records an idea assignment will change. */
 export function spendingAssignmentPreview(s: State, a: Actor, raw: unknown) {
-  const q = z.object({ item: id, list: id }).parse(raw);
+  const q = z
+    .object({
+      item: id,
+      list: id.optional(),
+      allocations: allocationsInput.optional(),
+    })
+    .parse(raw);
   if (!spendingAvailable() || !spendingSettings(s, a).enabled)
     fail(403, "Enable spending tracking first.");
   const item = s.items.find(
@@ -195,7 +261,8 @@ export function spendingAssignmentPreview(s: State, a: Actor, raw: unknown) {
       itemVisible(s, a, i),
   );
   if (!item) fail(404, "Gift idea not available.");
-  listContext(s, a, q.list, item.recipientIds);
+  if (q.allocations) allocationContext(s, a, q.allocations, item.recipientIds);
+  else listContext(s, a, q.list ?? null, item.recipientIds);
   const reservations = new Set(
     s.reservations
       .filter((r) => r.itemId === item.id && r.buyerId === a.id)
@@ -204,7 +271,16 @@ export function spendingAssignmentPreview(s: State, a: Actor, raw: unknown) {
   const records = s.spendingRecords.filter(
     (r) =>
       r.ownerId === a.id &&
-      !r.listId &&
+      (q.allocations
+        ? recordAllocations(r).some(
+            (v) =>
+              !v.listId &&
+              !v.eventId &&
+              q.allocations!.some(
+                (next) => next.recipientId === v.recipientId && next.listId,
+              ),
+          )
+        : !recordAllocations(r).some((v) => v.listId || v.eventId)) &&
       !r.eventId &&
       !r.occasionId &&
       reservations.has(r.reservationId ?? "") &&
@@ -237,17 +313,21 @@ export function assignIdeaSpending(
   s: State,
   a: Actor,
   itemId: string,
-  listId: string,
+  listId: string | undefined,
   token?: string,
+  allocations?: unknown,
 ) {
   const preview = spendingAssignmentPreview(s, a, {
     item: itemId,
     list: listId,
+    allocations,
   });
   if (token !== preview.token)
     fail(409, "Review the affected plans and purchases again before saving.");
   const item = s.items.find((i) => i.id === itemId)!;
-  const context = listContext(s, a, listId, item.recipientIds);
+  const context = allocations
+    ? { allocations: allocationContext(s, a, allocations, item.recipientIds) }
+    : listContext(s, a, listId ?? null, item.recipientIds);
   const affected = new Set(preview.records.map((r) => r.id));
   for (const r of s.spendingRecords) {
     if (
@@ -256,7 +336,16 @@ export function assignIdeaSpending(
         r.ownerId === a.id &&
         affected.has(r.sourceId ?? ""))
     ) {
-      Object.assign(r, context);
+      if ("allocations" in context) {
+        r.allocations = recordAllocations(r).map((v) => {
+          const next = context.allocations.find(
+            (n) => n.recipientId === v.recipientId,
+          );
+          return !v.listId && !v.eventId && next?.listId
+            ? { ...next, share: v.share }
+            : v;
+        });
+      } else Object.assign(r, context);
       touch(r, a, "Assigned spending from gift idea");
     }
   }
@@ -675,6 +764,7 @@ export function spendingCommand(
               date: date.nullable(),
               planningYear: year,
               splits: z.array(z.number().min(0).max(1000000)).min(1),
+              allocations: allocationsInput.optional(),
               listId: id.nullable().optional(),
             }),
           )
@@ -721,6 +811,7 @@ export function spendingCommand(
         exchangeId: id.optional(),
         giverId: id.optional(),
         exchangeRecipientId: id.optional(),
+        allocations: allocationsInput.optional(),
         listId: id.nullable().optional(),
         title: z.string().trim().min(1).max(200),
         recipientIds: z.array(id).min(1).max(20),
@@ -810,8 +901,22 @@ export function spendingCommand(
     const sourceReservationItem = s.items.find(
       (i) => i.id === reservation?.itemId,
     );
-    const assignment =
-      p.listId !== undefined
+    const assignment = p.allocations
+      ? {
+          allocations: allocationContext(
+            s,
+            a,
+            p.allocations,
+            base?.recipientIds ?? sourceItem?.recipientIds ?? p.recipientIds,
+            base ? recordAllocations(base) : undefined,
+          ),
+          listId: undefined,
+          listName: undefined,
+          listOwnerNames: undefined,
+          eventId: undefined,
+          eventName: undefined,
+        }
+      : p.listId !== undefined
         ? listContext(
             s,
             a,
@@ -862,7 +967,12 @@ export function spendingCommand(
       date: p.date,
       planningYear: new Date().getFullYear(),
       kind: "purchase",
-      splits: base?.splits ?? p.recipientIds.map(() => 1),
+      allocations: base?.allocations,
+      splits: p.allocations
+        ? (base?.recipientIds ?? p.recipientIds).map(
+            (id) => p.allocations!.find((v) => v.recipientId === id)!.share,
+          )
+        : (base?.splits ?? p.recipientIds.map(() => 1)),
       sharing: "private",
       history: [
         {
@@ -883,9 +993,19 @@ export function spendingCommand(
     };
     if (assignment) {
       Object.assign(r, assignment);
-      if (p.listId === null && p.eventId) {
+      if (
+        (p.listId === null ||
+          (p.allocations && !p.allocations.some((v) => v.listId))) &&
+        p.eventId
+      ) {
         r.eventId = p.eventId;
         r.eventName = s.groupEvents.find((e) => e.id === p.eventId)?.name;
+        if (r.allocations)
+          r.allocations = r.allocations.map((v) => ({
+            ...v,
+            eventId: r.eventId,
+            eventName: r.eventName,
+          }));
       }
     }
     if (!p.keepPrivate && sourceItem) {
@@ -913,6 +1033,7 @@ export function spendingCommand(
         amountCents: cents.nullable(),
         date: date.nullable(),
         planningYear: year,
+        allocations: allocationsInput.optional(),
         listId: id.nullable().optional(),
         splits: z.array(z.number().min(0).max(1000000)).min(1),
       })
@@ -923,11 +1044,28 @@ export function spendingCommand(
     )
       fail(400, "Enter a split for every recipient.");
     const { listId, ...values } = p;
-    if (listId !== undefined && !canAssignList(s, r))
+    if ((listId !== undefined || p.allocations) && !canAssignList(s, r))
       fail(400, "This record uses the wish list of its linked gift.");
-    const assignment =
-      listId !== undefined
-        ? listContext(s, a, listId, r.recipientIds)
+    const assignment = p.allocations
+      ? {
+          allocations: allocationContext(
+            s,
+            a,
+            p.allocations,
+            r.recipientIds,
+            recordAllocations(r),
+          ),
+          listId: undefined,
+          listName: undefined,
+          listOwnerNames: undefined,
+          eventId: undefined,
+          eventName: undefined,
+        }
+      : listId !== undefined
+        ? {
+            ...listContext(s, a, listId, r.recipientIds),
+            allocations: undefined,
+          }
         : undefined;
     const updates = { ...values, ...assignment };
     const before = r.amountCents;
@@ -947,11 +1085,19 @@ export function spendingCommand(
       r.unitEstimateCents =
         p.amountCents === null ? null : p.amountCents / Math.max(1, r.quantity);
     Object.assign(r, updates);
-    if (assignment)
+    if (r.allocations)
+      r.allocations = r.allocations.map((v) => ({
+        ...v,
+        share: r.splits[r.recipientIds.indexOf(v.recipientId)],
+      }));
+    if (assignment || r.allocations)
       for (const child of s.spendingRecords.filter(
         (v) => v.kind === "refund" && v.sourceId === r.id,
       )) {
-        Object.assign(child, assignment);
+        Object.assign(child, assignment, {
+          allocations: r.allocations,
+          splits: [...r.splits],
+        });
         touch(child, a, "Updated wish-list assignment with purchase");
       }
     touch(
@@ -1071,18 +1217,16 @@ export function spendingHistory(s: State, a: Actor, raw: unknown) {
       sourceMatches(r) &&
       r.canEdit &&
       r.canAssignList &&
-      !r.listId &&
-      !r.eventId &&
       !r.occasionId &&
       spendingMatches(r, { person: q.person, year: q.year }) &&
-      (!q.list ||
-        (!!targetList &&
-          r.recipientIds.every((id) => targetList.ownerIds.includes(id)))) &&
-      (!q.event ||
-        (!!targetEvent &&
-          r.recipientIds.every((id) =>
-            targetEvent.participantIds.includes(id),
-          ))),
+      recordAllocations(r).some(
+        (v) =>
+          !v.listId &&
+          !v.eventId &&
+          (!q.person || v.recipientId === q.person) &&
+          (!q.list || targetList?.ownerIds.includes(v.recipientId)) &&
+          (!q.event || targetEvent?.participantIds.includes(v.recipientId)),
+      ),
   );
   const rows = (q.unassigned === "true" ? unassigned : ledger)
     .filter(sourceMatches)
@@ -1117,7 +1261,10 @@ export function spendingHistory(s: State, a: Actor, raw: unknown) {
           : `purchase:${r.kind === "refund" && r.sourceId ? r.sourceId : r.id}`,
       ),
     ).size,
-    summary: spendingTotals(rows, q.person, isShared, ledger),
+    summary: spendingTotals(rows, q.person, isShared, ledger, {
+      ...q,
+      shared: isShared,
+    }),
     years: [
       ...new Set([
         new Date().getFullYear(),
@@ -1139,13 +1286,14 @@ export function spendingHistory(s: State, a: Actor, raw: unknown) {
     lists: [
       ...new Map(
         ledger
+          .flatMap(recordAllocations)
           .filter((r) => r.listId)
           .map((r) => [
             r.listId!,
             {
               id: r.listId!,
               name: r.listName ?? "Previous wish list",
-              ownerNames: r.listOwnerNames ?? r.recipientNames,
+              ownerNames: r.listOwnerNames,
             },
           ]),
       ).values(),
@@ -1153,6 +1301,7 @@ export function spendingHistory(s: State, a: Actor, raw: unknown) {
     events: [
       ...new Map(
         ledger
+          .flatMap(recordAllocations)
           .filter((r) => r.eventId)
           .map((r) => [
             r.eventId!,

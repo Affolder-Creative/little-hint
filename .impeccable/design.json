@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-19T02:33:17.318439+00:00",
+  "generatedAt": "2026-11-19T11:20:19.163809+00:00",
   "title": "Design System: Little Hint",
   "extensions": {
     "peopleDirectory": {
@@ -1069,7 +1069,8 @@
       "src/client/ItemPhotoGallery.tsx",
       "src/client/item-photo-gallery.css",
       "src/client/ArchivePrivacySettings.tsx",
-      "src/client/MentionNote.tsx"
+      "src/client/MentionNote.tsx",
+      "src/client/SpendingAllocations.tsx"
     ],
     "tonalRampNote": "Synthesized OKLCH previews at constant hue/chroma; these ramps are panel metadata, not additional application tokens.",
     "layout": {
@@ -1141,12 +1142,16 @@
       "gridFilters": "Available gifts by default; typed search includes taken-care-of gifts. Own surprise lists preserve purchase privacy. Explicit Wish/Gift idea labels and type filter; People uses a searchable multi-select."
     },
     "spendingAssignments": {
-      "field": "Visible optional wish list for spending; changes totals without publishing gifts.",
-      "preview": "Affected unassigned records are shown before saving an idea assignment.",
+      "field": "One labeled wish-list select per recipient in flat divided rows. Split equally by default; Adjust shares reveals relative weights with exact cent previews. No list remains an explicit choice.",
+      "preview": "Revision-bound review fills missing recipient assignments without overwriting saved shares or existing destinations. Clearing guidance appears only with all lists empty.",
       "recipientOptions": "Checkbox and avatar beside name and family group text; avatar vertically centered.",
       "mobileGiftSuggestions": "One-line title with ellipsis at 650px; supporting text wraps.",
       "actionMenus": "Visible viewport collision placement above fixed navigation; flip upward or scroll internally.",
-      "wishListOptions": "Native optgroups by owner or combined owners; preserve historical options."
+      "wishListOptions": "Native select per recipient, accessible personal and joint lists, with preserved historical options.",
+      "layout": "Existing controls spacing and border tokens; no final divider. Shared dialog header and footer stay fixed; content scrolls. Single-recipient forms omit split controls.",
+      "validation": "Domain-backed Chromium/WebKit workflows; 320, 390, 768 and 1280px light/dark captures; one polish pass.",
+      "amountPreview": "Exact dollar shares update immediately when editing a total. Event names derive from selected wish lists; manual event selection appears only without list assignments.",
+      "drafts": "Opening and closing an untouched editor remains quiet. Allocation edits participate in the existing snapshot-based unsaved-change protection."
     },
     "profileManagement": {
       "sourceFiles": [
@@ -1165,10 +1170,7 @@
       "actions": "Two fixed rows without an added gap: outlined Make cover with 4px by 8px padding and a star, or checked green Cover photo status in a 32px line. Neutral Replace and destructive Remove align toward the top of their 44px targets."
     },
     "sharedCost": {
-      "fields": [
-        "Total gift cost in USD",
-        "Your contribution in USD"
-      ],
+      "fields": ["Total gift cost in USD", "Your contribution in USD"],
       "summary": [
         "Goal from others",
         "Already pledged",

@@ -196,6 +196,7 @@ export interface Item extends Base {
   publicationState?: "draft" | "published";
   draftOwnerId?: string;
   /** Creator-private spending default; never changes wish-list membership. */
+  spendingAllocations?: import("./spending").SpendingAllocation[];
   spendingListId?: string | null;
   pricing?: PriceTracking;
   friendEntryId?: string;
@@ -434,6 +435,7 @@ export interface ImportDraft {
   recipientIds?: string[];
   excludedUserIds?: string[];
   descriptionRich?: NoteDocument | null;
+  spendingAllocations?: import("./spending").SpendingAllocation[];
   spendingListId?: string | null;
   friendEntryId?: string;
   kind?: "item" | "idea";

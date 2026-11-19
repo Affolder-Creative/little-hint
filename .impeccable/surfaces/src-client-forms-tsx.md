@@ -18,3 +18,5 @@ related_targets: ["src/client/ImportDrafts.tsx", "src/client/mobile-repairs.css"
 - Helpful notes use the approved rich-text toolbar. Preserve selections during formatting and link editing, literal legacy content, 5,000-character limits and formatting-only dirty state. Match the saved note typography and wrap toolbar targets without horizontal overflow.
 
 Lookup actions disable final saving until completion, failure, or explicit manual entry. Save for later preserves running lookup drafts; completed item lookups restore Save draft. Manual entry retires the lookup and protects local edits. Existing-record changes require discard confirmation.
+
+Recipient spending allocations use one optional list per person and an equal/custom split selector. Custom shares reveal labeled relative weights and exact dollar previews. Retain flat rows, existing field styling, mobile scrolling and fixed actions. Validate joint idea save, inheritance, purchase, refund, private defaults, and scoped totals. The polish pass removed duplicate helper copy and corrected clearing guidance.

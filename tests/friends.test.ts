@@ -169,6 +169,7 @@ describe("friend planning", () => {
       itemRevision: idea.revision,
       title: "A book",
       recipientIds: [f.f.personId],
+      allocations: [{ recipientId: f.f.personId, share: 1 }],
       amountCents: 2599,
       date: "2026-11-03",
       quantity: 1,
@@ -185,6 +186,7 @@ describe("friend planning", () => {
     command(f.s, f.actors[2], "invitations.accept", { id: inv.id });
     const purchase = f.s.spendingRecords.find((r) => r.kind === "purchase")!;
     expect(purchase.amountCents).toBe(2599);
+    expect(purchase.allocations?.[0].recipientId).toBe(f.f.personId);
     expect(purchase.recipientIds).toEqual([f.f.personId]);
     expect(f.s.reservations.find((r) => r.itemId === idea.id)?.purchased).toBe(
       1,
