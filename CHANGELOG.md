@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.10.0](https://github.com/Affolder-Creative/little-hint/compare/v1.9.0...v1.10.0) (2026-11-19)
+
+
+### Features
+
+* add items directly to Archived items ([#254](https://github.com/Affolder-Creative/little-hint/issues/254)) ([476af9f](https://github.com/Affolder-Creative/little-hint/commit/476af9fd25788c1e4e292b9e1cf6d6eaf724180c))
+* open shops directly from Buying ([#252](https://github.com/Affolder-Creative/little-hint/issues/252)) ([2bc5d63](https://github.com/Affolder-Creative/little-hint/commit/2bc5d637f57205591020a94d763773d00ea055fa))
+* track joint gifts against each recipient’s wish list ([#249](https://github.com/Affolder-Creative/little-hint/issues/249)) ([18df53d](https://github.com/Affolder-Creative/little-hint/commit/18df53d43afe593268313a42369d32bdb4fa4f30))
+
+
+### Fixes
+
+* simplify smaller People directories ([#256](https://github.com/Affolder-Creative/little-hint/issues/256)) ([1fce867](https://github.com/Affolder-Creative/little-hint/commit/1fce86736df5ac63b6ff62f63b9a7fe68eb84945))
+
 ## [1.9.0](https://github.com/Affolder-Creative/little-hint/compare/v1.8.0...v1.9.0) (2026-11-19)
 
 
