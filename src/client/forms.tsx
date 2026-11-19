@@ -321,6 +321,7 @@ export function ListForm({
   );
 }
 interface Draft {
+  archived?: boolean;
   descriptionRich?: NoteDocument | null;
   id: string;
   title: string;
@@ -490,7 +491,11 @@ function GiftEditor({
     );
   const [switchingToManual, setSwitchingToManual] = useState(false);
   const [archived, setArchived] = useState(
-    gift?.individuallyArchived ?? gift?.archived ?? false,
+    gift?.individuallyArchived ??
+      gift?.archived ??
+      importDraft?.draft?.archived ??
+      draft?.archived ??
+      false,
   );
   const [closing, setClosing] = useState(false);
   const [manualLookup, setManualLookup] = useState(false);
@@ -717,6 +722,7 @@ function GiftEditor({
     (group) => !friendEntry || friendEntry.groupIds.includes(group.id),
   );
   const snapshot = JSON.stringify({
+    archived,
     fields: { ...data, priority },
     descriptionRich: noteRich,
     touched: [...touched.current],
@@ -846,6 +852,7 @@ function GiftEditor({
                     spendingAllocations,
                   }
                 : { listId: destination }),
+              archived,
               fields: { ...data, priority },
               descriptionRich: noteRich,
               touched: [...touched.current],
@@ -1009,7 +1016,10 @@ function GiftEditor({
                   busy ||
                   importing ||
                   uploading ||
-                  !!gift?.archived ||
+                  !!(
+                    gift?.listId &&
+                    world.lists.find((l) => l.id === gift.listId)?.archived
+                  ) ||
                   !navigator.onLine
                 }
               >
@@ -1121,6 +1131,7 @@ function GiftEditor({
           }
         }
         const payload = {
+          archived,
           publicationState: saveAsDraft ? "draft" : undefined,
           importDraftRevision: savedDraft.current?.draft?.revision,
           ...data,
@@ -1146,7 +1157,6 @@ function GiftEditor({
             ? {
                 id: gift.id,
                 revision: gift.revision,
-                archived: f.get("archived") === "on",
               }
             : {
                 listId: idea ? undefined : value(f, "listId"),
@@ -1170,6 +1180,7 @@ function GiftEditor({
               "Reconnect to save, or turn on personal drafts in Settings for your own wish-list items.",
             );
           saveDraft(world.me.id, {
+            archived,
             title: data.title,
             url: data.url,
             description: data.description,
@@ -1200,15 +1211,19 @@ function GiftEditor({
         toast(
           saveAsDraft
             ? "Draft saved."
-            : publishDraft
-              ? "Item published."
-              : gift
-                ? idea
-                  ? "Gift idea updated."
-                  : "Item updated."
-                : idea
-                  ? "Gift idea saved."
-                  : "A little hint, saved.",
+            : archived && (!gift || publishDraft)
+              ? idea
+                ? "Gift idea saved to Archived items."
+                : "Item saved to Archived items."
+              : publishDraft
+                ? "Item published."
+                : gift
+                  ? idea
+                    ? "Gift idea updated."
+                    : "Item updated."
+                  : idea
+                    ? "Gift idea saved."
+                    : "A little hint, saved.",
         );
         close();
         onSaved?.(result);
@@ -1860,17 +1875,15 @@ function GiftEditor({
           </small>
         )}
       </details>
-      {gift && (
-        <label className="check">
-          <input
-            type="checkbox"
-            name="archived"
-            checked={archived}
-            onChange={(event) => setArchived(event.target.checked)}
-          />
-          {idea ? "Archive this gift idea" : "Archive this item"}
-        </label>
-      )}
+      <label className="check">
+        <input
+          type="checkbox"
+          name="archived"
+          checked={archived}
+          onChange={(event) => setArchived(event.target.checked)}
+        />
+        {idea ? "Archive this gift idea" : "Archive this item"}
+      </label>
       {duplicate && (
         <div className="duplicate">
           <strong>

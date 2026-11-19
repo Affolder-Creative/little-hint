@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-19T11:53:24.613726+00:00",
+  "generatedAt": "2026-11-19T14:10:07.634823+00:00",
   "title": "Design System: Little Hint",
   "extensions": {
     "peopleDirectory": {
@@ -1211,7 +1211,8 @@
       "purchased": "Keep Update purchase visible; put Visit shop in More actions.",
       "missingUrl": "Keep existing purchase actions.",
       "interaction": "Open shops in a new tab; preserve gift detail navigation, 44px targets, menu dismissal and purchase-status focus recovery."
-    }
+    },
+    "archiveEntry": "Shared centered 44px checkbox below More details and above the fixed footer; 14px label, 9px gap. Unchecked for new entries and restored for drafts. Archived destination lists block publishing; individual archive selection does not."
   },
   "components": [
     {
@@ -1490,6 +1491,13 @@
       "description": "Compact privacy label with contextual help beside the note composer.",
       "html": "<div class=\"ds-audience\"><span>Hidden from recipients</span><button aria-label=\"Who can read this note?\"><svg width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"M12 16v-4m0-4h.01\"/></svg></button></div>",
       "css": ".ds-audience {display:flex;align-items:center;gap:6px;color:var(--muted);font-size:13px}.ds-audience button {border:0;background:none;color:inherit;min-height:44px;min-width:44px;cursor:pointer}.ds-audience button:hover {background:var(--soft)}.ds-audience button:focus-visible {outline:3px solid var(--accent);outline-offset:3px}"
+    },
+    {
+      "name": "Archive checkbox",
+      "kind": "input",
+      "description": "Archive selection at the bottom of item and gift-idea editors.",
+      "html": "<label class=\"ds-check\"><input type=\"checkbox\">Archive this item</label>",
+      "css": ".ds-check { min-height:44px; cursor:pointer; display:flex; align-items:center; gap:9px; font-size:14px; line-height:1.5; color:var(--text); } .ds-check input { margin:0; accent-color:var(--accent); } .ds-check input:focus-visible { outline:3px solid var(--accent); outline-offset:3px; }"
     }
   ],
   "narrative": {

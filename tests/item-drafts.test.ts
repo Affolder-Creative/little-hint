@@ -143,3 +143,89 @@ it("account closure preserves other people's trashed drafts and removes orphaned
   expect(f.s.items.some((i) => i.id === privateDraft.id)).toBe(false);
   expect(f.s.items.some((i) => i.id === other.id)).toBe(true);
 });
+
+it.each([false, true])(
+  "creates wishes and ideas with archived=%s",
+  async (archived) => {
+    const f = wishlistFixture();
+    f.follow("list", f.list.id);
+    for (const destination of [
+      { listId: f.list.id },
+      { recipientIds: [f.people[1].id] },
+    ]) {
+      const item = command(f.s, f.john, "items.create", {
+        ...destination,
+        title: `Archive entry ${f.s.items.length}`,
+        archived,
+      }) as Item;
+      expect(item.archived).toBe(archived);
+      expect(Boolean(item.archivedAt)).toBe(archived);
+      expect(
+        priceEligible(
+          f.s,
+          f.s.items.find((i) => i.id === item.id)!,
+        ),
+      ).toBe(false);
+    }
+    expect(f.s.notices.filter((n) => n.event === "wishlist")).toHaveLength(
+      archived ? 0 : 1,
+    );
+    const active = await itemPage(f.s, f.john, {
+      scope: "list",
+      id: f.list.id,
+    });
+    expect(active.total).toBe(archived ? 0 : 1);
+  },
+);
+
+it.each([false, true])(
+  "publishes an archived draft with final archived=%s",
+  (archived) => {
+    const f = wishlistFixture();
+    f.follow("list", f.list.id);
+    const draft = command(f.s, f.john, "items.create", {
+      title: "Coffee grinder",
+      listId: f.list.id,
+      publicationState: "draft",
+      archived: true,
+    }) as Item;
+    expect(draft.archivedAt).toEqual(expect.any(String));
+    command(f.s, f.john, "items.publish", { ...draft, archived });
+    const saved = f.s.items[0];
+    expect(saved.publicationState).toBe("published");
+    expect(saved.archived).toBe(archived);
+    expect(saved.archivedAt).toBe(archived ? draft.archivedAt : undefined);
+    expect(f.s.notices.filter((n) => n.event === "wishlist")).toHaveLength(
+      archived ? 0 : 1,
+    );
+    expect(() => command(f.s, f.john, "items.publish", saved)).toThrow();
+  },
+);
+
+it("retains and clears the archive choice in import drafts with revision checks", () => {
+  const f = wishlistFixture();
+  const job = command(f.s, f.john, "imports.create", {
+    url: "https://example.com/grinder",
+    draft: {
+      listId: f.list.id,
+      archived: true,
+      fields: { title: "Grinder" },
+      touched: ["title"],
+    },
+  }) as import("../src/shared/model").ImportJob;
+  expect(job.draft?.archived).toBe(true);
+  command(f.s, f.john, "imports.update", {
+    id: job.id,
+    revision: job.draft!.revision,
+    archived: false,
+  });
+  expect(f.s.imports[0].draft?.archived).toBe(false);
+  expect(() =>
+    command(f.s, f.john, "imports.update", {
+      id: job.id,
+      revision: 1,
+      archived: true,
+    }),
+  ).toThrow();
+  expect(f.s.imports[0].draft?.archived).toBe(false);
+});
