@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.0](https://github.com/Affolder-Creative/little-hint/compare/v1.8.0...v1.9.0) (2026-11-19)
+
+
+### Features
+
+* share joint gift ideas with selected people ([#246](https://github.com/Affolder-Creative/little-hint/issues/246)) ([cccc8f9](https://github.com/Affolder-Creative/little-hint/commit/cccc8f9b140361e4bacf75702a7c7b219cba6f35))
+
 ## [1.8.0](https://github.com/Affolder-Creative/little-hint/compare/v1.7.0...v1.8.0) (2026-11-18)
 
 
