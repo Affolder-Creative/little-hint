@@ -280,4 +280,17 @@ describe("recipient spending allocations", () => {
     expect(scopedCents(r, { list: f.lists[0].id })).toBe(10001);
     expect(scopedCents(r, { list: f.lists[1].id })).toBe(0);
   });
+  it("retains list shares when recipient profiles merge", () => {
+    const f = setup(),
+      r = f.purchase();
+    r.allocations = r.allocations!.map((v) => ({
+      ...v,
+      recipientId: f.ids[0],
+    }));
+    r.recipientIds = [f.ids[0]];
+    r.splits = [5];
+    expect(scopedCents(r, { person: f.ids[0] })).toBe(10000);
+    expect(scopedCents(r, { list: f.lists[0].id })).toBe(6000);
+    expect(scopedCents(r, { list: f.lists[1].id })).toBe(4000);
+  });
 });

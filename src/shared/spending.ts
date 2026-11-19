@@ -119,9 +119,16 @@ export function allocationMatches(a: SpendingAllocation, f: SpendingFilter) {
 export function scopedCents(r: SpendingRecord, f: SpendingFilter) {
   if (!f.person && !f.list && !f.event) return r.amountCents;
   if (r.amountCents === null) return null;
-  return recordAllocations(r)
-    .filter((a) => allocationMatches(a, f))
-    .reduce((sum, a) => sum + (allocatedCents(r, a.recipientId) ?? 0), 0);
+  const allocations = recordAllocations(r);
+  const amounts = splitCents(
+    r.amountCents,
+    allocations.map((v) => v.share),
+  );
+  return allocations.reduce(
+    (sum, value, index) =>
+      sum + (allocationMatches(value, f) ? amounts[index] : 0),
+    0,
+  );
 }
 export function spendingMatches(r: SpendingRecord, f: SpendingFilter) {
   return (
@@ -135,11 +142,7 @@ export function spendingMatches(r: SpendingRecord, f: SpendingFilter) {
   );
 }
 export function allocatedCents(r: SpendingRecord, person?: string) {
-  if (r.amountCents === null) return null;
-  if (!person) return r.amountCents;
-  const i = r.recipientIds.indexOf(person);
-  if (i < 0) return 0;
-  return splitCents(r.amountCents, r.splits)[i];
+  return scopedCents(r, { person });
 }
 export function splitCents(amountCents: number, shares: number[]) {
   const total = shares.reduce((a, b) => a + b, 0);

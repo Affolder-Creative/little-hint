@@ -889,6 +889,11 @@ try {
   await page
     .getByRole("button", { name: "Edit gift idea", exact: true })
     .click();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toBeHidden();
+  await page
+    .getByRole("button", { name: "Edit gift idea", exact: true })
+    .click();
   await page
     .getByLabel("Jamie's wish list", { exact: true })
     .selectOption(secondList.id);

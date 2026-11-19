@@ -1052,8 +1052,7 @@ function GiftEditor({
       dirty={
         savedDraft.current?.draft
           ? snapshot !== baseline.current
-          : assignmentChanged ||
-            manualLookup ||
+          : manualLookup ||
             editSnapshot !== originalEditSnapshot.current ||
             photosChanged
       }
