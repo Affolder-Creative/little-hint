@@ -36,13 +36,8 @@ export const archivedSortOrders: readonly ArchivedSortOrder[] = [
 export function isArchivedSort(sort: SortOrder): sort is ArchivedSortOrder {
   return archivedSortOrders.some((value) => value === sort);
 }
-export function archivedItemSort(
-  sort: SortOrder,
-  ideasOnly = false,
-): ArchivedSortOrder {
-  return isArchivedSort(sort) && !(ideasOnly && sort === "priority")
-    ? sort
-    : "archived-newest";
+export function archivedItemSort(sort: SortOrder): ArchivedSortOrder {
+  return isArchivedSort(sort) ? sort : "archived-newest";
 }
 export function itemTrashed(s: State, item: Item): boolean {
   return (
@@ -111,4 +106,15 @@ export function ordered<
             : (a.priceCents - b.priceCents) * (sort === "price-desc" ? -1 : 1);
     return result || manual(a, b);
   });
+}
+
+export type PriorityFilter = ItemPriority | "all" | "none";
+export function matchesPriority(
+  priority: ItemPriority | null | undefined,
+  filter: PriorityFilter,
+): boolean {
+  return (
+    filter === "all" ||
+    (filter === "none" ? priority == null : priority === filter)
+  );
 }

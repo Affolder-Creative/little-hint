@@ -1136,7 +1136,7 @@ function GiftEditor({
           importDraftRevision: savedDraft.current?.draft?.revision,
           ...data,
           descriptionRich: noteRich,
-          ...(!idea ? { priority } : {}),
+          priority,
           ...(idea && world.spendingEnabled
             ? {
                 spendingListId: null,
@@ -1755,7 +1755,7 @@ function GiftEditor({
             />
           </Field>
         </div>
-        {!idea && <PrioritySelect value={priority} onChange={setPriority} />}
+        <PrioritySelect value={priority} onChange={setPriority} />
         <Field label="Tags" hint="Separate tags with commas.">
           <input
             value={data.tags}

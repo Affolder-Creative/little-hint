@@ -557,3 +557,43 @@ describe("priorities and organization", () => {
     expect(rows[0]).toBe(b);
   });
 });
+
+it("lets only the gift idea creator set and clear priority", () => {
+  const f = fixture();
+  const result = command(f.s, f.actors[0], "items.create", {
+    title: "Priority idea",
+    recipientIds: [f.s.people[1].id],
+    priority: "most-wanted",
+  }) as Item;
+  const idea = f.s.items.find((i) => i.id === result.id)!;
+  expect(idea.priority).toBe("most-wanted");
+  expect(
+    world(f.s, f.actors[0]).items.find((i) => i.id === idea.id)?.priority,
+  ).toBe("most-wanted");
+  expect(() =>
+    f.run("items.organize", idea, { priority: "would-love" }, f.actors[1]),
+  ).toThrow();
+  f.run("items.organize", idea, { priority: "would-love" });
+  expect(idea.priority).toBe("would-love");
+  expect(() =>
+    f.run("items.organize", idea, { priority: "invalid" }),
+  ).toThrow();
+  expect(() =>
+    f.run(
+      "items.organize",
+      { ...idea, revision: idea.revision - 1 },
+      { priority: null },
+    ),
+  ).toThrow("changed");
+  const update = { ...idea, title: "Edited priority idea" };
+  delete update.priority;
+  command(f.s, f.actors[0], "items.update", update);
+  expect(idea.priority).toBe("would-love");
+  command(f.s, f.actors[0], "items.update", {
+    ...idea,
+    priority: "nice-to-have",
+  });
+  expect(idea.priority).toBe("nice-to-have");
+  f.run("items.organize", idea, { priority: null });
+  expect(idea.priority).toBeNull();
+});

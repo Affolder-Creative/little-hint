@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-19T15:21:21.862090+00:00",
+  "generatedAt": "2026-11-20T22:27:58.547638+00:00",
   "title": "Design System: Little Hint",
   "extensions": {
     "peopleDirectory": {
@@ -1212,7 +1212,12 @@
       "missingUrl": "Keep existing purchase actions.",
       "interaction": "Open shops in a new tab; preserve gift detail navigation, 44px targets, menu dismissal and purchase-status focus recovery."
     },
-    "archiveEntry": "Shared centered 44px checkbox at the bottom of More details; 14px label, 9px gap and existing 16px disclosure field spacing. When checked, Will save to archive leads the summary, including while collapsed. Unchecked for new entries and restored for drafts. New entries and import drafts start collapsed; existing items and offline drafts start expanded. Archived destination lists block publishing; individual archive selection does not."
+    "archiveEntry": "Shared centered 44px checkbox at the bottom of More details; 14px label, 9px gap and existing 16px disclosure field spacing. When checked, Will save to archive leads the summary, including while collapsed. Unchecked for new entries and restored for drafts. New entries and import drafts start collapsed; existing items and offline drafts start expanded. Archived destination lists block publishing; individual archive selection does not.",
+    "giftPriorities": {
+      "editing": "Wish-list items and gift ideas share the optional Priority select in More details and Set priority action.",
+      "display": "Reuse the existing priority badges on cards and details, following the source-list caption when present.",
+      "browsing": "Priority sort includes archived gift ideas. The single-select Priority filter follows Sort by and offers All priorities, Most wanted, Would love, Nice to have, and No priority. It participates in the summary, filter count, clear action, and navigation restoration."
+    }
   },
   "components": [
     {
