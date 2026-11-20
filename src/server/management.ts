@@ -1,6 +1,6 @@
+import { canManageTrashedItem, isAdmin, groupAccess } from "./domain-access";
 import { listCanEdit, recoverDraft } from "./co-management";
 import { itemPhotos } from "../shared/item-photos";
-import { draftAccess } from "./domain-access";
 import { z } from "zod";
 import type {
   Actor,
@@ -57,12 +57,8 @@ function manages(s: State, a: Actor, kind: TrashKind, id: string): boolean {
     const i = s.items.find((i) => i.id === id);
     return (
       !!i &&
-      draftAccess(s, a, i) &&
-      (i.listId
-        ? !!s.lists.find(
-            (l) => l.id === i.listId && !l.deletedAt && listCanEdit(s, a, l),
-          )
-        : i.creatorId === a.id)
+      (!i.listId || s.lists.some((l) => l.id === i.listId && !l.deletedAt)) &&
+      canManageTrashedItem(s, a, i)
     );
   }
   if (kind === "lists")
@@ -72,12 +68,21 @@ function manages(s: State, a: Actor, kind: TrashKind, id: string): boolean {
   if (kind === "group-events") {
     const e = s.groupEvents.find((e) => e.id === id);
     const g = s.groups.find((g) => g.id === e?.groupId);
-    return !!g && canManageGroupEvents(g, a.id);
+    return (
+      !!g &&
+      groupAccess(s, a, g.id) &&
+      (isAdmin(s, a) || canManageGroupEvents(g, a.id))
+    );
   }
   return s.exchanges.some(
     (e) =>
       e.id === id &&
-      s.groups.some((g) => g.id === e.groupId && canManageGroupEvents(g, a.id)),
+      s.groups.some(
+        (g) =>
+          g.id === e.groupId &&
+          groupAccess(s, a, g.id) &&
+          (isAdmin(s, a) || canManageGroupEvents(g, a.id)),
+      ),
   );
 }
 export function trash(s: State, a: Actor): TrashEntry[] {
@@ -286,10 +291,33 @@ function canPurge(s: State, a: Actor, kind: TrashKind, id: string) {
       : kind === "items"
         ? s.lists.find((l) => l.id === s.items.find((i) => i.id === id)?.listId)
         : undefined;
-  return !list || list.ownerIds.some((id) => controls(s, a, id));
+  if (isAdmin(s, a)) return true;
+  if (kind === "items") {
+    const item = s.items.find((i) => i.id === id);
+    if (item && !item.listId) return item.creatorId === a.id;
+  }
+  if (kind === "group-events" || kind === "exchanges") {
+    const entry = s[kind === "group-events" ? "groupEvents" : "exchanges"].find(
+      (e) => e.id === id,
+    );
+    return (
+      !!entry &&
+      s.groups.some(
+        (g) =>
+          g.id === entry.groupId &&
+          (g.ownerId === a.id || !!g.eventLeaderIds?.includes(a.id)),
+      )
+    );
+  }
+  return !!list && list.ownerIds.some((id) => controls(s, a, id));
 }
 function purge(s: State, kind: TrashKind, id: string) {
   const removed = new Set([id]);
+  if (kind === "lists")
+    for (const draft of s.items.filter(
+      (i) => i.listId === id && i.publicationState === "draft",
+    ))
+      recoverDraft(s, draft);
   if (kind === "group-events") {
     for (const list of s.lists.filter((l) => l.groupEventId === id)) {
       delete list.groupEventId;

@@ -166,7 +166,7 @@ describe("event lists and permissions", () => {
     ).toBe(true);
     expect(
       world(f.state, f.actors[0]).lists.every(
-        (list) => !list.canEdit && !list.canManageSettings,
+        (list) => list.canEdit && !list.canManageSettings,
       ),
     ).toBe(true);
   });
@@ -205,7 +205,7 @@ describe("event lists and permissions", () => {
         listId: list.id,
         title: "Leader gift",
       }),
-    ).toThrow();
+    ).not.toThrow();
     for (const patch of [
       { name: "Rename" },
       { archived: true },

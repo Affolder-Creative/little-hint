@@ -267,7 +267,7 @@ export function Lists() {
             <ImportDrafts listId={list.id} />
           </>
         )}
-        {list.canEdit && list.revealAvailable && (
+        {list.canViewGiftSummary && list.revealAvailable && (
           <div className="tabs" role="group" aria-label="List view">
             <button
               aria-pressed={!showSummary}
@@ -283,7 +283,7 @@ export function Lists() {
             </button>
           </div>
         )}
-        {showSummary && list.canEdit && list.revealAvailable ? (
+        {showSummary && list.canViewGiftSummary && list.revealAvailable ? (
           <GiftSummaryPanel listId={list.id} />
         ) : (
           <Browser

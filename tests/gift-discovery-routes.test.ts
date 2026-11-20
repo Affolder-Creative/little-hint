@@ -11,9 +11,11 @@ vi.mock("../src/server/db", () => ({
   readState: async () => structuredClone(mocks.state),
   readCollectionState: async () => structuredClone(mocks.state),
   hydrateCollectionItems: async () => {},
-  transact: async (run: (s: State) => unknown) => {
+  transact: async (
+    run: (s: State, tx: { execute: ReturnType<typeof vi.fn> }) => unknown,
+  ) => {
     const next = structuredClone(mocks.state);
-    const result = await run(next);
+    const result = await run(next, { execute: vi.fn() });
     mocks.state = next;
     return result;
   },

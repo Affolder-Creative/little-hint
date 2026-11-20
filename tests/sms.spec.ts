@@ -89,6 +89,11 @@ for (const width of [393, 1280]) {
     });
     const requests: Array<{ path: string; body: any }> = [];
     await page.route("**/api/**", async (r) => {
+      const adminPath = new URL(r.request().url()).pathname;
+      if (adminPath === "/api/v1/admin/administrators")
+        return r.fulfill({ json: [] });
+      if (adminPath === "/api/v1/admin/groups")
+        return r.fulfill({ json: { rows: [], total: 0 } });
       const path = new URL(r.request().url()).pathname.replace("/api/v1/", "");
       if (path === "world")
         return r.fulfill({

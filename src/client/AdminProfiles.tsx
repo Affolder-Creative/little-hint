@@ -1,3 +1,4 @@
+import { Confirm } from "./Confirm";
 import { AdminAccountDeletion } from "./AdminAccountDeletion";
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -145,6 +146,38 @@ export function AdminProfiles() {
             </p>
           </div>
           <div className="invitation-actions">
+            {selected.userId && !selected.admin && (
+              <button
+                className="button secondary"
+                onClick={() =>
+                  open(
+                    "Appoint app administrator?",
+                    <Confirm
+                      label="Make app admin"
+                      onConfirm={async () => {
+                        await api("admin/administrators", {
+                          id: selected.id,
+                          revision: selected.revision,
+                          admin: true,
+                        });
+                        setSelected(null);
+                        await client.invalidateQueries({
+                          queryKey: ["admin-profiles"],
+                        });
+                        await client.invalidateQueries({
+                          queryKey: ["app-administrators"],
+                        });
+                      }}
+                    >
+                      {selected.name} will manage the installation and
+                      accessible shared content. Private content stays private.
+                    </Confirm>,
+                  )
+                }
+              >
+                Make app admin
+              </button>
+            )}
             <button
               className="button secondary"
               aria-label={`Edit name for ${selected.name}`}

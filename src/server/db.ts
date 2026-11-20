@@ -18,7 +18,7 @@ import {
   type ImportJob,
   type FriendEntry,
 } from "../shared/model";
-const supportedSchemaVersion = 12;
+const supportedSchemaVersion = 13;
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   max: 10,
@@ -307,6 +307,18 @@ INSERT INTO schema_migration(version) VALUES (2);`);
       // Legacy records remain readable through recordAllocations, including removed sources.
       // The version guard prevents an older runtime from ignoring new allocation data.
       await client.query("INSERT INTO schema_migration(version) VALUES (12)");
+    }
+    await client.query(
+      `CREATE TABLE IF NOT EXISTS admin_action_audit (id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY, actor_hash text NOT NULL, target_hash text NOT NULL, scope text NOT NULL, action text NOT NULL, fields jsonb NOT NULL, created_at timestamptz NOT NULL DEFAULT now())`,
+    );
+    const rolesMigration = await client.query(
+      "SELECT 1 FROM schema_migration WHERE version=13",
+    );
+    if (!rolesMigration.rowCount) {
+      await client.query(
+        `UPDATE app_record SET data=jsonb_set(data, '{adminIds}', '[]'::jsonb) WHERE kind='groups' AND NOT (data ? 'adminIds')`,
+      );
+      await client.query("INSERT INTO schema_migration(version) VALUES (13)");
     }
     await client.query("COMMIT");
   } catch (e) {

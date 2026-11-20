@@ -53,6 +53,11 @@ async function setup(
   };
   const saved: Record<string, any>[] = [];
   await page.route("**/api/**", async (r) => {
+    const adminPath = new URL(r.request().url()).pathname;
+    if (adminPath === "/api/v1/admin/administrators")
+      return r.fulfill({ json: [] });
+    if (adminPath === "/api/v1/admin/groups")
+      return r.fulfill({ json: { rows: [], total: 0 } });
     const path = new URL(r.request().url()).pathname.replace("/api/v1/", "");
     if (path === "world")
       return r.fulfill({

@@ -1,4 +1,4 @@
-import { coManages, listCanEdit } from "./co-management";
+import { coManages, listCanEdit, listCanManagePolicy } from "./co-management";
 import { profileOwner } from "./profile-management";
 import { hideArchivedItemsForState } from "./settings";
 import type { State, Actor, Person, Group, Item, List } from "../shared/model";
@@ -17,9 +17,23 @@ export const member = (g: Group, a: Actor) => g.memberIds.includes(a.id);
 export const groupAccess = (s: State, a: Actor, groupId: string) =>
   !!s.groups.find((g) => g.id === groupId && member(g, a));
 export const managesGroupExchanges = (s: State, a: Actor, groupId: string) =>
-  s.groups.some((g) => g.id === groupId && canManageGroupEvents(g, a.id));
+  s.groups.some(
+    (g) =>
+      g.id === groupId &&
+      member(g, a) &&
+      (isAdmin(s, a) || canManageGroupEvents(g, a.id)),
+  );
 export const isAdmin = (s: State, a: Actor) =>
-  s.people.some((p) => p.userId === a.id && p.admin);
+  s.people.some((p) => p.userId === a.id && p.admin && !p.mergedIntoId);
+export const administersGroup = (s: State, a: Actor, g: Group) =>
+  isAdmin(s, a) ||
+  (member(g, a) && (g.ownerId === a.id || !!g.adminIds?.includes(a.id)));
+export const administersAudience = (s: State, a: Actor, groups: string[]) =>
+  isAdmin(s, a) ||
+  s.groups.some((g) => groups.includes(g.id) && administersGroup(s, a, g));
+export const managedGroup = (s: State, a: Actor, id: string) =>
+  s.groups.find((g) => g.id === id && administersGroup(s, a, g)) ??
+  fail(404, "Family group not found.");
 export const ownedGroup = (s: State, a: Actor, id: string) =>
   s.groups.find((g) => g.id === id && g.ownerId === a.id) ??
   fail(404, "Family group not found.");
@@ -86,7 +100,8 @@ export const recipient = (s: State, a: Actor, i: Item) =>
   i.recipientIds.some((p) => controls(s, a, p));
 export const listVisible = (s: State, a: Actor, l: List) =>
   !l.deletedAt &&
-  (listCanEdit(s, a, l) || l.groupIds.some((g) => groupAccess(s, a, g)));
+  (listCanManagePolicy(s, a, l) ||
+    l.groupIds.some((g) => groupAccess(s, a, g)));
 /** Draft access also applies to Trash and exports, independently of deletion. */
 export function draftAccess(s: State, a: Actor, i: Item): boolean {
   if (i.publicationState !== "draft") return true;
@@ -106,7 +121,9 @@ export function draftAccess(s: State, a: Actor, i: Item): boolean {
 export function itemVisible(s: State, a: Actor, i: Item): boolean {
   return (
     itemSharedWith(s, a, i) &&
-    (!archived(s, i) || canEdit(s, a, i) || !archivePrivacyRequired(s, i))
+    (!archived(s, i) ||
+      ordinaryItemEditor(s, a, i) ||
+      !archivePrivacyRequired(s, i))
   );
 }
 /** Resolve current ownership, never the viewer's preference or a wish's author. */
@@ -145,11 +162,35 @@ function itemSharedWith(s: State, a: Actor, i: Item): boolean {
         )),
   );
 }
-export const canEdit = (s: State, a: Actor, i: Item) =>
+export const ordinaryItemEditor = (s: State, a: Actor, i: Item) =>
   draftAccess(s, a, i) &&
   (i.listId
-    ? !!s.lists.find((l) => l.id === i.listId && listCanEdit(s, a, l))
+    ? !!s.lists.find((l) => l.id === i.listId && listCanManagePolicy(s, a, l))
     : i.creatorId === a.id);
+export const canEdit = (s: State, a: Actor, i: Item): boolean =>
+  ordinaryItemEditor(s, a, i) ||
+  (i.publicationState === "draft" &&
+    draftAccess(s, a, i) &&
+    s.lists.some((l) => l.id === i.listId && listCanEdit(s, a, l))) ||
+  (i.publicationState !== "draft" &&
+    itemVisible(s, a, i) &&
+    administersAudience(
+      s,
+      a,
+      i.listId
+        ? (s.lists.find((l) => l.id === i.listId)?.groupIds ?? [])
+        : i.groupIds,
+    ));
+/** Trash suppresses normal browsing, but never changes the underlying audience. */
+export function canManageTrashedItem(s: State, a: Actor, i: Item): boolean {
+  const visibleState = {
+    ...s,
+    lists: s.lists.map((l) =>
+      l.id === i.listId ? { ...l, deletedAt: undefined } : l,
+    ),
+  };
+  return canEdit(visibleState, a, { ...i, deletedAt: undefined });
+}
 export const getItem = (s: State, a: Actor, id: string) =>
   s.items.find((i) => i.id === id && itemVisible(s, a, i)) ??
   fail(404, "Item not found.");

@@ -1,5 +1,5 @@
 import { noteVisible } from "./discussion-access";
-import { listCanEdit } from "./co-management";
+import { listCanManagePolicy } from "./co-management";
 import { draftAccess } from "./domain-access";
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { Actor, State } from "../shared/model";
@@ -13,7 +13,7 @@ export function accountExport(s: State, a: Actor) {
     (p) => p.userId === a.id || p.guardians.includes(a.id),
   );
   const peopleIds = new Set(people.map((p) => p.id));
-  const lists = s.lists.filter((l) => listCanEdit(s, a, l));
+  const lists = s.lists.filter((l) => listCanManagePolicy(s, a, l));
   const listIds = new Set(lists.map((l) => l.id));
   const pref = s.preferences.find((p) => p.userId === a.id);
   return {

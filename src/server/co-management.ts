@@ -1,7 +1,13 @@
 import { z } from "zod";
 import type { Actor, State, List, Item } from "../shared/model";
 import type { CoManagementView } from "../shared/co-management";
-import { controls, personVisible, reconcileAccess } from "./domain-access";
+import {
+  controls,
+  personVisible,
+  reconcileAccess,
+  administersAudience,
+  groupAccess,
+} from "./domain-access";
 import { fail, stamp, touch } from "./domain-common";
 import { emitActivity } from "./activity";
 
@@ -22,8 +28,12 @@ export const delegatedList = (
   a: Actor,
   l: Pick<List, "ownerIds" | "pendingOwnerIds">,
 ) => eligibleList(l) && coManages(s, a, l.ownerIds[0]);
-export const listCanEdit = (s: State, a: Actor, l: List) =>
+export const listCanManagePolicy = (s: State, a: Actor, l: List) =>
   l.ownerIds.some((id) => controls(s, a, id)) || delegatedList(s, a, l);
+export const listCanEdit = (s: State, a: Actor, l: List): boolean =>
+  listCanManagePolicy(s, a, l) ||
+  (l.groupIds.some((g) => groupAccess(s, a, g)) &&
+    administersAudience(s, a, l.groupIds));
 export function listAudience(
   s: State,
   a: Actor,
@@ -136,15 +146,7 @@ export function reconcileCoManagement(s: State) {
     const userId = i.draftOwnerId ?? i.creatorId;
     const l = s.lists.find((l) => l.id === i.listId);
     const a = { id: userId, email: "", name: "" };
-    if (
-      s.coManagement.some(
-        (g) =>
-          g.helperId === userId &&
-          (g.personId === l?.ownerIds[0] ||
-            i.recipientIds.includes(g.personId)),
-      ) &&
-      (!l || !listCanEdit(s, a, l))
-    ) {
+    if (!l || !listCanEdit(s, a, l)) {
       recoverDraft(s, i);
       s.items = s.items.filter((x) => x.id !== i.id);
     }

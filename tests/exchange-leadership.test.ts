@@ -174,7 +174,7 @@ describe("exchange leadership", () => {
       id: f.state.links.at(-1)!.id,
     });
     f.run(f.member, "update", f.input);
-    expect(() => f.run(f.owner, "update", f.input)).toThrow();
+    expect(() => f.run(f.owner, "update", f.input)).not.toThrow();
     f.run(f.leader, "update", f.input);
     expect(f.exchange.organizerId).toBe(f.formerOrganizer.id);
   });

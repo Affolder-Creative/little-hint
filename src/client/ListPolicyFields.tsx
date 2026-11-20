@@ -40,10 +40,12 @@ export function listPolicyValues(form: FormData, list?: Policy) {
 export function ListPolicyFields({
   list,
   event = false,
+  readOnly = false,
   children,
 }: {
   list?: Policy;
   event?: boolean;
+  readOnly?: boolean;
   children?: ReactNode;
 }) {
   const exchangeHintId = useId();
@@ -75,7 +77,7 @@ export function ListPolicyFields({
     <>
       <fieldset
         className="choice-group form-section"
-        disabled={list?.modeLocked}
+        disabled={readOnly || list?.modeLocked}
         aria-describedby={privacyHintId}
       >
         <legend>How should gifting work?</legend>
@@ -194,7 +196,7 @@ export function ListPolicyFields({
                 // iOS Reset falls back to the HTML default value. Keep it at
                 // the initial date instead of mirroring each picker selection.
                 defaultValue={list?.revealAfter ?? ""}
-                disabled={revealLocked}
+                disabled={readOnly || revealLocked}
                 min={
                   list?.modeLocked ? (list.revealAfter ?? undefined) : undefined
                 }
@@ -210,7 +212,7 @@ export function ListPolicyFields({
                   name="revealExchangeGivers"
                   aria-describedby={exchangeHintId}
                   checked={!!revealAfter && revealExchangeGivers}
-                  disabled={list?.modeLocked || !revealAfter}
+                  disabled={readOnly || list?.modeLocked || !revealAfter}
                   onChange={(e) => setRevealExchangeGivers(e.target.checked)}
                 />
                 Include secret exchange gifts and giver names
@@ -240,7 +242,7 @@ export function ListPolicyFields({
             <select
               name="timeZone"
               defaultValue={timeZone}
-              disabled={list?.modeLocked}
+              disabled={readOnly || list?.modeLocked}
             >
               {[
                 ...new Set([

@@ -44,6 +44,11 @@ async function setup(page: Page) {
     localStorage.setItem("little-hint:install", "never"),
   );
   await page.route("**/api/**", async (route) => {
+    const adminPath = new URL(route.request().url()).pathname;
+    if (adminPath === "/api/v1/admin/administrators")
+      return route.fulfill({ json: [] });
+    if (adminPath === "/api/v1/admin/groups")
+      return route.fulfill({ json: { rows: [], total: 0 } });
     const url = new URL(route.request().url());
     const path = url.pathname.replace("/api/v1/", "");
     if (/^items\/[^/]+\/discussion-audience$/.test(path)) {
@@ -1309,3 +1314,42 @@ for (const engine of ["chromium", "webkit"]) {
     }
   });
 }
+
+test("admins can change event participants without unlocking reveal settings", async ({
+  page,
+}) => {
+  const { state, actor } = await setup(page);
+  const event = state.groupEvents[0];
+  const group = state.groups.find((group) => group.id === event.groupId)!;
+  group.ownerId = group.memberIds.find((id) => id !== actor.id)!;
+  group.eventLeaderIds = [];
+  let submitted = false;
+  await page.route("**/api/v1/group-events/update", (route) => {
+    submitted = true;
+    return route.fulfill({
+      json: command(
+        state,
+        actor,
+        "group-events.update",
+        route.request().postDataJSON(),
+      ),
+    });
+  });
+  await page.goto(`/events/${event.id}`);
+  await page
+    .getByLabel(`Event actions for ${event.name}`, { exact: true })
+    .click();
+  await page.getByRole("button", { name: "Edit event", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(
+    dialog.getByRole("radio", { name: /Keep it a surprise/ }),
+  ).toBeDisabled();
+  const participant = dialog.locator('input[name="participantIds"]').first();
+  await expect(participant).toBeEnabled();
+  await participant.setChecked(!(await participant.isChecked()));
+  await dialog
+    .getByRole("button", { name: "Save event", exact: true })
+    .click();
+  await expect(dialog).toHaveCount(0);
+  expect(submitted).toBe(true);
+});

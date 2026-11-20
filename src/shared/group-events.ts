@@ -3,7 +3,9 @@ import type { Group, GroupEvent, Person } from "./model";
 export function canManageGroupEvents(group: Group, userId: string): boolean {
   return (
     group.memberIds.includes(userId) &&
-    (group.ownerId === userId || !!group.eventLeaderIds?.includes(userId))
+    (group.ownerId === userId ||
+      !!group.adminIds?.includes(userId) ||
+      !!group.eventLeaderIds?.includes(userId))
   );
 }
 

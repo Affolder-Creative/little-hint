@@ -27,3 +27,12 @@ An item that is inactive because it or its wish list has been archived. Archivin
 
 **Archive time**:
 The time an item or gift idea was most recently archived individually.
+
+**App admin**:
+An account holder who administers an installation and maintains content they already have permission to access.
+
+**Family admin**:
+A current family-group member authorized to administer that group and maintain its accessible shared content.
+
+**Primary owner**:
+The family-group member responsible for ownership and its transfer. The primary owner is always a family admin.

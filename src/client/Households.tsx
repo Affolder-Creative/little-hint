@@ -112,7 +112,7 @@ function MembershipForm({
 
 export function HouseholdSettings({ group }: { group: Group }) {
   const { world, mutate, open } = useApp();
-  const owner = group.ownerId === world.me.id;
+  const owner = !!group.canAdminister;
   const households = world.households.filter((h) => h.groupId === group.id);
   const people = peopleForGroup(world.people, group);
   return (

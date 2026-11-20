@@ -1,3 +1,10 @@
+import {
+  administersGroup,
+  administersAudience,
+  managedGroup,
+  ordinaryItemEditor,
+} from "./domain-access";
+import { listCanManagePolicy } from "./co-management";
 import { allocationContext } from "./spending";
 import { allocationsInput } from "../shared/spending-input";
 import {
@@ -176,8 +183,12 @@ const eventInput = z.object({
 
 function managedEventGroup(s: State, a: Actor, groupId: string): Group {
   return (
-    s.groups.find((g) => g.id === groupId && canManageGroupEvents(g, a.id)) ??
-    fail(404, "Event management is not available for this family group.")
+    s.groups.find(
+      (g) =>
+        g.id === groupId &&
+        member(g, a) &&
+        (isAdmin(s, a) || canManageGroupEvents(g, a.id)),
+    ) ?? fail(404, "Event management is not available for this family group.")
   );
 }
 function checkEventParticipants(
@@ -366,6 +377,7 @@ export function giftView(s: State, a: Actor, i: Item): GiftView {
       (id) => s.people.find((p) => p.id === id)?.name ?? "Recipient",
     ),
     canEdit: canEdit(s, a, i),
+    adminDetailsOnly: canEdit(s, a, i) && !ordinaryItemEditor(s, a, i),
     isRecipient: own,
     canShop: canShop(s, a, i),
     mode: mode(s, i),
@@ -377,7 +389,7 @@ export function giftView(s: State, a: Actor, i: Item): GiftView {
     view.canEditRecipients = !ideaRecipientsLocked(s, i);
   }
   if (!i.listId || canEdit(s, a, i)) view.creatorName = name(s, creatorId);
-  if (i.listId && canEdit(s, a, i) && lastEditorId)
+  if (canEdit(s, a, i) && lastEditorId)
     view.lastEditorName = name(s, lastEditorId);
   if (!own || view.mode === "transparent") {
     const rs = s.reservations.filter(
@@ -483,7 +495,16 @@ export function giftView(s: State, a: Actor, i: Item): GiftView {
             ((c.excludeRecipients ?? true) &&
               !discussionProtection(s, i).excludeRecipients)),
         canEdit: c.authorId === a.id && !archived(s, i),
-        canDelete: c.authorId === a.id || isAdmin(s, a),
+        canDelete:
+          c.authorId === a.id ||
+          (canEdit(s, a, i) &&
+            administersAudience(
+              s,
+              a,
+              i.listId
+                ? (s.lists.find((l) => l.id === i.listId)?.groupIds ?? [])
+                : i.groupIds,
+            )),
         editedAt: c.editedAt,
         author: name(s, c.authorId),
         body: c.body,
@@ -679,9 +700,11 @@ export function world(
     groupInviteRequests: s.groupInviteRequests.filter(
       (r) =>
         r.requestedBy === a.id ||
-        s.groups.some((g) => g.id === r.groupId && g.ownerId === a.id),
+        s.groups.some((g) => g.id === r.groupId && administersGroup(s, a, g)),
     ),
-    groups: s.groups.filter((g) => member(g, a)),
+    groups: s.groups
+      .filter((g) => member(g, a))
+      .map((g) => ({ ...g, canAdminister: administersGroup(s, a, g) })),
     households: s.households.filter((h) => groupAccess(s, a, h.groupId)),
     householdMemberships: s.householdMemberships.filter((m) =>
       s.households.some(
@@ -693,9 +716,11 @@ export function world(
       .map((event) => ({
         ...event,
         archived: listIsArchived(event),
-        canManage: canManageGroupEvents(
-          s.groups.find((g) => g.id === event.groupId)!,
-          a.id,
+        canManage: managesGroupExchanges(s, a, event.groupId),
+        canManagePolicy: s.groups.some(
+          (g) =>
+            g.id === event.groupId &&
+            (g.ownerId === a.id || !!g.eventLeaderIds?.includes(a.id)),
         ),
       })),
     invitations: s.invitations
@@ -708,7 +733,7 @@ export function world(
             !!s.groups.find(
               (g) =>
                 g.id === i.groupId &&
-                (g.ownerId === a.id ||
+                (administersGroup(s, a, g) ||
                   (member(g, a) && i.invitedById === a.id)),
             )),
       )
@@ -732,6 +757,8 @@ export function world(
         ),
         archived: listIsArchived(l),
         canEdit: listCanEdit(s, a, l),
+        canManagePolicy: listCanManagePolicy(s, a, l),
+        canViewGiftSummary: l.ownerIds.some((id) => controls(s, a, id)),
         hasOtherItemEditors: s.people.some(
           (p) =>
             l.ownerIds.includes(p.id) &&
@@ -1019,7 +1046,7 @@ export function command(
   const result = commandCore(s, a, action, raw);
   reconcileCoManagement(s);
   const changedItems = action.startsWith("items.")
-    ? s.items.filter((i) => i.listId && i.revision !== beforeItems.get(i.id))
+    ? s.items.filter((i) => i.revision !== beforeItems.get(i.id))
     : [];
   for (const i of changedItems) i.lastEditorId = a.id;
   if (
@@ -1121,7 +1148,7 @@ function commandCore(
   if (managementActions.includes(action))
     return managementCommand(s, a, action, raw);
   if (action.startsWith("prices.")) return priceCommand(s, a, action, raw);
-  const b = raw as Record<string, unknown>;
+  const b = { ...(raw as Record<string, unknown>) };
   if (
     [
       "notifications.read",
@@ -1211,7 +1238,7 @@ function commandCore(
       return updateGiftPreferences(s, a, raw);
     case "households.create": {
       const p = z.object({ groupId: id, name: text }).parse(b);
-      ownedGroup(s, a, p.groupId);
+      managedGroup(s, a, p.groupId);
       const household = { ...stamp(), ...p };
       s.households.push(household);
       return household;
@@ -1221,7 +1248,7 @@ function commandCore(
       const household =
         s.households.find((h) => h.id === p.id) ??
         fail(404, "Household not found.");
-      ownedGroup(s, a, household.groupId);
+      managedGroup(s, a, household.groupId);
       checkRevision(household, p.revision);
       household.name = p.name;
       touch(household);
@@ -1232,7 +1259,7 @@ function commandCore(
       const household =
         s.households.find((h) => h.id === p.id) ??
         fail(404, "Household not found.");
-      ownedGroup(s, a, household.groupId);
+      managedGroup(s, a, household.groupId);
       checkRevision(household, p.revision);
       const affected = new Set(
         s.householdMemberships
@@ -1254,12 +1281,14 @@ function commandCore(
         .object({ groupId: id, personId: id, revision, householdIds: ids })
         .parse(b);
       const group =
-        s.groups.find((g) => g.id === p.groupId && member(g, a)) ??
-        fail(404, "Family group not found.");
+        s.groups.find(
+          (g) =>
+            g.id === p.groupId && (member(g, a) || administersGroup(s, a, g)),
+        ) ?? fail(404, "Family group not found.");
       const person =
         peopleForGroup(s.people, group).find((q) => q.id === p.personId) ??
         fail(404, "Person not found in this family group.");
-      if (group.ownerId !== a.id && !controls(s, a, person.id))
+      if (!administersGroup(s, a, group) && !controls(s, a, person.id))
         fail(
           403,
           "Only the family-group owner or this person's controller can change their households.",
@@ -1310,7 +1339,7 @@ function commandCore(
           userIds: z.array(z.string().min(1)).max(100),
         })
         .parse(b);
-      const group = ownedGroup(s, a, p.groupId);
+      const group = managedGroup(s, a, p.groupId);
       checkRevision(group, p.revision);
       if (
         new Set(p.userIds).size !== p.userIds.length ||
@@ -1376,6 +1405,21 @@ function commandCore(
         fail(404, "Event not found.");
       const group = managedEventGroup(s, a, event.groupId);
       checkRevision(event, p.revision);
+      if (group.ownerId !== a.id && !group.eventLeaderIds?.includes(a.id)) {
+        for (const key of [
+          "mode",
+          "revealAfter",
+          "revealExchangeGivers",
+          "timeZone",
+        ] as const)
+          if (
+            JSON.stringify(p[key] ?? event[key]) !== JSON.stringify(event[key])
+          )
+            fail(
+              403,
+              "Reveal settings remain with the owner and event leaders.",
+            );
+      }
       checkEventParticipants(s, group, p.participantIds);
       checkSharedListPolicy({ ...event, modeLocked: true }, { ...event, ...p });
       if (listIsArchived(event) && !p.archived) p.archiveAfter = null;
@@ -1398,8 +1442,10 @@ function commandCore(
         .object({ groupId: id, email: z.string().trim().pipe(z.email()) })
         .parse(b);
       const group =
-        s.groups.find((g) => g.id === p.groupId && member(g, a)) ??
-        fail(404, "Family group not found.");
+        s.groups.find(
+          (g) =>
+            g.id === p.groupId && (member(g, a) || administersGroup(s, a, g)),
+        ) ?? fail(404, "Family group not found.");
       const email = normalizedEmail(p.email);
       if (
         s.groupInviteRequests.some(
@@ -1418,10 +1464,15 @@ function commandCore(
         status: "pending" as const,
       };
       s.groupInviteRequests.push(request);
-      emitActivity(s, "invitation", [group.ownerId], {
-        actorId: a.id,
-        action: "group-invitation-request",
-      });
+      emitActivity(
+        s,
+        "invitation",
+        [...new Set([group.ownerId, ...(group.adminIds ?? [])])],
+        {
+          actorId: a.id,
+          action: "group-invitation-request",
+        },
+      );
       return request;
     }
     case "groups.respond-invitation": {
@@ -1440,7 +1491,7 @@ function commandCore(
           fail(403, "Only the requester can withdraw this request.");
         request.status = "withdrawn";
       } else {
-        ownedGroup(s, a, group.id);
+        managedGroup(s, a, group.id);
         if (!group.memberIds.includes(request.requestedBy))
           fail(409, "The requester has left this family group.");
         if (p.decision === "approve")
@@ -1467,9 +1518,11 @@ function commandCore(
       const groupId = p.groupId;
       if (groupId) {
         const group =
-          s.groups.find((g) => g.id === groupId && member(g, a)) ??
-          fail(404, "Family group not found.");
-        if (group.ownerId !== a.id && !memberInvitationsEnabled(s))
+          s.groups.find(
+            (g) =>
+              g.id === groupId && (member(g, a) || administersGroup(s, a, g)),
+          ) ?? fail(404, "Family group not found.");
+        if (!administersGroup(s, a, group) && !memberInvitationsEnabled(s))
           fail(403, "Ask the group owner to approve an invitation.");
         if (
           s.invitations.some(
@@ -1560,9 +1613,12 @@ function commandCore(
           fail(409, "This invitation is no longer pending.");
       } else {
         const group =
-          s.groups.find((g) => g.id === inv.groupId && member(g, a)) ??
-          fail(404, "Invitation not found.");
-        if (group.ownerId !== a.id && inv.invitedById !== a.id)
+          s.groups.find(
+            (g) =>
+              g.id === inv.groupId &&
+              (member(g, a) || administersGroup(s, a, g)),
+          ) ?? fail(404, "Invitation not found.");
+        if (!administersGroup(s, a, group) && inv.invitedById !== a.id)
           fail(
             403,
             "Only the owner or authorized sender can cancel this invitation.",
@@ -1582,13 +1638,16 @@ function commandCore(
     case "groups.remove": {
       const p = z.object({ groupId: id, userId: z.string() }).parse(b);
       const g =
-        s.groups.find((g) => g.id === p.groupId && member(g, a)) ??
-        fail(404, "Family group not found.");
-      if (p.userId !== a.id && g.ownerId !== a.id)
+        s.groups.find(
+          (g) =>
+            g.id === p.groupId && (member(g, a) || administersGroup(s, a, g)),
+        ) ?? fail(404, "Family group not found.");
+      if (p.userId !== a.id && !administersGroup(s, a, g))
         fail(403, "Only the owner can remove another member.");
       if (g.ownerId === p.userId)
         fail(409, "Transfer ownership before leaving.");
       g.memberIds = g.memberIds.filter((u) => u !== p.userId);
+      g.adminIds = (g.adminIds ?? []).filter((u) => u !== p.userId);
       g.eventLeaderIds = (g.eventLeaderIds ?? []).filter((u) => u !== p.userId);
       reconcileEventParticipants(s);
       reconcileHouseholds(s);
@@ -2022,6 +2081,39 @@ function commandCore(
       return giftView(s, a, i);
     }
     case "items.update": {
+      const existing = getItem(s, a, id.parse(b.id));
+      const detailsOnly = !ordinaryItemEditor(s, a, existing);
+      if (detailsOnly) {
+        if (!canEdit(s, a, existing)) fail(403, "You cannot edit this item.");
+        const allowed = new Set([
+          "id",
+          "revision",
+          "title",
+          "description",
+          "descriptionRich",
+          "url",
+          "image",
+          "images",
+          "priceCents",
+          "currency",
+          "tags",
+          "quantity",
+          "priority",
+          "archived",
+        ]);
+        if (Object.keys(b).some((key) => !allowed.has(key)))
+          fail(
+            403,
+            "Sharing, recipients and private settings remain with their authorized editors.",
+          );
+        for (const key of allowed)
+          if (!(key in b) && key in existing)
+            b[key] = existing[key as keyof Item];
+        Object.assign(b, {
+          visibility: existing.visibility,
+          groupIds: existing.groupIds,
+        });
+      }
       const p = itemInput
         .extend({
           id,
@@ -2047,7 +2139,7 @@ function commandCore(
       p.images = itemPhotos(p);
       if (!p.image) p.image = p.images[0] ?? "";
       checkPhotos(s, a, p, i);
-      if (!i.listId) {
+      if (!i.listId && !detailsOnly) {
         const recipients = p.recipientIds ?? i.recipientIds;
         const changed =
           [...recipients].sort().join() !== [...i.recipientIds].sort().join();
@@ -2247,7 +2339,18 @@ function commandCore(
       if (!noteVisible(s, a, i, c.giverId, c)) fail(404, "Note not available.");
       if (
         c.authorId !== a.id &&
-        !(action === "comments.delete" && isAdmin(s, a))
+        !(
+          action === "comments.delete" &&
+          (isAdmin(s, a) ||
+            (canEdit(s, a, i) &&
+              administersAudience(
+                s,
+                a,
+                i.listId
+                  ? (s.lists.find((l) => l.id === i.listId)?.groupIds ?? [])
+                  : i.groupIds,
+              )))
+        )
       )
         fail(403, "You cannot change this note.");
       checkRevision(c, p.revision);

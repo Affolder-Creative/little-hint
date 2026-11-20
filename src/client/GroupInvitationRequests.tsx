@@ -5,7 +5,7 @@ import { InviteDialog, InvitationShare } from "./InvitationShare";
 import { Action } from "./Action";
 export function GroupInvitationRequests({ group }: { group: Group }) {
   const { world, open, close, mutate, toast } = useApp();
-  const owner = group.ownerId === world.me.id;
+  const owner = !!group.canAdminister;
   const requests = (world.groupInviteRequests ?? []).filter(
     (r) => r.groupId === group.id,
   );
@@ -30,14 +30,14 @@ export function GroupInvitationRequests({ group }: { group: Group }) {
                         email: data.get("email"),
                       });
                       close();
-                      toast("Invitation request sent to the group owner.");
+                      toast("Invitation request sent to the family admins.");
                     }}
                   >
                     <Field label="Email address">
                       <input type="email" name="email" required />
                     </Field>
                     <p>
-                      The group owner will review this request before an
+                      A family admin will review this request before an
                       invitation is sent.
                     </p>
                   </Form>,

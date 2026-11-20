@@ -209,8 +209,19 @@ export function ListForm({
             : { ownerIds: delegated ? [targetId!] : selected(f, "ownerIds") }),
           name: value(f, "name"),
           description: value(f, "description"),
-          groupIds: selected(f, "groupIds"),
-          ...listPolicyValues(f, list),
+          groupIds:
+            list?.canManagePolicy === false
+              ? list.groupIds
+              : selected(f, "groupIds"),
+          ...(list?.canManagePolicy === false
+            ? {
+                mode: list.mode,
+                archiveAfter: list.archiveAfter,
+                revealAfter: list.revealAfter,
+                timeZone: list.timeZone,
+                revealExchangeGivers: list.revealExchangeGivers,
+              }
+            : listPolicyValues(f, list)),
         });
         if (!list && onCreated) onCreated(saved);
         else close();
@@ -240,73 +251,82 @@ export function ListForm({
           placeholder="Favorite colors, sizes, or anything helpful."
         />
       </Field>
-      <ListPolicyFields list={list}>
-        {!list && delegated && (
-          <p>
-            This list is for {target?.name}. Only the account holder can change
-            its recipients.
-          </p>
-        )}
-        {!list && !delegated && (
-          <fieldset className="choice-group form-section">
-            <legend>Who is this list for?</legend>
-            {world.people.map((p) => (
-              <label className="check" key={p.id}>
-                <input
-                  type="checkbox"
-                  name="ownerIds"
-                  value={p.id}
-                  defaultChecked={p.id === (personId ?? mine[0]?.id)}
-                />
-                {p.name}
-                {!mine.includes(p) && <small>Invite to share ownership</small>}
-              </label>
-            ))}
-            <small>
-              Include yourself or someone whose profile you manage. Everyone
-              else must accept the invitation before you share this list.
-            </small>
-          </fieldset>
-        )}
-        <fieldset className="choice-group form-section">
-          <legend>Share with</legend>
-          {groups.length ? (
-            groups.map((g) => (
-              <label className="check" key={g.id}>
-                <input
-                  type="checkbox"
-                  name="groupIds"
-                  value={g.id}
-                  defaultChecked={
-                    list
-                      ? list.groupIds.includes(g.id)
-                      : !!world.people
-                          .find((p) => p.id === personId)
-                          ?.managedGroupIds?.includes(g.id)
-                  }
-                />
-                {world.groups.some((group) => group.id === g.id)
-                  ? familyGroupLabel(
-                      world.groups.find((group) => group.id === g.id)!,
-                      world,
-                    )
-                  : g.name}
-              </label>
-            ))
-          ) : (
+      {list?.canManagePolicy === false ? (
+        <p className="muted">
+          Sharing, recipients and reveal settings stay with the authorized
+          editors.
+        </p>
+      ) : (
+        <ListPolicyFields list={list}>
+          {!list && delegated && (
             <p>
-              {delegated
-                ? "This person has no family groups available for sharing. You can still create an unshared list."
-                : world.canCreateGroups === false
-                  ? "Accept a family-group invitation to share this list, or ask an app administrator to create a group."
-                  : "Create a family group in Settings to share this list."}
+              This list is for {target?.name}. Only the account holder can
+              change its recipients.
             </p>
           )}
-          <small>
-            Leaving every family group unchecked keeps the list private.
-          </small>
-        </fieldset>
-      </ListPolicyFields>
+          {!list && !delegated && (
+            <fieldset className="choice-group form-section">
+              <legend>Who is this list for?</legend>
+              {world.people.map((p) => (
+                <label className="check" key={p.id}>
+                  <input
+                    type="checkbox"
+                    name="ownerIds"
+                    value={p.id}
+                    defaultChecked={p.id === (personId ?? mine[0]?.id)}
+                  />
+                  {p.name}
+                  {!mine.includes(p) && (
+                    <small>Invite to share ownership</small>
+                  )}
+                </label>
+              ))}
+              <small>
+                Include yourself or someone whose profile you manage. Everyone
+                else must accept the invitation before you share this list.
+              </small>
+            </fieldset>
+          )}
+          <fieldset className="choice-group form-section">
+            <legend>Share with</legend>
+            {groups.length ? (
+              groups.map((g) => (
+                <label className="check" key={g.id}>
+                  <input
+                    type="checkbox"
+                    name="groupIds"
+                    value={g.id}
+                    defaultChecked={
+                      list
+                        ? list.groupIds.includes(g.id)
+                        : !!world.people
+                            .find((p) => p.id === personId)
+                            ?.managedGroupIds?.includes(g.id)
+                    }
+                  />
+                  {world.groups.some((group) => group.id === g.id)
+                    ? familyGroupLabel(
+                        world.groups.find((group) => group.id === g.id)!,
+                        world,
+                      )
+                    : g.name}
+                </label>
+              ))
+            ) : (
+              <p>
+                {delegated
+                  ? "This person has no family groups available for sharing. You can still create an unshared list."
+                  : world.canCreateGroups === false
+                    ? "Accept a family-group invitation to share this list, or ask an app administrator to create a group."
+                    : "Create a family group in Settings to share this list."}
+              </p>
+            )}
+            <small>
+              Leaving every family group unchecked keeps the list private.
+            </small>
+          </fieldset>
+        </ListPolicyFields>
+      )}
       {list && (
         <label className="check">
           <input
@@ -1067,6 +1087,7 @@ function GiftEditor({
             photosChanged
       }
       review={
+        !gift?.adminDetailsOnly &&
         idea &&
         visibility !== "private" &&
         (!gift ||
@@ -1113,8 +1134,11 @@ function GiftEditor({
           (!assignmentPreview.data || assignmentPreview.isFetching)) ||
         (idea && !gift && !recipientId) ||
         (!!duplicate && !allowDuplicate) ||
-        (sharingIdea && !audienceGroups.length) ||
-        (idea && visibility === "restricted" && !excludedUserIds.length)
+        (!gift?.adminDetailsOnly && sharingIdea && !audienceGroups.length) ||
+        (!gift?.adminDetailsOnly &&
+          idea &&
+          visibility === "restricted" &&
+          !excludedUserIds.length)
       }
       allowOffline={
         !idea &&
@@ -1171,6 +1195,27 @@ function GiftEditor({
             savedDraft.current?.id ??
             (job?.status === "complete" ? job.id : undefined),
         };
+        if (gift?.adminDetailsOnly) {
+          const allowed = new Set([
+            "id",
+            "revision",
+            "title",
+            "description",
+            "descriptionRich",
+            "url",
+            "image",
+            "images",
+            "priceCents",
+            "currency",
+            "tags",
+            "quantity",
+            "priority",
+            "archived",
+          ]);
+          for (const key of Object.keys(payload))
+            if (!allowed.has(key))
+              delete (payload as Record<string, unknown>)[key];
+        }
         if (!navigator.onLine) {
           if (
             idea ||
@@ -1311,7 +1356,13 @@ function GiftEditor({
             )}
           </div>
         )}
-      {idea && (
+      {gift?.adminDetailsOnly && (
+        <p className="muted">
+          Editing shared details as an administrator. Recipients, sharing and
+          private settings stay unchanged.
+        </p>
+      )}
+      {idea && !gift?.adminDetailsOnly && (
         <>
           {!gift &&
             !importDraft &&
@@ -1447,7 +1498,7 @@ function GiftEditor({
           </div>
         </>
       )}
-      {idea && world.spendingEnabled && (
+      {idea && !gift?.adminDetailsOnly && world.spendingEnabled && (
         <>
           <SpendingAllocations
             key={recipientIds.join()}
@@ -1916,8 +1967,8 @@ export function ExchangeForm({
   exchange?: World["exchanges"][number];
 }) {
   const { world, mutate, close } = useApp();
-  const groups = world.groups.filter((g) =>
-    canManageGroupEvents(g, world.me.id),
+  const groups = world.groups.filter(
+    (g) => world.me.admin || canManageGroupEvents(g, world.me.id),
   );
   const [groupId, setGroupId] = useState(
     exchange?.groupId ?? groups[0]?.id ?? "",

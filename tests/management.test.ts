@@ -532,7 +532,7 @@ describe("priorities and organization", () => {
         scope: "lists",
         revision: 2,
         sort: "manual",
-        order: [f.lists[1].id],
+        order: [stamp().id],
       }),
     ).toThrow("access");
   });

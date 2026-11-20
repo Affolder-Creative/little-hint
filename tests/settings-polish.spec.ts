@@ -79,6 +79,11 @@ async function setup(
     visible: true,
   };
   await page.route("**/api/**", async (route) => {
+    const adminPath = new URL(route.request().url()).pathname;
+    if (adminPath === "/api/v1/admin/administrators")
+      return route.fulfill({ json: [] });
+    if (adminPath === "/api/v1/admin/groups")
+      return route.fulfill({ json: { rows: [], total: 0 } });
     const path = new URL(route.request().url()).pathname.replace(
       "/api/v1/",
       "",

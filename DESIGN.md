@@ -699,6 +699,14 @@ Event calendar dates use a written month and the supporting text role below the 
 
 Reordering retains arrow controls and a shared action footer with primary Save order before outlined Cancel on one wrapping row. A 44px handle captures touch or mouse movement after a small threshold. The dragged row follows the pointer in the dialog with a paper preview, control border and temporary offset shadow; the target row uses the existing soft background. Edge scrolling handles long lists. Escape and interrupted gestures cancel the drag. Normal scrolling remains available outside handles.
 
+### Administrative roles and shared editing
+
+App administrators and All family groups reuse the existing warm administration panels. Administrator names and role actions use open rows, with a disabled removal action and a nearby explanation for the last app admin. Appointment and removal use the existing focused confirmation dialog. The directory retains labeled search, paged results, loading, empty and retry states.
+
+Manage family group is a collapsed disclosure in member settings and the administrative directory. Expanded content uses the existing labeled group-name field and a separate family-admin checkbox form. Keep the primary owner checked and disabled. Separate the forms with the existing border and control-spacing tokens. Group directory entries use open divided rows with control spacing above each name. A second collapsed disclosure contains invitation requests, pending invitations, event-leader selection and household forms. Use the same typography, focus treatment and 44px targets on phones and desktop.
+
+Admin gift editing retains the existing editor and photo controls. A short explanation replaces recipient, sharing and private spending controls when those fields are outside the editor's authority. List and event editors preserve reveal controls under their existing authority. Event participants and archive scheduling remain editable independently of the disabled reveal fields. No new palette, type scale or elevation is introduced.
+
 ## Do's and Don'ts
 
 ### Do:

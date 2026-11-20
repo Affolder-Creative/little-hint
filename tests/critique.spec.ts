@@ -198,6 +198,11 @@ async function preview(
     "exchanges/draw": "exchanges.draw",
   };
   await page.route("**/api/**", async (route) => {
+    const adminPath = new URL(route.request().url()).pathname;
+    if (adminPath === "/api/v1/admin/administrators")
+      return route.fulfill({ json: [] });
+    if (adminPath === "/api/v1/admin/groups")
+      return route.fulfill({ json: { rows: [], total: 0 } });
     const url = new URL(route.request().url());
     const path = url.pathname;
     const query = Object.fromEntries(url.searchParams);
