@@ -145,9 +145,92 @@ function lifecycleMigrationContract(evidence) {
   }
   return migrated;
 }
+// Schema 13 changes write authority, never the set of visible records. Derive
+// the expected flags from the released records and authenticated user evidence.
+function administrationMigrationContract(evidence) {
+  const migrated = structuredClone(evidence);
+  const rows = (kind) =>
+    migrated.records.filter((r) => r.kind === kind).map((r) => r.data);
+  const people = rows("people"),
+    groups = rows("groups"),
+    lists = rows("lists"),
+    items = rows("items");
+  for (const group of groups) group.adminIds ??= [];
+  for (const [email, view] of Object.entries(migrated.views)) {
+    const userId = migrated.users.find((u) => u.email === email)?.id;
+    if (!userId) continue;
+    const appAdmin = people.some(
+      (p) => p.userId === userId && p.admin && !p.mergedIntoId,
+    );
+    const controls = (id) =>
+      people.some(
+        (p) =>
+          p.id === id &&
+          (p.userId === userId || (!p.userId && p.guardians?.includes(userId))),
+      );
+    const manages = (g) =>
+      appAdmin ||
+      (g.memberIds.includes(userId) &&
+        (g.ownerId === userId || g.adminIds.includes(userId)));
+    const audience = (ids) =>
+      appAdmin || groups.some((g) => ids.includes(g.id) && manages(g));
+    for (const g of view.groups ?? []) {
+      const retained = groups.find((r) => r.id === g.id);
+      assert.ok(retained, "Group view must have retained evidence");
+      g.adminIds = retained.adminIds;
+      g.canAdminister = manages(retained);
+    }
+    for (const l of view.lists ?? []) {
+      const retained = lists.find((r) => r.id === l.id);
+      assert.ok(retained, "List view must have retained evidence");
+      l.canManagePolicy = l.canEdit;
+      l.canViewGiftSummary = retained.ownerIds.some(controls);
+      l.canEdit ||=
+        retained.groupIds.some((id) =>
+          groups.some((g) => g.id === id && g.memberIds.includes(userId)),
+        ) && audience(retained.groupIds);
+    }
+    function gifts(value) {
+      if (Array.isArray(value)) {
+        value.forEach(gifts);
+        return;
+      }
+      if (!value || typeof value !== "object") return;
+      if (typeof value.isRecipient === "boolean") {
+        const item = items.find((i) => i.id === value.id);
+        assert.ok(item, "Gift view must have retained evidence");
+        const ordinary = value.canEdit;
+        const ids = item.listId
+          ? (lists.find((l) => l.id === item.listId)?.groupIds ?? [])
+          : item.groupIds;
+        value.canEdit ||=
+          item.publicationState !== "draft" && audience(ids ?? []);
+        value.adminDetailsOnly = value.canEdit && !ordinary;
+        if (value.canEdit && item.lastEditorId)
+          value.lastEditorName =
+            people.find((p) => p.userId === item.lastEditorId)?.name ??
+            "Former member";
+        for (const note of value.comments ?? [])
+          if (value.canEdit && audience(ids ?? [])) note.canDelete = true;
+      }
+      Object.values(value).forEach(gifts);
+    }
+    gifts(view);
+    for (const exchange of view.exchanges ?? []) {
+      const group = groups.find((g) => g.id === exchange.groupId);
+      assert.ok(group, "Exchange must have retained group evidence");
+      exchange.canManage =
+        group.memberIds.includes(userId) &&
+        (manages(group) || !!group.eventLeaderIds?.includes(userId));
+    }
+  }
+  return migrated;
+}
 export function assertPreserved(actual, expected) {
   if (actual.schemaVersion >= 9 && (expected.schemaVersion ?? 0) < 9)
     expected = lifecycleMigrationContract(expected);
+  if (actual.schemaVersion >= 13 && (expected.schemaVersion ?? 0) < 13)
+    expected = administrationMigrationContract(expected);
   for (const field of ["records", "users", "barrier", "uploadHash", "views"]) {
     assert.ok(Object.hasOwn(actual, field), `Missing ${field} evidence`);
     assert.ok(

@@ -343,3 +343,81 @@ test("upgrade derives visibility metadata from retained audiences without accept
     assert.throws(() => assertPreserved(candidate, baseline));
   }
 });
+
+test("schema 13 permits only derived admin fields and retains privacy evidence", () => {
+  const baseline = structuredClone(original);
+  baseline.schemaVersion = 12;
+  baseline.users = [
+    { id: "admin", email: "admin@example.test" },
+    { id: "member", email: "member@example.test" },
+  ];
+  const group = {
+    id: "group",
+    ownerId: "admin",
+    memberIds: ["admin", "member"],
+  };
+  const list = { id: "list", ownerIds: ["person"], groupIds: ["group"] };
+  baseline.records = [
+    { id: "group", kind: "groups", data: group },
+    { id: "list", kind: "lists", data: list },
+    {
+      id: "person",
+      kind: "people",
+      data: { id: "person", userId: "member", name: "Member" },
+    },
+    {
+      id: "gift",
+      kind: "items",
+      data: { id: "gift", listId: "list", creatorId: "member" },
+    },
+  ];
+  const gift = { id: "gift", isRecipient: false, canEdit: false, comments: [] };
+  baseline.views = Object.fromEntries(
+    baseline.users.map((u) => [
+      u.email,
+      {
+        groups: [structuredClone(group)],
+        lists: [{ ...list, canEdit: u.id === "member" }],
+        items: [{ ...gift, canEdit: u.id === "member" }],
+      },
+    ]),
+  );
+  const candidate = structuredClone(baseline);
+  candidate.schemaVersion = 13;
+  candidate.records[0].data.adminIds = [];
+  for (const [email, view] of Object.entries(candidate.views)) {
+    const owner = email === "admin@example.test";
+    Object.assign(view.groups[0], { adminIds: [], canAdminister: owner });
+    Object.assign(view.lists[0], {
+      canEdit: true,
+      canManagePolicy: !owner,
+      canViewGiftSummary: !owner,
+    });
+    Object.assign(view.items[0], { canEdit: true, adminDetailsOnly: owner });
+  }
+  assertPreserved(candidate, baseline);
+  assertPreserved(baseline, baseline);
+  for (const corrupt of [
+    (v) => {
+      v.records[0].data.adminIds = ["member"];
+    },
+    (v) => {
+      v.views["member@example.test"].groups[0].canAdminister = true;
+    },
+    (v) => {
+      v.views["admin@example.test"].lists[0].canManagePolicy = true;
+    },
+    (v) => {
+      v.views["admin@example.test"].items[0].reservations = [
+        { buyerId: "private" },
+      ];
+    },
+    (v) => {
+      v.views["admin@example.test"].items.push({ id: "private-gift" });
+    },
+  ]) {
+    const changed = structuredClone(candidate);
+    corrupt(changed);
+    assert.throws(() => assertPreserved(changed, baseline));
+  }
+});
