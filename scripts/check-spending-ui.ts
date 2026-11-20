@@ -962,6 +962,112 @@ try {
     6000,
   );
 
+  // Allocation-only event names must agree across history, editing and totals.
+  const historyEvent = {
+    ...stamp(),
+    name: "Winter celebration",
+    groupId: s.groups[0].id,
+    participantIds: [s.people[1].id, s.people[2].id],
+    mode: "surprise" as const,
+    archived: false,
+    description: "",
+    timeZone: "UTC",
+    revealExchangeGivers: false,
+  };
+  s.groupEvents.push(historyEvent);
+  const eventLists = [1, 2].map((index) => {
+    const created = command(s, users[index], "lists.create", {
+      name: historyEvent.name,
+      ownerIds: [s.people[index].id],
+      groupIds: [s.groups[0].id],
+      mode: "surprise",
+    }) as { id: string };
+    s.lists.find((l) => l.id === created.id)!.groupEventId = historyEvent.id;
+    return created;
+  });
+  const historyOccasion = run("spending.occasion", {
+    name: "Christmas 2026",
+  }) as { id: string };
+  const eventPurchase = run("spending.purchase", {
+    title: "Event label regression gift",
+    recipientIds: [s.people[2].id],
+    allocations: [
+      { recipientId: s.people[2].id, share: 1, listId: eventLists[1].id },
+    ],
+    amountCents: 2396,
+    date: "2026-11-19",
+  }) as { id: string };
+  expect(spendingHistory(s, a, { event: historyEvent.id }).summary.spent).toBe(
+    2396,
+  );
+  expect(spendingHistory(s, a, { list: eventLists[1].id }).summary.spent).toBe(
+    2396,
+  );
+  await goto(server.resolvedUrls!.local[0] + "buying/spending");
+  const eventRow = page
+    .locator(".spending-row")
+    .filter({ hasText: "Event label regression gift" });
+  await eventRow
+    .getByRole("button", { name: "Edit purchase", exact: true })
+    .click();
+  await expect(
+    page.getByLabel("Emma's wish list", { exact: true }),
+  ).toHaveValue(eventLists[1].id);
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(eventRow.locator(".spending-row-meta").last()).toHaveText(
+    historyEvent.name,
+  );
+  const eventRecord = s.spendingRecords.find((r) => r.id === eventPurchase.id)!;
+  // Both recipients share an event: display it once, then retain distinct events in order.
+  eventRecord.recipientIds = [s.people[1].id, s.people[2].id];
+  eventRecord.recipientNames = ["Jamie", "Emma"];
+  eventRecord.splits = [1, 1];
+  eventRecord.allocations = eventLists.map((l, index) => ({
+    recipientId: s.people[index + 1].id,
+    share: 1,
+    listId: l.id,
+    eventId: historyEvent.id,
+    eventName: historyEvent.name,
+  }));
+  await goto(server.resolvedUrls!.local[0] + "buying/spending");
+  await expect(eventRow.locator(".spending-row-meta").last()).toHaveText(
+    historyEvent.name,
+  );
+  eventRecord.allocations[1].eventName = "Family birthday weekend";
+  eventRecord.allocations[1].eventId = stamp().id;
+  for (const theme of ["light", "dark"]) {
+    await page.evaluate(
+      (value) => localStorage.setItem("little-hint:theme", value),
+      theme,
+    );
+    for (const width of [320, 768, 1280]) {
+      await page.setViewportSize({ width, height: 900 });
+      await goto(server.resolvedUrls!.local[0] + "buying/spending");
+      await expect(eventRow.locator(".spending-row-meta").last()).toHaveText(
+        "Winter celebration · Family birthday weekend",
+      );
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+      ).toBe(true);
+      await eventRow.screenshot({
+        path: out + `/event-history-${theme}-${width}.png`,
+      });
+    }
+  }
+  eventRecord.allocations = undefined;
+  eventRecord.eventName = historyEvent.name;
+  eventRecord.occasionId = historyOccasion.id;
+  await goto(server.resolvedUrls!.local[0] + "buying/spending");
+  await expect(eventRow.locator(".spending-row-meta").last()).toHaveText(
+    "Winter celebration · Christmas 2026",
+  );
+  eventRecord.eventName = undefined;
+  eventRecord.occasionId = undefined;
+  await goto(server.resolvedUrls!.local[0] + "buying/spending");
+  await expect(eventRow.locator(".spending-row-meta")).toHaveCount(1);
+
   process.env.SPENDING_ENABLED = "false";
   await goto(server.resolvedUrls!.local[0] + "buying/spending");
   await expect(page).toHaveURL(/\/buying$/);

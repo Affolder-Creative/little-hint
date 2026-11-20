@@ -28,3 +28,7 @@ Validation: synthetic Chromium desktop/tablet/phone journeys in light and dark t
 Scope summaries use explicit label/value groups and omit redundant sole-owner captions only after matching owner IDs. Budget descriptions use the same labels.
 
 Recipient spending allocations use one optional list per person and an equal/custom split selector. Custom shares reveal labeled relative weights and exact dollar previews. Retain flat rows, existing field styling, mobile scrolling and fixed actions. Validate joint idea save, inheritance, purchase, refund, private defaults, and scoped totals. The polish pass removed duplicate helper copy and corrected clearing guidance.
+
+History event labels read saved recipient allocations, deduplicate event names in recipient order, and retain personal occasions and source-list context. Reuse the muted metadata row and natural mobile wrapping. Regression checks cover edit selection, event/list totals, shared and distinct allocation events, legacy records, and absent context.
+
+Polish: inspected light/dark history rows at phone, tablet and desktop widths. Existing metadata typography, action spacing and responsive layout remain consistent; no CSS changes were needed. Chromium regression workflow passes.

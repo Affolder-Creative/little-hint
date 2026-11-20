@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-20T22:27:58.547638+00:00",
+  "generatedAt": "2026-11-20T23:44:01.082507+00:00",
   "title": "Design System: Little Hint",
   "extensions": {
     "peopleDirectory": {
@@ -1151,7 +1151,8 @@
       "layout": "Existing controls spacing and border tokens; no final divider. Shared dialog header and footer stay fixed; content scrolls. Single-recipient forms omit split controls.",
       "validation": "Domain-backed Chromium/WebKit workflows; 320, 390, 768 and 1280px light/dark captures; one polish pass.",
       "amountPreview": "Exact dollar shares update immediately when editing a total. Event names derive from selected wish lists; manual event selection appears only without list assignments.",
-      "drafts": "Opening and closing an untouched editor remains quiet. Allocation edits participate in the existing snapshot-based unsaved-change protection."
+      "drafts": "Opening and closing an untouched editor remains quiet. Allocation edits participate in the existing snapshot-based unsaved-change protection.",
+      "historyEvents": "Saved recipient-allocation event names appear once in recipient order, followed by the personal occasion on the existing muted metadata line. Source-list records use the same treatment. Text wraps naturally on phones; missing context leaves no empty line."
     },
     "profileManagement": {
       "sourceFiles": [
