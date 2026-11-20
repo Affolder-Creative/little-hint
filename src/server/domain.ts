@@ -1845,8 +1845,6 @@ function commandCore(
       );
       if (!p.listId && p.publicationState === "draft")
         fail(400, "Drafts belong to a wish list.");
-      if (!p.listId && p.priority)
-        fail(400, "Only wish-list items have a recipient priority.");
       let recipients = p.recipientIds;
       if (p.listId) {
         if (p.friendEntryId)
@@ -2105,8 +2103,6 @@ function commandCore(
         delete p.friendEntryId;
         delete p.excludedUserIds;
       }
-      if (!i.listId && p.priority)
-        fail(400, "Only wish-list items have a recipient priority.");
       if (
         p.spendingListId !== undefined &&
         p.spendingListId !== i.spendingListId

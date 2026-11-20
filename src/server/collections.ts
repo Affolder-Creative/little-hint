@@ -6,6 +6,7 @@ import { canShop } from "./domain-access";
 import { z } from "zod";
 import type { Actor, State, Reservation } from "../shared/model";
 import {
+  matchesPriority,
   archivedItemSort,
   ordered,
   orderedArchivedItems,
@@ -49,6 +50,9 @@ export const browseQuery = z.object({
   page,
   search: z.string().max(500).default(""),
   tag: z.string().max(200).default(""),
+  priority: z
+    .enum(["all", "none", "most-wanted", "would-love", "nice-to-have"])
+    .default("all"),
   visibility: z.enum(["all", "only-me", "shared"]).default("all"),
   people: z.string().max(10000).default(""),
   available: z.enum(["true", "false"]).default("true"),
@@ -131,6 +135,7 @@ export async function itemPage(
         .includes(q.search.trim().toLowerCase()) &&
       (q.type === "all" || !!i.listId === (q.type === "wish")) &&
       (!q.tag || i.tags.includes(q.tag)) &&
+      matchesPriority(i.priority, q.priority) &&
       (q.visibility === "all" || visibilityScope(s, a, i) === q.visibility) &&
       (!chosen.length || i.recipientIds.some((id) => chosen.includes(id))) &&
       (!showAvailability ||
@@ -143,14 +148,7 @@ export async function itemPage(
     );
   });
   const sorted = archivedView
-    ? orderedArchivedItems(
-        filtered,
-        list?.itemOrder,
-        archivedItemSort(
-          q.sort,
-          (q.scope === "person" && q.tab === "ideas") || q.type === "idea",
-        ),
-      )
+    ? orderedArchivedItems(filtered, list?.itemOrder, archivedItemSort(q.sort))
     : ordered(filtered, q.sort, list?.itemOrder);
   const result = pageRows(sorted, q.page);
   await hydrate(

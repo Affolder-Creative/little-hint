@@ -10,6 +10,9 @@ import type { ItemPage } from "../shared/pagination";
 import { BrowseTools } from "./BrowseTools";
 import { useNavigationState } from "./NavigationScroll";
 import {
+  priorityLabels,
+  matchesPriority,
+  type PriorityFilter,
   ordered,
   orderedArchivedItems,
   sortLabels,
@@ -83,9 +86,11 @@ export function Browser({
     archivedSelected ? `${itemScope}:archived` : itemScope,
     archivedSelected ? "archived-newest" : "manual",
   );
-  const ideasOnly =
-    (scope === "person" && tab === "ideas") || itemType === "idea";
-  const archiveSort = archivedItemSort(settings.sort, ideasOnly);
+  const [priority, setPriority] = useNavigationState<PriorityFilter>(
+    "priority",
+    "all",
+  );
+  const archiveSort = archivedItemSort(settings.sort);
   const sort = archivedSelected ? archiveSort : settings.sort;
   const debounced = useDebounced(search);
   const availabilityApplies =
@@ -97,6 +102,7 @@ export function Browser({
     ...(tab ? { tab } : {}),
     search: debounced,
     tag,
+    priority,
     visibility,
     people: selectedPeople.join(","),
     available: String(availableOnly),
@@ -150,6 +156,7 @@ export function Browser({
           .includes(debounced.trim().toLowerCase()) &&
         (itemType === "all" || !!i.listId === (itemType === "wish")) &&
         (!tag || i.tags.includes(tag)) &&
+        matchesPriority(i.priority, priority) &&
         (visibility === "all" || i.visibilityScope === visibility) &&
         (!chosenPeople.length ||
           chosenPeople.some((person) => i.recipientIds.includes(person.id))) &&
@@ -223,6 +230,7 @@ export function Browser({
             activeCount={
               Number(visibility !== "all") +
               Number(!!tag) +
+              Number(priority !== "all") +
               Number(showAvailability && availableOnly) +
               Number(itemType !== "all") +
               Number(chosenPeople.length > 0)
@@ -230,6 +238,13 @@ export function Browser({
             summary={[
               ...(sort !== "manual" ? [sortLabels[sort]] : []),
               ...(tag ? [tag] : []),
+              ...(priority !== "all"
+                ? [
+                    priority === "none"
+                      ? "No priority"
+                      : priorityLabels[priority],
+                  ]
+                : []),
               ...(visibility !== "all"
                 ? [visibility === "only-me" ? "Only me" : "Shared with others"]
                 : []),
@@ -250,6 +265,7 @@ export function Browser({
             ]}
             clear={() => {
               setTag("");
+              setPriority("all");
               setVisibility("all");
               setAvailable(false);
               setSelectedPeople([]);
@@ -260,13 +276,7 @@ export function Browser({
             <SortSelect
               items
               manualLabel={parentList ? "List order" : "Default order"}
-              options={
-                archivedView
-                  ? archivedSortOrders.filter(
-                      (value) => !ideasOnly || value !== "priority",
-                    )
-                  : undefined
-              }
+              options={archivedView ? archivedSortOrders : undefined}
               sort={sort}
               change={(sort) => settings.save(sort)}
             />
@@ -307,6 +317,22 @@ export function Browser({
                 Reorder items
               </button>
             )}
+            <label>
+              Priority
+              <select
+                aria-label="Filter by priority"
+                value={priority}
+                onChange={(e) => setPriority(e.target.value as PriorityFilter)}
+              >
+                <option value="all">All priorities</option>
+                {Object.entries(priorityLabels).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+                <option value="none">No priority</option>
+              </select>
+            </label>
             <label>
               Tag
               <select
@@ -451,6 +477,7 @@ export function Browser({
                   onClick={() => {
                     setSearch("");
                     setTag("");
+                    setPriority("all");
                     setVisibility("all");
                     setAvailable(false);
                     setSelectedPeople([]);

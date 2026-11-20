@@ -227,8 +227,6 @@ export function managementCommand(
             .nullable(),
         })
         .parse(raw);
-      if (!i.listId)
-        fail(400, "Only wish-list items have a recipient priority.");
       i.priority = input.priority;
     } else
       setItemArchived(

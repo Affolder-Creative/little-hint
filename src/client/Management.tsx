@@ -344,17 +344,15 @@ export function ItemActions({ gift }: { gift: GiftView }) {
       >
         Edit {gift.listId ? "item" : "gift idea"}
       </button>
-      {gift.listId && (
-        <button
-          type="button"
-          className="text-button"
-          onClick={() =>
-            open(`Priority for ${gift.title}`, <PriorityForm gift={gift} />)
-          }
-        >
-          Set priority
-        </button>
-      )}
+      <button
+        type="button"
+        className="text-button"
+        onClick={() =>
+          open(`Priority for ${gift.title}`, <PriorityForm gift={gift} />)
+        }
+      >
+        Set priority
+      </button>
       {!parentArchived && (
         <RunButton
           run={async () => {

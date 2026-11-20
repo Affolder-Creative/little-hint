@@ -1362,7 +1362,7 @@ function GiftDetail() {
               {gift.lastEditorName && `Last edited by ${gift.lastEditorName}`}
             </p>
           )}
-          {gift.listId && gift.priority && (
+          {gift.priority && (
             <span className={`item-priority priority-${gift.priority}`}>
               {priorityLabels[gift.priority]}
             </span>

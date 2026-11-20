@@ -144,3 +144,34 @@ it.skipIf(!enabled)(
     ]);
   },
 );
+
+it.skipIf(!enabled)(
+  "persists and filters gift idea priorities through collection reads",
+  async () => {
+    const actor = fixture.actors[1];
+    const id = await storage.transact((s) => {
+      const recipient = s.people.find(
+        (p) => p.userId && p.userId !== actor.id,
+      )!;
+      return (
+        command(s, actor, "items.create", {
+          title: "Persisted priority idea",
+          recipientIds: [recipient.id],
+          priority: "would-love",
+        }) as { id: string }
+      ).id;
+    });
+    const state = await storage.readCollectionState();
+    const idea = state.items.find((i) => i.id === id)!;
+    expect(idea.priority).toBe("would-love");
+    const result = await itemPage(state, actor, {
+      scope: "person",
+      id: idea.recipientIds[0],
+      tab: "ideas",
+      priority: "would-love",
+      sort: "priority",
+    });
+    expect(result.rows.map((i) => i.id)).toContain(id);
+    expect(result.rows.find((i) => i.id === id)?.priority).toBe("would-love");
+  },
+);

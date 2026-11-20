@@ -251,7 +251,7 @@ test("priorities, shared ordering, Trash, and event preservation", async ({
 });
 
 for (const local of [false, true])
-  test(`Archived person sorting shares preferences with a temporary gift-idea fallback (${local ? "local" : "paged"})`, async ({
+  test(`Archived person sorting shares priority preferences with gift ideas (${local ? "local" : "paged"})`, async ({
     page,
   }) => {
     if (local)
@@ -276,8 +276,8 @@ for (const local of [false, true])
     for (const fields of [
       { listId: list.id, title: "A wish", priority: "most-wanted" },
       { listId: list.id, title: "Z wish", priority: "nice-to-have" },
-      { recipientIds: [person.id], title: "Z idea" },
-      { recipientIds: [person.id], title: "A idea" },
+      { recipientIds: [person.id], title: "Z idea", priority: "nice-to-have" },
+      { recipientIds: [person.id], title: "A idea", priority: "most-wanted" },
     ]) {
       const item = await post(page, "items", fields);
       await post(page, "items/archive", {
@@ -304,12 +304,12 @@ for (const local of [false, true])
     await expect(titles).toHaveText(["A wish", "Z wish"]);
     await page.getByRole("tab", { name: /^Gift ideas for/ }).click();
     await enterArchive();
-    await expect(sort).toHaveValue("archived-newest");
-    await expect(sort.locator('option[value="priority"]')).toHaveCount(0);
-    await expect(sort.locator("option")).toHaveCount(6);
+    await expect(sort).toHaveValue("priority");
+    await expect(sort.locator('option[value="priority"]')).toHaveCount(1);
+    await expect(sort.locator("option")).toHaveCount(7);
     await closeSort();
     await expect(titles).toHaveText(["A idea", "Z idea"]);
-    await expect(page.locator(".browse-summary")).toHaveText("Newest archived");
+    await expect(page.locator(".browse-summary")).toHaveText("Priority");
     const archiveScope = `items:person:${person.id}:archived`;
     expect(
       (await readWorld(page)).organization?.find(
@@ -533,3 +533,108 @@ test("exchange archive, Trash, and restore remain separate actions", async ({
   await page.getByRole("button", { name: "Current", exact: true }).click();
   await expect(panel).toBeVisible();
 });
+
+for (const local of [false, true])
+  test(`Gift idea priority editing and filtering (${local ? "local" : "paged"})`, async ({
+    page,
+  }) => {
+    if (local)
+      await page.route("**/api/v1/world", async (route) => {
+        const headers = { ...route.request().headers() };
+        delete headers["x-little-hint-world"];
+        await route.continue({ headers });
+      });
+    await login(page, "alex@example.test");
+    const person = await post(page, "people", {
+      name: `Priority recipient ${Date.now()}`,
+    });
+    for (const [title, priority] of [
+      ["First idea", "would-love"],
+      ["Favorite idea", "most-wanted"],
+      ["Unranked idea", null],
+    ] as const)
+      await post(page, "items", { title, recipientIds: [person.id], priority });
+    await page.goto(`/people/${person.id}?tab=ideas`);
+    await page.getByRole("tab", { name: /^Gift ideas for/ }).click();
+    await page.getByRole("button", { name: /^Sort & filter/ }).click();
+    await page.getByLabel("Sort by", { exact: true }).selectOption("priority");
+    await page.getByLabel("Filter by priority").selectOption("most-wanted");
+    await page.getByRole("button", { name: "Done", exact: true }).click();
+    await expect(page.locator(".gift-card .gift-title")).toHaveText([
+      "Favorite idea",
+    ]);
+    await page.getByRole("link", { name: /Favorite idea/ }).click();
+    await expect(page.locator(".gift-detail-info .item-priority")).toHaveText(
+      "Most wanted",
+    );
+    await page.goBack();
+    await page.getByRole("button", { name: /^Sort & filter/ }).click();
+    await expect(page.getByLabel("Filter by priority")).toHaveValue(
+      "most-wanted",
+    );
+    await page.getByLabel("Filter by priority").selectOption("none");
+    await page.getByRole("button", { name: "Done", exact: true }).click();
+    await expect(page.locator(".gift-card .gift-title")).toHaveText([
+      "Unranked idea",
+    ]);
+    await page.getByLabel("Actions for Unranked idea", { exact: true }).click();
+    await page
+      .getByRole("button", { name: "Set priority", exact: true })
+      .click();
+    await page
+      .getByLabel("Priority", { exact: true })
+      .selectOption("nice-to-have");
+    await page
+      .getByRole("button", { name: "Save priority", exact: true })
+      .click();
+    await expect(page.getByRole("dialog")).not.toBeVisible();
+    await expect(page.locator(".gift-card")).toHaveCount(0);
+    await page
+      .getByRole("region", { name: "Results", exact: true })
+      .getByRole("button", { name: "Clear filters", exact: true })
+      .click();
+    await expect(page.locator(".gift-card .gift-title")).toHaveText([
+      "Favorite idea",
+      "First idea",
+      "Unranked idea",
+    ]);
+    await page.getByLabel("Actions for Unranked idea", { exact: true }).click();
+    await page
+      .getByRole("button", { name: "Edit gift idea", exact: true })
+      .click();
+    await expect(page.getByLabel("Priority", { exact: true })).toHaveValue(
+      "nice-to-have",
+    );
+    await page.getByLabel("Priority", { exact: true }).selectOption("");
+    await page
+      .getByRole("button", { name: "Save changes", exact: true })
+      .click();
+    await expect(page.getByRole("dialog")).not.toBeVisible();
+    for (const [width, theme] of [
+      [1280, "light"],
+      [768, "light"],
+      [390, "light"],
+      [390, "dark"],
+    ] as const) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.evaluate((theme) => {
+        document.documentElement.dataset.theme = theme;
+      }, theme);
+      await page.screenshot({
+        path: `test-results/visual/priority-cards-${local ? "local" : "paged"}-${width}-${theme}.png`,
+      });
+      await page.getByRole("button", { name: /^Sort & filter/ }).click();
+      await expect(page.getByLabel("Filter by priority")).toBeVisible();
+      await expect(page.getByRole("dialog")).toBeVisible();
+      await mkdir("test-results/visual", { recursive: true });
+      await page.screenshot({
+        path: `test-results/visual/priority-${local ? "local" : "paged"}-${width}-${theme}.png`,
+      });
+      expect(
+        await page
+          .getByRole("dialog")
+          .evaluate((el) => el.scrollWidth <= el.clientWidth + 1),
+      ).toBe(true);
+      await page.getByRole("button", { name: "Done", exact: true }).click();
+    }
+  });

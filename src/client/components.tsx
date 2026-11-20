@@ -678,7 +678,7 @@ export function GiftCard({
         {sourceListName && (
           <p className="gift-source-list">From {sourceListName}</p>
         )}
-        {gift.listId && gift.priority && (
+        {gift.priority && (
           <span className={`item-priority priority-${gift.priority}`}>
             {priorityLabels[gift.priority]}
           </span>

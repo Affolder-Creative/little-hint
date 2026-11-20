@@ -239,7 +239,7 @@ it("sorts dated and undated archives together by name, priority, and price", asy
     ).toEqual(expected.map((i) => i.id));
   }
 });
-it("uses archive chronology for a person's gift ideas", async () => {
+it("sorts archived gift ideas by priority", async () => {
   const { state, actor } = fixture(3);
   state.items.forEach((item, n) => {
     delete item.listId;
@@ -250,6 +250,7 @@ it("uses archive chronology for a person's gift ideas", async () => {
   });
   state.items[0].archivedAt = "2026-01-02T00:00:00.000Z";
   state.items[1].archivedAt = "2026-01-01T00:00:00.000Z";
+  state.items[2].priority = "most-wanted";
   const page = await itemPage(state, actor, {
     scope: "person",
     id: state.items[0].recipientIds[0],
@@ -257,7 +258,9 @@ it("uses archive chronology for a person's gift ideas", async () => {
     status: "archived",
     sort: "priority",
   });
-  expect(page.rows.map((i) => i.id)).toEqual(state.items.map((i) => i.id));
+  expect(page.rows.map((i) => i.id)).toEqual(
+    [state.items[2], state.items[0], state.items[1]].map((i) => i.id),
+  );
 });
 it("keeps purchase counts independent of pages", async () => {
   const { state, actor } = fixture();
@@ -457,3 +460,67 @@ it("filters private and shared ideas across pages without exposing other authors
     ).total,
   ).toBe(24);
 });
+
+it("filters priorities before paging, including missing and null priorities", async () => {
+  const { state, actor, listId } = fixture(49);
+  state.items.forEach((item, n) => {
+    item.priority = n < 25 ? "most-wanted" : n < 47 ? "would-love" : null;
+  });
+  delete state.items[48].priority;
+  const query = { scope: "list", id: listId, available: "false" };
+  const page = await itemPage(state, actor, {
+    ...query,
+    priority: "most-wanted",
+    page: 2,
+  });
+  expect(page.total).toBe(25);
+  expect(page.rows).toHaveLength(1);
+  expect(page.rows[0].priority).toBe("most-wanted");
+  const none = await itemPage(state, actor, {
+    ...query,
+    priority: "none",
+    page: 9,
+  });
+  expect(none.total).toBe(2);
+  expect(none.page).toBe(1);
+  const combined = await itemPage(state, actor, {
+    ...query,
+    priority: "none",
+    tag: "Last",
+  });
+  expect(combined.total).toBe(1);
+  await expect(
+    itemPage(state, actor, { ...query, priority: "invalid" }),
+  ).rejects.toThrow();
+});
+
+it.each([false, true])(
+  "filters gift ideas by priority with archived=%s",
+  async (archived) => {
+    const { state, actor } = fixture(3);
+    state.items.forEach((item, n) => {
+      delete item.listId;
+      item.creatorId = actor.id;
+      item.visibility = "private";
+      item.archived = archived;
+      item.priority = n === 0 ? "most-wanted" : n === 1 ? "nice-to-have" : null;
+    });
+    const query = {
+      scope: "person",
+      id: state.items[0].recipientIds[0],
+      tab: "ideas",
+      status: archived ? "archived" : "active",
+      sort: "priority",
+    };
+    const filtered = await itemPage(state, actor, {
+      ...query,
+      priority: "nice-to-have",
+    });
+    expect(filtered.rows.map((i) => i.id)).toEqual([state.items[1].id]);
+    expect(
+      (await itemPage(state, actor, { ...query, priority: "none" })).rows.map(
+        (i) => i.id,
+      ),
+    ).toEqual([state.items[2].id]);
+  },
+);
