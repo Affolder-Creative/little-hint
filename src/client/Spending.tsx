@@ -687,6 +687,15 @@ function SpendingRow({
     );
   const canPurchase =
     r.kind === "plan" && r.canEdit && !!r.reservationId && !r.sourceId;
+  const eventNames = [
+    ...new Set(
+      recordAllocations(r).flatMap((a) => (a.eventName ? [a.eventName] : [])),
+    ),
+  ];
+  const contextNames = [
+    ...eventNames,
+    data.occasions.find((o) => o.id === r.occasionId)?.name,
+  ].filter(Boolean);
   const secondaryActions = [
     canPurchase && (
       <button key="edit" className="text-button" onClick={edit}>
@@ -825,15 +834,8 @@ function SpendingRow({
           · {r.kind === "plan" ? "Planned by" : "Paid by"}{" "}
           {r.ownerId === world.me.id ? "you" : r.payerName}
         </p>
-        {(r.eventName || r.occasionId) && (
-          <p className="spending-row-meta">
-            {[
-              r.eventName,
-              data.occasions.find((o) => o.id === r.occasionId)?.name,
-            ]
-              .filter(Boolean)
-              .join(" · ")}
-          </p>
+        {contextNames.length > 0 && (
+          <p className="spending-row-meta">{contextNames.join(" · ")}</p>
         )}
         <span className="spending-privacy">
           {r.connectionId && r.sharing !== "private" ? (
