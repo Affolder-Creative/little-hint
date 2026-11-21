@@ -895,7 +895,7 @@ export default function SettingsPage({
               className="about-support"
               aria-labelledby="about-support-title"
             >
-              <h3 id="about-support-title">A little hint from me</h3>
+              <h3 id="about-support-title">A little hint from me...</h3>
               <p>
                 If Little Hint has made your gift-giving easier, here's
                 something on my wish list: coffee. Just coffee. ツ
