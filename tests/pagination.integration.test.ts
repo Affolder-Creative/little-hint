@@ -150,7 +150,7 @@ it.skipIf(!enabled)(
   async () => {
     const actor = fixture.actors[1];
     const id = await storage.transact((s) => {
-      const recipient = s.people.find(
+      const recipient = world(s, actor).people.find(
         (p) => p.userId && p.userId !== actor.id,
       )!;
       return (

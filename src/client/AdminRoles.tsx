@@ -1,5 +1,8 @@
 import "./admin-roles.css";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { ActionMenu } from "./Management";
+import { AddAdministrator } from "./AdminAppointment";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Group, Household } from "../shared/model";
 import { api } from "./api";
@@ -9,7 +12,7 @@ import { Action } from "./Action";
 import { Confirm } from "./Confirm";
 import { InviteDialog } from "./InvitationShare";
 
-type DirectoryGroup = Group & {
+export type DirectoryGroup = Group & {
   members: Member[];
   households: Household[];
   people: Array<{
@@ -21,7 +24,7 @@ type DirectoryGroup = Group & {
   invitations: Array<{ id: string; email: string }>;
   requests: Array<{ id: string; email: string }>;
 };
-type Member = { userId: string; name: string };
+type Member = { userId: string; name: string; admin?: boolean };
 export function FamilyAdministrators({
   group,
   members,
@@ -151,21 +154,35 @@ export function FamilyAdministrators({
   );
 }
 export function AppAdministrators() {
-  const { open, mutate } = useApp();
+  const { world, open, mutate } = useApp();
   const cache = useQueryClient();
   const query = useQuery({
     queryKey: ["app-administrators"],
     queryFn: () =>
-      api<Array<{ id: string; name: string; revision: number }>>(
-        "admin/administrators",
-      ),
+      api<
+        Array<{
+          id: string;
+          userId: string;
+          name: string;
+          email?: string;
+          revision: number;
+        }>
+      >("admin/administrators"),
   });
   return (
     <section className="admin-panel" aria-label="App administrators">
-      <h3>App administrators</h3>
+      <div className="admin-section-heading">
+        <h3>App administrators</h3>
+        <button
+          className="button secondary"
+          onClick={() => open("Add administrator", <AddAdministrator />)}
+        >
+          Add administrator
+        </button>
+      </div>
       <p>
-        Admins manage the installation and content they can already access. Add
-        an admin through Users &amp; profiles below.
+        Manage this app and all family groups. Private content, gift surprises
+        and secrets stay protected.
       </p>
       {query.isPending ? (
         <p role="status">Loading administrators…</p>
@@ -177,74 +194,117 @@ export function AppAdministrators() {
           </Action>
         </p>
       ) : (
-        query.data?.map((p) => (
-          <div className="invitation-row" key={p.id}>
-            <span>{p.name}</span>
-            <button
-              className="text-button"
-              disabled={query.data.length === 1}
-              onClick={() =>
-                open(
-                  "Remove app administrator?",
-                  <Confirm
-                    label="Remove admin role"
-                    onConfirm={async () => {
-                      await mutate("admin/administrators", {
-                        id: p.id,
-                        revision: p.revision,
-                        admin: false,
-                      });
-                      await cache.invalidateQueries({
-                        queryKey: ["app-administrators"],
-                      });
-                      await cache.invalidateQueries({
-                        queryKey: ["admin-profiles"],
-                      });
-                    }}
-                  >
-                    Remove administration access for {p.name}? Their account
-                    remains.
-                  </Confirm>,
-                )
-              }
-            >
-              Remove admin role
-            </button>
+        query.data.map((p) => (
+          <div className="admin-directory-row" key={p.id}>
+            <div>
+              <strong>
+                {p.name}
+                {p.userId === world.me.id ? " · You" : ""}
+              </strong>
+              {p.email && <p className="muted">{p.email}</p>}
+            </div>
+            {query.data.length > 1 && (
+              <ActionMenu name={p.name}>
+                <button
+                  className="text-button danger"
+                  onClick={() =>
+                    open(
+                      "Remove app administrator?",
+                      <Confirm
+                        label="Remove admin role"
+                        onConfirm={async () => {
+                          await mutate("admin/administrators", {
+                            id: p.id,
+                            revision: p.revision,
+                            admin: false,
+                          });
+                          await Promise.all(
+                            [
+                              "app-administrators",
+                              "admin-profiles",
+                              "admin-groups",
+                            ].map((key) =>
+                              cache.invalidateQueries({ queryKey: [key] }),
+                            ),
+                          );
+                        }}
+                      >
+                        Remove administration access for {p.name}?
+                        {p.userId === world.me.id
+                          ? " You will lose access to Administration."
+                          : " Their account remains."}
+                      </Confirm>,
+                    )
+                  }
+                >
+                  Remove admin role
+                </button>
+              </ActionMenu>
+            )}
           </div>
         ))
       )}
-      <p className="muted">Keep at least one app administrator.</p>
+      {query.data?.length === 1 && (
+        <p className="muted">
+          Add another administrator before removing this role.
+        </p>
+      )}
     </section>
   );
 }
+
 export function AdminGroups() {
+  const [params, setParams] = useSearchParams();
+  const active = params.get("adminGroup");
   const [search, setSearch] = useState("");
+  const [term, setTerm] = useState("");
   const [page, setPage] = useState(1);
+  const lastTrigger = useRef<HTMLButtonElement | null>(null);
+  const searchInput = useRef<HTMLInputElement>(null);
+  const position = useRef(0);
+  const previous = useRef(active);
+  useEffect(() => {
+    if (previous.current && !active) {
+      (lastTrigger.current?.isConnected
+        ? lastTrigger.current
+        : searchInput.current
+      )?.focus({ preventScroll: true });
+      window.scrollTo(0, position.current);
+    }
+    previous.current = active;
+  }, [active]);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setTerm(search.trim());
+      setPage(1);
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [search]);
   const query = useQuery({
-    queryKey: ["admin-groups", search, page],
+    queryKey: ["admin-groups", "directory", term, page],
     queryFn: () =>
       api<{ rows: DirectoryGroup[]; total: number }>(
-        `admin/groups?${new URLSearchParams({ search, page: String(page) })}`,
+        `admin/groups?${new URLSearchParams({ search: term, page: String(page) })}`,
       ),
   });
   return (
     <section className="admin-panel" aria-label="All family groups">
       <h3>All family groups</h3>
       <p>
-        Manage group membership and administrators. Gift access still follows
-        normal sharing.
+        Choose a group to manage its members, invitations and households.
+        Managing a group does not join it or grant access to its gifts.
       </p>
       <Field label="Find a family group">
         <input
+          ref={searchInput}
           type="search"
+          maxLength={160}
+          placeholder="Search group names"
           value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            setPage(1);
-          }}
+          onChange={(e) => setSearch(e.target.value)}
         />
       </Field>
-      {query.isPending ? (
+      {query.isPending || term !== search.trim() ? (
         <p role="status">Loading groups…</p>
       ) : query.error ? (
         <p role="alert">
@@ -255,12 +315,43 @@ export function AdminGroups() {
         </p>
       ) : (
         <>
-          {query.data.rows.length === 0 && <p>No family groups found.</p>}
+          {!query.data.rows.length && (
+            <p>
+              {term
+                ? "No matching family groups. Try another name."
+                : "No family groups have been created yet."}
+            </p>
+          )}
           {query.data.rows.map((g) => (
-            <div className="admin-group-row" key={g.id}>
-              <h4>{g.name}</h4>
-              <FamilyAdministrators group={g} members={g.members} />
-              <DirectoryOperations group={g} />
+            <div className="admin-directory-row" key={g.id}>
+              <div>
+                <h4>{g.name}</h4>
+                <p className="muted">
+                  {g.members.find((m) => m.userId === g.ownerId)?.name ??
+                    "Primary owner"}{" "}
+                  · {g.members.length}{" "}
+                  {g.members.length === 1 ? "member" : "members"}
+                  {g.requests.length
+                    ? ` · ${g.requests.length} pending ${g.requests.length === 1 ? "request" : "requests"}`
+                    : ""}
+                </p>
+              </div>
+              <button
+                className="button secondary"
+                aria-label={`Manage ${g.name}`}
+                onClick={(e) => {
+                  lastTrigger.current = e.currentTarget;
+                  position.current = window.scrollY;
+                  setParams((current) => {
+                    const next = new URLSearchParams(current);
+                    next.set("adminGroup", g.id);
+                    next.delete("adminTab");
+                    return next;
+                  });
+                }}
+              >
+                Manage
+              </button>
             </div>
           ))}
           {query.data.total > 24 && (
@@ -268,15 +359,17 @@ export function AdminGroups() {
               <button
                 className="button secondary"
                 disabled={page === 1}
-                onClick={() => setPage((p) => p - 1)}
+                onClick={() => setPage(page - 1)}
               >
                 Previous
               </button>
-              <span>Page {page}</span>
+              <span>
+                Page {page} of {Math.ceil(query.data.total / 24)}
+              </span>
               <button
                 className="button secondary"
                 disabled={page * 24 >= query.data.total}
-                onClick={() => setPage((p) => p + 1)}
+                onClick={() => setPage(page + 1)}
               >
                 Next
               </button>
@@ -285,175 +378,5 @@ export function AdminGroups() {
         </>
       )}
     </section>
-  );
-}
-
-function DirectoryOperations({ group: g }: { group: DirectoryGroup }) {
-  const { mutate, open } = useApp();
-  const cache = useQueryClient();
-  const save = async (path: string, body: unknown) => {
-    await mutate(path, body);
-    await cache.invalidateQueries({ queryKey: ["admin-groups"] });
-  };
-  return (
-    <details className="family-admin-controls">
-      <summary>Invitations, households and event leaders</summary>
-      <div className="text-stack">
-        {g.requests.map((r) => (
-          <div className="invitation-row" key={r.id}>
-            <span>{r.email} · Invitation request</span>
-            <div className="actions">
-              <Action
-                secondary
-                onClick={() =>
-                  save("groups/respond-invitation", {
-                    id: r.id,
-                    decision: "approve",
-                  })
-                }
-              >
-                Approve
-              </Action>
-              <Action
-                secondary
-                onClick={() =>
-                  save("groups/respond-invitation", {
-                    id: r.id,
-                    decision: "decline",
-                  })
-                }
-              >
-                Decline
-              </Action>
-            </div>
-          </div>
-        ))}
-        {g.invitations.map((i) => (
-          <div className="invitation-row" key={i.id}>
-            <span>{i.email} · Pending invitation</span>
-            <Action
-              secondary
-              onClick={() => save("invitations/revoke", { id: i.id })}
-            >
-              Cancel invitation
-            </Action>
-          </div>
-        ))}
-        <Form
-          key={`leaders-${g.revision}`}
-          submit="Save event leaders"
-          onSubmit={(f) =>
-            save("groups/event-leaders", {
-              groupId: g.id,
-              revision: g.revision,
-              userIds: f.getAll("leaders"),
-            })
-          }
-        >
-          <fieldset className="choice-group">
-            <legend>Event leaders</legend>
-            {g.members
-              .filter((m) => m.userId !== g.ownerId)
-              .map((m) => (
-                <label className="check" key={m.userId}>
-                  <input
-                    name="leaders"
-                    type="checkbox"
-                    value={m.userId}
-                    defaultChecked={g.eventLeaderIds?.includes(m.userId)}
-                  />
-                  {m.name}
-                </label>
-              ))}
-          </fieldset>
-        </Form>
-        <h5>Households</h5>
-        <Form
-          submit="Create household"
-          onSubmit={(f) =>
-            save("households", { groupId: g.id, name: f.get("name") })
-          }
-        >
-          <Field label="New household name">
-            <input name="name" required maxLength={160} />
-          </Field>
-        </Form>
-        {g.households.map((h) => (
-          <div key={h.id}>
-            <Form
-              key={h.revision}
-              submit="Rename household"
-              onSubmit={(f) =>
-                save("households/update", {
-                  id: h.id,
-                  revision: h.revision,
-                  name: f.get("name"),
-                })
-              }
-            >
-              <Field label="Household name">
-                <input
-                  name="name"
-                  required
-                  maxLength={160}
-                  defaultValue={h.name}
-                />
-              </Field>
-            </Form>
-            <button
-              className="text-button danger"
-              onClick={() =>
-                open(
-                  "Delete household?",
-                  <Confirm
-                    label="Delete household"
-                    onConfirm={() =>
-                      save("households/delete", {
-                        id: h.id,
-                        revision: h.revision,
-                      })
-                    }
-                  >
-                    Delete {h.name}? Members and wish lists remain.
-                  </Confirm>,
-                )
-              }
-            >
-              Delete household
-            </button>
-          </div>
-        ))}
-        {g.households.length > 0 &&
-          g.people.map((p) => (
-            <Form
-              key={`${p.id}-${p.revision}`}
-              submit="Save households"
-              onSubmit={(f) =>
-                save("households/memberships", {
-                  groupId: g.id,
-                  personId: p.id,
-                  revision: p.revision,
-                  householdIds: f.getAll("households"),
-                })
-              }
-            >
-              <fieldset className="choice-group">
-                <legend>Households for {p.name}</legend>
-                {g.households.map((h) => (
-                  <label className="check" key={h.id}>
-                    <input
-                      name="households"
-                      type="checkbox"
-                      value={h.id}
-                      defaultChecked={p.householdIds.includes(h.id)}
-                    />
-                    {h.name}
-                  </label>
-                ))}
-              </fieldset>
-            </Form>
-          ))}
-      </div>
-    </details>
   );
 }

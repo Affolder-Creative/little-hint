@@ -37,6 +37,12 @@ describe.skipIf(!url)("administration roles over HTTP", () => {
       });
     });
     const { registerAdminRoles } = await import("../src/server/admin-roles");
+    const { registerProfileAccounts } =
+      await import("../src/server/profile-accounts");
+    registerProfileAccounts(
+      app,
+      async (req) => actors[Number(req.headers["x-test-actor"] ?? 0)],
+    );
     registerAdminRoles(
       app,
       async (req) => actors[Number(req.headers["x-test-actor"] ?? 0)],
@@ -44,6 +50,11 @@ describe.skipIf(!url)("administration roles over HTTP", () => {
   });
   beforeEach(async () => {
     await storage.pool.query("DELETE FROM app_record");
+    for (const a of actors)
+      await storage.pool.query(
+        'INSERT INTO "user" (id,name,email,email_verified) VALUES ($1,$2,$3,true) ON CONFLICT (id) DO NOTHING',
+        [a.id, a.name, a.email],
+      );
     await storage.transact((s) => {
       Object.assign(s, emptyState());
       s.people = actors.map((a, n) => ({
@@ -148,6 +159,76 @@ describe.skipIf(!url)("administration roles over HTTP", () => {
       (await post("groups/admins", { groupId, revision: 1, userIds: [] }, 2))
         .statusCode,
     ).toBe(409);
+  });
+  it("filters administrator candidates before pagination and includes account email", async () => {
+    await storage.transact((s) => {
+      s.people.forEach((p) => {
+        p.name = "Same name";
+      });
+      for (let i = 0; i < 30; i++) {
+        const p = { ...stamp(), name: "Same name", guardians: [actors[0].id] };
+        s.people.push(p);
+      }
+      s.people.push({
+        ...stamp(),
+        name: "Same name",
+        userId: "deleted-account",
+        guardians: [],
+      });
+    });
+    const candidates = await app.inject(
+      "/api/v1/admin/profiles?search=Same&eligibleForAdmin=true",
+    );
+    expect(candidates.statusCode).toBe(200);
+    expect(candidates.json().total).toBe(3);
+    expect(
+      candidates
+        .json()
+        .rows.map((p: any) => p.email)
+        .sort(),
+    ).toEqual(
+      actors
+        .slice(1)
+        .map((a) => a.email)
+        .sort(),
+    );
+    expect(
+      candidates.json().rows.every((p: any) => !p.admin && !p.managed),
+    ).toBe(true);
+    expect(
+      (await app.inject("/api/v1/admin/administrators")).json()[0].email,
+    ).toBe(actors[0].email);
+    expect(
+      (
+        await app.inject({
+          url: "/api/v1/admin/profiles?search=Same&eligibleForAdmin=true",
+          headers: { "x-test-actor": "3" },
+        })
+      ).statusCode,
+    ).toBe(403);
+  });
+  it("loads one unjoined group without exposing content or granting membership", async () => {
+    const result = await app.inject(`/api/v1/admin/groups/${groupId}`);
+    expect(result.statusCode).toBe(200);
+    expect(result.headers["cache-control"]).toBe("no-store");
+    expect(result.json().id).toBe(groupId);
+    expect(result.json().members[0]).toMatchObject({ admin: false });
+    expect(result.json()).not.toHaveProperty("items");
+    expect(result.json()).not.toHaveProperty("lists");
+    expect((await storage.readState()).groups[0].memberIds).not.toContain(
+      actors[0].id,
+    );
+    expect(
+      (
+        await app.inject({
+          url: `/api/v1/admin/groups/${groupId}`,
+          headers: { "x-test-actor": "2" },
+        })
+      ).statusCode,
+    ).toBe(403);
+    expect((await app.inject(`/api/v1/admin/groups/missing`)).statusCode).toBe(
+      404,
+    );
   });
   it("lets app admins manage unjoined groups without changing membership", async () => {
     const res = await app.inject("/api/v1/admin/groups");

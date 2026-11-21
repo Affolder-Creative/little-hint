@@ -55,6 +55,7 @@ export function registerProfileAccounts(
     const q = z
       .object({
         search: z.string().max(160).default(""),
+        eligibleForAdmin: z.enum(["true", "false"]).optional(),
         page: z.coerce.number().int().min(1).default(1),
       })
       .parse(req.query);
@@ -64,6 +65,11 @@ export function registerProfileAccounts(
     const emails = new Map(accounts.rows.map((u) => [u.id, u.email]));
     const rows = s.people
       .filter((p) => !p.mergedIntoId && (p.userId || p.guardians.length))
+      .filter(
+        (p) =>
+          q.eligibleForAdmin !== "true" ||
+          (!!p.userId && emails.has(p.userId) && !p.admin),
+      )
       .map((p) => ({
         id: p.id,
         revision: p.revision,

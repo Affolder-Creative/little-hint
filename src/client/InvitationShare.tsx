@@ -58,10 +58,12 @@ export function InviteDialog({
   groupId,
   explanation,
   initialEmail,
+  onCreated,
 }: {
   groupId?: string;
   explanation?: string;
   initialEmail?: string;
+  onCreated?: () => Promise<unknown>;
 }) {
   const { mutate, close } = useApp();
   const [created, setCreated] = useState<{ id: string; email: string } | null>(
@@ -91,6 +93,7 @@ export function InviteDialog({
           { email, ...(groupId ? { groupId } : {}) },
         );
         setCreated({ id: invitation.id, email });
+        await onCreated?.();
       }}
     >
       <Field label="Email address">
