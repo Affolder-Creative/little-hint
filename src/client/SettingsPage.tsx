@@ -1,3 +1,4 @@
+import { AdminGroupDetail } from "./AdminGroupDetail";
 import {
   AppAdministrators,
   AdminGroups,
@@ -1282,6 +1283,15 @@ function Security() {
   );
 }
 function Admin() {
+  const [adminParams] = useSearchParams();
+  const selectedAdminGroup = adminParams.get("adminGroup");
+  const [visitedAdminGroups, setVisitedAdminGroups] = useState<string[]>([]);
+  useEffect(() => {
+    if (selectedAdminGroup)
+      setVisitedAdminGroups((ids) =>
+        ids.includes(selectedAdminGroup) ? ids : [...ids, selectedAdminGroup],
+      );
+  }, [selectedAdminGroup]);
   const client = useQueryClient();
   const settings = useQuery({
     queryKey: ["admin-settings"],
@@ -1309,206 +1319,225 @@ function Admin() {
   return (
     <section className="settings-section admin-page">
       <h2>Administration</h2>
-      <AppAdministrators />
-      <AdminProfiles />
-      <AdminGroups />
-      <section className="admin-panel" aria-label="App settings">
-        <h3>App settings</h3>
-        <p className="muted">
-          These settings apply to everyone using this Little Hint app.
-        </p>
-        {settings.isPending && (
-          <p role="status">Loading administration settings…</p>
-        )}
-        {settings.data && <AdminPreferences settings={settings.data} />}
-      </section>
-      <AdminUsage />
-      <section className="admin-panel" aria-label="Service status">
-        <h3>Service status</h3>
-        <p className="muted">
-          Services are managed in hosting configuration. Configured means setup
-          is present; connections have not been tested here.
-        </p>
-        {services.isPending && <p role="status">Loading service status…</p>}
-        {services.error ? (
-          <div role="alert">
-            <p>We could not load service status.</p>
-            <button
-              className="button secondary"
-              onClick={() => services.refetch()}
-            >
-              Retry service status
-            </button>
-          </div>
-        ) : (
-          services.data?.map((service) => (
-            <div className="setting-row admin-service-row" key={service.id}>
-              <div>
-                <strong>{service.label}</strong>
-                {service.detail && <p>{service.detail}</p>}
-              </div>
-              <span>{service.status}</span>
+      {Array.from(
+        new Set([
+          ...visitedAdminGroups,
+          ...(selectedAdminGroup ? [selectedAdminGroup] : []),
+        ]),
+      ).map((id) => (
+        <AdminGroupDetail key={id} id={id} active={id === selectedAdminGroup} />
+      ))}
+      <div hidden={!!selectedAdminGroup}>
+        <AppAdministrators />
+        <AdminGroups />
+        <AdminProfiles />
+        <section className="admin-panel" aria-label="App settings">
+          <h3>App settings</h3>
+          <p className="muted">
+            These settings apply to everyone using this Little Hint app.
+          </p>
+          {settings.isPending && (
+            <p role="status">Loading administration settings…</p>
+          )}
+          {settings.data && <AdminPreferences settings={settings.data} />}
+        </section>
+        <AdminUsage />
+        <section className="admin-panel" aria-label="Service status">
+          <h3>Service status</h3>
+          <p className="muted">
+            Services are managed in hosting configuration. Configured means
+            setup is present; connections have not been tested here.
+          </p>
+          {services.isPending && <p role="status">Loading service status…</p>}
+          {services.error ? (
+            <div role="alert">
+              <p>We could not load service status.</p>
+              <button
+                className="button secondary"
+                onClick={() => services.refetch()}
+              >
+                Retry service status
+              </button>
             </div>
-          ))
-        )}
-      </section>
-      <section className="admin-panel" aria-label="Background jobs">
-        <h3>Background jobs</h3>
-        <p className="muted">
-          Backups are managed by your hosting provider. Backup status is
-          unavailable here.
-        </p>
-        {jobs.isPending && (
-          <p role="status">Checking updates and shop lookups…</p>
-        )}
-        {jobs.error && (
-          <div role="alert">
-            <p className="error">
-              We could not check updates or shop lookups. Try again to see
-              whether they are running.
-            </p>
-            <button className="button secondary" onClick={() => jobs.refetch()}>
-              Check again
-            </button>
-          </div>
-        )}
-        {jobs.data && !jobs.error && (
-          <div className="admin-job-summary">
-            {jobs.data.prices && (
-              <section aria-label="Price checks" className="admin-job-group">
-                <div className="admin-job-heading">
-                  <h4>Price checks</h4>
-                  <span
-                    className={`status ${jobs.data.prices.enabled ? "available" : ""}`}
-                  >
-                    {jobs.data.prices.enabled ? "Enabled" : "Off"}
-                  </span>
+          ) : (
+            services.data?.map((service) => (
+              <div className="setting-row admin-service-row" key={service.id}>
+                <div>
+                  <strong>{service.label}</strong>
+                  {service.detail && <p>{service.detail}</p>}
                 </div>
+                <span>{service.status}</span>
+              </div>
+            ))
+          )}
+        </section>
+        <section className="admin-panel" aria-label="Background jobs">
+          <h3>Background jobs</h3>
+          <p className="muted">
+            Backups are managed by your hosting provider. Backup status is
+            unavailable here.
+          </p>
+          {jobs.isPending && (
+            <p role="status">Checking updates and shop lookups…</p>
+          )}
+          {jobs.error && (
+            <div role="alert">
+              <p className="error">
+                We could not check updates or shop lookups. Try again to see
+                whether they are running.
+              </p>
+              <button
+                className="button secondary"
+                onClick={() => jobs.refetch()}
+              >
+                Check again
+              </button>
+            </div>
+          )}
+          {jobs.data && !jobs.error && (
+            <div className="admin-job-summary">
+              {jobs.data.prices && (
+                <section aria-label="Price checks" className="admin-job-group">
+                  <div className="admin-job-heading">
+                    <h4>Price checks</h4>
+                    <span
+                      className={`status ${jobs.data.prices.enabled ? "available" : ""}`}
+                    >
+                      {jobs.data.prices.enabled ? "Enabled" : "Off"}
+                    </span>
+                  </div>
+                  <dl className="admin-job-facts">
+                    <div>
+                      <dt>Schedule</dt>
+                      <dd>
+                        Daily at {jobs.data.prices.time}
+                        <small>{jobs.data.prices.zone}</small>
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Last run started</dt>
+                      <dd>
+                        {jobs.data.prices.lastRun > 0
+                          ? formatDateTime(jobs.data.prices.lastRun)
+                          : "Not run yet"}
+                      </dd>
+                    </div>
+                  </dl>
+                  {jobs.data.prices.report ? (
+                    <PriceRunReport report={jobs.data.prices.report} />
+                  ) : (
+                    <p>Retained failed checks: {jobs.data.prices.failed}</p>
+                  )}
+                  <details className="admin-provider-details">
+                    <summary>Provider attempts</summary>
+                    <dl className="admin-job-facts">
+                      <div>
+                        <dt>Today</dt>
+                        <dd>
+                          {jobs.data.prices.dailyUsed} /{" "}
+                          {jobs.data.prices.daily}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>This month</dt>
+                        <dd>
+                          {jobs.data.prices.monthlyUsed} /{" "}
+                          {jobs.data.prices.monthly}
+                        </dd>
+                      </div>
+                      {jobs.data.prices.providerUsage.map((usage) => (
+                        <div key={usage.source}>
+                          <dt>{usage.source}</dt>
+                          <dd>{usage.count}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </details>
+                </section>
+              )}
+              <section
+                aria-label="Updates and shop lookups"
+                className="admin-job-group"
+              >
+                <div className="admin-job-heading">
+                  <h4>Updates and shop lookups</h4>
+                </div>
+                <p className="muted">
+                  {jobs.data.workerLastSeen &&
+                  Date.now() - jobs.data.workerLastSeen < 60000
+                    ? "Worker active"
+                    : "No recent worker activity reported"}
+                  {jobs.data.workerLastSeen ? (
+                    <>
+                      <br />
+                      Last reported {formatDateTime(jobs.data.workerLastSeen)}
+                    </>
+                  ) : null}
+                </p>
                 <dl className="admin-job-facts">
                   <div>
-                    <dt>Schedule</dt>
+                    <dt>Shop lookups waiting</dt>
                     <dd>
-                      Daily at {jobs.data.prices.time}
-                      <small>{jobs.data.prices.zone}</small>
+                      {
+                        jobs.data.imports.filter(
+                          (job) =>
+                            job.status === "pending" ||
+                            job.status === "running",
+                        ).length
+                      }
                     </dd>
                   </div>
                   <div>
-                    <dt>Last run started</dt>
+                    <dt>Updates waiting</dt>
                     <dd>
-                      {jobs.data.prices.lastRun > 0
-                        ? formatDateTime(jobs.data.prices.lastRun)
-                        : "Not run yet"}
+                      {
+                        jobs.data.notifications.filter(
+                          (job) => job.status === "pending",
+                        ).length
+                      }
                     </dd>
                   </div>
                 </dl>
-                {jobs.data.prices.report ? (
-                  <PriceRunReport report={jobs.data.prices.report} />
-                ) : (
-                  <p>Retained failed checks: {jobs.data.prices.failed}</p>
-                )}
-                <details className="admin-provider-details">
-                  <summary>Provider attempts</summary>
-                  <dl className="admin-job-facts">
-                    <div>
-                      <dt>Today</dt>
-                      <dd>
-                        {jobs.data.prices.dailyUsed} / {jobs.data.prices.daily}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>This month</dt>
-                      <dd>
-                        {jobs.data.prices.monthlyUsed} /{" "}
-                        {jobs.data.prices.monthly}
-                      </dd>
-                    </div>
-                    {jobs.data.prices.providerUsage.map((usage) => (
-                      <div key={usage.source}>
-                        <dt>{usage.source}</dt>
-                        <dd>{usage.count}</dd>
-                      </div>
-                    ))}
-                  </dl>
-                </details>
               </section>
-            )}
-            <section
-              aria-label="Updates and shop lookups"
-              className="admin-job-group"
+            </div>
+          )}
+          {jobs.data && (
+            <>
+              <AdminJobFailures
+                title="Shop lookups needing attention"
+                jobs={jobs.data.imports.filter(
+                  (j) => j.draftState === "active",
+                )}
+              />
+              <AdminJobFailures
+                title="Past shop lookup failures"
+                jobs={jobs.data.imports.filter(
+                  (j) => j.draftState !== "active",
+                )}
+              />
+              <AdminJobFailures
+                title="Failed updates"
+                jobs={jobs.data.notifications}
+                retry={async (id) => {
+                  await api("admin/jobs/retry", { id });
+                  await client.invalidateQueries({ queryKey: ["admin-jobs"] });
+                }}
+              />
+            </>
+          )}
+        </section>
+        {settings.error && (
+          <div role="alert">
+            <p className="error">We could not load app settings. Try again.</p>
+            <button
+              className="button secondary"
+              onClick={() => settings.refetch()}
             >
-              <div className="admin-job-heading">
-                <h4>Updates and shop lookups</h4>
-              </div>
-              <p className="muted">
-                {jobs.data.workerLastSeen &&
-                Date.now() - jobs.data.workerLastSeen < 60000
-                  ? "Worker active"
-                  : "No recent worker activity reported"}
-                {jobs.data.workerLastSeen ? (
-                  <>
-                    <br />
-                    Last reported {formatDateTime(jobs.data.workerLastSeen)}
-                  </>
-                ) : null}
-              </p>
-              <dl className="admin-job-facts">
-                <div>
-                  <dt>Shop lookups waiting</dt>
-                  <dd>
-                    {
-                      jobs.data.imports.filter(
-                        (job) =>
-                          job.status === "pending" || job.status === "running",
-                      ).length
-                    }
-                  </dd>
-                </div>
-                <div>
-                  <dt>Updates waiting</dt>
-                  <dd>
-                    {
-                      jobs.data.notifications.filter(
-                        (job) => job.status === "pending",
-                      ).length
-                    }
-                  </dd>
-                </div>
-              </dl>
-            </section>
+              Retry administration settings
+            </button>
           </div>
         )}
-        {jobs.data && (
-          <>
-            <AdminJobFailures
-              title="Shop lookups needing attention"
-              jobs={jobs.data.imports.filter((j) => j.draftState === "active")}
-            />
-            <AdminJobFailures
-              title="Past shop lookup failures"
-              jobs={jobs.data.imports.filter((j) => j.draftState !== "active")}
-            />
-            <AdminJobFailures
-              title="Failed updates"
-              jobs={jobs.data.notifications}
-              retry={async (id) => {
-                await api("admin/jobs/retry", { id });
-                await client.invalidateQueries({ queryKey: ["admin-jobs"] });
-              }}
-            />
-          </>
-        )}
-      </section>
-      {settings.error && (
-        <div role="alert">
-          <p className="error">We could not load app settings. Try again.</p>
-          <button
-            className="button secondary"
-            onClick={() => settings.refetch()}
-          >
-            Retry administration settings
-          </button>
-        </div>
-      )}
+      </div>
     </section>
   );
 }

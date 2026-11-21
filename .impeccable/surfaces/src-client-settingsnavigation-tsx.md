@@ -10,6 +10,9 @@ related_targets:
     "src/client/AccountInvitations.tsx",
     "src/client/InvitationShare.tsx",
     "src/client/AdminUsage.tsx",
+    "src/client/AdminRoles.tsx",
+    "src/client/AdminGroupDetail.tsx",
+    "src/client/AdminAppointment.tsx",
   ]
 ---
 
@@ -52,3 +55,7 @@ Managers retains its divided section with a 17px/600 heading and 13px/550 field 
 Price diagnostics distinguish the dated latest run from seven-day history. Published and discarded import failures appear in history, apart from active drafts needing attention. The worker timestamp and counts refresh every 20 seconds while the page is visible. Preserve existing definition lists, 44px disclosures, theme colors and narrow-screen stacking.
 
 Personal Archive privacy sits 32px after Appearance with a compact checkbox row and an explicit Save/Discard form. A shared info popover beside the label holds the explanatory text, preserving 44px targets, keyboard access, and mobile wrapping. A global-requirement notice explains the current effective policy without disabling personal edits. Global administration says Require archive privacy for everyone; disabling it preserves personal hiding choices.
+
+Administration starts with App administrators and All family groups, followed by Users & profiles. Add administrator opens a name/email account search and explicit appointment confirmation. Existing administrators and managed profiles are excluded before pagination. Administrator rows show email and You; removal is contextual, with explanatory text for the final admin.
+
+All family groups is a compact searchable directory with owner, member and pending-request summaries and one Manage action. A focused group view hides other administration panels and offers Members, Invitations, Households and Settings. The adminGroup and adminTab URL parameters support direct links and history independently of ordinary family-group selection. Keep overview and visited group drafts mounted; Back restores search, page, focus and scroll. Use individual member-role actions, distinct app-admin labels, protected ownership, confirmation for removals, and focused household forms. Retain existing tokens, wrapping 44px navigation, light/dark contrast and native field styling.

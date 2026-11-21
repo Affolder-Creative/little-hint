@@ -2,8 +2,8 @@ import { peopleForGroup } from "../shared/group-events";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { sql } from "drizzle-orm";
-import type { Actor } from "../shared/model";
-import { readState, transact } from "./db";
+import type { Actor, Group } from "../shared/model";
+import { readState, transact, pool } from "./db";
 import { isAdmin, managedGroup } from "./domain-access";
 import {
   checkRevision,
@@ -24,11 +24,14 @@ export function registerAdminRoles(
       s = await readState();
     if (!isAdmin(s, a)) fail(403, "Administration access is required.");
     reply.header("Cache-Control", "no-store");
+    const accounts = await pool.query('SELECT id,email FROM "user"');
+    const emails = new Map(accounts.rows.map((u) => [u.id, u.email]));
     return s.people
       .filter((p) => p.userId && p.admin && !p.mergedIntoId)
       .map((p) => ({
         id: p.id,
         userId: p.userId!,
+        email: emails.get(p.userId!),
         name: p.name,
         revision: p.revision,
       }));
@@ -77,45 +80,24 @@ export function registerAdminRoles(
       .sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id));
     return {
       total: rows.length,
-      rows: rows.slice((q.page - 1) * 24, q.page * 24).map((g) => ({
-        ...g,
-        canAdminister: true,
-        households: s.households.filter((h) => h.groupId === g.id),
-        people: peopleForGroup(s.people, g).map((p) => ({
-          id: p.id,
-          name: p.name,
-          revision: p.revision,
-          householdIds: s.householdMemberships
-            .filter(
-              (m) =>
-                m.personId === p.id &&
-                s.households.some(
-                  (h) => h.id === m.householdId && h.groupId === g.id,
-                ),
-            )
-            .map((m) => m.householdId),
-        })),
-        invitations: s.invitations
-          .filter(
-            (i) =>
-              i.groupId === g.id &&
-              !i.acceptedBy &&
-              !i.revoked &&
-              !i.declined &&
-              Date.parse(i.expiresAt) > Date.now(),
-          )
-          .map((i) => ({ id: i.id, email: i.email })),
-        requests: s.groupInviteRequests
-          .filter((r) => r.groupId === g.id && r.status === "pending")
-          .map((r) => ({ id: r.id, email: r.email })),
-        members: g.memberIds.map((userId) => ({
-          userId,
-          name:
-            s.people.find((p) => p.userId === userId)?.name ?? "Former member",
-        })),
-      })),
+      rows: rows
+        .slice((q.page - 1) * 24, q.page * 24)
+        .map((g) => directoryGroup(s, g)),
     };
   });
+  app.get<{ Params: { id: string } }>(
+    "/api/v1/admin/groups/:id",
+    async (req, reply) => {
+      const a = await actor(req),
+        s = await readState();
+      if (!isAdmin(s, a)) fail(403, "Administration access is required.");
+      reply.header("Cache-Control", "no-store");
+      const g =
+        s.groups.find((g) => g.id === req.params.id) ??
+        fail(404, "Family group not found.");
+      return directoryGroup(s, g);
+    },
+  );
   app.post("/api/v1/groups/admins", async (req) => {
     const a = await actor(req),
       b = z
@@ -167,4 +149,46 @@ export function registerAdminRoles(
       return { ok: true };
     });
   });
+}
+
+function directoryGroup(s: Awaited<ReturnType<typeof readState>>, g: Group) {
+  return {
+    ...g,
+    canAdminister: true,
+    households: s.households.filter((h) => h.groupId === g.id),
+    people: peopleForGroup(s.people, g).map((p) => ({
+      id: p.id,
+      name: p.name,
+      revision: p.revision,
+      householdIds: s.householdMemberships
+        .filter(
+          (m) =>
+            m.personId === p.id &&
+            s.households.some(
+              (h) => h.id === m.householdId && h.groupId === g.id,
+            ),
+        )
+        .map((m) => m.householdId),
+    })),
+    invitations: s.invitations
+      .filter(
+        (i) =>
+          i.groupId === g.id &&
+          !i.acceptedBy &&
+          !i.revoked &&
+          !i.declined &&
+          Date.parse(i.expiresAt) > Date.now(),
+      )
+      .map((i) => ({ id: i.id, email: i.email })),
+    requests: s.groupInviteRequests
+      .filter((r) => r.groupId === g.id && r.status === "pending")
+      .map((r) => ({ id: r.id, email: r.email })),
+    members: g.memberIds.map((userId) => ({
+      userId,
+      admin: s.people.some(
+        (p) => p.userId === userId && p.admin && !p.mergedIntoId,
+      ),
+      name: s.people.find((p) => p.userId === userId)?.name ?? "Former member",
+    })),
+  };
 }
