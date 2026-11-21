@@ -421,3 +421,306 @@ test("schema 13 permits only derived admin fields and retains privacy evidence",
     assert.throws(() => assertPreserved(changed, baseline));
   }
 });
+
+function shoppingUpgradeFixture(legacy = false) {
+  const baseline = structuredClone(original);
+  baseline.schemaVersion = 13;
+  const item = {
+    id: "gift",
+    title: "Jacket",
+    url: "https://www.shop.test/jacket?size=M",
+    priceCents: 12000,
+    recipientIds: ["recipient"],
+    pricing: {
+      baseline: 15000,
+      baselineLabel: "when tracking started",
+      generation: "original-watch-generation",
+      status: "verified",
+      checkedAt: "2026-11-19T00:00:00.000Z",
+      paused: true,
+    },
+  };
+  if (legacy)
+    item.purchaseOffers = [
+      {
+        url: item.url + "&utm_source=duplicate",
+        retailer: "Duplicate",
+        priceCents: 1,
+      },
+      {
+        url: "https://rei.test/jacket?size=M",
+        retailer: "REI",
+        priceCents: 10000,
+        checkedAt: "2026-11-18T00:00:00.000Z",
+        identity: { obsolete: true },
+      },
+      {
+        url: "https://rei.test/jacket?size=M&utm_source=duplicate",
+        retailer: "Duplicate",
+        priceCents: 2,
+      },
+      {
+        url: "https://rei.test/jacket?size=L",
+        retailer: "REI large",
+        priceCents: 11000,
+        checkedAt: "2026-11-17T00:00:00.000Z",
+      },
+    ];
+  baseline.records = [
+    { kind: "items", id: "gift", data: item },
+    {
+      kind: "items",
+      id: "unlinked",
+      data: { id: "unlinked", url: "", priceCents: null },
+    },
+    {
+      kind: "priceWatches",
+      id: "watch",
+      data: {
+        id: "watch",
+        itemId: "gift",
+        userId: "buyer",
+        generation: item.pricing.generation,
+        lastNotifiedPrice: 15000,
+      },
+    },
+    {
+      kind: "priceChanges",
+      id: "history",
+      data: {
+        id: "history",
+        itemId: "gift",
+        oldPriceCents: 15000,
+        priceCents: 12000,
+      },
+    },
+  ];
+  baseline.views = {
+    recipient: {
+      items: [{ ...structuredClone(item), isRecipient: true, canEdit: false }],
+    },
+    buyer: {
+      buying: [
+        {
+          id: "plan",
+          purchased: 1,
+          item: {
+            ...structuredClone(item),
+            isRecipient: false,
+            reservations: [{ id: "plan", buyerId: "buyer", quantity: 1 }],
+          },
+        },
+      ],
+    },
+  };
+  const candidate = structuredClone(baseline);
+  candidate.schemaVersion = 14;
+  const migrated = candidate.records[0].data;
+  migrated.shoppingOffers = [
+    {
+      id: "gift:primary",
+      url: item.url,
+      label: "shop.test",
+      priceCents: 12000,
+      pricing: structuredClone(item.pricing),
+    },
+  ];
+  migrated.primaryOfferId = "gift:primary";
+  if (legacy) {
+    for (const [index, old] of [
+      item.purchaseOffers[1],
+      item.purchaseOffers[3],
+    ].entries())
+      migrated.shoppingOffers.push({
+        id: `00000000-0000-4000-8000-00000000000${index + 1}`,
+        url: old.url,
+        label: old.retailer,
+        priceCents: old.priceCents,
+        pricing: {
+          baseline: old.priceCents,
+          baselineLabel: "when tracking started",
+          generation: `00000000-0000-4000-8000-00000000000${index + 3}`,
+          checkedAt: old.checkedAt,
+          status: "verified",
+        },
+      });
+    migrated.pricing.generation = "00000000-0000-4000-8000-000000000005";
+    delete migrated.purchaseOffers;
+  }
+  candidate.records[1].data.shoppingOffers = [];
+  for (const view of [
+    candidate.views.recipient.items[0],
+    candidate.views.buyer.buying[0].item,
+  ]) {
+    view.shoppingOffers = structuredClone(migrated.shoppingOffers);
+    view.primaryOfferId = migrated.primaryOfferId;
+    view.pricing = structuredClone(migrated.pricing);
+    delete view.purchaseOffers;
+  }
+  return { baseline, candidate };
+}
+
+test("schema 14 preserves primary URLs, prices, tracking, and unlinked items", () => {
+  const { baseline, candidate } = shoppingUpgradeFixture();
+  assertPreserved(candidate, baseline);
+  assertPreserved(baseline, baseline); // Recovery restores the released snapshot.
+  assertPreserved(candidate, candidate); // Subsequent boots preserve exact IDs.
+  for (const corrupt of [
+    (v) => {
+      delete v.records[1].data.shoppingOffers;
+    },
+    (v) => {
+      v.records[0].data.url = "https://wrong.test/";
+    },
+    (v) => {
+      v.records[0].data.priceCents++;
+    },
+    (v) => {
+      v.records[0].data.shoppingOffers[0].priceCents++;
+    },
+    (v) => {
+      v.records[0].data.shoppingOffers[0].pricing.paused = false;
+    },
+    (v) => {
+      v.records[0].data.pricing.generation = "changed";
+    },
+    (v) => {
+      v.records[0].data.primaryOfferId = "wrong";
+    },
+    (v) => {
+      v.views.recipient.items[0].shoppingOffers[0].url = "https://wrong.test/";
+    },
+    (v) => {
+      v.views.recipient.items[0].reservations = [{ buyerId: "private" }];
+    },
+    (v) => {
+      v.views.buyer.buying[0].purchased = 0;
+    },
+    (v) => {
+      v.records[2].data.lastNotifiedPrice++;
+    },
+    (v) => {
+      v.records[3].data.priceCents++;
+    },
+  ]) {
+    const changed = structuredClone(candidate);
+    corrupt(changed);
+    assert.throws(() => assertPreserved(changed, baseline));
+  }
+});
+
+test("schema 14 migrates legacy offers with fresh bound UUIDs and distinct variants", () => {
+  const { baseline, candidate } = shoppingUpgradeFixture(true);
+  assertPreserved(candidate, baseline);
+  assertPreserved(baseline, baseline);
+  assertPreserved(candidate, candidate);
+  for (const corrupt of [
+    (v) => {
+      v.records[0].data.shoppingOffers.pop();
+    },
+    (v) => {
+      v.records[0].data.shoppingOffers.push(
+        structuredClone(v.records[0].data.shoppingOffers[1]),
+      );
+    },
+    (v) => {
+      v.records[0].data.shoppingOffers[1].id = "not-a-uuid";
+    },
+    (v) => {
+      v.records[0].data.shoppingOffers[1].pricing.generation =
+        v.records[0].data.shoppingOffers[1].id;
+    },
+    (v) => {
+      v.records[0].data.shoppingOffers[1].pricing.checkedAt =
+        "2026-11-20T00:00:00.000Z";
+    },
+    (v) => {
+      v.records[0].data.shoppingOffers[1].priceCents++;
+    },
+    (v) => {
+      v.records[0].data.shoppingOffers[1].pricing.identity = { obsolete: true };
+    },
+    (v) => {
+      v.records[0].data.pricing.generation =
+        baseline.records[0].data.pricing.generation;
+    },
+    (v) => {
+      v.records[0].data.shoppingOffers[0].pricing.generation =
+        v.records[0].data.pricing.generation;
+    },
+    (v) => {
+      v.records[0].data.shoppingOffers[1].id =
+        "00000000-0000-4000-8000-000000000099";
+    }, // Persisted/view ID mismatch.
+    (v) => {
+      v.records[2].data.generation = v.records[0].data.pricing.generation;
+    }, // Watch must re-baseline on its next check.
+    (v) => {
+      v.views.recipient.items[0].purchaseOffers =
+        baseline.records[0].data.purchaseOffers;
+    },
+  ]) {
+    const changed = structuredClone(candidate);
+    corrupt(changed);
+    assert.throws(() => assertPreserved(changed, baseline));
+  }
+  const recreated = structuredClone(candidate);
+  recreated.records[0].data.shoppingOffers[1].id =
+    "00000000-0000-4000-8000-000000000099";
+  assert.throws(() => assertPreserved(recreated, candidate));
+});
+
+test("schema 14 invalidates only unfinished legacy price jobs and retains their targets", () => {
+  const { baseline, candidate } = shoppingUpgradeFixture();
+  for (const status of ["pending", "running", "complete", "failed"]) {
+    const row = {
+      kind: "priceChecks",
+      id: status,
+      data: {
+        id: status,
+        status,
+        itemId: "gift",
+        url: baseline.records[0].data.url,
+        generation: "original-watch-generation",
+        token: "lease-token",
+        leaseUntil: "later",
+        requestedBy: "buyer",
+        outcome: "verified",
+      },
+    };
+    baseline.records.push(row);
+    const migrated = structuredClone(row);
+    if (["pending", "running"].includes(status)) {
+      delete migrated.data.token;
+      delete migrated.data.leaseUntil;
+      Object.assign(migrated.data, {
+        status: "failed",
+        outcome: "skipped",
+        error: "Superseded by shopping-offer migration.",
+      });
+    }
+    candidate.records.push(migrated);
+  }
+  assertPreserved(candidate, baseline);
+  for (const corrupt of [
+    (v) => {
+      v.records[4].data.token = "lease-token";
+    },
+    (v) => {
+      v.records[5].data.status = "running";
+    },
+    (v) => {
+      delete v.records[5].data.requestedBy;
+    },
+    (v) => {
+      v.records[6].data.status = "failed";
+    },
+    (v) => {
+      delete v.records[7].data.token;
+    },
+  ]) {
+    const changed = structuredClone(candidate);
+    corrupt(changed);
+    assert.throws(() => assertPreserved(changed, baseline));
+  }
+});

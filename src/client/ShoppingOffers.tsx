@@ -65,10 +65,15 @@ export function ShoppingLinks({ gift }: { gift: GiftView }) {
               </a>
               {offer.note && <p>{offer.note}</p>}
               <small>
-                {offer.pricing?.checkedAt
-                  ? `${freshOffer(offer) ? "Checked" : "Last verified"} ${formatDateTime(offer.pricing.checkedAt)}`
-                  : "Price not yet checked"}
-                {offer.id === gift.primaryOfferId ? " · Primary link" : ""}
+                {(gift.priceCents !== null || offer.priceCents !== null) && (
+                  <>
+                    {offer.pricing?.checkedAt
+                      ? `${freshOffer(offer) ? "Checked" : "Last verified"} ${formatDateTime(offer.pricing.checkedAt)}`
+                      : "Price not yet checked"}
+                    {offer.id === gift.primaryOfferId ? " · " : ""}
+                  </>
+                )}
+                {offer.id === gift.primaryOfferId ? "Primary link" : ""}
               </small>
             </div>
             <div className="shopping-offer-price">
