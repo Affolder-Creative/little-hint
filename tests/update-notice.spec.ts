@@ -102,3 +102,27 @@ test("first installation does not announce an app update", async ({ page }) => {
   await expect(page.getByLabel("Email address", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Update now" })).toHaveCount(0);
 });
+
+for (const width of [320, 393, 852, 1440]) {
+  test(`update banner centers its controls at ${width}px`, async ({
+    page,
+  }, info) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/");
+    await expect(
+      page.getByRole("button", { name: "Update now" }),
+    ).toBeVisible();
+    const banner = (await page.locator(".update-banner").boundingBox())!;
+    const content = (await page
+      .locator(".update-banner-content")
+      .boundingBox())!;
+    expect(
+      Math.abs(content.x + content.width / 2 - (banner.x + banner.width / 2)),
+    ).toBeLessThan(1);
+    expect(content.x).toBeGreaterThanOrEqual(banner.x);
+    expect(content.x + content.width).toBeLessThanOrEqual(
+      banner.x + banner.width,
+    );
+    await page.screenshot({ path: info.outputPath("update-banner.png") });
+  });
+}

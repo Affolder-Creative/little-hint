@@ -247,6 +247,7 @@ try {
   await expect(
     page.getByText("Split between recipients", { exact: true }),
   ).toHaveCount(0);
+  await expect(page.locator(".spending-allocation-row > p")).toHaveCount(0);
   await page.screenshot({
     path: out + "/edit-single-desktop.png",
   });
@@ -589,7 +590,12 @@ try {
   await page
     .getByLabel("Total paid in USD, optional", { exact: true })
     .fill("120");
-  await expect(page.locator(".spending-allocations")).toContainText("$80");
+  await expect(page.locator(".spending-allocations")).toContainText(
+    "Jamie's share: 66.67% · $80",
+  );
+  await expect(page.locator(".spending-allocations")).not.toContainText(
+    "Estimated",
+  );
   await page
     .getByLabel("Total paid in USD, optional", { exact: true })
     .fill("90");
@@ -905,7 +911,9 @@ try {
     .selectOption("custom");
   await page.getByLabel("Jamie's share", { exact: true }).fill("3");
   await page.getByLabel("Emma's share", { exact: true }).fill("2");
-  await expect(page.locator(".spending-allocations")).toContainText("$60");
+  await expect(page.locator(".spending-allocations")).toContainText(
+    "Jamie's share: 60% · estimated $60",
+  );
   for (const theme of ["light", "dark"]) {
     await page.evaluate(
       (theme) => (document.documentElement.dataset.theme = theme),

@@ -294,3 +294,48 @@ describe("recipient spending allocations", () => {
     expect(scopedCents(r, { list: f.lists[1].id })).toBe(4000);
   });
 });
+
+it("saves published idea details after allocation key order and display metadata change", () => {
+  const f = setup();
+  const saved = f.run("items.create", {
+    title: "Editable idea",
+    description: "Before",
+    recipientIds: f.ids,
+    visibility: "private",
+    spendingAllocations: f.allocations,
+  }) as Item;
+  const item = f.s.items.find((i) => i.id === saved.id)!;
+  item.spendingAllocations = item.spendingAllocations!.map(
+    (v) => Object.fromEntries(Object.entries(v).reverse()) as typeof v,
+  );
+  f.s.lists[0].name = "Renamed list";
+  const assignments = structuredClone(item.spendingAllocations);
+  f.run("items.update", {
+    ...item,
+    description: "After",
+    spendingListId: null,
+  });
+  expect(item.description).toBe("After");
+  expect(item.spendingAllocations).toEqual(assignments);
+});
+
+it("preserves legacy defaults during unchanged allocation resubmission", () => {
+  const f = setup();
+  const saved = f.run("items.create", {
+    title: "Legacy idea",
+    recipientIds: [f.ids[0]],
+    visibility: "private",
+    spendingListId: f.lists[0].id,
+  }) as Item;
+  const item = f.s.items.find((i) => i.id === saved.id)!;
+  f.run("items.update", {
+    ...item,
+    description: "Updated",
+    spendingListId: null,
+    spendingAllocations: [
+      { recipientId: f.ids[0], share: 1, listId: f.lists[0].id },
+    ],
+  });
+  expect(item.spendingListId).toBe(f.lists[0].id);
+  expect(item.spendingAllocations).toBeUndefined();
+});

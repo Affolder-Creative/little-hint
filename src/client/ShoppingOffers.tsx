@@ -236,18 +236,26 @@ export function ProductsEditor({
   products: ProductInput[];
   onChange: (products: ProductInput[]) => void;
 }) {
+  const multiple = products.length > 1;
   const update = (index: number, fields: Partial<ProductInput>) =>
     onChange(products.map((p, i) => (i === index ? { ...p, ...fields } : p)));
   return (
-    <section className="products-editor" aria-label="Products in this set">
-      <h3>Products in this set</h3>
-      <p className="muted">
-        Each product can be reserved separately. Shop links within a product are
-        places to buy that same product.
-      </p>
+    <section
+      className={`products-editor${multiple ? "" : " single-product"}`}
+      aria-label={multiple ? "Products in this set" : "Product details"}
+    >
+      {multiple && (
+        <>
+          <h3>Products in this set</h3>
+          <p className="muted">
+            Each product can be reserved separately. Shop links within a product
+            are places to buy that same product.
+          </p>
+        </>
+      )}
       {products.map((product, index) => (
         <fieldset className="product-editor" key={product.id ?? index}>
-          <legend>Product {index + 1}</legend>
+          {multiple && <legend>Product {index + 1}</legend>}
           <Field label="Product name">
             <input
               required
@@ -310,45 +318,52 @@ export function ProductsEditor({
               })
             }
           />
-          <div className="offer-actions">
-            <button
-              type="button"
-              className="text-button"
-              disabled={index === 0}
-              aria-label={`Move product ${index + 1} up`}
-              onClick={() => {
-                const next = [...products];
-                [next[index - 1], next[index]] = [next[index], next[index - 1]];
-                onChange(next);
-              }}
-            >
-              <ArrowUp size={16} />
-              Move up
-            </button>
-            <button
-              type="button"
-              className="text-button"
-              disabled={index === products.length - 1}
-              aria-label={`Move product ${index + 1} down`}
-              onClick={() => {
-                const next = [...products];
-                [next[index + 1], next[index]] = [next[index], next[index + 1]];
-                onChange(next);
-              }}
-            >
-              <ArrowDown size={16} />
-              Move down
-            </button>
-            <button
-              type="button"
-              className="text-button danger"
-              disabled={products.length === 1}
-              onClick={() => onChange(products.filter((_, i) => i !== index))}
-            >
-              <Trash2 size={16} />
-              Remove product
-            </button>
-          </div>
+          {multiple && (
+            <div className="offer-actions">
+              <button
+                type="button"
+                className="text-button"
+                disabled={index === 0}
+                aria-label={`Move product ${index + 1} up`}
+                onClick={() => {
+                  const next = [...products];
+                  [next[index - 1], next[index]] = [
+                    next[index],
+                    next[index - 1],
+                  ];
+                  onChange(next);
+                }}
+              >
+                <ArrowUp size={16} />
+                Move up
+              </button>
+              <button
+                type="button"
+                className="text-button"
+                disabled={index === products.length - 1}
+                aria-label={`Move product ${index + 1} down`}
+                onClick={() => {
+                  const next = [...products];
+                  [next[index + 1], next[index]] = [
+                    next[index],
+                    next[index + 1],
+                  ];
+                  onChange(next);
+                }}
+              >
+                <ArrowDown size={16} />
+                Move down
+              </button>
+              <button
+                type="button"
+                className="text-button danger"
+                onClick={() => onChange(products.filter((_, i) => i !== index))}
+              >
+                <Trash2 size={16} />
+                Remove product
+              </button>
+            </div>
+          )}
         </fieldset>
       ))}
       <button

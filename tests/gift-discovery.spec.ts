@@ -666,6 +666,10 @@ test("new-account deep links open directly and preference setup remains availabl
   ).toBeVisible();
   await expect(page.locator(".gift-preference-prompt")).toBeVisible();
   await page.goto("/settings?section=profile");
+  await page
+    .locator(".profile-setting-row")
+    .getByLabel(`Actions for ${f.people[0].name}`, { exact: true })
+    .click();
   await page.getByRole("button", { name: /^Edit profile/ }).click();
   await page
     .getByRole("tab", { name: "Gift preferences", exact: true })
@@ -824,9 +828,7 @@ test("discovery titles follow delayed content, failures, retries, and navigation
 
   fail = true;
   await page.reload();
-  await expect(page).toHaveTitle(
-    "This page is unavailable · Little Hint",
-  );
+  await expect(page).toHaveTitle("This page is unavailable · Little Hint");
   fail = false;
   await page.getByRole("button", { name: "Retry", exact: true }).click();
   await expect(page).toHaveTitle(

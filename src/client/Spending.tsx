@@ -376,6 +376,7 @@ export function RecordForm({
       )}
       {r.canAssignList && (
         <SpendingAllocations
+          amountKind={r.kind === "plan" ? "estimate" : "payment"}
           value={allocations}
           onChange={setAllocations}
           amountCents={previewAmount}

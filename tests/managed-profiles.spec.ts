@@ -153,13 +153,25 @@ for (const [width, theme] of [
       });
     };
     await page.goto("/settings?section=profile");
-    await expect(
-      page.getByRole("button", { name: `Edit profile for ${f.child.name}` }),
-    ).toBeVisible();
+    const profileActions = page
+      .locator(".profile-setting-row")
+      .getByLabel(`Actions for ${f.child.name}`, { exact: true });
+    await expect(profileActions).toBeVisible();
     await expect(
       page.getByText("Take over this profile:", { exact: false }),
     ).toHaveCount(0);
     await capture("profiles");
+    await profileActions.click();
+    await expect(
+      page.getByRole("button", {
+        name: `Gift preferences for ${f.child.name}`,
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Invite to take over", exact: true }),
+    ).toBeVisible();
+    await capture("profile-actions");
     await page
       .getByRole("button", { name: `Edit profile for ${f.child.name}` })
       .click();

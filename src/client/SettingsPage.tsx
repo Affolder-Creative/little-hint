@@ -1,3 +1,4 @@
+import { Gift } from "lucide-react";
 import { AdminGroupDetail } from "./AdminGroupDetail";
 import {
   AppAdministrators,
@@ -28,7 +29,7 @@ import type { AdminServiceStatus } from "../shared/admin-services";
 import { AdminUsage } from "./AdminUsage";
 import { KyleSignature } from "./KyleSignature";
 import { AccountEmail } from "./AccountEmail";
-import { ProfileEditor, GiftPreferencesShortcut } from "./ProfileEditor";
+import { ProfileEditor } from "./ProfileEditor";
 import {
   FollowButton,
   NotificationTopics,
@@ -196,54 +197,71 @@ export default function SettingsPage({
                 <div>
                   <strong>{p.name}</strong>
                   <p>{p.userId ? "Your account" : "Managed profile"}</p>
-                  <GiftPreferencesShortcut personId={p.id} name={p.name} />
                 </div>
                 <div className="profile-setting-actions">
-                  <button
-                    className="button secondary"
-                    aria-label={`Edit profile for ${p.name}`}
-                    onClick={() =>
-                      open("Edit profile", <ProfileEditor personId={p.id} />)
-                    }
-                  >
-                    Edit profile
-                  </button>
-                  {!p.userId &&
-                    (p.managedOwnerId ?? p.guardians[0]) === world.me.id && (
-                      <button
-                        className="text-button"
-                        onClick={() =>
-                          open(
-                            "Let them manage their profile",
-                            <Form
-                              submit="Invite to take over"
-                              onSubmit={async (f) => {
-                                await mutate("people/link", {
-                                  id: p.id,
-                                  email: value(f, "email"),
-                                });
-                                close();
-                                toast(
-                                  "Invitation ready. They can accept it in Settings after signing in.",
-                                );
-                              }}
-                            >
-                              <Field label="Email they use to sign in">
-                                <input type="email" name="email" required />
-                              </Field>
-                              <p>
-                                They must verify this email and accept in
-                                Settings. You will stop managing their profile
-                                when they accept. Invite them to the family
-                                group separately if needed.
-                              </p>
-                            </Form>,
-                          )
-                        }
-                      >
-                        Invite to take over
-                      </button>
-                    )}
+                  <ActionMenu name={p.name} label="Actions">
+                    <button
+                      className="button secondary"
+                      aria-label={`Edit profile for ${p.name}`}
+                      onClick={() =>
+                        open("Edit profile", <ProfileEditor personId={p.id} />)
+                      }
+                    >
+                      <Pencil size={16} aria-hidden="true" /> Edit profile
+                    </button>
+                    <button
+                      className="text-button"
+                      aria-label={`Gift preferences for ${p.name}`}
+                      onClick={() =>
+                        open(
+                          "Edit profile",
+                          <ProfileEditor
+                            personId={p.id}
+                            initialTab="preferences"
+                          />,
+                        )
+                      }
+                    >
+                      <Gift size={16} aria-hidden="true" /> Gift preferences
+                    </button>
+                    {!p.userId &&
+                      (p.managedOwnerId ?? p.guardians[0]) === world.me.id && (
+                        <button
+                          className="text-button"
+                          onClick={() =>
+                            open(
+                              "Let them manage their profile",
+                              <Form
+                                submit="Invite to take over"
+                                onSubmit={async (f) => {
+                                  await mutate("people/link", {
+                                    id: p.id,
+                                    email: value(f, "email"),
+                                  });
+                                  close();
+                                  toast(
+                                    "Invitation ready. They can accept it in Settings after signing in.",
+                                  );
+                                }}
+                              >
+                                <Field label="Email they use to sign in">
+                                  <input type="email" name="email" required />
+                                </Field>
+                                <p>
+                                  They must verify this email and accept in
+                                  Settings. You will stop managing their profile
+                                  when they accept. Invite them to the family
+                                  group separately if needed.
+                                </p>
+                              </Form>,
+                            )
+                          }
+                        >
+                          <Mail size={16} aria-hidden="true" /> Invite to take
+                          over
+                        </button>
+                      )}
+                  </ActionMenu>
                 </div>
               </div>
             ))}

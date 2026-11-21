@@ -21,7 +21,13 @@ import AxeBuilder from "@axe-core/playwright";
 import { stagingFixtures } from "../src/server/staging-fixtures";
 import { world } from "../src/server/domain";
 import { commandWithAudience as command } from "./discussion-command";
-import { emptyState, type List, type Group } from "../src/shared/model";
+import {
+  emptyState,
+  type List,
+  type Group,
+  type Person,
+  type Item,
+} from "../src/shared/model";
 import { discoveryConfig } from "./gift-discovery-fixture";
 import { smsInfo } from "../src/server/sms-provider";
 
@@ -1123,7 +1129,10 @@ test("secondary actions retain 44px touch targets on phones and desktop", async 
       ["/buying", ".entry-actions > summary"],
       [`/gift/${gift.id}`, ".back-link"],
       ["/exchanges", ".assignments a"],
-      ["/settings?section=profile", 'button[aria-label^="Edit profile"]'],
+      [
+        "/settings?section=profile",
+        ".profile-setting-row .entry-actions > summary",
+      ],
     ]) {
       await page.goto(route);
       await expect(page.locator("main h1")).toBeVisible();
@@ -1134,6 +1143,18 @@ test("secondary actions retain 44px touch targets on phones and desktop", async 
         const box = await target.boundingBox();
         expect(box!.height).toBeGreaterThanOrEqual(44);
         expect(box!.width).toBeGreaterThanOrEqual(44);
+      }
+      if (route.startsWith("/settings")) {
+        await targets.first().click();
+        const options = page
+          .locator(".profile-setting-row .entry-actions-content button")
+          .filter({ visible: true });
+        await expect(options.first()).toBeVisible();
+        for (const option of await options.all()) {
+          const box = (await option.boundingBox())!;
+          expect(box.height).toBeGreaterThanOrEqual(44);
+          expect(box.width).toBeGreaterThanOrEqual(44);
+        }
       }
       expect(
         await page.evaluate(
@@ -3062,7 +3083,7 @@ test("idea audience controls match the saved privacy choice", async ({
   await audience.selectOption("visible");
   await expect(
     page.getByText(
-      "Visible to you, members of Morgan family, all recipients.",
+      "Visible to you and members of Morgan family. Recipients can see this idea.",
       { exact: true },
     ),
   ).toBeVisible();
@@ -3089,6 +3110,45 @@ test("idea audience controls match the saved privacy choice", async ({
   expect(
     world(state, actors[2]).items.some((item) => item.id === idea.id),
   ).toBe(false);
+});
+
+test("idea exceptions name excluded people and expand without changing privacy", async ({
+  page,
+}, info) => {
+  const { state, actor, actors } = await preview(page);
+  const recipient = rawCommand(state, actor, "people.create", {
+    name: "Young Morgan",
+    managedGroupIds: [state.groups[0].id],
+  }) as Person;
+  const idea = command(state, actor, "items.create", {
+    title: "A surprise with exceptions",
+    recipientIds: [recipient.id],
+    visibility: "restricted",
+    groupIds: state.groups.map((g) => g.id),
+    excludedUserIds: actors.slice(1).map((a) => a.id),
+  }) as Item;
+  await page.setViewportSize({ width: 393, height: 900 });
+  await page.goto(`/gift/${idea.id}`);
+  await page
+    .getByRole("button", { name: "Edit gift idea", exact: true })
+    .click();
+  const summary = page
+    .getByRole("status")
+    .filter({ hasText: "Hidden from all recipients" });
+  await expect(summary).toContainText("Sam Morgan, Jamie Chen, Riley Morgan");
+  await expect(summary).not.toContainText("Taylor Reed");
+  const more = summary.getByRole("button", { name: "and 1 more", exact: true });
+  await expect(more).toHaveAttribute("aria-expanded", "false");
+  await more.click();
+  await expect(summary).toContainText("Taylor Reed");
+  await expect(
+    summary.getByRole("button", { name: "Show fewer" }),
+  ).toHaveAttribute("aria-expanded", "true");
+  await summary.scrollIntoViewIfNeeded();
+  await page.screenshot({ path: info.outputPath("named-exceptions.png") });
+  await summary.getByRole("button", { name: "Show fewer" }).click();
+  await expect(summary).not.toContainText("Taylor Reed");
+  expect(idea.excludedUserIds).toEqual(actors.slice(1).map((a) => a.id));
 });
 
 test("gift availability keeps personal reservations and their next action in view", async ({
@@ -6468,3 +6528,81 @@ test("app admins can create exchanges in their groups without an event-leader ro
       .locator("option"),
   ).toHaveCount(2);
 });
+
+for (const idea of [false, true]) {
+  test(`single remaining product has no set controls for ${idea ? "ideas" : "items"}`, async ({
+    page,
+  }, info) => {
+    const { state, actor, actors } = await preview(page);
+    await page.setViewportSize({ width: 393, height: 900 });
+    const recipient = state.people.find(
+      (p) => p.userId === (idea ? actors[1].id : actor.id),
+    )!;
+    const list = state.lists.find((l) => l.ownerIds.includes(recipient.id))!;
+    await page.goto(idea ? `/people/${recipient.id}` : `/lists/${list.id}`);
+    await page
+      .getByRole("button", {
+        name: idea ? "Add gift idea" : "Add item",
+        exact: true,
+      })
+      .last()
+      .click();
+    await page
+      .getByLabel(idea ? "Gift idea name" : "Item name", { exact: true })
+      .fill("A useful gift");
+    await page
+      .getByRole("button", { name: "Add another product", exact: true })
+      .click();
+    await page
+      .getByLabel("Product note (optional)")
+      .first()
+      .fill("Keep this note");
+    await page
+      .getByLabel("Price in USD", { exact: true })
+      .first()
+      .fill("24.50");
+    await page
+      .getByRole("button", { name: "Add shop link", exact: true })
+      .first()
+      .click();
+    await page
+      .getByLabel("Shop 1 link", { exact: true })
+      .fill("https://shop.example/gift");
+    await page
+      .getByRole("button", { name: "Remove product", exact: true })
+      .last()
+      .click();
+    await expect(
+      page.getByRole("button", { name: /Move product/ }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: "Remove product", exact: true }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole("heading", { name: "Products in this set", exact: true }),
+    ).toHaveCount(0);
+    await expect(page.locator(".product-editor legend")).toHaveCount(0);
+    await expect(page.getByLabel("Product note (optional)")).toHaveValue(
+      "Keep this note",
+    );
+    await expect(page.getByLabel("Price in USD", { exact: true })).toHaveValue(
+      "24.50",
+    );
+    await expect(page.getByLabel("Shop 1 link", { exact: true })).toHaveValue(
+      "https://shop.example/gift",
+    );
+    await page
+      .getByRole("button", { name: "Add another product", exact: true })
+      .scrollIntoViewIfNeeded();
+    await page.screenshot({ path: info.outputPath("single-product.png") });
+    await page
+      .getByRole("button", { name: "Add another product", exact: true })
+      .click();
+    await expect(
+      page.getByRole("group", { name: "Product 2", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByLabel("Product note (optional)").first(),
+    ).toHaveValue("Keep this note");
+  });
+}

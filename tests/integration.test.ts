@@ -72,6 +72,36 @@ describe.skipIf(!url)("PostgreSQL transaction integrity", () => {
   afterAll(async () => {
     await storage?.pool.end();
   });
+  it("saves idea descriptions after a PostgreSQL JSONB round trip", async () => {
+    let ideaId: string;
+    await storage.transact((s) => {
+      command(s, b, "spending.settings", { enabled: true, summaries: true });
+      const list = s.lists.find((l) => l.id === listId)!;
+      const idea = command(s, b, "items.create", {
+        title: "JSONB edit regression",
+        recipientIds: list.ownerIds,
+        visibility: "private",
+        spendingAllocations: list.ownerIds.map((recipientId) => ({
+          recipientId,
+          share: 1,
+          listId,
+        })),
+      }) as { id: string };
+      ideaId = idea.id;
+    });
+    await storage.transact((s) => {
+      const idea = s.items.find((i) => i.id === ideaId)!;
+      command(s, b, "items.update", {
+        ...idea,
+        description: "Saved after reload",
+        spendingListId: null,
+      });
+    });
+    expect(
+      (await storage.readState()).items.find((i) => i.id === ideaId!)
+        ?.description,
+    ).toBe("Saved after reload");
+  });
   it("reads only the account's buying records and records transaction timings", async () => {
     const { databaseMetrics } = await import("../src/server/metrics");
     const before = databaseMetrics.transactions.snapshot().count;

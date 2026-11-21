@@ -315,18 +315,20 @@ export function UpdateNotice() {
   }, []);
   return available ? (
     <div className="update-banner" role="status">
-      <RefreshCw size={17} />
-      <span>{message || "A new version of Little Hint is ready."}</span>
-      <button disabled={busy} onClick={() => request.current()}>
-        {busy ? "Updating…" : "Update now"}
-      </button>
-      <button
-        disabled={busy}
-        aria-label="Dismiss update"
-        onClick={() => setAvailable(false)}
-      >
-        <X size={16} />
-      </button>
+      <div className="update-banner-content">
+        <RefreshCw size={17} />
+        <span>{message || "A new version of Little Hint is ready."}</span>
+        <button disabled={busy} onClick={() => request.current()}>
+          {busy ? "Updating…" : "Update now"}
+        </button>
+        <button
+          disabled={busy}
+          aria-label="Dismiss update"
+          onClick={() => setAvailable(false)}
+        >
+          <X size={16} />
+        </button>
+      </div>
     </div>
   ) : null;
 }

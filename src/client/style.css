@@ -2196,7 +2196,7 @@ main {
   }
   .update-banner {
     bottom: var(--mobile-nav-height);
-    justify-content: flex-start;
+    justify-content: center;
   }
   .page-heading {
     margin-bottom: 20px;
@@ -2586,7 +2586,7 @@ main {
     font-size: 11px;
     gap: 9px;
   }
-  .update-banner > span {
+  .update-banner-content > span {
     flex: 1;
   }
   .toast {
@@ -4768,11 +4768,11 @@ a.button:is(:hover, :focus, :active),
   }
 }
 
-/* Identity and invitation controls wrap as groups, never squeezed columns. */
+/* Identity keeps a compact action menu; invitation actions wrap together. */
 .settings-content .profile-setting-row {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: start;
+  align-items: center;
 }
 .profile-setting-actions,
 .invitation-actions {
@@ -4813,12 +4813,6 @@ a.button:is(:hover, :focus, :active),
   justify-content: flex-start;
 }
 @media (max-width: 650px) {
-  .settings-content .profile-setting-row {
-    grid-template-columns: auto minmax(0, 1fr);
-  }
-  .profile-setting-row .profile-setting-actions {
-    grid-column: 2;
-  }
   .invitation-row {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -5189,19 +5183,10 @@ a.button:is(:hover, :focus, :active),
   margin-top: 2px;
 }
 
-/* Identity actions align with the name and status, above the preference shortcut. */
-.settings-content .profile-setting-row {
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: start;
-}
 .profile-setting-row .profile-setting-actions {
   grid-column: 3;
   grid-row: 1;
-  align-self: start;
-  margin-top: 4px;
-}
-.profile-setting-row .profile-setting-actions .button {
-  padding-inline: 10px;
+  align-self: center;
 }
 .event-date,
 .buying-price {
@@ -5405,4 +5390,60 @@ a.button:is(:hover, :focus, :active),
   font-size: 13px;
   font-weight: 400;
   color: var(--muted);
+}
+
+.update-banner-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: inherit;
+  max-width: 100%;
+  min-width: 0;
+  margin-inline: auto;
+}
+.update-banner-content > svg,
+.update-banner-content > button {
+  flex-shrink: 0;
+}
+.update-banner-content > span {
+  min-width: 0;
+}
+.archive-privacy-option {
+  align-items: center;
+  gap: 10px;
+}
+.archive-privacy-check {
+  display: flex;
+  flex: none;
+  align-items: center;
+  min-height: 44px;
+}
+.archive-privacy-label {
+  min-width: 0;
+}
+.archive-privacy-label > label {
+  display: inline;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.6;
+}
+.archive-privacy-label .info-help-trigger {
+  margin-block: -8px;
+}
+.idea-exclusions-toggle {
+  position: relative;
+  display: inline;
+  margin-inline-start: 4px;
+  padding: 0;
+  min-height: 0;
+  font-size: inherit;
+  line-height: inherit;
+}
+.idea-exclusions-toggle::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  top: 50%;
+  height: 44px;
+  transform: translateY(-50%);
 }
