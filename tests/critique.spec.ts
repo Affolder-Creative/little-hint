@@ -6032,7 +6032,7 @@ test("discussion audience changes preserve drafts and require review", async ({
   const context = page.getByLabel("Buying for", { exact: true });
   if (await context.count()) await context.selectOption("ordinary");
   await expect(page.locator(".discussion form")).toContainText(
-    "excluding recipients",
+    "Recipients can’t see it.",
   );
   await page
     .getByLabel("Your note", { exact: true })
