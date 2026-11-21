@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.12.0](https://github.com/Affolder-Creative/little-hint/compare/v1.11.0...v1.12.0) (2026-11-21)
+
+
+### Features
+
+* support price ranges for items and gift ideas ([#272](https://github.com/Affolder-Creative/little-hint/issues/272)) ([3e2d0b0](https://github.com/Affolder-Creative/little-hint/commit/3e2d0b07dfe3c6fd8f362820c85af7b1084f8fbd))
+
+
+### Fixes
+
+* simplify event shortcuts and polish discussion and invitations ([#274](https://github.com/Affolder-Creative/little-hint/issues/274)) ([03d665b](https://github.com/Affolder-Creative/little-hint/commit/03d665b15894c71b69c8be8b9c4110970dcc6d54))
+
 ## [1.11.0](https://github.com/Affolder-Creative/little-hint/compare/v1.10.1...v1.11.0) (2026-11-21)
 
 
