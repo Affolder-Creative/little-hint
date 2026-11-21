@@ -76,3 +76,23 @@
 .admin-section-heading + p {
   margin-top: 0;
 }
+
+.admin-invitations {
+  display: grid;
+  gap: var(--space-section);
+}
+.admin-invitation-section {
+  display: grid;
+  gap: var(--space-related);
+}
+.admin-invitation-section h4,
+.admin-invitation-section p {
+  margin: 0;
+}
+.admin-invitation-section .invitation-row:first-child {
+  padding-top: 0;
+}
+.admin-invitation-section .invitation-row:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}

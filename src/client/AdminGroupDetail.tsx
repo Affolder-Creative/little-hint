@@ -236,7 +236,7 @@ function GroupTasks({ group: g, tab }: { group: DirectoryGroup; tab: string }) {
           </div>
         ))}
       </div>
-      <div hidden={tab !== "Invitations"} className="text-stack">
+      <div hidden={tab !== "Invitations"} className="admin-invitations">
         <div>
           <button
             className="button secondary"
@@ -255,54 +255,62 @@ function GroupTasks({ group: g, tab }: { group: DirectoryGroup; tab: string }) {
             Invite someone
           </button>
         </div>
-        <h4>Requests to invite</h4>
-        {!g.requests.length && (
-          <p className="muted">No requests waiting for approval.</p>
-        )}
-        {g.requests.map((r) => (
-          <div className="invitation-row" key={r.id}>
-            <span>{r.email}</span>
-            <div className="actions">
-              <Action
-                secondary
-                onClick={() =>
-                  save("groups/respond-invitation", {
-                    id: r.id,
-                    decision: "approve",
-                  })
-                }
-              >
-                Approve and send
-              </Action>
-              <Action
-                secondary
-                onClick={() =>
-                  save("groups/respond-invitation", {
-                    id: r.id,
-                    decision: "decline",
-                  })
-                }
-              >
-                Decline
-              </Action>
-            </div>
+        <section className="admin-invitation-section">
+          <h4>Requests to invite</h4>
+          <div>
+            {!g.requests.length && (
+              <p className="muted">No requests waiting for approval.</p>
+            )}
+            {g.requests.map((r) => (
+              <div className="invitation-row" key={r.id}>
+                <span>{r.email}</span>
+                <div className="actions">
+                  <Action
+                    secondary
+                    onClick={() =>
+                      save("groups/respond-invitation", {
+                        id: r.id,
+                        decision: "approve",
+                      })
+                    }
+                  >
+                    Approve and send
+                  </Action>
+                  <Action
+                    secondary
+                    onClick={() =>
+                      save("groups/respond-invitation", {
+                        id: r.id,
+                        decision: "decline",
+                      })
+                    }
+                  >
+                    Decline
+                  </Action>
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
-        <h4>Pending invitations</h4>
-        {!g.invitations.length && (
-          <p className="muted">No pending invitations.</p>
-        )}
-        {g.invitations.map((i) => (
-          <div className="invitation-row" key={i.id}>
-            <span>{i.email}</span>
-            <Action
-              secondary
-              onClick={() => save("invitations/revoke", { id: i.id })}
-            >
-              Cancel invitation
-            </Action>
+        </section>
+        <section className="admin-invitation-section">
+          <h4>Pending invitations</h4>
+          <div>
+            {!g.invitations.length && (
+              <p className="muted">No pending invitations.</p>
+            )}
+            {g.invitations.map((i) => (
+              <div className="invitation-row" key={i.id}>
+                <span>{i.email}</span>
+                <Action
+                  secondary
+                  onClick={() => save("invitations/revoke", { id: i.id })}
+                >
+                  Cancel invitation
+                </Action>
+              </div>
+            ))}
           </div>
-        ))}
+        </section>
       </div>
       <div hidden={tab !== "Households"} className="text-stack">
         <p className="muted">

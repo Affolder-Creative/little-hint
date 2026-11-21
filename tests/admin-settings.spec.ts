@@ -37,6 +37,8 @@ async function setup(page: Page) {
   ];
   const posts: { path: string; body: any }[] = [];
   const state = { conflict: false, denied: false };
+  const invitations: { id: string; email: string }[] = [];
+  const requests = [{ id: "request", email: "invite@example.test" }];
   const directory = () => ({
     ...group,
     canAdminister: true,
@@ -48,8 +50,8 @@ async function setup(page: Page) {
       revision: p.revision,
       householdIds: [],
     })),
-    invitations: [],
-    requests: [{ id: "request", email: "invite@example.test" }],
+    invitations,
+    requests,
   });
   await page.route("**/api/**", async (route) => {
     const url = new URL(route.request().url());
@@ -114,7 +116,7 @@ async function setup(page: Page) {
     if (path === "admin/usage") return json({ visible: false });
     return json([]);
   });
-  return { group, members, posts, state };
+  return { group, members, posts, state, invitations, requests };
 }
 
 test("appoint an administrator from the section with unambiguous email and protect the last admin", async ({
@@ -347,3 +349,65 @@ test("manage invitations and households in focused dialogs and recover from lost
     detail.getByRole("button", { name: "Create household", exact: true }),
   ).toBeVisible();
 });
+
+for (const width of [320, 393, 768, 1440]) {
+  for (const theme of ["light", "dark"]) {
+    test(`invitation section rhythm ${width} ${theme}`, async ({
+      page,
+    }, info) => {
+      const f = await setup(page);
+      await page.setViewportSize({ width, height: 1000 });
+      await page.addInitScript(
+        (theme) => localStorage.setItem("little-hint:theme", theme),
+        theme,
+      );
+      f.requests.length = 0;
+      await page.goto(
+        `/settings?section=admin&adminGroup=${f.group.id}&adminTab=invitations`,
+      );
+      const sections = page.locator(".admin-invitation-section");
+      await expect(sections).toHaveCount(2);
+      for (const populated of [false, true]) {
+        if (populated) {
+          f.requests.push(
+            {
+              id: "r1",
+              email: "a-long-family-invitation-address@example.test",
+            },
+            { id: "r2", email: "second@example.test" },
+          );
+          f.invitations.push({ id: "i1", email: "pending@example.test" });
+          await page.reload();
+          await expect(
+            page.getByRole("button", { name: "Approve and send" }),
+          ).toHaveCount(2);
+        }
+        const gap = await page
+          .locator(".admin-invitations")
+          .evaluate((e) => getComputedStyle(e).gap);
+        expect(gap).toBe(width <= 650 ? "24px" : "32px");
+        expect(
+          await sections.first().evaluate((e) => getComputedStyle(e).gap),
+        ).toBe("8px");
+        expect(
+          await page.evaluate(
+            () => document.documentElement.scrollWidth <= innerWidth,
+          ),
+        ).toBe(true);
+        await page.screenshot({
+          path: info.outputPath(
+            `invitations-${populated ? "populated" : "empty"}.png`,
+          ),
+          fullPage: true,
+        });
+      }
+      expect(
+        (
+          await new AxeBuilder({ page })
+            .include(".admin-group-detail")
+            .analyze()
+        ).violations,
+      ).toEqual([]);
+    });
+  }
+}

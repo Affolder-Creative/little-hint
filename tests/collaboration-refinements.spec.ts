@@ -127,6 +127,17 @@ for (const [width, theme] of [
     await page.goto(`/gift/${gift.id}`);
     await expect(page.locator(".gift-attribution")).toBeVisible();
     await expect(page.locator(".discussion-audience")).toHaveCount(1);
+    await page
+      .getByRole("button", { name: "About who can read this note?" })
+      .click();
+    const help = page.getByRole("dialog", { name: "Who can read this note?" });
+    await expect(help).toContainText("These people can read your note:");
+    await expect(help).toContainText("Recipients can’t see it.");
+    await page.screenshot({
+      path: info.outputPath("audience-help.png"),
+      fullPage: true,
+    });
+    await page.keyboard.press("Escape");
     const note = page.getByLabel("Your note", { exact: true });
     await note.fill("@");
     await page.getByRole("option").filter({ hasText: readers[0].name }).click();

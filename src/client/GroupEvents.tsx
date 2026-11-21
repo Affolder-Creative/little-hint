@@ -481,24 +481,20 @@ export function GroupEventsSection({ archived }: { archived: boolean }) {
         />
       )}
       {filtered.map((event) => {
-        const mine = ownedLists
-          .filter((l) => l.groupEventId === event.id)
+        const lists = ownedLists.filter((l) => l.groupEventId === event.id);
+        const isOwn = (list: (typeof lists)[number]) =>
+          list.ownerIds.some((id) =>
+            world.people.some((p) => p.id === id && p.userId === world.me.id),
+          );
+        const listLabel = (list: (typeof lists)[number]) =>
+          `${list.ownerIds.map((id) => world.people.find((p) => p.id === id)?.name ?? "Managed profile").join(" & ")}’s wish list`;
+        const mine = lists.filter(isOwn);
+        const others = lists
+          .filter((list) => !isOwn(list))
           .sort(
             (a, b) =>
-              Number(
-                !a.ownerIds.some((id) =>
-                  world.people.some(
-                    (p) => p.id === id && p.userId === world.me.id,
-                  ),
-                ),
-              ) -
-                Number(
-                  !b.ownerIds.some((id) =>
-                    world.people.some(
-                      (p) => p.id === id && p.userId === world.me.id,
-                    ),
-                  ),
-                ) || a.ownerIds[0].localeCompare(b.ownerIds[0]),
+              listLabel(a).localeCompare(listLabel(b)) ||
+              a.id.localeCompare(b.id),
           );
         return (
           <article className="event-entry" key={event.id}>
@@ -534,14 +530,6 @@ export function GroupEventsSection({ archived }: { archived: boolean }) {
             <div className="event-entry-actions">
               <div className="event-entry-links">
                 {mine.map((list) => {
-                  const own = list.ownerIds.some((id) =>
-                    world.people.some(
-                      (p) => p.id === id && p.userId === world.me.id,
-                    ),
-                  );
-                  const label = own
-                    ? "Your wish list"
-                    : `${list.ownerIds.map((id) => world.people.find((p) => p.id === id)?.name ?? "Managed profile").join(" & ")}’s wish list`;
                   return (
                     <Link
                       key={list.id}
@@ -549,7 +537,7 @@ export function GroupEventsSection({ archived }: { archived: boolean }) {
                       to={`/lists/${list.id}`}
                     >
                       <span>
-                        {label}
+                        Your wish list
                         {list.archived && <small>Archived wish list</small>}
                       </span>
                       <ArrowRight size={16} />
@@ -557,6 +545,27 @@ export function GroupEventsSection({ archived }: { archived: boolean }) {
                   );
                 })}
               </div>
+              {others.length > 0 && (
+                <ActionMenu name={event.name} label="Other wish lists">
+                  {others.map((list) => (
+                    <Link
+                      key={list.id}
+                      className="text-button"
+                      to={`/lists/${list.id}`}
+                    >
+                      <span>
+                        {listLabel(list)}
+                        {list.archived && (
+                          <small className="event-list-status">
+                            Archived wish list
+                          </small>
+                        )}
+                      </span>
+                      <ArrowRight size={16} aria-hidden="true" />
+                    </Link>
+                  ))}
+                </ActionMenu>
+              )}
               {event.canManage ? (
                 <ActionMenu name={event.name} label="Event actions">
                   <Link className="text-button" to={`/events/${event.id}`}>
