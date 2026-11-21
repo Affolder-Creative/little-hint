@@ -209,6 +209,8 @@ export interface PriceChange extends Base {
   generation: string;
   from: number | null;
   to: number | null;
+  fromMaxCents?: number | null;
+  toMaxCents?: number | null;
   source: string;
 }
 export interface Item extends Base {
@@ -237,6 +239,7 @@ export interface Item extends Base {
   image: string;
   images?: string[];
   priceCents: number | null;
+  priceMaxCents?: number | null;
   currency: "USD";
   tags: string[];
   quantity: number;
@@ -459,6 +462,7 @@ export interface Preferences extends Base {
 }
 export type DraftShoppingOffer = Partial<Omit<ShoppingOffer, "pricing">>;
 export type DraftProduct = Partial<Omit<Item, "shoppingOffers">> & {
+  price?: string;
   shoppingOffers?: DraftShoppingOffer[];
 };
 export interface ImportDraft {

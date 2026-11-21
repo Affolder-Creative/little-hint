@@ -1,3 +1,4 @@
+import { isPriceRange } from "../shared/price";
 import { fail } from "./domain-common";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
@@ -60,11 +61,24 @@ export function migrateShoppingOffers(item: Item) {
 
 /** Input pricing is never trusted. Preserve checked data only for the same saved link. */
 export function reconcileShoppingOffers(item: Item, previous?: Item) {
+  const rangeTransition =
+    isPriceRange(item) || (!!previous && isPriceRange(previous));
+  if (rangeTransition) {
+    item.pricing ??= {
+      baseline: null,
+      baselineLabel: "when tracking started",
+      generation: randomUUID(),
+    };
+    item.pricing.paused = true;
+    item.pricing.baseline = null;
+    delete item.pricing.checkedAt;
+    delete item.pricing.status;
+  }
   const old = previous ? shoppingOffers(previous) : [];
   let offers = item.shoppingOffers;
   if (!offers) {
-    if (!previous?.shoppingOffers) return;
-    offers = previous.shoppingOffers.map((o) => ({ ...o }));
+    if (!previous?.shoppingOffers && !rangeTransition) return;
+    offers = (previous ? old : shoppingOffers(item)).map((o) => ({ ...o }));
   }
   // Older clients can still replace the primary scalar URL.
   if (
@@ -75,7 +89,11 @@ export function reconcileShoppingOffers(item: Item, previous?: Item) {
     offers = offers
       .map((o) =>
         o.id === item.primaryOfferId
-          ? { ...o, url: item.url, priceCents: item.priceCents }
+          ? {
+              ...o,
+              url: item.url,
+              priceCents: rangeTransition ? o.priceCents : item.priceCents,
+            }
           : o,
       )
       .filter((o) => o.url);
@@ -84,7 +102,7 @@ export function reconcileShoppingOffers(item: Item, previous?: Item) {
         id: randomUUID(),
         url: item.url,
         label: shopLabel(item.url),
-        priceCents: item.priceCents,
+        priceCents: rangeTransition ? null : item.priceCents,
       });
   }
   const ids = new Set<string>(),
@@ -126,6 +144,7 @@ export function reconcileShoppingOffers(item: Item, previous?: Item) {
   }
   if (
     previous &&
+    !rangeTransition &&
     previous.url === item.url &&
     previous.priceCents !== item.priceCents
   ) {
@@ -147,6 +166,7 @@ export function reconcileShoppingOffers(item: Item, previous?: Item) {
     }
   } else if (
     !previous &&
+    !rangeTransition &&
     primary &&
     primary.priceCents === null &&
     item.priceCents !== null

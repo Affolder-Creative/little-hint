@@ -120,7 +120,63 @@ describe.skipIf(!url)("persisted drafts", () => {
           )
         ).rows[0].version,
       ),
-    ).toBe(14);
+    ).toBe(15);
+  });
+  it("persists range bounds, pauses published ranges and rolls back invalid pairs", async () => {
+    const draft = (await db.transact((state) =>
+      command(state, f.john, "items.create", {
+        title: "TV range integration",
+        listId: f.list.id,
+        publicationState: "draft",
+        priceCents: 40000,
+        priceMaxCents: 70000,
+        url: "https://shop.example/tv-range",
+      }),
+    )) as import("../src/shared/model").GiftView;
+    const persisted = (await db.readState()).items.find(
+      (item) => item.id === draft.id,
+    )!;
+    expect(persisted).toMatchObject({
+      priceCents: 40000,
+      priceMaxCents: 70000,
+      pricing: { paused: true },
+    });
+    await expect(
+      db.transact((state) =>
+        command(state, f.john, "items.update", {
+          ...persisted,
+          title: "Must not persist",
+          priceMaxCents: 30000,
+        }),
+      ),
+    ).rejects.toThrow(/higher/);
+    expect(
+      (await db.readState()).items.find((item) => item.id === draft.id),
+    ).toMatchObject({
+      title: "TV range integration",
+      priceCents: 40000,
+      priceMaxCents: 70000,
+    });
+    await db.transact((state) =>
+      command(state, f.john, "items.publish", { ...persisted }),
+    );
+    const { itemPage } = await import("../src/server/collections");
+    const page = await itemPage(await db.readCollectionState(), f.reader, {
+      scope: "list",
+      id: f.list.id,
+      search: "TV range integration",
+    });
+    expect(page.rows[0]).toMatchObject({
+      priceCents: 40000,
+      priceMaxCents: 70000,
+      publicationState: "published",
+      pricing: { paused: true },
+    });
+    await db.migrate();
+    expect(
+      (await db.readState()).items.find((item) => item.id === draft.id)
+        ?.priceMaxCents,
+    ).toBe(70000);
   });
   it("round-trips typed nested product and offer draft fields", async () => {
     const fields = {
@@ -137,6 +193,9 @@ describe.skipIf(!url)("persisted drafts", () => {
       products: [
         {
           title: "Forks",
+          price: "400-",
+          priceCents: null,
+          priceMaxCents: null,
           shoppingOffers: [
             {
               id: "forks",

@@ -1,3 +1,4 @@
+import { formatPrice } from "../shared/price";
 import { noteText } from "../shared/helpful-note";
 import { priorityLabels } from "../shared/organization";
 import { Link } from "react-router-dom";
@@ -332,12 +333,7 @@ export function RecoveredCoManagementDrafts() {
             ? noteText(draft.descriptionRich)
             : draft.description,
           draft.url,
-          draft.priceCents == null
-            ? "Price not specified"
-            : new Intl.NumberFormat("en-US", {
-                style: "currency",
-                currency: draft.currency ?? "USD",
-              }).format(draft.priceCents / 100),
+          formatPrice(draft),
           `Quantity: ${draft.quantity}`,
           draft.tags.length ? `Tags: ${draft.tags.join(", ")}` : "",
           draft.priority ? `Priority: ${priorityLabels[draft.priority]}` : "",

@@ -30,6 +30,7 @@ describe("spreadsheet exports", () => {
     const own = s.items.find((i) => i.creatorId === a.id)!;
     own.title = '=HYPERLINK("https://example.test")';
     own.priceCents = 12345;
+    own.priceMaxCents = 23456;
     own.deletedAt = new Date().toISOString();
     s.items.push({
       ...own,
@@ -41,7 +42,9 @@ describe("spreadsheet exports", () => {
     });
     const output = accountCsv(s, a, "wishes");
     expect(output.filename).toBe("little-hint-wishes.csv");
-    expect(output.content).toContain('"123.45"');
+    expect(output.content).toContain('"123.45-234.56"');
+    expect(output.content).toContain('"Minimum price (USD)","Maximum price (USD)"');
+    expect(output.content).toContain('"123.45","234.56"');
     expect(output.content).toContain('"Deleted"');
     expect(output.content).toContain("\"'=HYPERLINK");
     expect(output.content).not.toContain("Secret surprise");

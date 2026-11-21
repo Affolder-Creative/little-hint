@@ -1,3 +1,4 @@
+import { formatPrice, isPriceRange, priceTotal } from "../shared/price";
 import { productItems } from "../shared/item-groups";
 import { SpendingAllocations, defaultAllocations } from "./SpendingAllocations";
 import { recordAllocations, type SpendingAllocation } from "../shared/spending";
@@ -157,7 +158,12 @@ export function PurchaseForm({
     ),
   ];
   const occasionId = occasion ?? plan?.occasionId ?? "";
-  const price = item?.priceCents ?? plan?.unitEstimateCents ?? null;
+  const listedPrice = item ??
+    plan?.listedPriceSnapshot ?? {
+      priceCents: plan?.unitEstimateCents ?? null,
+    };
+  const price = listedPrice.priceCents;
+  const ranged = isPriceRange(listedPrice);
   const maxQuantity = reservation
     ? reservation.quantity - reservation.purchased
     : (item?.available ?? 1);
@@ -471,21 +477,26 @@ export function PurchaseForm({
           {price !== null && (
             <div className="purchase-estimate">
               <span>
-                Listed price: <strong>{dollars(price * quantity)}</strong>
+                Listed price:{" "}
+                <strong>
+                  {formatPrice(priceTotal(listedPrice, quantity))}
+                </strong>
                 {quantity > 1 && (
                   <small>
-                    {quantity} × {dollars(price)}
+                    {quantity} × {formatPrice(listedPrice)}
                   </small>
                 )}
               </span>
-              <button
-                type="button"
-                className="button secondary small"
-                data-form-change
-                onClick={() => setAmount(String((price * quantity) / 100))}
-              >
-                Use listed price
-              </button>
+              {!ranged && (
+                <button
+                  type="button"
+                  className="button secondary small"
+                  data-form-change
+                  onClick={() => setAmount(String((price * quantity) / 100))}
+                >
+                  Use listed price
+                </button>
+              )}
             </div>
           )}
         </div>

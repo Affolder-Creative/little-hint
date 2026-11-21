@@ -138,6 +138,7 @@ export async function itemPage(
       ? {
           ...item,
           priceCents: giftView(s, a, item).priceCents,
+          priceMaxCents: giftView(s, a, item).priceMaxCents,
         }
       : item,
   );

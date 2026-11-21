@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-21T06:08:45.884861+00:00",
+  "generatedAt": "2026-11-21T16:05:34.930633+00:00",
   "title": "Design System: Little Hint",
   "extensions": {
     "peopleDirectory": {
@@ -1076,7 +1076,9 @@
       "src/client/Exchanges.tsx",
       "src/client/IdeaAudienceSummary.tsx",
       "src/client/ShoppingOffers.tsx",
-      "src/client/shopping-offers.css"
+      "src/client/shopping-offers.css",
+      "src/client/PriceInput.tsx",
+      "src/client/price-input.css"
     ],
     "tonalRampNote": "Synthesized OKLCH previews at constant hue/chroma; these ramps are panel metadata, not additional application tokens.",
     "layout": {
@@ -1247,6 +1249,17 @@
         "light": "#bf3989",
         "dark": "#f088bd"
       }
+    },
+    "priceRanges": {
+      "entry": "Single decimal-keypad text field with adjacent 44px outlined Range action, 8px gap, persistent example hint and associated inline errors. Pointer activation retains input focus.",
+      "display": "Tabular currency endpoints wrap without clipping. Accessible range uses to. Spending explains upper-price estimates; purchase references omit Use listed price for ranges.",
+      "sourceFiles": [
+        "src/client/PriceInput.tsx",
+        "src/client/price-input.css",
+        "src/client/Price.tsx",
+        "src/client/SpendingPurchase.tsx"
+      ],
+      "layout": "Price and quantity use a top-aligned 2:1 desktop row and stack at 650px and below; price input shrinks within its row while the Range action retains its 44px target."
     }
   },
   "components": [
@@ -1533,6 +1546,14 @@
       "description": "Archive selection at the bottom of item and gift-idea editors.",
       "html": "<label class=\"ds-check\"><input type=\"checkbox\">Archive this item</label>",
       "css": ".ds-check { min-height:44px; cursor:pointer; display:flex; align-items:center; gap:9px; font-size:14px; line-height:1.5; color:var(--text); } .ds-check input { margin:0; accent-color:var(--accent); } .ds-check input:focus-visible { outline:3px solid var(--accent); outline-offset:3px; }"
+    },
+    {
+      "name": "Price range input",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "One optional price or increasing range with a separator action.",
+      "html": "<label class=\"ds-price-label\" for=\"ds-price\">Price in USD</label><div class=\"ds-price-row\"><input id=\"ds-price\" inputmode=\"decimal\" value=\"400-700\" aria-describedby=\"ds-price-hint\"><button type=\"button\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><path d=\"M5 12h14\"/></svg>Range</button></div><small id=\"ds-price-hint\">Enter a price or range, such as 25 or 25-50.</small>",
+      "css": ".ds-price-label{display:block;font-size:13px;font-weight:550}.ds-price-row{display:flex;gap:8px;align-items:center}.ds-price-row input{flex:1;min-width:0;width:0;font-size:16px;font-variant-numeric:tabular-nums}.ds-price-row input,.ds-price-row button{background:var(--paper);color:var(--text);border:1px solid var(--control-border);border-radius:8px;min-height:44px;padding:11px 12px}.ds-price-row button{display:inline-flex;align-items:center;gap:4px;font-size:14px;font-weight:600;padding-inline:10px}.ds-price-row button:hover{background:var(--soft)}.ds-price-row input:focus-visible,.ds-price-row button:focus-visible{outline:3px solid var(--accent);outline-offset:3px}#ds-price-hint{display:block;color:var(--muted)}"
     }
   ],
   "narrative": {

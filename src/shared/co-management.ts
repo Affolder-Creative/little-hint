@@ -22,6 +22,7 @@ export interface RecoveredDraft extends Base {
   images?: string[];
   descriptionRich?: Item["descriptionRich"];
   priceCents: number | null;
+  priceMaxCents?: number | null;
   currency: Item["currency"];
   quantity: number;
   tags: string[];

@@ -1,3 +1,4 @@
+import { isPriceRange } from "../shared/price";
 import { shoppingOffers, bestShoppingOffer } from "../shared/shopping-offers";
 import { itemTrashed } from "../shared/organization";
 import { canEdit, archived } from "./domain-access";
@@ -12,7 +13,8 @@ export function priceBaseline(
   label: NonNullable<Item["pricing"]>["baselineLabel"],
 ) {
   i.pricing = {
-    baseline: i.priceCents,
+    baseline: isPriceRange(i) ? null : i.priceCents,
+    ...(isPriceRange(i) ? { paused: true } : {}),
     baselineLabel: label,
     generation: randomUUID(),
   };
@@ -22,6 +24,7 @@ export function priceEligible(s: State, i: Item) {
     i.kind !== "group" &&
     i.publicationState !== "draft" &&
     i.priceCents !== null &&
+    !isPriceRange(i) &&
     shoppingOffers(i).length > 0 &&
     !itemTrashed(s, i) &&
     (!i.listId || s.lists.some((l) => l.id === i.listId)) &&
@@ -82,8 +85,14 @@ export function priceCommand(s: State, a: Actor, action: string, raw: unknown) {
     }
   } else if (action === "prices.tracking") {
     if (!canEdit(s, a, item)) fail(403, "You cannot edit this item.");
+    if (p.enabled && isPriceRange(item))
+      fail(400, "Enter an exact price before resuming price checks.");
     if (p.enabled && (item.priceCents === null || !item.url))
       fail(400, "Add a price and product link before resuming price checks.");
+    if (p.enabled && item.pricing!.baseline === null) {
+      item.pricing!.baseline = item.priceCents;
+      item.pricing!.baselineLabel = "when tracking started";
+    }
     item.pricing!.paused = !p.enabled;
     for (const w of s.priceWatches.filter((w) => w.itemId === item.id))
       w.reference = null;

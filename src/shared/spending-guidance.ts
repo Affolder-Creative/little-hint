@@ -1,3 +1,4 @@
+import { priceEstimateCents } from "./price";
 import { productItems } from "./item-groups";
 import { netContribution } from "./contribution-money";
 import type { GiftView, World } from "./model";
@@ -74,11 +75,21 @@ export function giftEstimate(
   quantity: number,
   poolTargetCents = 0,
   poolTotalCents?: number,
+  priceMaxCents?: number | null,
 ) {
   return {
     cents:
-      poolTotalCents ?? Math.max((priceCents ?? 0) * quantity, poolTargetCents),
+      poolTotalCents ??
+      Math.max(
+        (priceEstimateCents({ priceCents, priceMaxCents }) ?? 0) * quantity,
+        poolTargetCents,
+      ),
     unknown: poolTotalCents == null && priceCents === null,
+    usesRangeMaximum:
+      poolTotalCents == null &&
+      priceCents != null &&
+      priceMaxCents != null &&
+      priceMaxCents * quantity >= poolTargetCents,
   };
 }
 
@@ -100,7 +111,8 @@ export function spendingSummary(
 ) {
   let cents = 0,
     unknown = 0,
-    unattributed = 0;
+    unattributed = 0,
+    usesRangeMaximum = false;
   for (const r of world.buying) {
     if (r.quantity <= 0) continue;
     const resolved = reservationSpendingContext(world, r);
@@ -129,6 +141,7 @@ export function spendingSummary(
       preview.poolReservationId === r.id
         ? preview.poolTotalCents
         : r.poolTotalCents,
+      r.item.priceMaxCents,
     );
     const contributions =
       r.item.reservations?.find((entry) => entry.id === r.id)?.contributions ??
@@ -137,6 +150,7 @@ export function spendingSummary(
       .filter((c) => c.status !== "cancelled" && c.userId !== world.me.id)
       .reduce((total, c) => total + netContribution(c), 0);
     cents += Math.max(0, estimate.cents - promised);
+    usesRangeMaximum ||= estimate.usesRangeMaximum;
     if (estimate.unknown) unknown++;
   }
   if (context.kind === "event") {
@@ -154,9 +168,16 @@ export function spendingSummary(
   }
   if (preview.itemId && preview.quantity && preview.quantity > 0) {
     const gift = productItems(world.items).find((i) => i.id === preview.itemId);
-    const estimate = giftEstimate(gift?.priceCents ?? null, preview.quantity);
+    const estimate = giftEstimate(
+      gift?.priceCents ?? null,
+      preview.quantity,
+      0,
+      undefined,
+      gift?.priceMaxCents,
+    );
     cents += estimate.cents;
+    usesRangeMaximum ||= estimate.usesRangeMaximum;
     if (estimate.unknown) unknown++;
   }
-  return { cents, unknown, unattributed };
+  return { cents, unknown, unattributed, usesRangeMaximum };
 }

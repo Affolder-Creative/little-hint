@@ -1,3 +1,4 @@
+import { isPriceRange } from "./price";
 import type { Item, ShoppingOffer } from "./model";
 
 export const PRICE_FRESH_MS = 48 * 3600000;
@@ -9,7 +10,10 @@ export function shopLabel(url: string) {
   }
 }
 export function shoppingOffers(
-  item: Pick<Item, "id" | "url" | "priceCents" | "pricing" | "shoppingOffers">,
+  item: Pick<
+    Item,
+    "id" | "url" | "priceCents" | "pricing" | "shoppingOffers" | "priceMaxCents"
+  >,
 ): ShoppingOffer[] {
   if (item.shoppingOffers) return item.shoppingOffers;
   return item.url
@@ -18,8 +22,8 @@ export function shoppingOffers(
           id: `${item.id}:primary`,
           url: item.url,
           label: shopLabel(item.url),
-          priceCents: item.priceCents,
-          pricing: item.pricing,
+          priceCents: isPriceRange(item) ? null : item.priceCents,
+          pricing: isPriceRange(item) ? undefined : item.pricing,
         },
       ]
     : [];

@@ -20,7 +20,7 @@ import {
   type ImportJob,
   type FriendEntry,
 } from "../shared/model";
-const supportedSchemaVersion = 14;
+const supportedSchemaVersion = 15;
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   max: 10,
@@ -343,6 +343,10 @@ INSERT INTO schema_migration(version) VALUES (2);`);
       );
       await client.query("INSERT INTO schema_migration(version) VALUES (14)");
     }
+    // Older app/worker versions must not treat range minima as exact prices.
+    await client.query(
+      "INSERT INTO schema_migration(version) VALUES (15) ON CONFLICT DO NOTHING",
+    );
     await client.query("COMMIT");
   } catch (e) {
     await client.query("ROLLBACK");

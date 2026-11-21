@@ -24,3 +24,5 @@ Recipient spending allocations use one optional list per person and an equal/cus
 Archive selection uses the existing checkbox at the bottom of More details in every editor mode. The summary starts with Will save to archive when checked, including while collapsed. It survives draft saves and reopening. Individually archived drafts can publish; archived destinations cannot. Success names Archived items without changing pages.
 
 Audience summaries name up to three additional exclusions, with and N more / Show fewer disclosure at the normal paragraph line height. Shop editors use 12px gaps and product sections 16px gaps without compounded margins. A single remaining product hides set framing and product reorder/remove controls while retaining its data and Add another product.
+
+Price range entry uses one decimal-keypad text field with an adjacent outlined Range button. Preserve focus, raw unfinished draft input and late-import edit protection. Hint and inline validation remain associated with the input. See DESIGN.md Price range entry for the shared visual treatment.

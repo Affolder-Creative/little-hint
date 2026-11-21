@@ -1,3 +1,4 @@
+import { isPriceRange, priceEstimateCents } from "../shared/price";
 import { allocationsInput } from "../shared/spending-input";
 import { netContribution } from "../shared/contribution-money";
 import { canShop } from "./domain-access";
@@ -173,9 +174,15 @@ function snapshot(s: State, a: Actor, reservationId: string): SpendingRecord {
     eventId: l?.groupEventId,
     reservationId: r.id,
     quantity: r.quantity - r.purchased,
-    unitEstimateCents: i?.priceCents ?? null,
+    unitEstimateCents: i ? priceEstimateCents(i) : null,
+    listedPriceSnapshot: i
+      ? { priceCents: i.priceCents, priceMaxCents: i.priceMaxCents ?? null }
+      : undefined,
+    estimateUsesRangeMaximum: !!i && isPriceRange(i),
     amountCents:
-      i?.priceCents == null ? null : i.priceCents * (r.quantity - r.purchased),
+      i?.priceCents == null
+        ? null
+        : priceEstimateCents(i)! * (r.quantity - r.purchased),
     date: null,
     planningYear: new Date().getFullYear(),
     kind: "plan",
@@ -375,6 +382,7 @@ export function syncSpending(s: State, a: Actor) {
         plan.revision++;
       }
       plan.unitEstimateCents = r.poolTotalCents / r.quantity;
+      plan.estimateUsesRangeMaximum = false;
     }
     if (remaining !== plan.quantity) {
       plan.amountCents =
@@ -1084,6 +1092,8 @@ export function spendingCommand(
     if (r.kind === "plan" && !r.sourceId)
       r.unitEstimateCents =
         p.amountCents === null ? null : p.amountCents / Math.max(1, r.quantity);
+    if (r.kind === "plan" && before !== p.amountCents)
+      r.estimateUsesRangeMaximum = false;
     Object.assign(r, updates);
     if (r.allocations)
       r.allocations = r.allocations.map((v) => ({

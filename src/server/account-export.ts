@@ -64,6 +64,7 @@ export function accountExport(s: State, a: Actor) {
         image: i.image,
         images: i.images ?? (i.image ? [i.image] : []),
         priceCents: i.priceCents,
+        priceMaxCents: i.priceMaxCents ?? null,
         currency: i.currency,
         quantity: i.quantity,
         tags: i.tags,

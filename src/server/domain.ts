@@ -1,3 +1,4 @@
+import { isPriceRange, priceBounds } from "../shared/price";
 import {
   ideaAllocationChoices,
   sameAllocationChoices,
@@ -540,6 +541,14 @@ export function giftView(s: State, a: Actor, i: Item): GiftView {
           (total, child) => total + child.priceCents! * child.quantity,
           0,
         );
+    const upperTotal = view.unpricedProductCount
+      ? null
+      : view.products.reduce(
+          (total, child) =>
+            total + priceBounds(child).maxCents! * child.quantity,
+          0,
+        );
+    view.priceMaxCents = upperTotal !== view.priceCents ? upperTotal : null;
     delete view.reservations;
     delete view.reserved;
     delete view.purchased;
@@ -1038,6 +1047,7 @@ const draftFieldsInput = z
               ? z
                   .array(
                     productInput.partial().extend({
+                      price: z.string().max(100).optional(),
                       title: z.string().max(160).optional(),
                       url: z.string().max(2048).optional(),
                       shoppingOffers: z
@@ -1099,6 +1109,7 @@ const productFields = z.object({
       "Choose an imported or uploaded image.",
     ),
   priceCents: z.number().int().min(0).max(100000000).nullable().default(null),
+  priceMaxCents: z.number().int().min(0).max(100000000).nullable().optional(),
   tags: z.array(z.string().trim().min(1).max(30)).max(12).default([]),
   quantity: z.number().int().min(1).max(999).default(1),
 });
@@ -1110,6 +1121,39 @@ const itemInput = productFields.extend({
   kind: z.literal("group").optional(),
   products: z.array(productInput).min(1).max(50).optional(),
 });
+
+/** Preserve a range for older clients only when its lower price is unchanged. */
+function normalizeItemPrice(
+  input: { priceCents: number | null; priceMaxCents?: number | null },
+  previous?: Item,
+) {
+  if (input.priceMaxCents === undefined) {
+    if (
+      previous &&
+      isPriceRange(previous) &&
+      input.priceCents !== previous.priceCents
+    )
+      fail(
+        409,
+        "This item has a price range. Refresh the editor before changing its price.",
+      );
+    input.priceMaxCents = previous?.priceMaxCents ?? null;
+  }
+  if (
+    input.priceMaxCents !== null &&
+    (input.priceCents === null || input.priceMaxCents <= input.priceCents)
+  )
+    fail(400, "The second price must be higher than the first.");
+}
+function itemPriceChanged(
+  a: Item,
+  b: { priceCents: number | null; priceMaxCents?: number | null },
+) {
+  return (
+    a.priceCents !== b.priceCents ||
+    (a.priceMaxCents ?? null) !== (b.priceMaxCents ?? null)
+  );
+}
 
 function saveGroupProducts(
   s: State,
@@ -1133,6 +1177,7 @@ function saveGroupProducts(
       if (child && childRevision !== undefined)
         checkRevision(child, childRevision);
       const before = child ? structuredClone(child) : undefined;
+      normalizeItemPrice(fields, child);
       normalizeNote(fields, child);
       checkPhotos(s, a, fields, child);
       if (!child) {
@@ -1156,7 +1201,7 @@ function saveGroupProducts(
         Object.assign(child, fields, { position });
         if (before!.url !== child.url)
           priceBaseline(child, "when link changed");
-        else if (before!.priceCents !== child.priceCents) {
+        else if (itemPriceChanged(before!, child)) {
           if (!child.pricing) priceBaseline(child, "when tracking started");
           child.pricing!.paused = true;
           delete child.pricing!.checkedAt;
@@ -1167,6 +1212,17 @@ function saveGroupProducts(
         }
         touch(child);
       }
+      if (before && itemPriceChanged(before, child))
+        s.priceChanges.push({
+          ...stamp(),
+          itemId: child.id,
+          generation: child.pricing!.generation,
+          from: before.priceCents,
+          to: child.priceCents,
+          fromMaxCents: before.priceMaxCents ?? null,
+          toMaxCents: child.priceMaxCents ?? null,
+          source: "manual",
+        });
       inheritGroupContext(parent, child);
       reconcileShoppingOffers(child, before);
     }
@@ -1177,6 +1233,7 @@ function saveGroupProducts(
   }
   parent.url = "";
   parent.priceCents = null;
+  parent.priceMaxCents = null;
   parent.quantity = 1;
   delete parent.shoppingOffers;
   delete parent.primaryOfferId;
@@ -2065,6 +2122,7 @@ function commandCore(
         .parse(b);
       if (p.kind === "group" && !p.products?.length && !wrapping)
         fail(400, "Add at least one product to the group.");
+      normalizeItemPrice(p);
       normalizeNote(p);
       p.images = itemPhotos(p);
       if (!p.image) p.image = p.images[0] ?? "";
@@ -2263,6 +2321,16 @@ function commandCore(
     }
     case "items.update": {
       const existing = getItem(s, a, id.parse(b.id));
+      if (
+        isPriceRange(existing) &&
+        b.priceMaxCents === undefined &&
+        b.priceCents !== undefined &&
+        b.priceCents !== existing.priceCents
+      )
+        fail(
+          409,
+          "This item has a price range. Refresh the editor before changing its price.",
+        );
       const detailsOnly = !ordinaryItemEditor(s, a, existing);
       if (detailsOnly) {
         if (!canEdit(s, a, existing)) fail(403, "You cannot edit this item.");
@@ -2278,6 +2346,7 @@ function commandCore(
           "image",
           "images",
           "priceCents",
+          "priceMaxCents",
           "currency",
           "tags",
           "quantity",
@@ -2318,6 +2387,7 @@ function commandCore(
       const i = getItem(s, a, p.id);
       if (!canEdit(s, a, i)) fail(403, "You cannot edit this item.");
       checkRevision(i, p.revision);
+      normalizeItemPrice(p, i);
       if (i.kind !== "group" && p.kind === "group") {
         if (i.parentItemId) fail(400, "Groups cannot contain other groups.");
         if (!p.products?.some((product) => product.id === i.id))
@@ -2536,7 +2606,7 @@ function commandCore(
       if (i.url !== p.url) {
         priceBaseline(i, "when link changed");
         i.pricing!.baseline = p.priceCents;
-      } else if (i.priceCents !== p.priceCents) {
+      } else if (itemPriceChanged(i, p)) {
         if (!i.pricing) priceBaseline(i, "when tracking started");
         s.priceChanges.push({
           ...stamp(),
@@ -2544,6 +2614,8 @@ function commandCore(
           generation: i.pricing!.generation,
           from: i.priceCents,
           to: p.priceCents,
+          fromMaxCents: i.priceMaxCents ?? null,
+          toMaxCents: p.priceMaxCents ?? null,
           source: "manual",
         });
         i.pricing!.paused = true;
@@ -2554,6 +2626,9 @@ function commandCore(
       setItemArchived(i, fields.archived);
       Object.assign(i, fields);
       reconcileShoppingOffers(i, previousItem);
+      if (itemPriceChanged(previousItem, i))
+        for (const watch of s.priceWatches.filter((w) => w.itemId === i.id))
+          watch.reference = null;
       saveGroupProducts(s, a, i, products);
       touch(i);
       reconcileAccess(s);
