@@ -1,3 +1,4 @@
+import { formatPrice, isPriceRange } from "../shared/price";
 import { bestShoppingOffer, shoppingOffers } from "../shared/shopping-offers";
 import { InfoHelp } from "./InfoHelp";
 import { useState } from "react";
@@ -18,13 +19,15 @@ export function Price({
         <small>
           {gift.priceCents === null
             ? "Some products have no listed price"
-            : `Estimated set total: ${dollars(gift.priceCents)}`}
+            : `Estimated set total: ${formatPrice(gift)}`}
         </small>
       </div>
     );
+  const ranged = isPriceRange(gift);
   const best = bestShoppingOffer(gift);
   const p = gift.pricing,
     changed =
+      !ranged &&
       gift.priceCents !== null &&
       p?.baseline != null &&
       p.baseline !== gift.priceCents;
@@ -34,10 +37,14 @@ export function Price({
       Date.now() - Date.parse(p.checkedAt) > 48 * 3600000);
   return (
     <div className={compact ? "item-price compact" : "item-price"}>
-      <span className={compact ? undefined : "detail-price"}>
-        {dollars(gift.priceCents)}
+      <span
+        className={compact ? undefined : "detail-price"}
+        aria-label={ranged ? formatPrice(gift).replace("–", " to ") : undefined}
+      >
+        {formatPrice(gift)}
       </span>
       {!compact &&
+        !ranged &&
         best &&
         !p?.paused &&
         !stale &&
@@ -59,7 +66,8 @@ export function Price({
           )}
         </small>
       )}
-      {!compact && gift.priceCents !== null && (
+      {!compact && ranged && <small>Price range</small>}
+      {!compact && !ranged && gift.priceCents !== null && (
         <>
           {p?.paused ? (
             <small>Manual price · Automatic checks paused</small>
@@ -87,6 +95,7 @@ export function Price({
 }
 export function PriceControls({ gift }: { gift: GiftView }) {
   const { world, mutate } = useApp();
+  const ranged = isPriceRange(gift);
   const [busy, setBusy] = useState(false),
     [error, setError] = useState("");
   if (
@@ -111,24 +120,32 @@ export function PriceControls({ gift }: { gift: GiftView }) {
   }
   return (
     <div className="price-controls">
-      <div className="price-watch">
-        <label className="check">
-          <input
-            type="checkbox"
-            checked={gift.priceWatching ?? false}
-            disabled={busy || (!!gift.pricing?.paused && !gift.priceWatching)}
-            onChange={(e) => change("prices/watch", e.target.checked)}
-          />
-          {shoppingOffers(gift).length > 1
-            ? "Notify me when the best price drops"
-            : "Notify me of price drops"}
-        </label>
-        <InfoHelp title="Price-drop notifications">
-          Alerts for drops of at least 5% and $1 appear in Notifications. Enable
-          Price drops in notification settings for delivery to your devices.
-        </InfoHelp>
-      </div>
-      {gift.canEdit && (
+      {ranged && (
+        <p className="muted">
+          Automatic price checks are paused. Enter an exact price to resume.
+        </p>
+      )}
+      {(!ranged || gift.priceWatching) && (
+        <div className="price-watch">
+          <label className="check">
+            <input
+              type="checkbox"
+              checked={gift.priceWatching ?? false}
+              disabled={busy || (!!gift.pricing?.paused && !gift.priceWatching)}
+              onChange={(e) => change("prices/watch", e.target.checked)}
+            />
+            {shoppingOffers(gift).length > 1
+              ? "Notify me when the best price drops"
+              : "Notify me of price drops"}
+          </label>
+          <InfoHelp title="Price-drop notifications">
+            Alerts for drops of at least 5% and $1 appear in Notifications.
+            Enable Price drops in notification settings for delivery to your
+            devices.
+          </InfoHelp>
+        </div>
+      )}
+      {gift.canEdit && !ranged && (
         <button
           className="text-button"
           disabled={busy}

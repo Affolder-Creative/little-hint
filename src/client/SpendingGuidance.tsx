@@ -1,3 +1,4 @@
+import { isPriceRange, priceEstimateCents } from "../shared/price";
 import { productItems } from "../shared/item-groups";
 import { netContribution } from "../shared/contribution-money";
 import { useCollection } from "./Pagination";
@@ -57,6 +58,7 @@ export function SpendingGuidance({
   preview?: SpendingPreview;
   sharedGift?: {
     priceCents: number | null;
+    priceMaxCents?: number | null;
     quantity: number;
     poolTotalCents?: number;
     poolTargetCents?: number;
@@ -99,6 +101,7 @@ export function SpendingGuidance({
         sharedGift.quantity,
         sharedGift.poolTargetCents,
         sharedGift.poolTotalCents,
+        sharedGift.priceMaxCents,
       )
     : null;
   return (
@@ -119,6 +122,12 @@ export function SpendingGuidance({
           : ""}
         . You can still reserve, buy, or contribute above it.
       </p>
+      {(total.usesRangeMaximum ||
+        (sharedGift &&
+          sharedGift.poolTotalCents == null &&
+          isPriceRange(sharedGift))) && (
+        <small>Estimates for price ranges use the upper price.</small>
+      )}
       {preview?.itemId && (
         <small>Includes the quantity you are about to reserve.</small>
       )}
@@ -188,11 +197,12 @@ export function ShareCostForm({
   const { world, mutate, close } = useApp();
   const legacy =
     r.poolTargetCents !== undefined && r.poolTotalCents === undefined;
+  const [totalEdited, setTotalEdited] = useState(false);
   const [total, setTotal] = useState(
     r.poolTotalCents != null
       ? String(r.poolTotalCents / 100)
       : !legacy && r.item?.priceCents != null
-        ? String((r.item.priceCents * r.quantity) / 100)
+        ? String((priceEstimateCents(r.item)! * r.quantity) / 100)
         : "",
   );
   const [own, setOwn] = useState(
@@ -246,7 +256,15 @@ export function ShareCostForm({
       )}
       <Field
         label="Total gift cost in USD"
-        hint="The full cost for the quantity you reserved, including any tax or shipping you want to cover."
+        hint={
+          !totalEdited &&
+          r.poolTotalCents == null &&
+          !legacy &&
+          r.item &&
+          isPriceRange(r.item)
+            ? "Starts with the upper price for the quantity reserved. Adjust it to include tax and shipping."
+            : "The full cost for the quantity you reserved, including any tax or shipping you want to cover."
+        }
       >
         <input
           name="totalCost"
@@ -256,7 +274,10 @@ export function ShareCostForm({
           step="0.01"
           required
           value={total}
-          onChange={(e) => setTotal(e.target.value)}
+          onChange={(e) => {
+            setTotalEdited(true);
+            setTotal(e.target.value);
+          }}
         />
       </Field>
       <Field
@@ -299,6 +320,7 @@ export function ShareCostForm({
         }}
         sharedGift={{
           priceCents: r.item?.priceCents ?? null,
+          priceMaxCents: r.item?.priceMaxCents,
           quantity: r.quantity,
           poolTargetCents: Math.max(0, target),
           poolTotalCents: totalCents > 0 ? totalCents : undefined,
@@ -358,6 +380,7 @@ export function ContributionForm({
         preview={{ contributionReservationId: r.id, amountCents: cents }}
         sharedGift={{
           priceCents: gift.priceCents,
+          priceMaxCents: gift.priceMaxCents,
           quantity: r.quantity,
           poolTargetCents: r.poolTargetCents,
           poolTotalCents: r.poolTotalCents,
@@ -394,6 +417,7 @@ export function ContributionSpendingGuidance({
       context={eventSpendingContext(world, gift)}
       sharedGift={{
         priceCents: gift.priceCents,
+        priceMaxCents: gift.priceMaxCents,
         quantity: reservation.quantity,
         poolTargetCents: reservation.poolTargetCents,
         poolTotalCents: reservation.poolTotalCents,

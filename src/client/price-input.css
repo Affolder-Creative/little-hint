@@ -1,0 +1,39 @@
+.price-input-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.price-input-controls input {
+  flex: 1;
+  min-width: 0;
+  width: 0;
+  font-variant-numeric: tabular-nums;
+}
+.price-range-button {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding-inline: 10px;
+  min-height: 44px;
+}
+.price-field > small {
+  display: block;
+}
+.form-row:has(> .price-field) {
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  align-items: start;
+}
+.price-input-controls input {
+  font-weight: 400;
+  min-height: 44px;
+}
+.price-field > small.error {
+  color: var(--error);
+}
+@media (max-width: 650px) {
+  .form-row:has(> .price-field) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

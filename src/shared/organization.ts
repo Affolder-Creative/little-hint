@@ -59,6 +59,7 @@ export function ordered<
     title?: string;
     priority?: ItemPriority | null;
     priceCents?: number | null;
+    priceMaxCents?: number | null;
     archivedAt?: string;
   },
 >(
@@ -105,7 +106,13 @@ export function ordered<
             : 1
           : b.priceCents == null
             ? -1
-            : (a.priceCents - b.priceCents) * (sort === "price-desc" ? -1 : 1);
+            : sort === "price-desc"
+              ? (b.priceMaxCents ?? b.priceCents) -
+                  (a.priceMaxCents ?? a.priceCents) ||
+                b.priceCents - a.priceCents
+              : a.priceCents - b.priceCents ||
+                (a.priceMaxCents ?? a.priceCents) -
+                  (b.priceMaxCents ?? b.priceCents);
     return result || manual(a, b);
   });
 }

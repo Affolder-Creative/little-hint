@@ -212,6 +212,7 @@ function reserved(
   f: ReturnType<typeof fixture>,
   quantity = 2,
   priceCents = 5000,
+  priceMaxCents?: number,
 ) {
   const list = command(f.s, f.actors[2], "lists.create", {
     name: "Emma wishes",
@@ -224,6 +225,7 @@ function reserved(
     listId: list.id,
     quantity,
     priceCents,
+    priceMaxCents,
   }) as { id: string };
   const gift = f.s.items.find((i) => i.id === result.id)!;
   const response = command(f.s, f.actors[0], "reservations.create", {
@@ -1553,4 +1555,29 @@ describe("idea spending defaults and combined purchase edits", () => {
     expect(purchases).toHaveLength(1);
     expect(purchases[0]).toMatchObject({ amountCents: 2795, listId: f.listId });
   });
+});
+
+it("snapshots the upper price for range plans without inventing payments or rewriting manual estimates", () => {
+  const f = fixture();
+  const gift = reserved(f, 2, 40000, 70000);
+  expect(gift.plan()).toMatchObject({
+    amountCents: 140000,
+    unitEstimateCents: 70000,
+    estimateUsesRangeMaximum: true,
+    listedPriceSnapshot: { priceCents: 40000, priceMaxCents: 70000 },
+  });
+  f.run(0, "record", {
+    id: gift.plan().id,
+    revision: gift.plan().revision,
+    amountCents: 100000,
+    date: null,
+    planningYear: 2026,
+    splits: [1],
+  });
+  expect(gift.plan().estimateUsesRangeMaximum).toBe(false);
+  gift.buy(null);
+  expect(gift.plan().amountCents).toBe(50000);
+  expect(
+    f.s.spendingRecords.find((r) => r.kind === "purchase")?.amountCents,
+  ).toBeNull();
 });

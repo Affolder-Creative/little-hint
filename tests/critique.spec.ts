@@ -5414,7 +5414,7 @@ for (const width of [320, 393, 768, 1440]) {
     await dialog.getByText("More details", { exact: true }).click();
     await expect(details).not.toHaveAttribute("open");
     await expect(dialog.locator(".gift-import-preview")).toContainText(
-      "$42.00",
+      "$42",
     );
     await page.screenshot({
       path: info.outputPath(`item-editor-${width}.png`),

@@ -44,6 +44,8 @@ export interface SpendingRecord extends Base {
   quantity: number;
   amountCents: number | null;
   unitEstimateCents?: number | null;
+  listedPriceSnapshot?: import("./price").PriceValue;
+  estimateUsesRangeMaximum?: boolean;
   promisedCents?: number;
   date: string | null;
   planningYear: number;
@@ -175,7 +177,8 @@ export function spendingTotals(
     knownActual = 0,
     missingActual = 0,
     knownPlanned = 0,
-    missingPlanned = 0;
+    missingPlanned = 0,
+    usesRangeMaximum = false;
   const rows = records.filter((r) => !r.voided);
   const internal = shared
     ? authorizedRecords.filter(
@@ -240,6 +243,7 @@ export function spendingTotals(
     }
     if (r.kind === "plan") {
       planned += amount;
+      usesRangeMaximum ||= amount > 0 && !!r.estimateUsesRangeMaximum;
       knownPlanned++;
     } else {
       spent += r.kind === "refund" ? -amount : amount;
@@ -254,6 +258,7 @@ export function spendingTotals(
     missingActual,
     knownPlanned,
     missingPlanned,
+    usesRangeMaximum,
   };
 }
 

@@ -1,3 +1,4 @@
+import { formatPrice, priceTotal } from "../shared/price";
 import { shoppingUrl } from "../shared/shopping-offers";
 import { dismissActionMenu } from "./menu-dismiss";
 import { InfoHelp } from "./InfoHelp";
@@ -322,14 +323,14 @@ export function Buying() {
                     <p className="buying-price">
                       {r.item?.priceCents != null ? (
                         <>
-                          Listed price {dollars(r.item.priceCents)}
+                          Listed price {formatPrice(r.item)}
                           {r.quantity > 1 && (
                             <>
                               {" "}
-                              each · {dollars(
-                                r.item.priceCents * r.quantity,
-                              )}{" "}
-                              for {r.quantity}
+                              each ·{" "}
+                              {formatPrice(
+                                priceTotal(r.item, r.quantity),
+                              )} for {r.quantity}
                             </>
                           )}
                         </>
@@ -353,6 +354,7 @@ export function Buying() {
                         r.poolTargetCents
                           ? {
                               priceCents: r.item?.priceCents ?? null,
+                              priceMaxCents: r.item?.priceMaxCents,
                               quantity: r.quantity,
                               poolTargetCents: r.poolTargetCents,
                               poolTotalCents: r.poolTotalCents,

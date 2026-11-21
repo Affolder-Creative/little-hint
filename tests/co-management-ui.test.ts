@@ -239,7 +239,17 @@ describe("wish-list co-management UI", () => {
       world(f.state, f.actors[1]),
     );
     expect(html).toContain("Coffee set");
-    expect(html).toContain("$25.00");
+    expect(html).toContain("$25");
+    f.state.recoveredDrafts[0].priceMaxCents = 5000;
+    expect(
+      render(
+        createElement(RecoveredCoManagementDrafts),
+        world(f.state, f.actors[1]),
+      ),
+    ).toContain("$25–$50");
+    expect(
+      recoveredDraftContent(f.state.recoveredDrafts[0]).priceMaxCents,
+    ).toBe(5000);
     expect(html).toContain("Quantity: 2");
     expect(html).toContain("Kitchen");
     expect(html).toContain("/api/v1/media/photo");

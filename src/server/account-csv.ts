@@ -1,3 +1,4 @@
+import { priceInputValue, priceBounds } from "../shared/price";
 import { recordAllocations } from "../shared/spending";
 import { listCanManagePolicy } from "./co-management";
 import { draftAccess } from "./domain-access";
@@ -73,6 +74,8 @@ export function accountCsv(s: State, a: Actor, table: ExportTable) {
         "Parent item ID",
         "Created at (UTC)",
         "Item ID",
+        "Minimum price (USD)",
+        "Maximum price (USD)",
       ],
       ...s.items
         .filter(
@@ -87,7 +90,7 @@ export function accountCsv(s: State, a: Actor, table: ExportTable) {
           i.description,
           names(i.recipientIds),
           listName(i.listId),
-          money(i.priceCents),
+          priceInputValue(i),
           i.quantity,
           i.priority,
           i.tags.join("; "),
@@ -107,6 +110,8 @@ export function accountCsv(s: State, a: Actor, table: ExportTable) {
           i.parentItemId ?? "",
           i.createdAt,
           i.id,
+          money(priceBounds(i).minCents),
+          money(priceBounds(i).maxCents),
         ]),
     ];
   } else if (table === "buying") {

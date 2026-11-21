@@ -485,6 +485,9 @@ export function SpendingSummary({
       <div className="spending-quick-metric">
         <span>Still planning · Estimated</span>
         <strong>{totalLabel(totals, true)}</strong>
+        {totals.usesRangeMaximum && (
+          <small>Price ranges use the upper price.</small>
+        )}
         {totals.missingPlanned > 0 && (
           <small>
             {totals.missingPlanned}{" "}
@@ -863,7 +866,11 @@ function SpendingRow({
               : "Amount not recorded"
             : dollars(scopedCents(r, { ...scope, person }))}
           {r.kind === "plan" && r.amountCents !== null && (
-            <small>Estimated</small>
+            <small>
+              {r.estimateUsesRangeMaximum
+                ? "Estimated using the upper price"
+                : "Estimated"}
+            </small>
           )}
           {person && r.recipientIds.length > 1 && r.amountCents !== null && (
             <small>of {dollars(r.amountCents)} total</small>
@@ -1411,6 +1418,9 @@ export function SpendingPage() {
               <div>
                 <span>Still planning</span>
                 <strong>{totalLabel(totals, true)}</strong>
+                {totals.usesRangeMaximum && (
+                  <small>Price ranges use the upper price.</small>
+                )}
                 <small>Estimated</small>
                 {totals.missingPlanned > 0 && (
                   <p className="spending-completeness">

@@ -42,3 +42,6 @@ A shop link for a particular product and variant, with its own price and verific
 
 **Product group**:
 Related products presented together under a shared name and gallery. Each product can be reserved and purchased separately.
+
+**Price range**:
+The lowest and highest listed price for one item or gift idea. A range can describe acceptable alternatives while the idea remains a single gift to reserve.

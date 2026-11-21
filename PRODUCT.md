@@ -262,3 +262,11 @@ Multiple app admins manage the installation; primary family owners and additiona
 Items and gift ideas support several labeled shopping offers for the same product and variant. The primary link supplies product details; additional links preserve the chosen name, description and photos. Each offer retains its own price and verification time. One private subscription follows the lowest fresh verified price, with the existing daily schedule, provider allowances, 48-hour freshness window and 5%/$1 alert threshold. Changed offer membership establishes a fresh reference without an alert. Failed checks preserve saved amounts; recorded payments and commitments remain independent.
 
 Product groups share a name, description, gallery and audience while each product retains its own quantity, shopping offers, gift plans, discussion and spending. Wrapping an existing item preserves its identity and commitments. Browsing presents the group once and Buying identifies the individual product. Groups cannot be reserved as a whole or nested. Group privacy and lifecycle apply to the products; purchase and settlement history survive removal. Different acceptable alternatives are not treated as equivalent offers.
+
+## Price ranges
+
+Items and gift ideas, including individual products in a group, accept an optional exact USD price or increasing range in one field. A Range button retains the decimal keypad and inserts the separator. Recognized USD paste formatting is normalized; ambiguous text is rejected. Unfinished lookup and device drafts preserve incomplete text until an item is saved.
+
+Cards, details, Buying and purchase references display both endpoints. Group totals sum both endpoints with quantities. Ascending sorting uses the lower price; descending uses the upper. New estimates use the upper price and explain their basis; existing saved estimates and payments retain their values. Ranged purchases require an entered actual amount or retain an unknown amount.
+
+Ranges pause automatic checks and alerts, including in-flight results, until an exact price is saved and an editor resumes checking. Shopping offers retain exact prices independently. A ranged idea remains one gift plan rather than a product group. Schema 15 protects these semantics from older app and worker versions.

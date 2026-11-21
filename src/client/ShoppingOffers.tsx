@@ -1,3 +1,10 @@
+import { PriceInput } from "./PriceInput";
+import {
+  parsePriceInput,
+  priceInputValue,
+  formatPrice,
+  isPriceRange,
+} from "../shared/price";
 import { useId } from "react";
 import { ArrowDown, ArrowUp, ExternalLink, Plus, Trash2 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
@@ -16,8 +23,7 @@ import "./shopping-offers.css";
 export type ProductInput = Pick<
   Item,
   "title" | "url" | "description" | "image" | "priceCents" | "quantity" | "tags"
-> &
-  Partial<
+> & { price?: string; priceMaxCents?: number | null } & Partial<
     Pick<
       Item,
       "id" | "revision" | "images" | "shoppingOffers" | "primaryOfferId"
@@ -33,8 +39,9 @@ export const newProduct = (): ProductInput => ({
   tags: [],
 });
 export function offerInputs(
-  item: Pick<Item, "url" | "priceCents"> &
-    Partial<
+  item: Pick<Item, "url" | "priceCents"> & {
+    priceMaxCents?: number | null;
+  } & Partial<
       Pick<
         Item,
         | "id"
@@ -45,7 +52,11 @@ export function offerInputs(
       >
     >,
 ): ShoppingOffer[] {
-  return shoppingOffers({ ...item, id: item.id ?? "new" });
+  return shoppingOffers({
+    ...item,
+    priceCents: isPriceRange(item) ? null : item.priceCents,
+    id: item.id ?? "new",
+  });
 }
 
 export function ShoppingLinks({ gift }: { gift: GiftView }) {
@@ -65,7 +76,7 @@ export function ShoppingLinks({ gift }: { gift: GiftView }) {
               </a>
               {offer.note && <p>{offer.note}</p>}
               <small>
-                {(gift.priceCents !== null || offer.priceCents !== null) && (
+                {offer.priceCents !== null && (
                   <>
                     {offer.pricing?.checkedAt
                       ? `${freshOffer(offer) ? "Checked" : "Last verified"} ${formatDateTime(offer.pricing.checkedAt)}`
@@ -232,8 +243,10 @@ export function OfferEditor({
 export function ProductsEditor({
   products,
   onChange,
+  allowIncomplete = false,
 }: {
   products: ProductInput[];
+  allowIncomplete?: boolean;
   onChange: (products: ProductInput[]) => void;
 }) {
   const multiple = products.length > 1;
@@ -265,25 +278,19 @@ export function ProductsEditor({
             />
           </Field>
           <div className="form-row">
-            <Field label="Price in USD">
-              <input
-                type="number"
-                min="0"
-                max="1000000"
-                step="0.01"
-                value={
-                  product.priceCents === null ? "" : product.priceCents / 100
-                }
-                onChange={(e) =>
-                  update(index, {
-                    priceCents:
-                      e.target.value === ""
-                        ? null
-                        : Math.round(Number(e.target.value) * 100),
-                  })
-                }
-              />
-            </Field>
+            <PriceInput
+              allowIncomplete={allowIncomplete}
+              value={product.price ?? priceInputValue(product)}
+              onChange={(price) => {
+                const parsed = parsePriceInput(price);
+                update(index, {
+                  price,
+                  ...(parsed.ok
+                    ? parsed.value
+                    : { priceCents: null, priceMaxCents: null }),
+                });
+              }}
+            />
             <Field label="Quantity wanted">
               <input
                 type="number"
@@ -391,8 +398,7 @@ export function GroupProducts({ gift }: { gift: GiftView }) {
                 {product.title}
               </Link>
               <small>
-                {dollars(product.priceCents)} · Quantity wanted:{" "}
-                {product.quantity}
+                {formatPrice(product)} · Quantity wanted: {product.quantity}
               </small>
               {product.available !== undefined && (
                 <small>

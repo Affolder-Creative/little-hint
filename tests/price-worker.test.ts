@@ -249,3 +249,23 @@ it("invalidates stale editors after a partial result while concurrent sibling ch
     mock.state!.notices.filter((n) => n.event === "price-drop"),
   ).toHaveLength(1);
 });
+
+it("rejects in-flight results after an exact price becomes a range", async () => {
+  const { id, i } = fixture();
+  mock.lookup.mockImplementation(async () => {
+    const item = mock.state!.items.find((x) => x.id === i.id)!;
+    item.priceMaxCents = 20000;
+    item.pricing!.paused = true;
+    item.revision++;
+    return { priceCents: 8000, identity: "same", source: "direct" };
+  });
+  await processPrice(id);
+  expect(mock.state!.items.find((x) => x.id === i.id)).toMatchObject({
+    priceCents: 10000,
+    priceMaxCents: 20000,
+  });
+  expect(mock.state!.priceChanges).toHaveLength(0);
+  expect(
+    mock.state!.notices.filter((n) => n.event === "price-drop"),
+  ).toHaveLength(0);
+});

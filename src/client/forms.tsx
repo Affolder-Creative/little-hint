@@ -1,3 +1,12 @@
+import { useOnline } from "./pwa";
+import { PriceInput } from "./PriceInput";
+import {
+  parsePriceInput,
+  priceInputValue,
+  formatPrice,
+  priceEstimateCents,
+  isPriceRange,
+} from "../shared/price";
 import {
   ideaAllocationChoices,
   sameAllocationChoices,
@@ -354,6 +363,7 @@ export function ListForm({
   );
 }
 interface Draft {
+  price?: string;
   kind?: "group";
   products?: ProductInput[];
   shoppingOffers?: ShoppingOffer[];
@@ -480,6 +490,7 @@ function GiftEditor({
   capture?: { url: string; title: string };
 }) {
   const { world, mutate, close, toast } = useApp();
+  const online = useOnline();
   const navigate = useNavigate();
   const lists = world.lists.filter((l) => l.canEdit && !l.archived);
   const [noteRich, setNoteRich] = useState<NoteDocument | null | undefined>(
@@ -492,7 +503,7 @@ function GiftEditor({
     title: gift?.title ?? draft?.title ?? capture?.title ?? "",
     url: gift?.url ?? draft?.url ?? capture?.url ?? "",
     description: gift?.description ?? draft?.description ?? "",
-    price: gift?.priceCents == null ? "" : String(gift.priceCents / 100),
+    price: gift ? priceInputValue(gift) : (draft?.price ?? ""),
     image: gift?.image ?? "",
     images: itemPhotos(gift ?? {}),
     tags: gift?.tags.join(", ") ?? "",
@@ -532,13 +543,22 @@ function GiftEditor({
       draft?.primaryOfferId ??
       (restoredFields?.primaryOfferId as string | undefined),
   );
+  const parsedPrice = parsePriceInput(data.price);
+  const priceValue = parsedPrice.ok
+    ? parsedPrice.value
+    : { priceCents: null, priceMaxCents: null };
+  const exactOfferPrice = isPriceRange(priceValue)
+    ? null
+    : priceValue.priceCents;
+  const priceSummary = parsedPrice.ok
+    ? formatPrice(priceValue)
+    : "Price needs attention";
   const effectiveOffers =
     offers.length || !data.url
       ? offers
       : offerInputs({
           url: data.url,
-          priceCents:
-            data.price === "" ? null : Math.round(Number(data.price) * 100),
+          priceCents: exactOfferPrice,
         });
   const shoppingFields = {
     shoppingOffers: effectiveOffers,
@@ -575,8 +595,8 @@ function GiftEditor({
         url: data.url,
         image: data.image,
         images: data.images,
-        priceCents:
-          data.price === "" ? null : Math.round(Number(data.price) * 100),
+        ...priceValue,
+        price: data.price,
         quantity: Number(data.quantity),
         shoppingOffers: effectiveOffers,
         primaryOfferId,
@@ -1259,12 +1279,40 @@ function GiftEditor({
             return;
           }
         }
+        if (!navigator.onLine) {
+          if (
+            idea ||
+            !localStorage.getItem(`little-hint:draft-optin:${world.me.id}`)
+          )
+            throw new Error(
+              "Reconnect to save, or turn on personal drafts in Settings for your own wish-list items.",
+            );
+          saveDraft(world.me.id, {
+            archived,
+            ...shoppingFields,
+            title: data.title,
+            price: data.price,
+            url: data.url,
+            description: data.description,
+            descriptionRich: noteRich,
+          });
+          toast("Personal draft saved on this device.");
+          close();
+          return;
+        }
+        if (!products && !parsedPrice.ok) throw new Error(parsedPrice.error);
+        const savedProducts = products?.map(({ price, ...product }) => {
+          const parsed = parsePriceInput(price ?? priceInputValue(product));
+          if (!parsed.ok) throw new Error(parsed.error);
+          return { ...product, ...parsed.value };
+        });
         const payload = {
           archived,
           publicationState: saveAsDraft ? "draft" : undefined,
           importDraftRevision: savedDraft.current?.draft?.revision,
           ...data,
           ...shoppingFields,
+          ...(savedProducts ? { products: savedProducts } : {}),
           ...(products
             ? { url: "", price: "", priceCents: null, quantity: 1 }
             : {}),
@@ -1283,10 +1331,9 @@ function GiftEditor({
             .split(",")
             .map((s) => s.trim())
             .filter(Boolean),
-          priceCents:
-            products || data.price === ""
-              ? null
-              : Math.round(Number(data.price) * 100),
+          ...(products
+            ? { priceCents: null, priceMaxCents: null }
+            : priceValue),
           quantity: products ? 1 : Number(data.quantity),
           ...(gift
             ? {
@@ -1317,6 +1364,7 @@ function GiftEditor({
             "image",
             "images",
             "priceCents",
+            "priceMaxCents",
             "currency",
             "tags",
             "quantity",
@@ -1330,26 +1378,6 @@ function GiftEditor({
           for (const key of Object.keys(payload))
             if (!allowed.has(key))
               delete (payload as Record<string, unknown>)[key];
-        }
-        if (!navigator.onLine) {
-          if (
-            idea ||
-            !localStorage.getItem(`little-hint:draft-optin:${world.me.id}`)
-          )
-            throw new Error(
-              "Reconnect to save, or turn on personal drafts in Settings for your own wish-list items.",
-            );
-          saveDraft(world.me.id, {
-            archived,
-            ...shoppingFields,
-            title: data.title,
-            url: data.url,
-            description: data.description,
-            descriptionRich: noteRich,
-          });
-          toast("Personal draft saved on this device.");
-          close();
-          return;
         }
         await saveQueue.current.catch(() => {});
         const result = await mutate(
@@ -1630,9 +1658,7 @@ function GiftEditor({
             amountKind="estimate"
             key={recipientIds.join()}
             value={spendingAllocations}
-            amountCents={
-              data.price === "" ? null : Math.round(Number(data.price) * 100)
-            }
+            amountCents={priceEstimateCents(priceValue)}
             onChange={setSpendingAllocations}
           />
           {assignmentChanged && !spendingAllocations.some((v) => v.listId) && (
@@ -1817,14 +1843,7 @@ function GiftEditor({
                     {job.result?.source && (
                       <small className="muted">{job.result.source}</small>
                     )}
-                    {data.price !== "" && (
-                      <p>
-                        {new Intl.NumberFormat("en-US", {
-                          style: "currency",
-                          currency: "USD",
-                        }).format(Number(data.price))}
-                      </p>
-                    )}
+                    {data.price !== "" && <p>{priceSummary}</p>}
                   </div>
                 </div>
               )}
@@ -1869,6 +1888,7 @@ function GiftEditor({
       {products ? (
         <ProductsEditor
           products={products}
+          allowIncomplete={!online}
           onChange={(next) => {
             touched.current.add("products");
             setProducts(next);
@@ -1883,10 +1903,7 @@ function GiftEditor({
                 : data.url
                   ? offerInputs({
                       url: data.url,
-                      priceCents:
-                        data.price === ""
-                          ? null
-                          : Math.round(Number(data.price) * 100),
+                      priceCents: exactOfferPrice,
                     })
                   : []
             }
@@ -1932,11 +1949,7 @@ function GiftEditor({
             {[
               archived && "Will save to archive",
               data.description && "Note added",
-              data.price !== "" &&
-                new Intl.NumberFormat("en-US", {
-                  style: "currency",
-                  currency: "USD",
-                }).format(Number(data.price)),
+              data.price !== "" && priceSummary,
               Number(data.quantity) !== 1 && `Quantity: ${data.quantity}`,
               priority && "Priority set",
               data.tags && "Tags added",
@@ -1957,17 +1970,11 @@ function GiftEditor({
         />
         {!products && (
           <div className="form-row">
-            <Field label="Price in USD">
-              <input
-                type="number"
-                min="0"
-                max="1000000"
-                step="0.01"
-                value={data.price}
-                onChange={(e) => change("price", e.target.value)}
-                placeholder="Optional"
-              />
-            </Field>
+            <PriceInput
+              allowIncomplete={!online}
+              value={data.price}
+              onChange={(value) => change("price", value)}
+            />
             <Field label="Quantity wanted">
               <input
                 type="number"
