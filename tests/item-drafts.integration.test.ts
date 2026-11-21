@@ -48,4 +48,139 @@ describe.skipIf(!url)("persisted drafts", () => {
     expect(published.items[0].publicationState).toBe("published");
     expect(itemVisible(published, f.reader, published.items[0])).toBe(true);
   });
+  it("persists and hydrates grouped products without duplicate browse entries", async () => {
+    const { itemPage, buyingPage } = await import("../src/server/collections");
+    const group = (await db.transact((s) =>
+      command(s, f.john, "items.create", {
+        title: "Silverware integration",
+        kind: "group",
+        listId: f.list.id,
+        products: [
+          {
+            title: "Dinner forks",
+            description: "Fork details",
+            priceCents: 3200,
+            shoppingOffers: [
+              {
+                id: "fork-shop",
+                url: "https://shop.example/forks",
+                label: "Shop",
+                priceCents: 3200,
+              },
+            ],
+          },
+          { title: "Teaspoons", priceCents: 2400 },
+        ],
+      }),
+    )) as import("../src/shared/model").GiftView;
+    const state = await db.readCollectionState();
+    expect(state.items.find((i) => i.id === group.id)?.kind).toBe("group");
+    const page = await itemPage(state, f.reader, {
+      scope: "list",
+      id: f.list.id,
+      search: "Dinner forks",
+    });
+    expect(page.rows.map((i) => i.id)).toEqual([group.id]);
+    expect(page.rows[0].priceCents).toBe(5600);
+    expect(page.rows[0].products?.[0].shoppingOffers?.[0].url).toBe(
+      "https://shop.example/forks",
+    );
+    await db.transact((s) =>
+      command(s, f.reader, "reservations.create", {
+        itemId: group.products![0].id,
+        quantity: 1,
+        ordinary: true,
+      }),
+    );
+    const buying = await buyingPage(
+      await db.readBuyingState(f.reader.id),
+      f.reader,
+      {},
+    );
+    expect(
+      buying.rows.find((r) => r.itemId === group.products![0].id)?.item
+        ?.parentTitle,
+    ).toBe("Silverware integration");
+    const recipientPage = await itemPage(
+      await db.readCollectionState(),
+      f.john,
+      { scope: "list", id: f.list.id, search: "Dinner forks" },
+    );
+    expect(recipientPage.rows[0].available).toBeUndefined();
+    expect(
+      recipientPage.rows[0].products?.every(
+        (p) => p.reservations === undefined && p.available === undefined,
+      ),
+    ).toBe(true);
+    expect(
+      Number(
+        (
+          await db.pool.query(
+            "SELECT max(version) AS version FROM schema_migration",
+          )
+        ).rows[0].version,
+      ),
+    ).toBe(14);
+  });
+  it("round-trips typed nested product and offer draft fields", async () => {
+    const fields = {
+      title: "Imported set",
+      kind: "group",
+      shoppingOffers: [
+        {
+          id: "primary",
+          url: "https://shop.example/a",
+          label: "Shop A",
+          priceCents: 1000,
+        },
+      ],
+      products: [
+        {
+          title: "Forks",
+          shoppingOffers: [
+            {
+              id: "forks",
+              url: "https://shop.example/forks",
+              label: "Shop B",
+              priceCents: 3200,
+            },
+          ],
+        },
+      ],
+    };
+    const job = (await db.transact((s) =>
+      command(s, f.john, "imports.create", {
+        url: "https://shop.example/a",
+        draft: {
+          listId: f.list.id,
+          fields,
+          touched: ["shoppingOffers", "products"],
+        },
+      }),
+    )) as import("../src/shared/model").ImportJob;
+    expect(
+      (await db.readState()).imports.find((i) => i.id === job.id)?.draft
+        ?.fields,
+    ).toEqual(fields);
+    await db.transact((s) =>
+      command(s, f.john, "imports.update", {
+        id: job.id,
+        revision: job.draft!.revision,
+        fields: { products: [{ title: "Spoons" }] },
+        touched: ["products"],
+      }),
+    );
+    expect(
+      (await db.readState()).imports.find((i) => i.id === job.id)?.draft?.fields
+        .products,
+    ).toEqual([{ title: "Spoons" }]);
+    await expect(
+      db.transact((s) =>
+        command(s, f.john, "imports.update", {
+          id: job.id,
+          fields: { shoppingOffers: [{ title: "Not an offer" }] },
+        }),
+      ),
+    ).rejects.toThrow(/Invalid shoppingOffers/);
+  });
 });

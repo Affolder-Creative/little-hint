@@ -41,7 +41,9 @@ export function archivedItemSort(sort: SortOrder): ArchivedSortOrder {
 }
 export function itemTrashed(s: State, item: Item): boolean {
   return (
-    !!item.deletedAt || !!s.lists.find((l) => l.id === item.listId)?.deletedAt
+    !!item.deletedAt ||
+    !!s.items.find((i) => i.id === item.parentItemId)?.deletedAt ||
+    !!s.lists.find((l) => l.id === item.listId)?.deletedAt
   );
 }
 export function orderedArchivedItems<T extends Base & { archivedAt?: string }>(

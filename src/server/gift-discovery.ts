@@ -1,3 +1,5 @@
+import { migrateShoppingOffers } from "./shopping-offers";
+import { bestShoppingOffer } from "../shared/shopping-offers";
 import { excludedAccounts } from "./idea-audience";
 import { itemPhotos } from "../shared/item-photos";
 import { noteDocumentSchema, normalizeNote } from "../shared/helpful-note";
@@ -485,9 +487,22 @@ function simulateSave(
       item.purchaseOffers = structuredClone(candidate.offers);
       item.recommendationEvidence = structuredClone(candidate.evidence);
       item.source = new URL(item.url).hostname;
-      item.importedAt = candidate.offers.find(
-        (o) => o.url === item.url,
-      )!.checkedAt;
+      const selectedOffer = candidate.offers.find((o) => o.url === item.url)!;
+      item.importedAt = selectedOffer.checkedAt;
+      if (item.pricing) {
+        item.pricing.checkedAt = selectedOffer.checkedAt;
+        item.pricing.status = "verified";
+      }
+      migrateShoppingOffers(item);
+      const primary = item.shoppingOffers!.find(
+        (offer) => offer.id === item.primaryOfferId,
+      );
+      if (primary) primary.label = selectedOffer.retailer;
+      const best = bestShoppingOffer(item);
+      if (best && item.pricing) {
+        item.priceCents = best.priceCents;
+        item.pricing.checkedAt = best.pricing!.checkedAt;
+      }
     }
   }
   return { copy, conflicts, saved };

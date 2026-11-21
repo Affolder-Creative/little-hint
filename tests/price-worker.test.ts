@@ -1,3 +1,4 @@
+import { command } from "../src/server/domain";
 import { processPrice } from "../src/server/price-worker";
 import { beforeEach, afterEach, expect, it, vi } from "vitest";
 import type { State } from "../src/shared/model";
@@ -123,4 +124,128 @@ it("discards an in-flight result when the price is removed", async () => {
   expect(
     mock.state!.notices.filter((notice) => notice.event === "price-drop"),
   ).toHaveLength(0);
+});
+
+function multipleOffers() {
+  const { f, i } = fixture();
+  i.shoppingOffers = [
+    {
+      id: "primary",
+      url: i.url,
+      label: "Primary",
+      priceCents: 10000,
+      pricing: { ...i.pricing!, status: "verified" },
+    },
+    {
+      id: "other",
+      url: "https://other.example/p",
+      label: "Other",
+      priceCents: null,
+      pricing: {
+        baseline: null,
+        baselineLabel: "when added",
+        generation: "other",
+      },
+    },
+  ];
+  i.primaryOfferId = "primary";
+  f.s.priceChecks = [];
+  f.s.usage = [];
+  schedulePrices(f.s, new Date("2026-11-03T12:00:00Z"));
+  mock.state = f.s;
+  return { f, i, jobs: f.s.priceChecks };
+}
+it("checks unknown alternative prices and alerts once after all shops settle", async () => {
+  const { i, jobs } = multipleOffers();
+  expect(jobs).toHaveLength(2);
+  mock.lookup.mockImplementation(async (url) => ({
+    priceCents: url.includes("other") ? 7000 : 9000,
+    identity: url,
+    source: "direct",
+  }));
+  await processPrice(jobs[0].id);
+  expect(
+    mock.state!.notices.filter((n) => n.event === "price-drop"),
+  ).toHaveLength(0);
+  expect(mock.state!.items[0].priceCents).toBe(10000);
+  await processPrice(jobs[1].id);
+  expect(mock.state!.items[0].priceCents).toBe(7000);
+  expect(mock.state!.priceChanges.map((c) => c.offerId).sort()).toEqual([
+    "other",
+    "primary",
+  ]);
+  expect(
+    mock.state!.notices.filter((n) => n.event === "price-drop"),
+  ).toHaveLength(1);
+  expect(mock.state!.items[0].id).toBe(i.id);
+});
+it("settles a product when one shop fails and excludes its previous price", async () => {
+  const { jobs } = multipleOffers();
+  mock.state!.items[0].shoppingOffers![0].priceCents = 6000;
+  mock.lookup.mockImplementation(async (url) => {
+    if (!url.includes("other")) throw new Error("Out of stock");
+    return { priceCents: 8000, identity: url, source: "direct" };
+  });
+  await processPrice(jobs[1].id);
+  await processPrice(jobs[0].id);
+  expect(mock.state!.items[0].priceCents).toBe(8000);
+  expect(mock.state!.items[0].shoppingOffers![0].priceCents).toBe(6000);
+  expect(mock.state!.items[0].shoppingOffers![0].pricing!.status).toBe(
+    "unavailable",
+  );
+});
+it("does not accept a removed or replaced offer during a check", async () => {
+  const { jobs } = multipleOffers();
+  mock.lookup.mockImplementation(async () => {
+    mock.state!.items[0].shoppingOffers![1].pricing!.generation = "replaced";
+    return { priceCents: 1000, identity: "different", source: "direct" };
+  });
+  await processPrice(jobs[1].id);
+  expect(mock.state!.items[0].shoppingOffers![1].priceCents).toBeNull();
+  expect(mock.state!.priceChanges).toHaveLength(0);
+});
+
+it("invalidates stale editors after a partial result while concurrent sibling checks finish", async () => {
+  const { f, i, jobs } = multipleOffers();
+  const editorSnapshot = structuredClone(i);
+  let release!: () => void;
+  let started!: () => void;
+  const pendingLookup = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const startedLookup = new Promise<void>((resolve) => {
+    started = resolve;
+  });
+  mock.lookup.mockImplementation(async (url) => {
+    if (url.includes("other")) {
+      started();
+      await pendingLookup;
+    }
+    return {
+      priceCents: url.includes("other") ? 7000 : 9000,
+      identity: url,
+      source: "direct",
+    };
+  });
+  const pending = processPrice(jobs[1].id);
+  await startedLookup;
+  await processPrice(jobs[0].id);
+  expect(mock.state!.items[0].revision).toBeGreaterThan(
+    editorSnapshot.revision,
+  );
+  expect(() =>
+    command(mock.state!, f.john, "items.update", {
+      ...editorSnapshot,
+      title: "Renamed",
+    }),
+  ).toThrow();
+  release();
+  await pending;
+  expect(mock.state!.items[0].priceCents).toBe(7000);
+  expect(
+    mock.state!.priceChecks.every((job) => job.status === "complete"),
+  ).toBe(true);
+  expect(
+    mock.state!.notices.filter((n) => n.event === "price-drop"),
+  ).toHaveLength(1);
 });

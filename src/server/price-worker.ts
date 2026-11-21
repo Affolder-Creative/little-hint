@@ -1,3 +1,5 @@
+import type { State, Item, PriceCheck } from "../shared/model";
+import { bestShoppingOffer } from "../shared/shopping-offers";
 import { recordPriceFailure } from "./price-diagnostics";
 import { randomUUID } from "node:crypto";
 import { transact, readState } from "./db";
@@ -9,6 +11,86 @@ import { priceConfig } from "./price-config";
 import { priceEligible, meaningfulDrop, priceAlertAllowed } from "./prices";
 import { stamp } from "./domain";
 import { emitActivity } from "./activity";
+function targetEligible(s: State, i: Item, t: PriceCheck["targets"][number]) {
+  return (
+    i.revision === t.revision &&
+    i.pricing?.generation === t.generation &&
+    priceEligible(s, i) &&
+    (!t.offerId ||
+      i.shoppingOffers?.some(
+        (o) =>
+          o.id === t.offerId && o.pricing?.generation === t.offerGeneration,
+      ))
+  );
+}
+// Worker writes invalidate stale editors without invalidating sibling checks.
+// Only targets for the exact input revision are rebased; user edits never are.
+function bumpPriceRevision(s: State, item: Item) {
+  const previous = item.revision++;
+  for (const check of s.priceChecks)
+    for (const target of check.targets)
+      if (
+        target.id === item.id &&
+        target.generation === item.pricing?.generation &&
+        target.revision === previous
+      )
+        target.revision = item.revision;
+}
+function finishProductRuns(s: State, job: PriceCheck) {
+  for (const t of job.targets.filter((t) => t.offerId)) {
+    const i = s.items.find((i) => i.id === t.id);
+    if (!i || !targetEligible(s, i, t) || i.pricing!.completedDay === job.day)
+      continue;
+    const jobs = s.priceChecks.filter(
+      (j) =>
+        j.day === job.day &&
+        j.targets.some(
+          (target) =>
+            target.id === i.id &&
+            target.generation === t.generation &&
+            target.revision === t.revision,
+        ),
+    );
+    if (jobs.some((j) => j.status === "pending" || j.status === "running"))
+      continue;
+    const p = i.pricing!;
+    p.completedDay = job.day;
+    const best = bestShoppingOffer(i);
+    if (!best) {
+      p.status = i.shoppingOffers?.some((o) => o.pricing?.status === "deferred")
+        ? "deferred"
+        : "unavailable";
+      continue;
+    }
+    i.priceCents = best.priceCents;
+    p.checkedAt = best.pricing!.checkedAt;
+    p.status = "verified";
+    bumpPriceRevision(s, i);
+    // A run with no accepted result must not manufacture a price-drop alert.
+    if (!jobs.some((j) => j.status === "complete")) continue;
+    notifyDrop(s, i, best.priceCents!);
+  }
+}
+function notifyDrop(s: State, i: Item, price: number) {
+  const p = i.pricing!;
+  for (const w of s.priceWatches.filter((w) => w.itemId === i.id)) {
+    if (w.generation !== p.generation) {
+      w.generation = p.generation;
+      w.reference = null;
+    }
+    if (w.reference === null) w.reference = price;
+    else if (
+      meaningfulDrop(w.reference, price) &&
+      priceAlertAllowed(s, w.userId, i.id)
+    ) {
+      emitActivity(s, "price-drop", [w.userId], {
+        itemId: i.id,
+        action: `Price fell from $${(w.reference / 100).toFixed(2)} to $${(price / 100).toFixed(2)}`,
+      });
+      w.reference = price;
+    }
+  }
+}
 export async function processPrice(id: string) {
   const cfg = await config();
   if (!priceConfig().enabled || !productLookupEnabled(cfg)) return;
@@ -33,15 +115,11 @@ export async function processPrice(id: string) {
       !priceConfig().enabled ||
       !productLookupEnabled(await config()) ||
       !s.priceChecks.some((j) => j.id === id && j.token === token) ||
-      !job.targets.some((t) =>
-        s.items.some(
-          (i) =>
-            i.id === t.id &&
-            i.revision === t.revision &&
-            i.pricing?.generation === t.generation &&
-            priceEligible(s, i),
-        ),
-      )
+      !s.priceChecks
+        .find((j) => j.id === id)!
+        .targets.some((t) =>
+          s.items.some((i) => i.id === t.id && targetEligible(s, i, t)),
+        )
     )
       throw new Error("Check no longer eligible");
   };
@@ -60,59 +138,46 @@ export async function processPrice(id: string) {
       if (!j || j.token !== token) return;
       const checkedAt = new Date().toISOString();
       let accepted = 0;
-      for (const t of job.targets) {
+      for (const t of j.targets) {
         const i = s.items.find((i) => i.id === t.id);
-        if (
-          !i ||
-          i.revision !== t.revision ||
-          i.pricing?.generation !== t.generation ||
-          !priceEligible(s, i)
-        )
-          continue;
-        const p = i.pricing!;
+        if (!i || !targetEligible(s, i, t)) continue;
+        const offer = t.offerId
+          ? i.shoppingOffers!.find((o) => o.id === t.offerId)!
+          : undefined;
+        const p = offer?.pricing ?? i.pricing!;
         if (p.identity && p.identity !== result.identity) {
           p.status = "unavailable";
+          if (offer) bumpPriceRevision(s, i);
           continue;
         }
         accepted++;
         p.identity = result.identity;
         p.checkedAt = checkedAt;
         p.status = "verified";
-        const old = i.priceCents;
+        const old = offer ? offer.priceCents : i.priceCents;
         if (old !== result.priceCents) {
           s.priceChanges.push({
             ...stamp(),
             itemId: i.id,
+            ...(offer ? { offerId: offer.id } : {}),
             generation: p.generation,
             from: old,
             to: result.priceCents,
             source: result.source,
           });
-          i.priceCents = result.priceCents;
-          i.revision++;
+          if (offer) offer.priceCents = result.priceCents;
+          else {
+            i.priceCents = result.priceCents;
+            i.revision++;
+          }
         }
         for (const offer of i.purchaseOffers ?? [])
           if (offer.url === i.url) {
             offer.priceCents = result.priceCents;
             offer.checkedAt = checkedAt;
           }
-        for (const w of s.priceWatches.filter((w) => w.itemId === i.id)) {
-          if (w.generation !== p.generation) {
-            w.generation = p.generation;
-            w.reference = null;
-          }
-          if (w.reference === null) w.reference = result.priceCents;
-          else if (
-            meaningfulDrop(w.reference, result.priceCents) &&
-            priceAlertAllowed(s, w.userId, i.id)
-          ) {
-            emitActivity(s, "price-drop", [w.userId], {
-              itemId: i.id,
-              action: `Price fell from $${(w.reference / 100).toFixed(2)} to $${(result.priceCents / 100).toFixed(2)}`,
-            });
-            w.reference = result.priceCents;
-          }
-        }
+        if (offer) bumpPriceRevision(s, i);
+        else notifyDrop(s, i, result.priceCents);
       }
       j.status = accepted ? "complete" : "failed";
       if (!accepted) {
@@ -127,6 +192,7 @@ export async function processPrice(id: string) {
         delete j.error;
       }
       delete j.leaseUntil;
+      finishProductRuns(s, j);
     });
   } catch (error) {
     await transact((s) => {
@@ -145,13 +211,15 @@ export async function processPrice(id: string) {
         : "Price could not be verified; the previous price was retained.";
       for (const t of j.targets) {
         const i = s.items.find((i) => i.id === t.id);
-        if (
-          i?.pricing?.generation === t.generation &&
-          i.revision === t.revision &&
-          priceEligible(s, i)
-        )
-          i.pricing.status = deferred ? "deferred" : "unavailable";
+        if (i && targetEligible(s, i, t)) {
+          const pricing = t.offerId
+            ? i.shoppingOffers!.find((o) => o.id === t.offerId)!.pricing!
+            : i.pricing!;
+          pricing.status = deferred ? "deferred" : "unavailable";
+          if (t.offerId) bumpPriceRevision(s, i);
+        }
       }
+      finishProductRuns(s, j);
     });
   }
 }

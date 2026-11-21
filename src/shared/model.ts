@@ -160,7 +160,16 @@ export interface ProductSource {
   method: "extraction" | "web";
   checkedAt: string;
 }
+export interface ShoppingOffer {
+  id: string;
+  url: string;
+  label: string;
+  note?: string;
+  priceCents: number | null;
+  pricing?: PriceTracking;
+}
 export interface PriceTracking {
+  completedDay?: string;
   baseline: number | null;
   baselineLabel: "when added" | "when tracking started" | "when link changed";
   generation: string;
@@ -181,7 +190,13 @@ export interface PriceCheck extends Base {
   paidAttempted?: boolean;
   url: string;
   day: string;
-  targets: Array<{ id: string; generation: string; revision: number }>;
+  targets: Array<{
+    id: string;
+    generation: string;
+    revision: number;
+    offerId?: string;
+    offerGeneration?: string;
+  }>;
   status: "pending" | "running" | "complete" | "failed";
   leaseUntil?: string;
   token?: string;
@@ -189,6 +204,7 @@ export interface PriceCheck extends Base {
   providerState?: ImportJob["providerState"];
 }
 export interface PriceChange extends Base {
+  offerId?: string;
   itemId: string;
   generation: string;
   from: number | null;
@@ -196,6 +212,9 @@ export interface PriceChange extends Base {
   source: string;
 }
 export interface Item extends Base {
+  kind?: "group";
+  parentItemId?: string;
+  position?: number;
   lastEditorId?: string;
   descriptionRich?: NoteDocument | null;
   publicationState?: "draft" | "published";
@@ -207,6 +226,8 @@ export interface Item extends Base {
   friendEntryId?: string;
   productSources?: ProductSource[];
   purchaseOffers?: GiftOffer[];
+  shoppingOffers?: ShoppingOffer[];
+  primaryOfferId?: string;
   recommendationEvidence?: GiftEvidence[];
   deletedAt?: string;
   priority?: ItemPriority | null;
@@ -436,6 +457,10 @@ export interface Preferences extends Base {
   smsConsentVersion?: string;
   smsConsentedDailyLimit?: number;
 }
+export type DraftShoppingOffer = Partial<Omit<ShoppingOffer, "pricing">>;
+export type DraftProduct = Partial<Omit<Item, "shoppingOffers">> & {
+  shoppingOffers?: DraftShoppingOffer[];
+};
 export interface ImportDraft {
   archived?: boolean;
   recipientIds?: string[];
@@ -451,7 +476,10 @@ export interface ImportDraft {
   listId?: string;
   revision: number;
   state: "active" | "published" | "discarded";
-  fields: Record<string, string | number | null | string[]>;
+  fields: Record<
+    string,
+    string | number | null | string[] | DraftShoppingOffer[] | DraftProduct[]
+  >;
   touched: string[];
 }
 export interface ImportJob extends Base {
@@ -686,6 +714,10 @@ export interface GiftView extends Omit<
 > {
   adminDetailsOnly?: boolean;
   /** Unlike archived, this excludes archive status inherited from a wish list. */
+  products?: GiftView[];
+  parentTitle?: string;
+  productCount?: number;
+  unpricedProductCount?: number;
   visibilityScope?: "only-me" | "shared";
   individuallyArchived?: boolean;
   watchingNotes?: boolean;

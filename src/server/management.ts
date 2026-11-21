@@ -197,6 +197,7 @@ export function managementCommand(
     current(list, p.revision);
     const active = s.items.filter(
       (i) =>
+        !i.parentItemId &&
         i.listId === list.id &&
         !i.archived &&
         !i.deletedAt &&
@@ -315,9 +316,14 @@ function purge(s: State, kind: TrashKind, id: string) {
   const removed = new Set([id]);
   if (kind === "lists")
     for (const draft of s.items.filter(
-      (i) => i.listId === id && i.publicationState === "draft",
+      (i) =>
+        i.listId === id && i.publicationState === "draft" && !i.parentItemId,
     ))
       recoverDraft(s, draft);
+  if (kind === "items")
+    s.items
+      .filter((i) => i.parentItemId === id)
+      .forEach((i) => removed.add(i.id));
   if (kind === "group-events") {
     for (const list of s.lists.filter((l) => l.groupEventId === id)) {
       delete list.groupEventId;

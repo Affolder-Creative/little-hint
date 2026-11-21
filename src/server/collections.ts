@@ -1,3 +1,4 @@
+import { groupProducts } from "./item-groups";
 import { visibilityScope } from "./visibility";
 import { listCanEdit } from "./co-management";
 import { itemPhotos } from "../shared/item-photos";
@@ -82,6 +83,7 @@ export async function itemPage(
   const q = browseQuery.parse(raw);
   let items = s.items.filter(
     (i) =>
+      !i.parentItemId &&
       itemVisible(s, a, i) &&
       (i.publicationState ?? "published") === q.publicationState,
   );
@@ -116,10 +118,29 @@ export async function itemPage(
   for (const r of s.reservations)
     if (r.quantity > 0)
       quantities.set(r.itemId, (quantities.get(r.itemId) ?? 0) + r.quantity);
-  const availability = (i: State["items"][number]) =>
-    canShop(s, a, i) || mode(s, i) === "transparent"
-      ? Math.max(0, i.quantity - (quantities.get(i.id) ?? 0))
+  const availability = (i: State["items"][number]): number | undefined => {
+    if (i.kind === "group") {
+      const values = groupProducts(s, i)
+        .filter((child) => itemVisible(s, a, child))
+        .map(availability);
+      return values.some((value) => value !== undefined)
+        ? values.filter((value) => (value ?? 0) > 0).length
+        : undefined;
+    }
+    return canShop(s, a, i) || mode(s, i) === "transparent"
+      ? archived(s, i)
+        ? 0
+        : Math.max(0, i.quantity - (quantities.get(i.id) ?? 0))
       : undefined;
+  };
+  items = items.map((item) =>
+    item.kind === "group"
+      ? {
+          ...item,
+          priceCents: giftView(s, a, item).priceCents,
+        }
+      : item,
+  );
   const names = new Map(s.people.map((p) => [p.id, p.name]));
   const showAvailability = items.some((i) => availability(i) !== undefined);
   const chosen = q.people.split(",").filter((id) => people.includes(id));
@@ -130,7 +151,14 @@ export async function itemPage(
       (q.publicationState === "draft" ||
         (!!list && listIsArchived(list)) ||
         archived(s, i) === (canManage && q.status === "archived")) &&
-      `${i.title} ${i.recipientIds.map((id) => names.get(id) ?? "Recipient").join(" ")} ${i.tags.join(" ")}`
+      `${i.title} ${
+        i.kind === "group"
+          ? groupProducts(s, i)
+              .filter((child) => itemVisible(s, a, child))
+              .map((child) => child.title)
+              .join(" ")
+          : ""
+      } ${i.recipientIds.map((id) => names.get(id) ?? "Recipient").join(" ")} ${i.tags.join(" ")}`
         .toLowerCase()
         .includes(q.search.trim().toLowerCase()) &&
       (q.type === "all" || !!i.listId === (q.type === "wish")) &&
@@ -159,6 +187,11 @@ export async function itemPage(
     ...result,
     rows: result.rows.map((i) => {
       const v = giftView(s, a, getItem(s, a, i.id));
+      if (v.products)
+        v.products = v.products.map(
+          ({ comments: _comments, reservations: _reservations, ...product }) =>
+            product,
+        );
       delete v.comments;
       delete v.reservations;
       delete v.purchaseOffers;
@@ -292,7 +325,7 @@ export function registerCollections(
         itemVisible(s, a, i) &&
         canShop(s, a, i) &&
         !archived(s, i) &&
-        `${i.title} ${i.recipientIds.map((id) => s.people.find((p) => p.id === id)?.name).join(" ")} ${s.lists.find((l) => l.id === i.listId)?.name ?? ""}`
+        `${i.title} ${s.items.find((parent) => parent.id === i.parentItemId)?.title ?? ""} ${i.recipientIds.map((id) => s.people.find((p) => p.id === id)?.name).join(" ")} ${s.lists.find((l) => l.id === i.listId)?.name ?? ""}`
           .toLowerCase()
           .includes(search.toLowerCase()),
     );

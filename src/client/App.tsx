@@ -1,3 +1,4 @@
+import { productItems } from "../shared/item-groups";
 import { PeopleDirectory } from "./PeopleDirectory";
 import { PersonCoManagement } from "./CoManagement";
 import { ItemPhotoDetail } from "./ItemPhotoDetail";
@@ -27,7 +28,7 @@ import { ImportDrafts } from "./ImportDrafts";
 import { useProductImages } from "./useProductImages";
 import { ProfileEditor, GiftPreferencesShortcut } from "./ProfileEditor";
 import { Invitations } from "./Invitations";
-import { OfferLinks } from "./OfferLinks";
+import { ShoppingLinks, GroupProducts } from "./ShoppingOffers";
 import { Action } from "./Action";
 import { PageBoundary } from "./PageBoundary";
 import { NavigationScroll } from "./NavigationScroll";
@@ -1223,7 +1224,8 @@ function GiftDetail() {
   const detailQuery = useCollection<GiftView>(`items/${id}`);
   const gift = world.paged
     ? detailQuery.data
-    : world.items.find((i) => i.id === id);
+    : (world.items.find((i) => i.id === id) ??
+      productItems(world.items).find((i) => i.id === id));
   const [quantity, setQuantity] = useState(1),
     [exchange, setExchange] = useState(
       new URLSearchParams(noteLocation.search).get("shopping") ?? "",
@@ -1367,6 +1369,12 @@ function GiftDetail() {
               {priorityLabels[gift.priority]}
             </span>
           )}
+          {gift.parentTitle && (
+            <p className="muted">
+              Part of{" "}
+              <Link to={`/gift/${gift.parentItemId}`}>{gift.parentTitle}</Link>
+            </p>
+          )}
           <Price gift={gift} />
           <PriceControls gift={gift} />
           <p
@@ -1388,7 +1396,9 @@ function GiftDetail() {
                     ? "On your list · Buying plans stay a surprise"
                     : "On your list · You can see the gift plans"
                   : gift.available
-                    ? `${gift.available} available to reserve`
+                    ? gift.kind === "group"
+                      ? `${gift.available} products available`
+                      : `${gift.available} available to reserve`
                     : "Taken care of"}
             {myReserved > 0 &&
               ` · You reserved ${myReserved} · ${myPurchased} purchased`}
@@ -1416,7 +1426,9 @@ function GiftDetail() {
             </div>
           )}
           <p className="muted">
-            Quantity wanted: {gift.quantity}
+            {gift.kind === "group"
+              ? `${gift.products?.length ?? 0} products in this set`
+              : `Quantity wanted: ${gift.quantity}`}
             <ProductSources sources={gift.productSources} />
             {gift.importedAt && !gift.pricing && (
               <>
@@ -1425,18 +1437,10 @@ function GiftDetail() {
               </>
             )}
           </p>
-          {gift.url && (
-            <a
-              className="button secondary"
-              href={gift.url}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Visit shop <ExternalLink size={16} />
-            </a>
-          )}
-          {gift.purchaseOffers && (
-            <OfferLinks candidate={{ offers: gift.purchaseOffers }} />
+          {gift.kind === "group" ? (
+            <GroupProducts gift={gift} />
+          ) : (
+            <ShoppingLinks gift={gift} />
           )}
           {gift.recommendationEvidence?.map((e, i) => (
             <p className="muted" key={i}>
@@ -1464,7 +1468,7 @@ function GiftDetail() {
             contextSelector}
         </section>
       </div>
-      {gift.archived ? (
+      {gift.kind === "group" ? null : gift.archived ? (
         <p className="notice">
           {gift.listId
             ? "This item is archived."

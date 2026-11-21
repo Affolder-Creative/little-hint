@@ -69,6 +69,8 @@ export function accountCsv(s: State, a: Actor, table: ExportTable) {
         "Visibility",
         "Status",
         "Shop URL",
+        "Additional shop URLs",
+        "Parent item ID",
         "Created at (UTC)",
         "Item ID",
       ],
@@ -98,6 +100,11 @@ export function accountCsv(s: State, a: Actor, table: ExportTable) {
                 ? "Archived"
                 : "Active",
           i.url,
+          (i.shoppingOffers ?? [])
+            .filter((offer) => offer.url !== i.url)
+            .map((offer) => offer.url)
+            .join("; "),
+          i.parentItemId ?? "",
           i.createdAt,
           i.id,
         ]),

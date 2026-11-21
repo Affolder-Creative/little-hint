@@ -171,6 +171,9 @@ try {
       ? ["tests/friends.spec.ts", "tests/helpful-note.spec.ts"]
       : []),
   ]).done;
+  if (suite === "list-features")
+    await run("node", ["--import", "tsx", "tests/shopping-ui.browser.mjs"])
+      .done;
 } finally {
   await stop();
   await mkdir("test-results", { recursive: true });

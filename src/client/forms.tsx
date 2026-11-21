@@ -1,3 +1,11 @@
+import {
+  OfferEditor,
+  ProductsEditor,
+  offerInputs,
+  newProduct,
+  type ProductInput,
+} from "./ShoppingOffers";
+import type { ShoppingOffer } from "../shared/model";
 import { SpendingAllocations, defaultAllocations } from "./SpendingAllocations";
 import { IdeaPeople } from "./IdeaPeople";
 import { itemPhotos } from "../shared/item-photos";
@@ -341,6 +349,10 @@ export function ListForm({
   );
 }
 interface Draft {
+  kind?: "group";
+  products?: ProductInput[];
+  shoppingOffers?: ShoppingOffer[];
+  primaryOfferId?: string;
   archived?: boolean;
   descriptionRich?: NoteDocument | null;
   id: string;
@@ -463,6 +475,7 @@ function GiftEditor({
   capture?: { url: string; title: string };
 }) {
   const { world, mutate, close, toast } = useApp();
+  const navigate = useNavigate();
   const lists = world.lists.filter((l) => l.canEdit && !l.archived);
   const [noteRich, setNoteRich] = useState<NoteDocument | null | undefined>(
     gift?.descriptionRich ??
@@ -496,6 +509,76 @@ function GiftEditor({
         )
       : {}),
   });
+  const restoredFields = importDraft?.draft?.fields;
+  const [products, setProducts] = useState<ProductInput[] | undefined>(
+    gift?.products ??
+      draft?.products ??
+      (restoredFields?.products as ProductInput[] | undefined),
+  );
+  const [offers, setOffers] = useState<ShoppingOffer[]>(
+    gift
+      ? offerInputs(gift)
+      : (draft?.shoppingOffers ??
+          (restoredFields?.shoppingOffers as ShoppingOffer[]) ??
+          []),
+  );
+  const [primaryOfferId, setPrimaryOfferId] = useState<string | undefined>(
+    gift?.primaryOfferId ??
+      draft?.primaryOfferId ??
+      (restoredFields?.primaryOfferId as string | undefined),
+  );
+  const effectiveOffers =
+    offers.length || !data.url
+      ? offers
+      : offerInputs({
+          url: data.url,
+          priceCents:
+            data.price === "" ? null : Math.round(Number(data.price) * 100),
+        });
+  const shoppingFields = {
+    shoppingOffers: effectiveOffers,
+    ...(primaryOfferId ? { primaryOfferId } : {}),
+    ...(products ? { kind: "group" as const, products } : {}),
+  };
+  const syncOffers = (next: ShoppingOffer[], primary?: string) => {
+    touched.current.add("shoppingOffers");
+    setOffers(next);
+    setPrimaryOfferId(primary);
+    setData((d) => ({
+      ...d,
+      url: next.find((o) => o.id === primary)?.url ?? next[0]?.url ?? "",
+      price:
+        !gift &&
+        d.price === "" &&
+        !touched.current.has("price") &&
+        next.some((o) => o.priceCents !== null)
+          ? String(
+              (next.find((o) => o.id === primary && o.priceCents !== null) ??
+                next.find((o) => o.priceCents !== null))!.priceCents! / 100,
+            )
+          : d.price,
+    }));
+  };
+  const addProduct = () => {
+    touched.current.add("products");
+    setProducts([
+      {
+        ...newProduct(),
+        ...(gift ? { id: gift.id, revision: gift.revision } : {}),
+        title: data.title,
+        description: data.description,
+        url: data.url,
+        image: data.image,
+        images: data.images,
+        priceCents:
+          data.price === "" ? null : Math.round(Number(data.price) * 100),
+        quantity: Number(data.quantity),
+        shoppingOffers: effectiveOffers,
+        primaryOfferId,
+      },
+      newProduct(),
+    ]);
+  };
   const [priority, setPriority] = useState<ItemPriority | null>(
     gift?.priority ??
       (importDraft?.draft?.fields.priority as ItemPriority | null) ??
@@ -743,7 +826,7 @@ function GiftEditor({
   );
   const snapshot = JSON.stringify({
     archived,
-    fields: { ...data, priority },
+    fields: { ...data, priority, ...shoppingFields },
     descriptionRich: noteRich,
     touched: [...touched.current],
     ...(idea
@@ -784,6 +867,13 @@ function GiftEditor({
   const sharingIdea = idea && visibility !== "private";
   const change = (key: keyof typeof data, v: string | number) => {
     if (key === "url") {
+      setOffers((previous) =>
+        previous.map((offer, index) =>
+          offer.id === primaryOfferId || (!primaryOfferId && index === 0)
+            ? { ...offer, url: String(v) }
+            : offer,
+        ),
+      );
       clearTimeout(autosaveTimer.current);
       conflict.current = false;
       setSavedFeedback(false);
@@ -814,6 +904,15 @@ function GiftEditor({
     ) {
       applied.current = job.id;
       const r = job.result;
+      if (r.priceCents != null && !touched.current.has("shoppingOffers"))
+        setOffers((previous) =>
+          previous.map((offer, index) =>
+            offer.id === (primaryOfferId ?? previous[0]?.id) &&
+            offer.priceCents === null
+              ? { ...offer, priceCents: r.priceCents! }
+              : offer,
+          ),
+        );
       setData((d) => ({
         ...d,
         ...Object.fromEntries(
@@ -873,7 +972,7 @@ function GiftEditor({
                   }
                 : { listId: destination }),
               archived,
-              fields: { ...data, priority },
+              fields: { ...data, priority, ...shoppingFields },
               descriptionRich: noteRich,
               touched: [...touched.current],
             }
@@ -1159,6 +1258,10 @@ function GiftEditor({
           publicationState: saveAsDraft ? "draft" : undefined,
           importDraftRevision: savedDraft.current?.draft?.revision,
           ...data,
+          ...shoppingFields,
+          ...(products
+            ? { url: "", price: "", priceCents: null, quantity: 1 }
+            : {}),
           descriptionRich: noteRich,
           priority,
           ...(idea && world.spendingEnabled
@@ -1175,8 +1278,10 @@ function GiftEditor({
             .map((s) => s.trim())
             .filter(Boolean),
           priceCents:
-            data.price === "" ? null : Math.round(Number(data.price) * 100),
-          quantity: Number(data.quantity),
+            products || data.price === ""
+              ? null
+              : Math.round(Number(data.price) * 100),
+          quantity: products ? 1 : Number(data.quantity),
           ...(gift
             ? {
                 id: gift.id,
@@ -1211,6 +1316,10 @@ function GiftEditor({
             "quantity",
             "priority",
             "archived",
+            "shoppingOffers",
+            "primaryOfferId",
+            "products",
+            "kind",
           ]);
           for (const key of Object.keys(payload))
             if (!allowed.has(key))
@@ -1226,6 +1335,7 @@ function GiftEditor({
             );
           saveDraft(world.me.id, {
             archived,
+            ...shoppingFields,
             title: data.title,
             url: data.url,
             description: data.description,
@@ -1271,6 +1381,8 @@ function GiftEditor({
                     : "A little hint, saved.",
         );
         close();
+        if (gift && products && result.id !== gift.id)
+          navigate(`/gift/${result.id}`);
         onSaved?.(result);
       }}
     >
@@ -1585,140 +1697,144 @@ function GiftEditor({
           )}
         </>
       )}
-      <section className="gift-lookup" aria-label="Product link and details">
-        <div
-          className={`url-entry${world.productLookupEnabled === false ? " manual-entry" : ""}`}
-        >
-          <Field label="Product link (optional)">
-            <input
-              type="url"
-              value={data.url}
-              onChange={(e) => change("url", e.target.value)}
-              placeholder="Paste a shop link"
-            />
-          </Field>
-          {world.productLookupEnabled !== false &&
-            job?.status !== "complete" && (
-              <button
-                className="button secondary small"
-                type="button"
-                disabled={!data.url || importing}
-                onClick={() => importUrl()}
-              >
-                {importing ? (
-                  <LoaderCircle className="spin" size={16} />
-                ) : (
-                  <LinkIcon size={16} />
-                )}{" "}
-                {importing ? "Finding details…" : "Get details"}
-              </button>
-            )}
-        </div>
-        {error && (
-          <p className="error" role="alert">
-            {error}
-          </p>
-        )}
-        {importQuery.error && (
-          <div className="error" role="alert">
-            <p>
-              {actionError(importQuery.error)} You can retry or enter the
-              details manually.
+      {!products && (
+        <section className="gift-lookup" aria-label="Product link and details">
+          <div
+            className={`url-entry${world.productLookupEnabled === false ? " manual-entry" : ""}`}
+          >
+            <Field label="Product link (optional)">
+              <input
+                type="url"
+                value={data.url}
+                onChange={(e) => change("url", e.target.value)}
+                placeholder="Paste a shop link"
+              />
+            </Field>
+            {world.productLookupEnabled !== false &&
+              job?.status !== "complete" && (
+                <button
+                  className="button secondary small"
+                  type="button"
+                  disabled={!data.url || importing}
+                  onClick={() => importUrl()}
+                >
+                  {importing ? (
+                    <LoaderCircle className="spin" size={16} />
+                  ) : (
+                    <LinkIcon size={16} />
+                  )}{" "}
+                  {importing ? "Finding details…" : "Get details"}
+                </button>
+              )}
+          </div>
+          {error && (
+            <p className="error" role="alert">
+              {error}
             </p>
+          )}
+          {importQuery.error && (
+            <div className="error" role="alert">
+              <p>
+                {actionError(importQuery.error)} You can retry or enter the
+                details manually.
+              </p>
+              <button
+                type="button"
+                className="text-button"
+                onClick={() => importQuery.retry()}
+              >
+                Retry status
+              </button>
+            </div>
+          )}
+          {importing && (
+            <p className="muted" role="status">
+              {slow
+                ? savedDraft.current?.draft
+                  ? "This is taking a little longer. You can keep editing or save for later while we keep working."
+                  : "This is taking a little longer. You can keep editing."
+                : savedDraft.current?.draft
+                  ? "Finding product details. You can keep editing or save for later."
+                  : "Finding product details. Save when the lookup finishes, or enter details manually."}
+            </p>
+          )}
+          {(importing || importQuery.error) && !importQuery.creating && (
             <button
               type="button"
               className="text-button"
-              onClick={() => importQuery.retry()}
+              onClick={() => void enterManually()}
             >
-              Retry status
+              Enter details manually
             </button>
-          </div>
-        )}
-        {importing && (
-          <p className="muted" role="status">
-            {slow
-              ? savedDraft.current?.draft
-                ? "This is taking a little longer. You can keep editing or save for later while we keep working."
-                : "This is taking a little longer. You can keep editing."
-              : savedDraft.current?.draft
-                ? "Finding product details. You can keep editing or save for later."
-                : "Finding product details. Save when the lookup finishes, or enter details manually."}
-          </p>
-        )}
-        {(importing || importQuery.error) && !importQuery.creating && (
-          <button
-            type="button"
-            className="text-button"
-            onClick={() => void enterManually()}
-          >
-            Enter details manually
-          </button>
-        )}
-        {!job && !importing && !error && (
-          <p className="muted">Or enter the details below.</p>
-        )}
-        {job?.status === "complete" && (
-          <>
-            <div className="gift-lookup-result">
-              <p className="success" role="status">
-                <Check size={16} /> Details found. Check them before saving.
-              </p>
-              {world.productLookupEnabled !== false && (
-                <button
-                  type="button"
-                  className="text-button"
-                  onClick={() => importUrl(true)}
-                >
-                  Refresh from shop
-                </button>
-              )}
-            </div>
-            {(data.image || data.price || job.result?.source) && (
-              <div className="gift-import-preview">
-                {data.image && (
-                  <img
-                    key={data.image}
-                    src={data.image}
-                    alt="Product preview"
-                    onError={(event) => {
-                      event.currentTarget.hidden = true;
-                    }}
-                  />
+          )}
+          {!job && !importing && !error && (
+            <p className="muted">Or enter the details below.</p>
+          )}
+          {job?.status === "complete" && (
+            <>
+              <div className="gift-lookup-result">
+                <p className="success" role="status">
+                  <Check size={16} /> Details found. Check them before saving.
+                </p>
+                {world.productLookupEnabled !== false && (
+                  <button
+                    type="button"
+                    className="text-button"
+                    onClick={() => importUrl(true)}
+                  >
+                    Refresh from shop
+                  </button>
                 )}
-                <div>
-                  {job.result?.source && (
-                    <small className="muted">{job.result.source}</small>
-                  )}
-                  {data.price !== "" && (
-                    <p>
-                      {new Intl.NumberFormat("en-US", {
-                        style: "currency",
-                        currency: "USD",
-                      }).format(Number(data.price))}
-                    </p>
-                  )}
-                </div>
               </div>
-            )}
-          </>
-        )}
-        <ProductSources
-          sources={(job?.result?.productSources ?? gift?.productSources)
-            ?.map((source) => ({
-              ...source,
-              fields: source.fields.filter(
-                (field) => data[field] === (job?.result ?? gift)?.[field],
-              ),
-            }))
-            .filter((source) => source.fields.length)}
-        />
-        {job?.result?.warnings?.map((warning) => (
-          <p className="notice" key={warning}>
-            {warning}
-          </p>
-        ))}
-      </section>
-      <Field label={idea ? "Gift idea name" : "Item name"}>
+              {(data.image || data.price || job.result?.source) && (
+                <div className="gift-import-preview">
+                  {data.image && (
+                    <img
+                      key={data.image}
+                      src={data.image}
+                      alt="Product preview"
+                      onError={(event) => {
+                        event.currentTarget.hidden = true;
+                      }}
+                    />
+                  )}
+                  <div>
+                    {job.result?.source && (
+                      <small className="muted">{job.result.source}</small>
+                    )}
+                    {data.price !== "" && (
+                      <p>
+                        {new Intl.NumberFormat("en-US", {
+                          style: "currency",
+                          currency: "USD",
+                        }).format(Number(data.price))}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+          <ProductSources
+            sources={(job?.result?.productSources ?? gift?.productSources)
+              ?.map((source) => ({
+                ...source,
+                fields: source.fields.filter(
+                  (field) => data[field] === (job?.result ?? gift)?.[field],
+                ),
+              }))
+              .filter((source) => source.fields.length)}
+          />
+          {job?.result?.warnings?.map((warning) => (
+            <p className="notice" key={warning}>
+              {warning}
+            </p>
+          ))}
+        </section>
+      )}
+      <Field
+        label={products ? "Set name" : idea ? "Gift idea name" : "Item name"}
+      >
         <input
           value={data.title}
           required
@@ -1729,6 +1845,41 @@ function GiftEditor({
           }
         />
       </Field>
+      {products ? (
+        <ProductsEditor
+          products={products}
+          onChange={(next) => {
+            touched.current.add("products");
+            setProducts(next);
+          }}
+        />
+      ) : (
+        <>
+          <OfferEditor
+            offers={
+              offers.length
+                ? offers
+                : data.url
+                  ? offerInputs({
+                      url: data.url,
+                      priceCents:
+                        data.price === ""
+                          ? null
+                          : Math.round(Number(data.price) * 100),
+                    })
+                  : []
+            }
+            primaryId={primaryOfferId}
+            onChange={syncOffers}
+          />
+          {!gift?.parentItemId && !gift?.adminDetailsOnly && (
+            <button type="button" className="text-button" onClick={addProduct}>
+              <Plus size={16} aria-hidden="true" />
+              Add another product
+            </button>
+          )}
+        </>
+      )}
       {!idea && !gift && (
         <Field label="Wish list">
           <select
@@ -1783,29 +1934,31 @@ function GiftEditor({
             change("description", text);
           }}
         />
-        <div className="form-row">
-          <Field label="Price in USD">
-            <input
-              type="number"
-              min="0"
-              max="1000000"
-              step="0.01"
-              value={data.price}
-              onChange={(e) => change("price", e.target.value)}
-              placeholder="Optional"
-            />
-          </Field>
-          <Field label="Quantity wanted">
-            <input
-              type="number"
-              min="1"
-              max="999"
-              required
-              value={data.quantity}
-              onChange={(e) => change("quantity", Number(e.target.value))}
-            />
-          </Field>
-        </div>
+        {!products && (
+          <div className="form-row">
+            <Field label="Price in USD">
+              <input
+                type="number"
+                min="0"
+                max="1000000"
+                step="0.01"
+                value={data.price}
+                onChange={(e) => change("price", e.target.value)}
+                placeholder="Optional"
+              />
+            </Field>
+            <Field label="Quantity wanted">
+              <input
+                type="number"
+                min="1"
+                max="999"
+                required
+                value={data.quantity}
+                onChange={(e) => change("quantity", Number(e.target.value))}
+              />
+            </Field>
+          </div>
+        )}
         <PrioritySelect value={priority} onChange={setPriority} />
         <Field label="Tags" hint="Separate tags with commas.">
           <input

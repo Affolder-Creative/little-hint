@@ -1,6 +1,6 @@
 # Background price checks
 
-The existing server worker checks the primary link of each active saved wish and
+The existing server worker checks the shopping offers of each active saved wish and
 gift idea. Free structured extraction runs first; the selected paid provider is a
 fallback. No AI or photo import runs. Identical safe public URLs share one check;
 variant parameters remain distinct. Archived, trashed and paused items are excluded.
@@ -52,8 +52,16 @@ payments, contribution commitments and purchase amounts never change automatical
 
 A failed check retains the old price and verification timestamp. Prices older
 than 48 hours are labeled last verified. Confirm the final price at the shop.
-Alternate purchase offers retain their own checked timestamps; this version
-refreshes the primary link only.
+Each shopping offer retains its own checked timestamp and verification identity.
+Only verified offers checked within 48 hours participate in the lowest checked
+price. Failed and stale offers retain their saved prices without winning that
+comparison. Products in a group are checked and watched independently.
+
+A product run settles after its shop checks finish, producing at most one alert
+for that product. Adding, removing or replacing an offer establishes a new
+comparison reference silently. Added links without a saved offer price can obtain
+their first price through the daily check when the product has a listed price.
+Products without any listed price still require initial product entry.
 
 Price-drop subscriptions are private per account and item. Alerts require both
 5% and $1 below the last alerted price, or the verified price at subscription.
@@ -64,7 +72,8 @@ Current access and subscription eligibility are checked before delivery.
 
 ## Upgrade and validation
 
-Schema version 3 adds durable price records. Upgrade app and worker together.
+Schema version 14 adds stable shopping offers and product grouping to the durable
+price records introduced in schema version 3. Upgrade app and worker together.
 Back up before upgrading; older binaries reject the newer schema. Disable
 `PRICE_CHECK_ENABLED` to stop checking without deleting saved data. Staging uses
 its prefixed switch. Do not downgrade against the upgraded database.

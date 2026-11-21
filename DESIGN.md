@@ -675,6 +675,12 @@ Pause/resume is an editor-only text action; errors appear beside these controls.
 Administration separates price checks and worker activity into compact labeled facts. Schedule, timezone and last-run start precede a dated latest-run summary with total URLs, successful checks, waiting checks, failures, unverifiable prices, allowance deferrals and skipped edits. Seven-day totals and unsuccessful-check diagnostics use a collapsed disclosure; provider attempts remain separate. Worker status includes its last reported time. Active failed imports and past failures use separate disclosures, with published or discarded draft status in supporting copy. Counts retain tabular figures; run headings use 14px semibold type and 20px top spacing.
 No chart, new color, font or elevation treatment is introduced.
 
+### Shopping links and product groups
+
+Where to buy uses flat divided rows beneath item metadata, with the shop link and optional note on the left and tabular price on the right. Verification time and the Lowest checked label use the existing supporting type and semantic colors. The last row has no bottom rule. Links retain 44px targets and external-link icons. Product groups use the same row anatomy with product names, quantities, authorized availability and an outlined action. Below 400px, product actions move beneath their details. Group cards name the product count and distinguish an estimated set total from incomplete prices.
+
+Editors use the existing labeled fields and one scrolling dialog body. Shop rows use quiet top dividers, primary-link radio controls and wrapping reorder/remove actions. Product fieldsets keep their names, quantities, prices, notes and shop links together. Existing paper, border, accent and semantic text tokens carry both themes; no new palette or elevation is introduced. The aggregate Lowest checked price caption appears only when the displayed amount matches a fresh verified offer and automatic checks are not paused.
+
 ### Spending assignment and mobile controls
 
 Spending history shows the saved event names from recipient spending assignments, with each name appearing once in recipient order. Source-list records retain the same treatment. Event names and any personal occasion share the existing muted metadata line below the date and payer, wrapping naturally on phones. Records without either omit the line.

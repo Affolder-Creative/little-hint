@@ -1,3 +1,4 @@
+import { bestShoppingOffer, shoppingOffers } from "../shared/shopping-offers";
 import { InfoHelp } from "./InfoHelp";
 import { useState } from "react";
 import type { GiftView } from "../shared/model";
@@ -11,6 +12,17 @@ export function Price({
   gift: GiftView;
   compact?: boolean;
 }) {
+  if (gift.kind === "group")
+    return (
+      <div className="item-price">
+        <small>
+          {gift.priceCents === null
+            ? "Some products have no listed price"
+            : `Estimated set total: ${dollars(gift.priceCents)}`}
+        </small>
+      </div>
+    );
+  const best = bestShoppingOffer(gift);
   const p = gift.pricing,
     changed =
       gift.priceCents !== null &&
@@ -25,6 +37,16 @@ export function Price({
       <span className={compact ? undefined : "detail-price"}>
         {dollars(gift.priceCents)}
       </span>
+      {!compact &&
+        best &&
+        !p?.paused &&
+        !stale &&
+        p?.status === "verified" &&
+        !!p.checkedAt &&
+        gift.priceCents === best.priceCents &&
+        shoppingOffers(gift).length > 1 && (
+          <small>Lowest checked price · {best.label}</small>
+        )}
       {changed && (
         <small>
           {dollars(p.baseline)} {p.baselineLabel}
@@ -68,6 +90,7 @@ export function PriceControls({ gift }: { gift: GiftView }) {
   const [busy, setBusy] = useState(false),
     [error, setError] = useState("");
   if (
+    gift.kind === "group" ||
     gift.publicationState === "draft" ||
     gift.priceCents === null ||
     !gift.url ||
@@ -96,7 +119,9 @@ export function PriceControls({ gift }: { gift: GiftView }) {
             disabled={busy || (!!gift.pricing?.paused && !gift.priceWatching)}
             onChange={(e) => change("prices/watch", e.target.checked)}
           />
-          Notify me of price drops
+          {shoppingOffers(gift).length > 1
+            ? "Notify me when the best price drops"
+            : "Notify me of price drops"}
         </label>
         <InfoHelp title="Price-drop notifications">
           Alerts for drops of at least 5% and $1 appear in Notifications. Enable
