@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-21T01:17:14.669663+00:00",
+  "generatedAt": "2026-11-21T01:26:17.482945+00:00",
   "title": "Design System: Little Hint",
   "extensions": {
     "peopleDirectory": {
@@ -1223,7 +1223,7 @@
       "layout": "Warm administration panels; compact divided directory rows; a focused group view replaces the overview while managing one group.",
       "interaction": "Direct Add administrator account search and confirmation; identity and email rows with contextual removal; a plain last-administrator explanation. Existing shared dialogs and menus retain keyboard focus and 44px targets.",
       "editing": "Shared gift editors replace protected audience, recipient and spending controls with a short explanation; retain existing photos and detail controls.",
-      "directory": "Debounced search, 24-row pages and one Manage action per group. Members, Invitations, Households and Settings navigation uses adminGroup/adminTab URLs. Hidden panels retain drafts; Back restores directory search, page, focus and scroll. App-wide authority is distinct from family roles.",
+      "directory": "Debounced search, 24-row pages and one Manage action per group. Members, Invitations, Households and Settings navigation uses adminGroup/adminTab URLs. Hidden panels retain drafts; Back restores directory search, page, focus and scroll. App-wide authority is distinct from family roles. Failed refreshes hide management controls while retaining mounted drafts for retry.",
       "eventEditing": "Participant selection and archive scheduling remain editable while reveal fields stay disabled for admins without policy authority.",
       "exchangeCreation": "Use the existing Create exchange action for app admins in their joined groups, alongside family admins and event leaders.",
       "listNavigation": "Administrative editing retains the shopping view of other people’s lists, including private gift-idea shortcuts and recipient navigation. Owner-only discovery stays with controlled recipients.",

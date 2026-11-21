@@ -204,6 +204,21 @@ test("focus group tasks, change roles independently, and preserve search and dra
   await expect(detail.getByRole("textbox", { name: "Group name" })).toHaveValue(
     "Draft name",
   );
+  f.state.denied = true;
+  await detail
+    .getByRole("button", { name: "Save group name", exact: true })
+    .click();
+  await expect(detail.getByRole("alert")).toContainText(
+    "your access may have changed",
+  );
+  await expect(detail.getByRole("textbox", { name: "Group name" })).toHaveCount(
+    0,
+  );
+  f.state.denied = false;
+  await detail.getByRole("button", { name: "Try again", exact: true }).click();
+  await expect(detail.getByRole("textbox", { name: "Group name" })).toHaveValue(
+    "Draft name",
+  );
   expect(f.posts.some((p) => p.path.includes("join"))).toBe(false);
 });
 

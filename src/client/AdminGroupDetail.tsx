@@ -32,7 +32,7 @@ export function AdminGroupDetail({
   });
   useEffect(() => {
     if (active) heading.current?.focus();
-  }, [active, query.isPending]);
+  }, [active, query.isPending, query.error]);
   return (
     <div hidden={!active}>
       <button
@@ -55,9 +55,8 @@ export function AdminGroupDetail({
         <h3 ref={heading} tabIndex={-1}>
           {query.data?.name ?? "Family group"}
         </h3>
-        {query.isPending ? (
-          <p role="status">Loading family group…</p>
-        ) : query.error ? (
+        {query.isPending && <p role="status">Loading family group…</p>}
+        {query.error && (
           <p role="alert">
             This group could not be loaded. It may have been removed or your
             access may have changed.{" "}
@@ -65,8 +64,9 @@ export function AdminGroupDetail({
               Try again
             </Action>
           </p>
-        ) : (
-          <>
+        )}
+        {query.data && (
+          <div hidden={!!query.error}>
             <p className="muted">
               Primary owner:{" "}
               {query.data.members.find((m) => m.userId === query.data.ownerId)
@@ -94,7 +94,7 @@ export function AdminGroupDetail({
               ))}
             </nav>
             <GroupTasks group={query.data} tab={tab} />
-          </>
+          </div>
         )}
       </section>
     </div>
