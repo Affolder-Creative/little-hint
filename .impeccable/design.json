@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-21T01:52:33.633823+00:00",
+  "generatedAt": "2026-11-21T05:08:14.729049+00:00",
   "title": "Design System: Little Hint",
   "extensions": {
     "peopleDirectory": {
@@ -1234,6 +1234,14 @@
       "groups": "Product rows use existing outlined actions, stacked below details under 400px. Group cards show count and an explicitly estimated total or missing-price message.",
       "editor": "Existing fields, paper surfaces, fixed dialog footer and wrapping 44px actions; top-divided shop rows and product fieldsets.",
       "pricing": "Lowest checked caption only beside a matching fresh verified aggregate amount, with manual pause respected. Omit unchecked-price metadata when neither the product nor the shop has a saved price."
+    },
+    "aboutSupport": {
+      "layout": "Flat 62ch section after the signature and before attribution; shared section margin, 24px top padding, top divider, 17px heading and muted 14px supporting copy.",
+      "action": "Shared outlined secondary link button with a decorative 17px Lucide heart. Inherits 44px minimum target, hover and focus styles. Opens Buy Me a Coffee in a new tab.",
+      "heartColors": {
+        "light": "#bf3989",
+        "dark": "#f088bd"
+      }
     }
   },
   "components": [

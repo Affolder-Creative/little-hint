@@ -3829,6 +3829,24 @@ main {
   margin-top: 8px;
   color: var(--accent);
 }
+.about-support {
+  max-width: 62ch;
+  margin-block: var(--space-section);
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+}
+.about-support h3 {
+  margin: 0 0 var(--space-related);
+}
+.about-support p {
+  color: var(--muted);
+}
+.about-support .lucide-heart {
+  color: #bf3989;
+}
+[data-theme="dark"] .about-support .lucide-heart {
+  color: #f088bd;
+}
 .usage-details > p {
   font-size: 13px;
   color: var(--muted);

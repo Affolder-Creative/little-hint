@@ -48,6 +48,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import {
   Plus,
   ExternalLink,
+  Heart,
   LogOut,
   KeyRound,
   Pencil,
@@ -890,6 +891,25 @@ export default function SettingsPage({
               </p>
               <KyleSignature />
             </div>
+            <section
+              className="about-support"
+              aria-labelledby="about-support-title"
+            >
+              <h3 id="about-support-title">A little hint from me...</h3>
+              <p>
+                If Little Hint has made your gift-giving easier, here's
+                something on my wish list: coffee. Just coffee. ツ
+              </p>
+              <a
+                className="button secondary"
+                href="https://buymeacoffee.com/k.affolder"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Heart size={17} aria-hidden="true" />
+                Buy me a coffee
+              </a>
+            </section>
             <p className="creator-credit">Created by Affolder Creative</p>
             <p className="muted">Version {__APP_VERSION__}</p>
           </section>
