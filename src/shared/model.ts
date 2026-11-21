@@ -71,6 +71,8 @@ export interface FriendEntry extends Base {
   connectedAt?: string;
 }
 export interface Group extends Base {
+  adminIds?: string[];
+  canAdminister?: boolean;
   name: string;
   ownerId: string;
   memberIds: string[];
@@ -102,6 +104,8 @@ export interface Invitation extends Base {
   revoked?: boolean;
 }
 export interface List extends Base {
+  canManagePolicy?: boolean;
+  canViewGiftSummary?: boolean;
   deletedAt?: string;
   itemOrder?: string[];
   groupEventId?: string;
@@ -119,6 +123,7 @@ export interface List extends Base {
   revealExchangeGivers?: boolean;
 }
 export interface GroupEvent extends Base {
+  canManagePolicy?: boolean;
   eventDate?: string | null;
   spendingGuidelineCents?: number | null;
   deletedAt?: string;
@@ -679,6 +684,7 @@ export interface GiftView extends Omit<
   Item,
   "creatorId" | "draftOwnerId" | "lastEditorId"
 > {
+  adminDetailsOnly?: boolean;
   /** Unlike archived, this excludes archive status inherited from a wish list. */
   visibilityScope?: "only-me" | "shared";
   individuallyArchived?: boolean;

@@ -1,4 +1,9 @@
-import { coManages, listCanEdit, listAudience } from "./co-management";
+import {
+  coManages,
+  listCanEdit,
+  listAudience,
+  listCanManagePolicy,
+} from "./co-management";
 import { z } from "zod";
 import type { State, Actor, List } from "../shared/model";
 import { listIsArchived } from "../shared/list-dates";
@@ -137,7 +142,20 @@ export function listCommand(
       if (l.groupEventId)
         fail(403, "This list is managed through its group event.");
       checkRevision(l, p.revision);
-      listAudience(s, a, l, p.groupIds);
+      if (!listCanManagePolicy(s, a, l)) {
+        for (const key of [
+          "groupIds",
+          "mode",
+          "revealAfter",
+          "revealExchangeGivers",
+          "timeZone",
+        ] as const)
+          if (JSON.stringify(p[key] ?? l[key]) !== JSON.stringify(l[key]))
+            fail(
+              403,
+              "Sharing and reveal settings remain with their authorized editors.",
+            );
+      } else listAudience(s, a, l, p.groupIds);
       checkSharedListPolicy(l, { ...l, ...p });
       if (l.pendingOwnerIds.length && p.groupIds.length)
         fail(

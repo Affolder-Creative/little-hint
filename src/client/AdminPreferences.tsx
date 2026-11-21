@@ -134,13 +134,13 @@ export function AdminPreferences({ settings }: { settings: Setting[] }) {
                   change("FAMILY_GROUP_INVITATIONS", e.target.value)
                 }
               >
-                <option value="owners">Group owners only</option>
+                <option value="owners">Family admins only</option>
                 <option value="members">All group members</option>
               </select>
             </Field>
             <p>
-              When invitations are restricted, members can ask the owner to send
-              one. This does not change who can create groups.
+              When invitations are restricted, members can ask a family admin to
+              send one. This does not change who can create groups.
             </p>
           </>
         )}

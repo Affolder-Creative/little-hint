@@ -1,0 +1,22 @@
+.family-admin-controls {
+  margin-block: var(--space-controls);
+}
+.family-admin-controls > .text-stack {
+  display: grid;
+  gap: var(--space-controls);
+  padding-block: var(--space-related);
+}
+.family-admin-controls form + form {
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-controls);
+}
+.admin-group-row {
+  margin-top: var(--space-controls);
+}
+.admin-group-row + .admin-group-row {
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-controls);
+}
+.admin-group-row h4 {
+  overflow-wrap: anywhere;
+}

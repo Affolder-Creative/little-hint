@@ -421,10 +421,14 @@ export function closeAccountData(
   );
   s.groups = s.groups.filter((g) => !soloGroups.has(g.id));
   for (const g of s.groups.filter(
-    (g) => g.memberIds.includes(a.id) || g.eventLeaderIds?.includes(a.id),
+    (g) =>
+      g.memberIds.includes(a.id) ||
+      g.eventLeaderIds?.includes(a.id) ||
+      g.adminIds?.includes(a.id),
   )) {
     g.memberIds = g.memberIds.filter((id) => id !== a.id);
     g.eventLeaderIds = g.eventLeaderIds?.filter((id) => id !== a.id);
+    g.adminIds = g.adminIds?.filter((id) => id !== a.id);
     touch(g);
   }
   s.households = s.households.filter((h) => !soloGroups.has(h.groupId));

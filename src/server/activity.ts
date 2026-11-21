@@ -1,5 +1,5 @@
 import { noteVisible } from "./discussion-access";
-import { listCanEdit } from "./co-management";
+import { listCanManagePolicy } from "./co-management";
 import { selfRecipient } from "./domain-access";
 import { buyingDestination } from "./gift-lifecycle";
 import { reservationNeedsReview } from "./privacy-review";
@@ -297,7 +297,7 @@ export function activityAllowed(s: State, n: Notice): boolean {
     const l = s.lists.find((l) => l.id === n.listId);
     return (
       !!l &&
-      listCanEdit(s, a, l) &&
+      listCanManagePolicy(s, a, l) &&
       (!n.itemId ||
         s.items.some(
           (i) => i.id === n.itemId && i.publicationState !== "draft",

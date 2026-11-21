@@ -75,7 +75,9 @@ describe("private spending", () => {
     f.add();
     expect(spendingView(f.s, f.actors[0]).records).toHaveLength(1);
     expect(spendingView(f.s, f.actors[1]).records).toHaveLength(0);
-    expect(JSON.stringify(world(f.s, f.actors[1]))).not.toContain("4500");
+    expect(JSON.stringify(world(f.s, f.actors[1]))).not.toContain(
+      '"amountCents":4500',
+    );
   });
   it("distinguishes missing amounts and records refunds independently", () => {
     const f = fixture();

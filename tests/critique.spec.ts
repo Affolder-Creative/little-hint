@@ -198,6 +198,11 @@ async function preview(
     "exchanges/draw": "exchanges.draw",
   };
   await page.route("**/api/**", async (route) => {
+    const adminPath = new URL(route.request().url()).pathname;
+    if (adminPath === "/api/v1/admin/administrators")
+      return route.fulfill({ json: [] });
+    if (adminPath === "/api/v1/admin/groups")
+      return route.fulfill({ json: { rows: [], total: 0 } });
     const url = new URL(route.request().url());
     const path = url.pathname;
     const query = Object.fromEntries(url.searchParams);
@@ -6442,4 +6447,24 @@ test("people directory updates thresholds and clears hidden searches", async ({
   setCount(10);
   await page.reload();
   await expect(search).toHaveValue("");
+});
+
+test("app admins can create exchanges in their groups without an event-leader role", async ({
+  page,
+}) => {
+  const { state, actors } = await preview(page);
+  for (const group of state.groups) {
+    group.ownerId = actors[2].id;
+    group.eventLeaderIds = [];
+  }
+  await page.goto("/exchanges");
+  await page
+    .getByRole("button", { name: "Create exchange", exact: true })
+    .click();
+  await expect(
+    page
+      .getByRole("dialog")
+      .getByLabel("Family group", { exact: true })
+      .locator("option"),
+  ).toHaveCount(2);
 });

@@ -1,3 +1,6 @@
+import { accountFingerprint } from "./closed-accounts";
+import { administersGroup } from "./domain-access";
+import { registerAdminRoles } from "./admin-roles";
 import { discussionAudience } from "./discussion-access";
 import { itemPhotoLimit } from "./photo-config";
 import { itemPhotos } from "../shared/item-photos";
@@ -295,6 +298,7 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
   registerAccountExport(app, actor);
   registerProfileAccounts(app, actor);
   registerAdminAccounts(app, actor);
+  registerAdminRoles(app, actor);
   registerCollections(app, actor);
   registerAccountClosure(app, async (req) => {
     const a = await actor(req);
@@ -657,6 +661,21 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
             await tx.execute(
               sql`UPDATE "user" SET name=${p.name}, updated_at=now() WHERE id=${p.userId}`,
             );
+        }
+        if (
+          !(result as { replayed?: boolean })?.replayed &&
+          (isAdmin(s, a) || s.groups.some((g) => administersGroup(s, a, g)))
+        ) {
+          const body = req.body as Record<string, unknown>;
+          const target = String(
+            body.id ??
+              body.groupId ??
+              (result as { id?: string })?.id ??
+              "installation",
+          );
+          await tx.execute(
+            sql`INSERT INTO admin_action_audit(actor_hash,target_hash,scope,action,fields) VALUES (${accountFingerprint(a.id)},${accountFingerprint(target)},${isAdmin(s, a) ? "app" : "family"},${action},${JSON.stringify(Object.keys(body).filter((k) => !/token|secret|password|body|email/i.test(k)))}::jsonb)`,
+          );
         }
         syncSpending(s, a);
         const contributionSource =

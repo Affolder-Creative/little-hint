@@ -425,7 +425,7 @@ it("connected entries leave sharing with each idea author", () => {
       ...item,
       visibility: "visible",
     }),
-  ).toThrow("cannot edit");
+  ).toThrow("Sharing, recipients");
   command(f.s, f.actors[1], "items.update", {
     ...f.s.items.find((i) => i.id === item.id)!,
     visibility: "visible",

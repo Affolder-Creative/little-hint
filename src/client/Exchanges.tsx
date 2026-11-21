@@ -26,8 +26,8 @@ export function Exchanges() {
     [group, setGroup] = useNavigationState<string>("exchangeGroup", ""),
     [status, setStatus] = useNavigationState<string>("exchangeStatus", "");
   const settings = useOrganization("exchanges");
-  const canCreate = world.groups.some((g) =>
-    canManageGroupEvents(g, world.me.id),
+  const canCreate = world.groups.some(
+    (g) => world.me.admin || canManageGroupEvents(g, world.me.id),
   );
   const location = useLocation();
   useEffect(() => {

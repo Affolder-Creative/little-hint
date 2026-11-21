@@ -1,4 +1,9 @@
 import {
+  AppAdministrators,
+  AdminGroups,
+  FamilyAdministrators,
+} from "./AdminRoles";
+import {
   CoManagementSettings,
   RecoveredCoManagementDrafts,
 } from "./CoManagement";
@@ -395,7 +400,9 @@ export default function SettingsPage({
                   <span>
                     {g.ownerId === world.me.id
                       ? "You own this group"
-                      : "You’re a member"}
+                      : g.canAdminister
+                        ? "You administer this group"
+                        : "You’re a member"}
                   </span>
                   <FollowButton target="group" targetId={g.id} compact />
                 </div>
@@ -430,6 +437,7 @@ export default function SettingsPage({
                   <p className="muted">
                     Members can access lists shared with this family group.
                   </p>
+                  <FamilyAdministrators group={g} />
                   <GroupInvitationRequests group={g} />
                   <div className="member-list">
                     {g.memberIds.map((uid) => {
@@ -441,54 +449,61 @@ export default function SettingsPage({
                             {person?.name ?? "Member"}
                             {uid === g.ownerId
                               ? " · Owner"
-                              : g.eventLeaderIds?.includes(uid)
-                                ? " · Event leader"
-                                : ""}
+                              : g.adminIds?.includes(uid)
+                                ? " · Family admin"
+                                : g.eventLeaderIds?.includes(uid)
+                                  ? " · Event leader"
+                                  : ""}
                           </span>
-                          {g.ownerId === world.me.id && uid !== world.me.id && (
+                          {g.canAdminister && uid !== g.ownerId && (
                             <ActionMenu name={person?.name ?? "Member"}>
-                              <button
-                                className="text-button"
-                                aria-label={`Transfer ownership to ${person?.name ?? "member"}`}
-                                onClick={() =>
-                                  open(
-                                    "Transfer family-group ownership",
-                                    <Form
-                                      submit="Request transfer"
-                                      onSubmit={async (f) => {
-                                        await mutate("groups/transfer", {
-                                          groupId: g.id,
-                                          userId: uid,
-                                          email: value(f, "email"),
-                                        });
-                                        close();
-                                      }}
-                                    >
-                                      <p>
-                                        Transfer <strong>{g.name}</strong> to{" "}
-                                        <strong>
-                                          {person?.name ?? "this member"}
-                                        </strong>
-                                        .
-                                      </p>
-                                      <Field label="New owner’s verified email">
-                                        <input
-                                          type="email"
-                                          name="email"
-                                          required
-                                        />
-                                      </Field>
-                                      <p>
-                                        The new owner must accept in Settings
-                                        before ownership changes.
-                                      </p>
-                                    </Form>,
-                                  )
-                                }
-                              >
-                                <ArrowRightLeft size={16} aria-hidden="true" />{" "}
-                                Transfer ownership
-                              </button>
+                              {g.ownerId === world.me.id && (
+                                <button
+                                  className="text-button"
+                                  aria-label={`Transfer ownership to ${person?.name ?? "member"}`}
+                                  onClick={() =>
+                                    open(
+                                      "Transfer family-group ownership",
+                                      <Form
+                                        submit="Request transfer"
+                                        onSubmit={async (f) => {
+                                          await mutate("groups/transfer", {
+                                            groupId: g.id,
+                                            userId: uid,
+                                            email: value(f, "email"),
+                                          });
+                                          close();
+                                        }}
+                                      >
+                                        <p>
+                                          Transfer <strong>{g.name}</strong> to{" "}
+                                          <strong>
+                                            {person?.name ?? "this member"}
+                                          </strong>
+                                          .
+                                        </p>
+                                        <Field label="New owner’s verified email">
+                                          <input
+                                            type="email"
+                                            name="email"
+                                            required
+                                          />
+                                        </Field>
+                                        <p>
+                                          The new owner must accept in Settings
+                                          before ownership changes.
+                                        </p>
+                                      </Form>,
+                                    )
+                                  }
+                                >
+                                  <ArrowRightLeft
+                                    size={16}
+                                    aria-hidden="true"
+                                  />{" "}
+                                  Transfer ownership
+                                </button>
+                              )}
                               <button
                                 className="text-button danger menu-destructive"
                                 aria-label={`Remove ${person?.name ?? "member"} from family group`}
@@ -522,7 +537,7 @@ export default function SettingsPage({
                       );
                     })}
                   </div>
-                  {g.ownerId === world.me.id ? (
+                  {g.canAdminister ? (
                     <>
                       <button
                         className="button secondary small"
@@ -1294,7 +1309,9 @@ function Admin() {
   return (
     <section className="settings-section admin-page">
       <h2>Administration</h2>
+      <AppAdministrators />
       <AdminProfiles />
+      <AdminGroups />
       <section className="admin-panel" aria-label="App settings">
         <h3>App settings</h3>
         <p className="muted">

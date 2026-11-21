@@ -51,8 +51,8 @@ export function EventForm({
 }) {
   const { world, mutate, close, toast } = useApp();
   const navigate = useNavigate();
-  const groups = world.groups.filter((g) =>
-    canManageGroupEvents(g, world.me.id),
+  const groups = world.groups.filter(
+    (g) => world.me.admin || canManageGroupEvents(g, world.me.id),
   );
   const [groupId, setGroupId] = useState(
     event?.groupId ??
@@ -151,7 +151,15 @@ export function EventForm({
             description: String(form.get("description") ?? ""),
             spendingGuidelineCents: guidelineValue(form),
             participantIds: participants,
-            ...listPolicyValues(form, policy),
+            ...(event?.canManagePolicy === false
+              ? {
+                  mode: event.mode,
+                  archiveAfter: String(form.get("archiveAfter") ?? "") || null,
+                  revealAfter: event.revealAfter,
+                  timeZone: event.timeZone,
+                  revealExchangeGivers: event.revealExchangeGivers,
+                }
+              : listPolicyValues(form, policy)),
           },
         );
         close();
@@ -237,7 +245,11 @@ export function EventForm({
         />
       </Field>
       <GuidelineField amount={initial?.spendingGuidelineCents} />
-      <ListPolicyFields list={policy} event>
+      <ListPolicyFields
+        list={policy}
+        event
+        readOnly={event?.canManagePolicy === false}
+      >
         <fieldset className="choice-group form-section event-participants">
           <legend>Who needs a wish list?</legend>
           <p className="muted">
@@ -300,6 +312,11 @@ export function EventForm({
           </small>
         </fieldset>
       </ListPolicyFields>
+      {event?.canManagePolicy === false && (
+        <p className="muted">
+          Reveal settings remain with the primary owner and event leaders.
+        </p>
+      )}
       {!event && (
         <p className="muted">
           Lists are shared immediately. Check privacy and reveal settings before
@@ -368,7 +385,7 @@ export function GroupEventSettings({ group }: { group: Group }) {
     <div className="group-event-settings">
       <div className="section-heading">
         <h4>Group events</h4>
-        {canManageGroupEvents(group, world.me.id) && (
+        {(world.me.admin || canManageGroupEvents(group, world.me.id)) && (
           <button
             className="text-button"
             onClick={() =>
@@ -397,7 +414,7 @@ export function GroupEventSettings({ group }: { group: Group }) {
       ) : (
         <p className="muted">No active events yet.</p>
       )}
-      {group.ownerId === world.me.id && (
+      {group.canAdminister && (
         <button
           className="text-button"
           onClick={() =>
@@ -424,8 +441,8 @@ export function GroupEventsSection({ archived }: { archived: boolean }) {
       event.archived === archived ||
       ownedLists.some((l) => l.groupEventId === event.id),
   );
-  const canCreate = world.groups.some((g) =>
-    canManageGroupEvents(g, world.me.id),
+  const canCreate = world.groups.some(
+    (g) => world.me.admin || canManageGroupEvents(g, world.me.id),
   );
   if (!world.groups.length) return null;
   const filtered = ordered(events, settings.sort, settings.order).filter(
