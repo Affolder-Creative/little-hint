@@ -58,11 +58,12 @@ export function Lists() {
         This list may no longer be shared with you.
       </Empty>
     );
+  const managesListPolicy = list?.canManagePolicy ?? list?.canEdit;
   const event = world.groupEvents.find((e) => e.id === list?.groupEventId);
   const eventName = event?.name ?? list?.name;
   const eventDescription = event?.description ?? list?.description;
   const giftIdeas = list &&
-    (!list.canEdit || coManaging) &&
+    (!managesListPolicy || coManaging) &&
     ideaRecipients.length > 0 && (
       <section className="list-gift-ideas">
         <h2>Gift ideas for {ideaRecipients.map((p) => p.name).join(" & ")}</h2>
@@ -71,7 +72,7 @@ export function Lists() {
             ? `Save your own ideas for ${ideaRecipients.map((p) => p.name).join(" & ")} here, separately from this wish list.`
             : "Gift ideas are saved for a person, separately from this wish list."}
         </p>
-        {(!list.canEdit || coManaging) &&
+        {(!managesListPolicy || coManaging) &&
           !list.archived &&
           ideaRecipients.length > 0 && (
             <button
@@ -114,7 +115,7 @@ export function Lists() {
           to={
             coManaging
               ? `/people/${list.ownerIds[0]}`
-              : list.canEdit
+              : managesListPolicy
                 ? "/lists"
                 : `/people/${list.ownerIds[0]}`
           }
@@ -122,7 +123,7 @@ export function Lists() {
           <ArrowLeft size={16} />
           {coManaging
             ? (coManagedPerson?.name ?? "Your people")
-            : list.canEdit
+            : managesListPolicy
               ? "My lists"
               : (world.people.find((p) => p.id === list.ownerIds[0])?.name ??
                 "On their wish lists")}
@@ -202,7 +203,7 @@ export function Lists() {
               <Plus size={17} /> Add item
             </button>
           )}
-          {list.canEdit && !coManaging && !list.archived && (
+          {list.canViewGiftSummary && !coManaging && !list.archived && (
             <DiscoveryLink
               personId={list.ownerIds.find((id) =>
                 world.people.some(
@@ -223,7 +224,7 @@ export function Lists() {
               >
                 <Pencil size={16} aria-hidden="true" /> Edit list
               </button>
-              {(!list.canEdit || list.hasOtherItemEditors) && (
+              {(!managesListPolicy || list.hasOtherItemEditors) && (
                 <FollowButton target="list" targetId={list.id} />
               )}
               <Action
@@ -245,7 +246,7 @@ export function Lists() {
               </Action>
               <TrashButton kind="lists" entry={list} />
             </ActionMenu>
-          ) : !list.canEdit || list.hasOtherItemEditors ? (
+          ) : !managesListPolicy || list.hasOtherItemEditors ? (
             <FollowButton target="list" targetId={list.id} />
           ) : null}
         </Header>
@@ -294,7 +295,7 @@ export function Lists() {
             items={world.items.filter((i) => i.listId === list.id)}
             searchLabel="Search items"
             emptyTitle={
-              list.canEdit && !list.archived && !list.groupEventId
+              managesListPolicy && !list.archived && !list.groupEventId
                 ? "Something in mind?"
                 : "No items yet"
             }
@@ -302,10 +303,10 @@ export function Lists() {
               list.archived
                 ? "This archived wish list has no items."
                 : list.groupEventId
-                  ? list.canEdit
+                  ? managesListPolicy
                     ? `Add a few things you would love for ${eventName}.`
                     : `${list.ownerIds.map((id) => world.people.find((p) => p.id === id)?.name ?? "The recipient").join(" & ")} hasn’t added any wishes for ${eventName} yet.`
-                  : list.canEdit
+                  : managesListPolicy
                     ? "Add your first item to this wish list."
                     : "Check back when they have added a few hints."
             }
