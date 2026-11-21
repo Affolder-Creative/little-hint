@@ -106,7 +106,7 @@ for (const width of [1440, 393]) {
         "Unsent note survives audience selection",
       );
       await expect(giver.locator(".discussion form")).toContainText(
-        "People with access, excluding recipients",
+        "Recipients can’t see it.",
       );
       await expect(
         giver.getByRole("button", { name: "Add note", exact: true }),
@@ -117,7 +117,7 @@ for (const width of [1440, 393]) {
         "ordinary",
       );
       await expect(giver.locator(".discussion form")).toContainText(
-        "People with access, excluding recipients",
+        "Recipients can’t see it.",
       );
       await giver
         .getByLabel("Buying for", { exact: true })

@@ -2316,7 +2316,7 @@ test("private note success clears the composer and offline actions are disabled"
   await page.getByLabel("Your note").fill("A useful private detail");
   await selector.selectOption("ordinary");
   await expect(page.locator(".discussion form")).toContainText(
-    "People with access, excluding recipients",
+    "Recipients can’t see it.",
   );
   await expect(page.getByLabel("Your note")).toHaveValue(
     "A useful private detail",
@@ -5733,6 +5733,32 @@ for (const width of [320, 768, 1440]) {
       exact: true,
     });
     await expect(wishList).toHaveAttribute("href", `/lists/${own.id}`);
+    const otherLists = world(state, actor).lists.filter(
+      (l) =>
+        l.groupEventId === event.id &&
+        l.canEdit &&
+        !l.ownerIds.includes(person.id),
+    );
+    const otherMenu = row.getByLabel(`Other wish lists for ${event.name}`, {
+      exact: true,
+    });
+    if (otherLists.length) {
+      for (const list of otherLists)
+        await expect(
+          row.locator(`a[href="/lists/${list.id}"]`),
+        ).not.toBeVisible();
+      await otherMenu.focus();
+      await page.keyboard.press("Enter");
+      for (const list of otherLists)
+        await expect(row.locator(`a[href="/lists/${list.id}"]`)).toBeVisible();
+      await page.screenshot({
+        path: info.outputPath("other-wish-lists.png"),
+        fullPage: true,
+      });
+      await page.keyboard.press("Escape");
+      await expect(otherMenu).toBeFocused();
+    } else await expect(otherMenu).toHaveCount(0);
+
     await expect(
       page.getByRole("heading", { name: "Other wish lists" }),
     ).toBeVisible();
@@ -6006,7 +6032,7 @@ test("discussion audience changes preserve drafts and require review", async ({
   const context = page.getByLabel("Buying for", { exact: true });
   if (await context.count()) await context.selectOption("ordinary");
   await expect(page.locator(".discussion form")).toContainText(
-    "excluding recipients",
+    "Recipients can’t see it.",
   );
   await page
     .getByLabel("Your note", { exact: true })

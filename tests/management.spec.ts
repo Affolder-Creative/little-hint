@@ -213,6 +213,12 @@ test("priorities, shared ordering, Trash, and event preservation", async ({
   ).toBeVisible();
   await expect(
     entry.getByRole("link", { name: /Managed recipient.*wish list/ }),
+  ).not.toBeVisible();
+  await entry
+    .getByLabel(`Other wish lists for ${eventName}`, { exact: true })
+    .click();
+  await expect(
+    entry.getByRole("link", { name: /Managed recipient.*wish list/ }),
   ).toBeVisible();
   await expect(
     entry.getByText(`Shared with: ${group.name}`, { exact: false }),

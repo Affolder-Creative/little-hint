@@ -272,8 +272,23 @@ export function MentionNote({
           <div className="discussion-audience">
             <span>{shortAudience(audience.data.label)}</span>
             <InfoHelp title="Who can read this note?">
-              <p>{audience.data.label}.</p>
-              <p>{audience.data.readers.map((p) => p.name).join(", ")}.</p>
+              {audience.data.label ===
+              "People with access, excluding recipients" ? (
+                <div className="text-stack">
+                  <p>
+                    {audience.data.readers.length === 1
+                      ? "This person can read your note:"
+                      : "These people can read your note:"}
+                  </p>
+                  <p>{audience.data.readers.map((p) => p.name).join(", ")}</p>
+                  <p>Recipients can’t see it.</p>
+                </div>
+              ) : (
+                <>
+                  <p>{audience.data.label}.</p>
+                  <p>{audience.data.readers.map((p) => p.name).join(", ")}.</p>
+                </>
+              )}
             </InfoHelp>
           </div>
         )}
