@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.11.0](https://github.com/Affolder-Creative/little-hint/compare/v1.10.1...v1.11.0) (2026-11-21)
+
+
+### Features
+
+* add a coffee invitation to About ([#268](https://github.com/Affolder-Creative/little-hint/issues/268)) ([a03f56b](https://github.com/Affolder-Creative/little-hint/commit/a03f56bfe479956d1c1af4d5b3727388807a87d0))
+* add gift idea priorities and filtering ([#260](https://github.com/Affolder-Creative/little-hint/issues/260)) ([adbba20](https://github.com/Affolder-Creative/little-hint/commit/adbba208b45c743c3309904f247aa741b92f00db))
+* compare shop offers and group gift products ([#266](https://github.com/Affolder-Creative/little-hint/issues/266)) ([ed56e9a](https://github.com/Affolder-Creative/little-hint/commit/ed56e9a0e75369f7b38794a1764e3371ae0742e3))
+* expand app and family administration ([#264](https://github.com/Affolder-Creative/little-hint/issues/264)) ([87b47c8](https://github.com/Affolder-Creative/little-hint/commit/87b47c882f1e2bf70954b966030a789ee7abb387))
+
+
+### Fixes
+
+* make administrator settings easier to navigate ([#267](https://github.com/Affolder-Creative/little-hint/issues/267)) ([182c5ae](https://github.com/Affolder-Creative/little-hint/commit/182c5aeca8662adab3169c7f3c82c8e3275844b0))
+* repair gift editing and polish settings and forms ([#270](https://github.com/Affolder-Creative/little-hint/issues/270)) ([e41260c](https://github.com/Affolder-Creative/little-hint/commit/e41260c22e41c9aa47b0e5894e259dbbf5b9445b))
+* show assigned events in spending history ([#263](https://github.com/Affolder-Creative/little-hint/issues/263)) ([739ca28](https://github.com/Affolder-Creative/little-hint/commit/739ca28e7e55bfe300929d29de6f789c87c7a562))
+
 ## [1.10.1](https://github.com/Affolder-Creative/little-hint/compare/v1.10.0...v1.10.1) (2026-11-19)
 
 
