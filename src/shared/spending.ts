@@ -268,3 +268,35 @@ export interface SpendingHistoryView {
   lists: Array<{ id: string; name: string; ownerNames?: string[] }>;
   events: Array<{ id: string; name: string }>;
 }
+
+/** Compare choices, not JSONB key order or saved display metadata. */
+export function ideaAllocationChoices(item: {
+  recipientIds: string[];
+  spendingListId?: string | null;
+  spendingAllocations?: SpendingAllocation[];
+}): SpendingAllocation[] {
+  return (
+    item.spendingAllocations ??
+    item.recipientIds.map((recipientId) => ({
+      recipientId,
+      share: 1,
+      listId: item.spendingListId ?? null,
+    }))
+  );
+}
+export function sameAllocationChoices(
+  a: SpendingAllocation[],
+  b: SpendingAllocation[],
+) {
+  return (
+    a.length === b.length &&
+    a.every((entry, index) => {
+      const other = b[index];
+      return (
+        entry.recipientId === other.recipientId &&
+        entry.share === other.share &&
+        (entry.listId ?? null) === (other.listId ?? null)
+      );
+    })
+  );
+}

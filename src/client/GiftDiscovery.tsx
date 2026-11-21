@@ -1,3 +1,4 @@
+import { IdeaAudienceSummary } from "./IdeaAudienceSummary";
 import { IdeaPeople } from "./IdeaPeople";
 import { HelpfulNoteEditor } from "./NoteEditor";
 import { OfferLinks } from "./OfferLinks";
@@ -775,16 +776,16 @@ function DiscoveryFlow({
                       )
                       .join(" & ")}
                     .{" "}
-                    {selection.visibility === "private"
-                      ? "Only you can see this idea."
-                      : `Shared with ${world.groups
-                          .filter((g) => selection.groupIds.includes(g.id))
-                          .map((g) => g.name)
-                          .join(
-                            ", ",
-                          )}; ${selection.visibility !== "visible" ? "hidden from" : "visible to"} all recipients.`}
-                    {!!selection.excludedUserIds?.length &&
-                      ` Also hidden from ${selection.excludedUserIds.map((id) => world.people.find((p) => p.userId === id)?.name ?? "an unavailable person").join(", ")}.`}
+                    {selection.visibility !== "private" &&
+                      `Shared with ${world.groups
+                        .filter((g) => selection.groupIds.includes(g.id))
+                        .map((g) => g.name)
+                        .join(", ")}. `}
+                    <IdeaAudienceSummary
+                      visibility={selection.visibility}
+                      recipientIds={selection.recipientIds ?? [personId]}
+                      excludedUserIds={selection.excludedUserIds}
+                    />
                   </p>
                 )}
                 {selection.allowDuplicate && (

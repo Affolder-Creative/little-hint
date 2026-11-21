@@ -334,6 +334,11 @@ test("preference shortcuts select the right tab and protect drafts on both pages
   const f = await setup(page);
   for (const url of ["/settings?section=profile", `/people/${f.person.id}`]) {
     await page.goto(url);
+    if (url.startsWith("/settings"))
+      await page
+        .locator(".profile-setting-row")
+        .getByLabel(`Actions for ${f.person.name}`, { exact: true })
+        .click();
     await page
       .getByRole("button", {
         name: `Gift preferences for ${f.person.name}`,
@@ -429,6 +434,10 @@ test.describe("settings visual review", () => {
           );
       }
       await page.goto("/settings?section=profile");
+      await page
+        .locator(".profile-setting-row")
+        .getByLabel(`Actions for ${f.person.name}`, { exact: true })
+        .click();
       await page
         .getByRole("button", {
           name: `Gift preferences for ${f.person.name}`,

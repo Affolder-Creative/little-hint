@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useApp } from "./context";
 import { InfoHelp } from "./InfoHelp";
 import { Form } from "./components";
 
 export function ArchivePrivacySettings() {
+  const checkboxId = useId();
   const { world, mutate } = useApp();
   const savedValue = world.preferences.hideArchivedItems ?? false;
   const [edit, setEdit] = useState<boolean | undefined>();
@@ -53,8 +54,9 @@ export function ArchivePrivacySettings() {
         }}
       >
         <div className="archive-privacy-option">
-          <label className="check">
+          <div className="archive-privacy-check">
             <input
+              id={checkboxId}
               type="checkbox"
               checked={value}
               onChange={(e) => {
@@ -67,23 +69,27 @@ export function ArchivePrivacySettings() {
                   : undefined
               }
             />
-            Hide my archived wishes and gift ideas from other users
-          </label>
-          <InfoHelp title="Archive privacy">
-            <div className="text-stack">
-              <p>
-                Applies to your wishes, gift ideas you created, and wishes for
-                managed profiles you own. On joint wish lists, any owner's hide
-                preference protects archived wishes.
-              </p>
-              <p>
-                List owners and profile managers keep access to wishes. Buyers
-                and contributors keep their personal history, including saved
-                item names. Turning this off keeps normal sharing rules,
-                including Only me.
-              </p>
-            </div>
-          </InfoHelp>
+          </div>
+          <div className="archive-privacy-label">
+            <label htmlFor={checkboxId}>
+              Hide my archived wishes and gift ideas from other users
+            </label>{" "}
+            <InfoHelp title="Archive privacy">
+              <div className="text-stack">
+                <p>
+                  Applies to your wishes, gift ideas you created, and wishes for
+                  managed profiles you own. On joint wish lists, any owner's
+                  hide preference protects archived wishes.
+                </p>
+                <p>
+                  List owners and profile managers keep access to wishes. Buyers
+                  and contributors keep their personal history, including saved
+                  item names. Turning this off keeps normal sharing rules,
+                  including Only me.
+                </p>
+              </div>
+            </InfoHelp>
+          </div>
         </div>
       </Form>
     </section>

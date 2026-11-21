@@ -1,4 +1,8 @@
 import {
+  ideaAllocationChoices,
+  sameAllocationChoices,
+} from "../shared/spending";
+import {
   administersGroup,
   administersAudience,
   managedGroup,
@@ -2453,6 +2457,18 @@ function commandCore(
             p.spendingAssignmentToken,
           );
       }
+      if (
+        !i.listId &&
+        (!p.recipientIds || p.recipientIds.join() === i.recipientIds.join()) &&
+        p.spendingAllocations &&
+        (p.spendingListId == null || p.spendingListId === i.spendingListId) &&
+        sameAllocationChoices(p.spendingAllocations, ideaAllocationChoices(i))
+      ) {
+        delete p.spendingAllocations;
+        // Older clients resend the effective allocation and clear the scalar default.
+        // Preserve that default when no actual choice changed.
+        delete p.spendingListId;
+      }
       if (p.spendingAllocations) {
         if (i.listId) fail(400, "Wish-list items use their source list.");
         p.spendingAllocations = allocationContext(
@@ -2462,8 +2478,10 @@ function commandCore(
           p.recipientIds ?? i.recipientIds,
         );
         if (
-          JSON.stringify(p.spendingAllocations) !==
-            JSON.stringify(i.spendingAllocations) &&
+          !sameAllocationChoices(
+            p.spendingAllocations,
+            ideaAllocationChoices(i),
+          ) &&
           p.spendingAllocations.some((v) => v.listId) &&
           (!p.recipientIds || p.recipientIds.join() === i.recipientIds.join())
         )

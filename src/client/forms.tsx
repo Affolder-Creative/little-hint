@@ -1,4 +1,9 @@
 import {
+  ideaAllocationChoices,
+  sameAllocationChoices,
+} from "../shared/spending";
+import { IdeaAudienceSummary } from "./IdeaAudienceSummary";
+import {
   OfferEditor,
   ProductsEditor,
   offerInputs,
@@ -756,8 +761,7 @@ function GiftEditor({
   );
   const assignmentChanged =
     !!gift &&
-    JSON.stringify(spendingAllocations) !==
-      JSON.stringify(gift.spendingAllocations);
+    !sameAllocationChoices(spendingAllocations, ideaAllocationChoices(gift));
   const needsAssignmentPreview = !!(
     idea &&
     world.spendingEnabled &&
@@ -1203,11 +1207,11 @@ function GiftEditor({
                   {audienceGroups.map((g) => g.name).join(", ")}.
                 </p>
                 <p>
-                  {visibility === "visible"
-                    ? "Recipients can see this idea."
-                    : "Hidden from all recipients."}
-                  {excludedUserIds.length > 0 &&
-                    ` Also hidden from ${excludedUserIds.map((id) => world.people.find((p) => p.userId === id)?.name ?? "an unavailable person").join(", ")}.`}
+                  <IdeaAudienceSummary
+                    visibility={visibility}
+                    recipientIds={recipientIds}
+                    excludedUserIds={excludedUserIds}
+                  />
                 </p>
                 <p>
                   Earlier protected discussion stays private. Removing access
@@ -1230,7 +1234,9 @@ function GiftEditor({
         data.description.length > 5000 ||
         uploading ||
         (needsAssignmentPreview &&
-          (!assignmentPreview.data || assignmentPreview.isFetching)) ||
+          (!assignmentPreview.data ||
+            assignmentPreview.isFetching ||
+            !!assignmentPreview.error)) ||
         (idea && !gift && !recipientId) ||
         (!!duplicate && !allowDuplicate) ||
         (!gift?.adminDetailsOnly && sharingIdea && !audienceGroups.length) ||
@@ -1264,7 +1270,7 @@ function GiftEditor({
             : {}),
           descriptionRich: noteRich,
           priority,
-          ...(idea && world.spendingEnabled
+          ...(idea && world.spendingEnabled && (!gift || assignmentChanged)
             ? {
                 spendingListId: null,
                 spendingAllocations,
@@ -1597,9 +1603,17 @@ function GiftEditor({
                     : friendEntries.length || friendEntry
                       ? "Share this friend with a group first, or choose Only me."
                       : "Join a family group to share this idea, or choose Only me."
-                  : visibility !== "visible"
-                    ? `Visible to you and members of ${audienceGroups.map((g) => familyGroupLabel(g, world)).join(", ")}. Hidden from all recipients${excludedUserIds.length ? " and the selected people" : ""}.`
-                    : `Visible to you, members of ${audienceGroups.map((g) => familyGroupLabel(g, world)).join(", ")}, all recipients.`}
+                  : `Visible to you and members of ${audienceGroups.map((g) => familyGroupLabel(g, world)).join(", ")}.`}
+              {sharingIdea && audienceGroups.length > 0 && (
+                <>
+                  {" "}
+                  <IdeaAudienceSummary
+                    visibility={visibility}
+                    recipientIds={recipientIds}
+                    excludedUserIds={excludedUserIds}
+                  />
+                </>
+              )}
             </p>
             {sharingIdea && (
               <p className="muted">
@@ -1613,6 +1627,7 @@ function GiftEditor({
       {idea && !gift?.adminDetailsOnly && world.spendingEnabled && (
         <>
           <SpendingAllocations
+            amountKind="estimate"
             key={recipientIds.join()}
             value={spendingAllocations}
             amountCents={
@@ -1833,7 +1848,13 @@ function GiftEditor({
         </section>
       )}
       <Field
-        label={products ? "Set name" : idea ? "Gift idea name" : "Item name"}
+        label={
+          products && products.length > 1
+            ? "Set name"
+            : idea
+              ? "Gift idea name"
+              : "Item name"
+        }
       >
         <input
           value={data.title}

@@ -18,10 +18,12 @@ export function SpendingAllocations({
   value,
   onChange,
   amountCents = null,
+  amountKind = "payment",
 }: {
   value: SpendingAllocation[];
   onChange: (value: SpendingAllocation[]) => void;
   amountCents?: number | null;
+  amountKind?: "estimate" | "payment";
 }) {
   const { world } = useApp();
   const [custom, setCustom] = useState(
@@ -110,14 +112,17 @@ export function SpendingAllocations({
                 />
               </Field>
             )}
-            <p className="muted">
-              {total > 0
-                ? `${Math.round((v.share / total) * 10000) / 100}%`
-                : "Enter at least one positive share"}
-              {amountCents !== null && total > 0
-                ? ` · ${dollars(amounts![index])}`
-                : ""}
-            </p>
+            {value.length > 1 && (
+              <p className="muted">
+                {name}'s share:{" "}
+                {total > 0
+                  ? `${Math.round((v.share / total) * 10000) / 100}%`
+                  : "Enter at least one positive share"}
+                {amountCents !== null && total > 0
+                  ? ` · ${amountKind === "estimate" ? "estimated " : ""}${dollars(amounts![index])}`
+                  : ""}
+              </p>
+            )}
           </div>
         );
       })}
