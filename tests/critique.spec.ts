@@ -1129,7 +1129,10 @@ test("secondary actions retain 44px touch targets on phones and desktop", async 
       ["/buying", ".entry-actions > summary"],
       [`/gift/${gift.id}`, ".back-link"],
       ["/exchanges", ".assignments a"],
-      ["/settings?section=profile", 'button[aria-label^="Edit profile"]'],
+      [
+        "/settings?section=profile",
+        ".profile-setting-row .entry-actions > summary",
+      ],
     ]) {
       await page.goto(route);
       await expect(page.locator("main h1")).toBeVisible();
@@ -1140,6 +1143,18 @@ test("secondary actions retain 44px touch targets on phones and desktop", async 
         const box = await target.boundingBox();
         expect(box!.height).toBeGreaterThanOrEqual(44);
         expect(box!.width).toBeGreaterThanOrEqual(44);
+      }
+      if (route.startsWith("/settings")) {
+        await targets.first().click();
+        const options = page
+          .locator(".profile-setting-row .entry-actions-content button")
+          .filter({ visible: true });
+        await expect(options.first()).toBeVisible();
+        for (const option of await options.all()) {
+          const box = (await option.boundingBox())!;
+          expect(box.height).toBeGreaterThanOrEqual(44);
+          expect(box.width).toBeGreaterThanOrEqual(44);
+        }
       }
       expect(
         await page.evaluate(
