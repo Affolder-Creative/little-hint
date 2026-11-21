@@ -424,6 +424,7 @@ test("family-group households support duplicate names and member-controlled sele
       .first()
       .click();
     await page
+      .getByRole("dialog")
       .getByLabel("Household name", { exact: true })
       .fill("School-week home");
     await page

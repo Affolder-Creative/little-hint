@@ -190,6 +190,10 @@ function administrationMigrationContract(evidence) {
           groups.some((g) => g.id === id && g.memberIds.includes(userId)),
         ) && audience(retained.groupIds);
     }
+    for (const l of view.lists ?? [])
+      if (Object.hasOwn(l, "canManageSettings"))
+        l.canManageSettings =
+          !lists.find((r) => r.id === l.id).groupEventId && l.canEdit;
     function gifts(value) {
       if (Array.isArray(value)) {
         value.forEach(gifts);

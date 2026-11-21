@@ -6448,3 +6448,23 @@ test("people directory updates thresholds and clears hidden searches", async ({
   await page.reload();
   await expect(search).toHaveValue("");
 });
+
+test("app admins can create exchanges in their groups without an event-leader role", async ({
+  page,
+}) => {
+  const { state, actors } = await preview(page);
+  for (const group of state.groups) {
+    group.ownerId = actors[2].id;
+    group.eventLeaderIds = [];
+  }
+  await page.goto("/exchanges");
+  await page
+    .getByRole("button", { name: "Create exchange", exact: true })
+    .click();
+  await expect(
+    page
+      .getByRole("dialog")
+      .getByLabel("Family group", { exact: true })
+      .locator("option"),
+  ).toHaveCount(2);
+});
