@@ -1,3 +1,4 @@
+import { productItems } from "../shared/item-groups";
 import { itemPhotos } from "../shared/item-photos";
 import type { World } from "../shared/model";
 
@@ -172,7 +173,11 @@ export function configureProductImages(world: World | null | undefined) {
     void validateProductImages(world.me.id);
     return;
   }
-  const next = new Set(world.items.flatMap(itemPhotos).filter(Boolean));
+  const next = new Set(
+    [...world.items, ...productItems(world.items)]
+      .flatMap(itemPhotos)
+      .filter(Boolean),
+  );
   allowed = next;
   if (!prefetchEnabled) cancelImagePrefetch();
   for (const url of memory.keys()) if (!permitted(url)) memory.delete(url);

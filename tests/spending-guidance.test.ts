@@ -540,3 +540,37 @@ it("uses the configured full cost in optional spending without recording payment
     false,
   );
 });
+it("uses a grouped product's own price for reservation previews and counts its contributions once", () => {
+  const f = fixture();
+  const gift = f.item(9000);
+  command(f.s, f.actors[0], "items.update", {
+    ...gift,
+    kind: "group",
+    title: "Silverware set",
+    products: [{ ...gift }, { title: "Additional product", priceCents: 1500 }],
+  });
+  expect(f.summary(1, 0, { itemId: gift.id, quantity: 2 })).toMatchObject({
+    cents: 18000,
+    unknown: 0,
+  });
+  const reservation = f.reserve(gift);
+  command(f.s, f.actors[1], "reservations.update", {
+    ...reservation,
+    poolTargetCents: 9000,
+  });
+  command(f.s, f.actors[2], "contributions.create", {
+    reservationId: reservation.id,
+    amountCents: 3000,
+  });
+  expect(f.summary(2).cents).toBe(3000);
+  expect(f.summary(1).cents).toBe(6000);
+  const viewer = world(f.s, f.actors[2]);
+  viewer.items.push(viewer.items.find((i) => i.kind === "group")!.products![0]);
+  expect(
+    spendingSummary(viewer, {
+      kind: "event",
+      id: f.event.id,
+      recipientId: f.people[0].id,
+    }).cents,
+  ).toBe(3000);
+});

@@ -1,0 +1,114 @@
+.shopping-links,
+.group-products {
+  margin-top: 24px;
+}
+.shopping-links h2,
+.group-products h2 {
+  font-size: 22px;
+  font-weight: 550;
+  margin: 0 0 8px;
+}
+.shopping-links ul,
+.group-products ul {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+}
+.shopping-links li,
+.group-products li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border);
+}
+.shopping-links li > div:first-child,
+.group-products li > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.shopping-links a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+}
+.shopping-links small,
+.group-products small {
+  display: block;
+  color: var(--muted);
+  font-size: 13px;
+}
+.shopping-links p {
+  margin: 0 0 4px;
+  font-size: 14px;
+}
+.shopping-offer-price {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+.shopping-links .shopping-lowest {
+  color: var(--green);
+}
+.offer-editor {
+  margin: 16px 0;
+}
+.offer-editor > p,
+.products-editor > p {
+  font-size: 14px;
+  margin: 0 0 12px;
+}
+.offer-editor-row {
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+  margin-top: 16px;
+  display: grid;
+  gap: 12px;
+}
+.offer-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.offer-actions .check {
+  flex: 1;
+  min-width: 180px;
+}
+.product-editor {
+  min-width: 0;
+  margin: 20px 0;
+  padding: 16px 0 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+  display: grid;
+  gap: 16px;
+}
+.product-editor legend {
+  padding: 0 8px 0 0;
+  font-weight: 550;
+}
+.products-editor {
+  margin: 24px 0;
+}
+.group-products li:last-child,
+.shopping-links li:last-child {
+  border-bottom: 0;
+}
+@media (max-width: 400px) {
+  .group-products li {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .group-products li > .button {
+    align-self: flex-start;
+  }
+  .shopping-links li {
+    gap: 12px;
+  }
+  .offer-actions {
+    gap: 8px;
+  }
+}

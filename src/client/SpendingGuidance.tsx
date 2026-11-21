@@ -1,3 +1,4 @@
+import { productItems } from "../shared/item-groups";
 import { netContribution } from "../shared/contribution-money";
 import { useCollection } from "./Pagination";
 import { useState } from "react";
@@ -381,7 +382,7 @@ export function ContributionSpendingGuidance({
   );
   const gift = world.paged
     ? query.data
-    : world.items.find((i) =>
+    : productItems(world.items).find((i) =>
         i.reservations?.some(
           (r) => r.id === reservationId && !r.exchange && r.quantity > 0,
         ),

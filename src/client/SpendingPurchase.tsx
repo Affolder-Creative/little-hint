@@ -1,3 +1,4 @@
+import { productItems } from "../shared/item-groups";
 import { SpendingAllocations, defaultAllocations } from "./SpendingAllocations";
 import { recordAllocations, type SpendingAllocation } from "../shared/spending";
 import { SearchSelect, type Choice } from "./SearchSelect";
@@ -196,7 +197,7 @@ export function PurchaseForm({
           }),
           `occasion:${occasionId}`,
         ].some((rule) => c.rules[world.me.id]?.includes(rule)));
-  const matches = world.items.filter(
+  const matches = productItems(world.items).filter(
     (gift) =>
       (gift.canShop ?? !gift.isRecipient) &&
       !gift.archived &&
@@ -205,7 +206,7 @@ export function PurchaseForm({
         world.lists.some(
           (l) => l.id === gift.listId && !l.archived && !l.deletedAt,
         )) &&
-      `${gift.title} ${gift.recipientNames.join(" ")} ${world.lists.find((l) => l.id === gift.listId)?.name ?? ""}`
+      `${gift.title} ${gift.parentTitle ?? ""} ${gift.recipientNames.join(" ")} ${world.lists.find((l) => l.id === gift.listId)?.name ?? ""}`
         .toLowerCase()
         .includes(title.toLowerCase()),
   );
@@ -229,7 +230,7 @@ export function PurchaseForm({
   const giftChoices: Choice[] = candidates.map(({ gift, reservation: r }) => ({
     id: r ? `reservation:${r.id}` : `item:${gift.id}`,
     label: gift.title,
-    detail: `${gift.recipientNames.join(" & ")} · ${world.lists.find((l) => l.id === gift.listId)?.name ?? "Private gift idea"}${r ? ` · Your reservation (${r.quantity - r.purchased} left)${r.exchangeId ? " · Exchange" : ""}` : ""}`,
+    detail: `${gift.parentTitle ? `Part of ${gift.parentTitle} · ` : ""}${gift.recipientNames.join(" & ")} · ${world.lists.find((l) => l.id === gift.listId)?.name ?? "Private gift idea"}${r ? ` · Your reservation (${r.quantity - r.purchased} left)${r.exchangeId ? " · Exchange" : ""}` : ""}`,
   }));
   if (title.trim())
     giftChoices.push({

@@ -1,3 +1,4 @@
+import { shoppingOffers, bestShoppingOffer } from "../shared/shopping-offers";
 import { itemTrashed } from "../shared/organization";
 import { canEdit, archived } from "./domain-access";
 import { randomUUID } from "node:crypto";
@@ -18,9 +19,10 @@ export function priceBaseline(
 }
 export function priceEligible(s: State, i: Item) {
   return (
+    i.kind !== "group" &&
     i.publicationState !== "draft" &&
     i.priceCents !== null &&
-    !!i.url &&
+    shoppingOffers(i).length > 0 &&
     !itemTrashed(s, i) &&
     (!i.listId || s.lists.some((l) => l.id === i.listId)) &&
     !archived(s, i) &&
@@ -62,15 +64,20 @@ export function priceCommand(s: State, a: Actor, action: string, raw: unknown) {
     if (p.enabled) {
       if (!priceEligible(s, item) || !priceConfig().enabled)
         fail(400, "Price tracking is unavailable for this item.");
-      const fresh =
-        item.pricing!.checkedAt &&
-        Date.now() - Date.parse(item.pricing!.checkedAt) < 48 * 3600000;
+      const fresh = item.shoppingOffers
+        ? !!bestShoppingOffer(item)
+        : item.pricing!.checkedAt &&
+          Date.now() - Date.parse(item.pricing!.checkedAt) < 48 * 3600000;
       s.priceWatches.push({
         ...stamp(),
         userId: a.id,
         itemId: p.id,
         generation: item.pricing!.generation,
-        reference: fresh ? item.priceCents : null,
+        reference: fresh
+          ? item.shoppingOffers
+            ? bestShoppingOffer(item)!.priceCents
+            : item.priceCents
+          : null,
       });
     }
   } else if (action === "prices.tracking") {
@@ -91,23 +98,38 @@ export function schedulePrices(s: State, now = new Date()) {
   const key = `price-run:${day}`;
   if (s.usage.some((u) => u.key === key)) return;
   s.usage.push({ ...stamp(), key, count: now.getTime() });
-  const groups = new Map<string, Item[]>();
+  const groups = new Map<
+    string,
+    { url: string; targets: State["priceChecks"][number]["targets"] }
+  >();
   for (const i of s.items.filter((i) => priceEligible(s, i))) {
     if (!i.pricing) priceBaseline(i, "when tracking started");
-    const key = productCacheUrl(i.url) ?? `private:${i.id}`;
-    groups.set(key, [...(groups.get(key) ?? []), i]);
-  }
-  for (const items of groups.values())
-    s.priceChecks.push({
-      ...stamp(),
-      url: items[0].url,
-      day,
-      status: "pending",
-      targets: items.map((i) => ({
+    for (const offer of shoppingOffers(i)) {
+      if (i.shoppingOffers && !offer.pricing)
+        offer.pricing = {
+          baseline: offer.priceCents,
+          baselineLabel: "when tracking started",
+          generation: randomUUID(),
+        };
+      const key = productCacheUrl(offer.url) ?? `private:${i.id}:${offer.id}`;
+      const group = groups.get(key) ?? { url: offer.url, targets: [] };
+      group.targets.push({
         id: i.id,
         generation: i.pricing!.generation,
         revision: i.revision,
-      })),
+        ...(i.shoppingOffers
+          ? { offerId: offer.id, offerGeneration: offer.pricing!.generation }
+          : {}),
+      });
+      groups.set(key, group);
+    }
+  }
+  for (const group of groups.values())
+    s.priceChecks.push({
+      ...stamp(),
+      ...group,
+      day,
+      status: "pending",
     });
   // Completed jobs are diagnostics, not price history.
   s.priceChecks = s.priceChecks.filter(

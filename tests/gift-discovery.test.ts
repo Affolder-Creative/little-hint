@@ -293,7 +293,7 @@ describe("review and atomic save", () => {
         (i) =>
           i.visibility === "private" &&
           !i.listId &&
-          i.purchaseOffers?.length === 1,
+          i.shoppingOffers?.length === 1,
       ),
     ).toBe(true);
     expect(JSON.stringify(items)).not.toContain("Matches private");
@@ -302,6 +302,35 @@ describe("review and atomic save", () => {
     expect(() =>
       saveDiscoveryReview(f.state, f.a, cfg, f.j.id, { reviewId: token }),
     ).toThrow("Review");
+  });
+  it("saves discovered alternatives as checked shopping offers with a stable primary", () => {
+    const f = ready();
+    const candidate = f.j.candidates[0];
+    candidate.offers.push({
+      ...candidate.offers[0],
+      url: "https://other.example/brewer",
+      retailer: "Other",
+      priceCents: 2000,
+    });
+    prepareDiscoveryReview(f.state, f.a, cfg, f.j.id, [f.picks[0]]);
+    const result = saveDiscoveryReview(f.state, f.a, cfg, f.j.id, {
+      reviewId: f.j.review!.id,
+    });
+    const saved = f.state.items.find(
+      (i) => i.id === result.saved[candidate.id],
+    )!;
+    expect(saved.shoppingOffers).toHaveLength(2);
+    expect(saved.purchaseOffers).toBeUndefined();
+    expect(saved.url).toBe(candidate.offers[0].url);
+    expect(
+      saved.shoppingOffers!.find((o) => o.id === saved.primaryOfferId)?.label,
+    ).toBe("OXO");
+    expect(
+      saved.shoppingOffers!.every((o) => o.pricing?.status === "verified"),
+    ).toBe(true);
+    expect(saved.shoppingOffers!.every((o) => !o.pricing?.identity)).toBe(true);
+    expect(saved.priceCents).toBe(2000);
+    expect(saved.pricing?.baseline).toBe(2500);
   });
   it("saves to an owned list and invalidates changed destinations without partial writes", () => {
     const f = ready(true);

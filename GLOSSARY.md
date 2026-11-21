@@ -36,3 +36,9 @@ A current family-group member authorized to administer that group and maintain i
 
 **Primary owner**:
 The family-group member responsible for ownership and its transfer. The primary owner is always a family admin.
+
+**Shopping offer**:
+A shop link for a particular product and variant, with its own price and verification time.
+
+**Product group**:
+Related products presented together under a shared name and gallery. Each product can be reserved and purchased separately.

@@ -3,7 +3,16 @@ import type { Actor, Item, State, Visibility } from "../shared/model";
 import { fail, touch } from "./domain-common";
 
 export function ideaRecipientsLocked(s: State, i: Item) {
-  return !!i.recipientsLocked || s.reservations.some((r) => r.itemId === i.id);
+  return (
+    !!i.recipientsLocked ||
+    s.reservations.some(
+      (r) =>
+        r.itemId === i.id ||
+        s.items.some(
+          (child) => child.id === r.itemId && child.parentItemId === i.id,
+        ),
+    )
+  );
 }
 export function lockIdeaRecipients(s: State) {
   for (const i of s.items)

@@ -53,6 +53,11 @@ export function accountExport(s: State, a: Actor) {
       .map((i) => ({
         id: i.id,
         title: i.title,
+        kind: i.kind,
+        parentItemId: i.parentItemId,
+        position: i.position,
+        shoppingOffers: i.shoppingOffers,
+        primaryOfferId: i.primaryOfferId,
         description: i.description,
         descriptionRich: i.descriptionRich,
         url: i.url,

@@ -1,3 +1,4 @@
+import { productItems } from "./item-groups";
 import { netContribution } from "./contribution-money";
 import type { GiftView, World } from "./model";
 
@@ -139,7 +140,7 @@ export function spendingSummary(
     if (estimate.unknown) unknown++;
   }
   if (context.kind === "event") {
-    for (const gift of world.items) {
+    for (const gift of productItems(world.items)) {
       if (!sameContext(eventSpendingContext(world, gift), context)) continue;
       for (const r of gift.reservations ?? []) {
         if (r.exchange || r.mine || r.quantity <= 0) continue;
@@ -152,7 +153,7 @@ export function spendingSummary(
     }
   }
   if (preview.itemId && preview.quantity && preview.quantity > 0) {
-    const gift = world.items.find((i) => i.id === preview.itemId);
+    const gift = productItems(world.items).find((i) => i.id === preview.itemId);
     const estimate = giftEstimate(gift?.priceCents ?? null, preview.quantity);
     cents += estimate.cents;
     if (estimate.unknown) unknown++;

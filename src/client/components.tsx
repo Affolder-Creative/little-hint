@@ -674,6 +674,11 @@ export function GiftCard({
           </span>
         </div>
         <Heading className="gift-title">{gift.title}</Heading>
+        {gift.kind === "group" && (
+          <p className="gift-source-list">
+            {gift.products?.length ?? 0} products in this set
+          </p>
+        )}
 
         {sourceListName && (
           <p className="gift-source-list">From {sourceListName}</p>

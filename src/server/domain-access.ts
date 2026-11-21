@@ -142,6 +142,12 @@ export function archivePrivacyRequired(s: State, i: Item): boolean {
 }
 /** Sharing revocation cancels commitments; archive privacy only hides the source. */
 function itemSharedWith(s: State, a: Actor, i: Item): boolean {
+  if (i.parentItemId) {
+    const parent = s.items.find(
+      (p) => p.id === i.parentItemId && p.kind === "group" && !p.parentItemId,
+    );
+    if (!parent || !itemSharedWith(s, a, parent)) return false;
+  }
   if (itemTrashed(s, i) || !draftAccess(s, a, i)) return false;
   if (i.listId) {
     const l = s.lists.find((l) => l.id === i.listId);
@@ -195,7 +201,9 @@ export const getItem = (s: State, a: Actor, id: string) =>
   s.items.find((i) => i.id === id && itemVisible(s, a, i)) ??
   fail(404, "Item not found.");
 export const archived = (s: State, i: Item) =>
-  i.archived || !!s.lists.find((l) => l.id === i.listId && listIsArchived(l));
+  i.archived ||
+  !!s.items.find((p) => p.id === i.parentItemId)?.archived ||
+  !!s.lists.find((l) => l.id === i.listId && listIsArchived(l));
 export const name = (s: State, userId: string) =>
   s.people.find((p) => p.userId === userId)?.name ?? "Former member";
 export const mode = (s: State, i: Item) =>
@@ -240,6 +248,7 @@ export function reconcileAccess(s: State) {
 export const selfRecipient = (s: State, a: Actor, ids: string[]) =>
   ids.some((id) => s.people.some((p) => p.id === id && p.userId === a.id));
 export const canShop = (s: State, a: Actor, i: Item) =>
+  i.kind !== "group" &&
   i.publicationState !== "draft" &&
   !selfRecipient(s, a, i.recipientIds) &&
   !s.people.some(

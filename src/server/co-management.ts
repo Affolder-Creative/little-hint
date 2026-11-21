@@ -68,6 +68,38 @@ export function coNotice(
     coManagement: { personId, message, content: refs.content },
   });
 }
+function recoveredContent(
+  s: State,
+  i: Item,
+): Omit<
+  import("../shared/co-management").RecoveredDraft,
+  keyof import("../shared/model").Base | "userId" | "sourceId"
+> {
+  return {
+    title: i.title,
+    description: i.description,
+    url: i.url,
+    image: i.image,
+    images: i.images,
+    descriptionRich: i.descriptionRich,
+    priceCents: i.priceCents,
+    currency: i.currency,
+    quantity: i.quantity,
+    tags: [...i.tags],
+    priority: i.priority,
+    kind: i.kind,
+    shoppingOffers: i.shoppingOffers,
+    primaryOfferId: i.primaryOfferId,
+    ...(i.kind === "group"
+      ? {
+          products: s.items
+            .filter((child) => child.parentItemId === i.id && !child.deletedAt)
+            .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+            .map((child) => recoveredContent(s, child)),
+        }
+      : {}),
+  };
+}
 export function recoverDraft(s: State, i: Item) {
   const userId = i.draftOwnerId ?? i.creatorId;
   if (
@@ -77,17 +109,7 @@ export function recoverDraft(s: State, i: Item) {
       ...stamp(),
       sourceId: i.id,
       userId,
-      title: i.title,
-      description: i.description,
-      url: i.url,
-      image: i.image,
-      images: i.images,
-      descriptionRich: i.descriptionRich,
-      priceCents: i.priceCents,
-      currency: i.currency,
-      quantity: i.quantity,
-      tags: [...i.tags],
-      priority: i.priority,
+      ...recoveredContent(s, i),
     });
 }
 export function reconcileCoManagement(s: State) {
@@ -141,14 +163,17 @@ export function reconcileCoManagement(s: State) {
       l.modeLocked = true;
       touch(l);
     }
-  for (const i of [...s.items]) {
+  for (const i of [...s.items].sort(
+    (a, b) => Number(!!a.parentItemId) - Number(!!b.parentItemId),
+  )) {
+    if (!s.items.some((item) => item.id === i.id)) continue;
     if (i.publicationState !== "draft" || !i.listId) continue;
     const userId = i.draftOwnerId ?? i.creatorId;
     const l = s.lists.find((l) => l.id === i.listId);
     const a = { id: userId, email: "", name: "" };
     if (!l || !listCanEdit(s, a, l)) {
       recoverDraft(s, i);
-      s.items = s.items.filter((x) => x.id !== i.id);
+      s.items = s.items.filter((x) => x.id !== i.id && x.parentItemId !== i.id);
     }
   }
 }

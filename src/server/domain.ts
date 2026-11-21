@@ -5,6 +5,12 @@ import {
   ordinaryItemEditor,
 } from "./domain-access";
 import { listCanManagePolicy } from "./co-management";
+import {
+  groupProducts,
+  inheritGroupContext,
+  reconcileItemGroups,
+} from "./item-groups";
+import { shoppingOfferInput, reconcileShoppingOffers } from "./shopping-offers";
 import { allocationContext } from "./spending";
 import { allocationsInput } from "../shared/spending-input";
 import {
@@ -511,6 +517,35 @@ export function giftView(s: State, a: Actor, i: Item): GiftView {
         mentions: c.mentions,
         createdAt: c.createdAt,
       }));
+  if (i.parentItemId) {
+    const parent = s.items.find((item) => item.id === i.parentItemId);
+    if (parent && itemVisible(s, a, parent)) view.parentTitle = parent.title;
+    if (!view.image && parent) view.image = parent.image;
+  }
+  if (i.kind === "group") {
+    view.products = groupProducts(s, i)
+      .filter((child) => itemVisible(s, a, child))
+      .map((child) => giftView(s, a, child));
+    view.productCount = view.products.length;
+    view.unpricedProductCount = view.products.filter(
+      (child) => child.priceCents === null,
+    ).length;
+    view.priceCents = view.unpricedProductCount
+      ? null
+      : view.products.reduce(
+          (total, child) => total + child.priceCents! * child.quantity,
+          0,
+        );
+    delete view.reservations;
+    delete view.reserved;
+    delete view.purchased;
+    delete view.available;
+    if (view.products.some((child) => child.available !== undefined))
+      view.available = view.products.filter(
+        (child) => !child.archived && (child.available ?? 0) > 0,
+      ).length;
+    view.canShop = false;
+  }
   return view;
 }
 export function preferences(s: State, a: Actor): Preferences {
@@ -770,7 +805,12 @@ export function world(
     items: paged
       ? []
       : s.items
-          .filter((i) => itemVisible(s, a, i) && i.publicationState !== "draft")
+          .filter(
+            (i) =>
+              !i.parentItemId &&
+              itemVisible(s, a, i) &&
+              i.publicationState !== "draft",
+          )
           .map((i) => giftView(s, a, i)),
     contributionHistory: compact
       ? []
@@ -971,19 +1011,65 @@ const photoUrls = z.array(
     .regex(/^\/api\/v1\/media\/[a-zA-Z0-9-]+$/)
     .max(2048),
 );
+const draftOfferInput = z
+  .object({
+    id: z.string().max(128).optional(),
+    url: z.string().max(2048).optional(),
+    label: z.string().max(100).optional(),
+    note: z.string().max(500).optional(),
+    priceCents: z.number().int().min(0).max(100000000).nullable().optional(),
+  })
+  .strict();
 const draftFieldsInput = z
-  .record(
-    z.string().max(40),
-    z.union([z.string().max(5000), z.number().finite(), z.null(), photoUrls]),
-  )
-  .refine(
-    (fields) =>
-      Object.entries(fields).every(
-        ([key, value]) => !Array.isArray(value) || key === "images",
-      ),
-    "Only photos accept multiple values.",
-  );
-const itemInput = z.object({
+  .record(z.string().max(40), z.unknown())
+  .transform((fields, ctx) => {
+    const result: import("../shared/model").ImportDraft["fields"] = {};
+    for (const [key, value] of Object.entries(fields)) {
+      const schema =
+        key === "images"
+          ? photoUrls
+          : key === "shoppingOffers"
+            ? z.array(draftOfferInput).max(30)
+            : key === "products"
+              ? z
+                  .array(
+                    productInput.partial().extend({
+                      title: z.string().max(160).optional(),
+                      url: z.string().max(2048).optional(),
+                      shoppingOffers: z
+                        .array(draftOfferInput)
+                        .max(30)
+                        .optional(),
+                    }),
+                  )
+                  .max(50)
+              : z.union([z.string().max(5000), z.number().finite(), z.null()]);
+      const parsed = schema.safeParse(value);
+      if (!parsed.success) {
+        ctx.addIssue({
+          code: "custom",
+          path: [key],
+          message: `Invalid ${key} in saved draft.`,
+        });
+      } else if (
+        key === "products" &&
+        Array.isArray(value) &&
+        Array.isArray(parsed.data)
+      ) {
+        result[key] = parsed.data.map((product, index) =>
+          Object.fromEntries(
+            Object.entries(product).filter(([field]) =>
+              Object.hasOwn(value[index], field),
+            ),
+          ),
+        );
+      } else result[key] = parsed.data;
+    }
+    return result;
+  });
+const productFields = z.object({
+  shoppingOffers: z.array(shoppingOfferInput).max(30).optional(),
+  primaryOfferId: z.string().optional(),
   images: photoUrls.optional(),
   spendingAllocations: allocationsInput.optional(),
   spendingListId: id.nullable().optional(),
@@ -1012,12 +1098,95 @@ const itemInput = z.object({
   tags: z.array(z.string().trim().min(1).max(30)).max(12).default([]),
   quantity: z.number().int().min(1).max(999).default(1),
 });
+const productInput = productFields.extend({
+  id: id.optional(),
+  revision: revision.optional(),
+});
+const itemInput = productFields.extend({
+  kind: z.literal("group").optional(),
+  products: z.array(productInput).min(1).max(50).optional(),
+});
+
+function saveGroupProducts(
+  s: State,
+  a: Actor,
+  parent: Item,
+  products: z.infer<typeof productInput>[] | undefined,
+) {
+  if (parent.kind !== "group") {
+    if (products) fail(400, "Add a group before adding products.");
+    return;
+  }
+  if (products) {
+    const ids = products.flatMap((p) => (p.id ? [p.id] : []));
+    if (new Set(ids).size !== ids.length)
+      fail(400, "Choose each product once.");
+    const previous = groupProducts(s, parent).filter((i) => !i.deletedAt);
+    for (const [position, input] of products.entries()) {
+      const { id: childId, revision: childRevision, ...fields } = input;
+      let child = childId ? previous.find((i) => i.id === childId) : undefined;
+      if (childId && !child) fail(404, "Product not found in this group.");
+      if (child && childRevision !== undefined)
+        checkRevision(child, childRevision);
+      const before = child ? structuredClone(child) : undefined;
+      normalizeNote(fields, child);
+      checkPhotos(s, a, fields, child);
+      if (!child) {
+        child = {
+          ...structuredClone(parent),
+          ...stamp(),
+          ...fields,
+          kind: undefined,
+          parentItemId: parent.id,
+          position,
+          pricing: undefined,
+          purchaseOffers: undefined,
+          productSources: undefined,
+          recommendationEvidence: undefined,
+          archived: false,
+        };
+        delete child.deletedAt;
+        s.items.push(child);
+        priceBaseline(child, "when added");
+      } else {
+        Object.assign(child, fields, { position });
+        if (before!.url !== child.url)
+          priceBaseline(child, "when link changed");
+        else if (before!.priceCents !== child.priceCents) {
+          if (!child.pricing) priceBaseline(child, "when tracking started");
+          child.pricing!.paused = true;
+          delete child.pricing!.checkedAt;
+          for (const watch of s.priceWatches.filter(
+            (watch) => watch.itemId === child!.id,
+          ))
+            watch.reference = null;
+        }
+        touch(child);
+      }
+      inheritGroupContext(parent, child);
+      reconcileShoppingOffers(child, before);
+    }
+    for (const child of previous.filter((i) => !ids.includes(i.id))) {
+      child.deletedAt = new Date().toISOString();
+      touch(child);
+    }
+  }
+  parent.url = "";
+  parent.priceCents = null;
+  parent.quantity = 1;
+  delete parent.shoppingOffers;
+  delete parent.primaryOfferId;
+  delete parent.pricing;
+  reconcileItemGroups(s);
+}
+
 export function command(
   s: State,
   a: Actor,
   action: string,
   raw: unknown,
 ): unknown {
+  reconcileItemGroups(s);
   reconcileCoManagement(s);
   reconcilePrivacyReview(s);
   reconcileSpendingPrivacy(s);
@@ -1044,6 +1213,7 @@ export function command(
   );
   const beforeItems = new Map(s.items.map((i) => [i.id, i.revision]));
   const result = commandCore(s, a, action, raw);
+  reconcileItemGroups(s);
   reconcileCoManagement(s);
   const changedItems = action.startsWith("items.")
     ? s.items.filter((i) => i.revision !== beforeItems.get(i.id))
@@ -1136,6 +1306,7 @@ function commandCore(
   a: Actor,
   action: string,
   raw: unknown,
+  wrapping = false,
 ): unknown {
   if (action.startsWith("co-management."))
     return coManagementCommand(s, a, action, raw);
@@ -1888,6 +2059,8 @@ function commandCore(
           importDraftRevision: z.number().int().optional(),
         })
         .parse(b);
+      if (p.kind === "group" && !p.products?.length && !wrapping)
+        fail(400, "Add at least one product to the group.");
       normalizeNote(p);
       p.images = itemPhotos(p);
       if (!p.image) p.image = p.images[0] ?? "";
@@ -1978,6 +2151,7 @@ function commandCore(
         importId,
         importDraftRevision,
         spendingAssignmentToken,
+        products,
         ...fields
       } = p;
       const imported = s.imports.find(
@@ -2041,6 +2215,8 @@ function commandCore(
       setItemArchived(i, p.archived);
       priceBaseline(i, "when added");
       s.items.push(i);
+      reconcileShoppingOffers(i);
+      saveGroupProducts(s, a, i, products);
       if (i.listId && i.publicationState !== "draft" && !i.archived)
         emitActivity(
           s,
@@ -2070,7 +2246,8 @@ function commandCore(
       i.publicationState = "published";
       delete i.draftOwnerId;
       touch(i);
-      priceBaseline(i, "when added");
+      if (i.kind !== "group") priceBaseline(i, "when added");
+      reconcileItemGroups(s);
       if (!i.archived)
         emitActivity(
           s,
@@ -2085,6 +2262,8 @@ function commandCore(
       const detailsOnly = !ordinaryItemEditor(s, a, existing);
       if (detailsOnly) {
         if (!canEdit(s, a, existing)) fail(403, "You cannot edit this item.");
+        if (b.kind !== undefined && b.kind !== existing.kind)
+          fail(403, "Only the item owner can change its grouping.");
         const allowed = new Set([
           "id",
           "revision",
@@ -2100,6 +2279,10 @@ function commandCore(
           "quantity",
           "priority",
           "archived",
+          "shoppingOffers",
+          "primaryOfferId",
+          "products",
+          "kind",
         ]);
         if (Object.keys(b).some((key) => !allowed.has(key)))
           fail(
@@ -2131,6 +2314,62 @@ function commandCore(
       const i = getItem(s, a, p.id);
       if (!canEdit(s, a, i)) fail(403, "You cannot edit this item.");
       checkRevision(i, p.revision);
+      if (i.kind !== "group" && p.kind === "group") {
+        if (i.parentItemId) fail(400, "Groups cannot contain other groups.");
+        if (!p.products?.some((product) => product.id === i.id))
+          fail(400, "Keep the original product in the group.");
+        if (
+          p.visibility !== i.visibility ||
+          p.groupIds.join() !== i.groupIds.join() ||
+          (p.recipientIds && p.recipientIds.join() !== i.recipientIds.join()) ||
+          (p.excludedUserIds &&
+            p.excludedUserIds.join() !== (i.excludedUserIds ?? []).join())
+        )
+          fail(400, "Keep the existing audience when creating a group.");
+        const { id: _id, revision: _revision, products, ...fields } = p;
+        const parentView = commandCore(
+          s,
+          a,
+          "items.create",
+          {
+            ...fields,
+            listId: i.listId,
+            recipientIds: i.recipientIds,
+            publicationState: i.publicationState,
+            allowDuplicate: true,
+            products: undefined,
+            visibility: i.visibility,
+            groupIds: i.groupIds,
+            excludedUserIds: i.excludedUserIds,
+            friendEntryId: i.friendEntryId,
+          },
+          true,
+        ) as GiftView;
+        const parent = s.items.find((item) => item.id === parentView.id)!;
+        parent.recipientsLocked = ideaRecipientsLocked(s, i);
+        i.parentItemId = parent.id;
+        const list = s.lists.find((list) => list.id === i.listId);
+        if (list?.itemOrder)
+          list.itemOrder = list.itemOrder.map((id) =>
+            id === i.id ? parent.id : id,
+          );
+        saveGroupProducts(s, a, parent, products);
+        return giftView(s, a, parent);
+      }
+      const previousItem = structuredClone(i);
+      if (i.kind === "group") p.kind = "group";
+      if (i.parentItemId) {
+        const parent = s.items.find((item) => item.id === i.parentItemId)!;
+        if (
+          (p.recipientIds &&
+            p.recipientIds.join() !== parent.recipientIds.join()) ||
+          p.visibility !== parent.visibility ||
+          p.groupIds.join() !== parent.groupIds.join() ||
+          (p.excludedUserIds &&
+            p.excludedUserIds.join() !== (parent.excludedUserIds ?? []).join())
+        )
+          fail(400, "Change sharing and recipients on the group.");
+      }
       normalizeNote(p, i);
       if (p.images === undefined)
         p.images = itemPhotos(i).filter(
@@ -2241,6 +2480,7 @@ function commandCore(
         importId,
         importDraftRevision,
         spendingAssignmentToken,
+        products,
         ...fields
       } = p;
       if (fields.spendingListId === undefined) delete fields.spendingListId;
@@ -2295,6 +2535,8 @@ function commandCore(
       }
       setItemArchived(i, fields.archived);
       Object.assign(i, fields);
+      reconcileShoppingOffers(i, previousItem);
+      saveGroupProducts(s, a, i, products);
       touch(i);
       reconcileAccess(s);
       notify(

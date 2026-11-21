@@ -1,3 +1,5 @@
+import { migrateShoppingOffers } from "./shopping-offers";
+import { reconcileItemGroups } from "./item-groups";
 import { reconcileCoManagement } from "./co-management";
 import { lifecycleBaseline } from "./gift-lifecycle";
 import { reconcilePrivacyReview } from "./privacy-review";
@@ -18,7 +20,7 @@ import {
   type ImportJob,
   type FriendEntry,
 } from "../shared/model";
-const supportedSchemaVersion = 13;
+const supportedSchemaVersion = 14;
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   max: 10,
@@ -95,10 +97,12 @@ export async function transact<T>(
         if (kinds.includes(row.kind as Kind))
           (state[row.kind as Kind] as unknown[]).push(row.data);
       }
+      reconcileItemGroups(state);
       reconcileCoManagement(state);
       reconcilePrivacyReview(state);
       reconcileSpendingPrivacy(state);
       const result = await fn(state, tx);
+      reconcileItemGroups(state);
       reconcileCoManagement(state);
       reconcilePrivacyReview(state);
       reconcileSpendingPrivacy(state);
@@ -320,6 +324,25 @@ INSERT INTO schema_migration(version) VALUES (2);`);
       );
       await client.query("INSERT INTO schema_migration(version) VALUES (13)");
     }
+    const shoppingMigration = await client.query(
+      "SELECT 1 FROM schema_migration WHERE version=14",
+    );
+    if (!shoppingMigration.rowCount) {
+      const items = await client.query(
+        "SELECT id,data FROM app_record WHERE kind='items'",
+      );
+      for (const row of items.rows) {
+        migrateShoppingOffers(row.data);
+        await client.query("UPDATE app_record SET data=$1 WHERE id=$2", [
+          JSON.stringify(row.data),
+          row.id,
+        ]);
+      }
+      await client.query(
+        `UPDATE app_record SET data = (data - 'leaseUntil' - 'token') || '{"status":"failed","outcome":"skipped","error":"Superseded by shopping-offer migration."}'::jsonb WHERE kind='priceChecks' AND data->>'status' IN ('pending','running')`,
+      );
+      await client.query("INSERT INTO schema_migration(version) VALUES (14)");
+    }
     await client.query("COMMIT");
   } catch (e) {
     await client.query("ROLLBACK");
@@ -360,7 +383,7 @@ export async function readBuyingState(userId: string): Promise<State> {
     UNION ALL
     SELECT 'friendEntries', data FROM app_record WHERE kind='friendEntries'
     UNION ALL
-    SELECT 'items', data FROM app_record WHERE kind='items' AND id IN (SELECT data->>'itemId' FROM relevant_reservations)
+    SELECT 'items', data FROM app_record WHERE kind='items' AND (id IN (SELECT data->>'itemId' FROM relevant_reservations) OR id IN (SELECT data->>'parentItemId' FROM app_record WHERE kind='items' AND id IN (SELECT data->>'itemId' FROM relevant_reservations)))
     UNION ALL
     SELECT 'lists', data FROM app_record WHERE kind='lists' AND id IN (SELECT data->>'listId' FROM app_record WHERE kind='items' AND id IN (SELECT data->>'itemId' FROM relevant_reservations))
   `,
@@ -393,7 +416,7 @@ export async function hydrateCollectionItems(
   if (!ids.length) return;
   const { rows } = await pool.query(
     `SELECT kind, data FROM app_record WHERE
-    (kind = 'items' AND id = ANY($1::text[])) OR
+    (kind = 'items' AND (id = ANY($1::text[]) OR data->>'parentItemId' = ANY($1::text[]) OR id IN (SELECT data->>'parentItemId' FROM app_record WHERE kind='items' AND id = ANY($1::text[])))) OR
     ($2 AND kind = 'comments' AND data->>'itemId' = ANY($1::text[]))`,
     [ids, details],
   );

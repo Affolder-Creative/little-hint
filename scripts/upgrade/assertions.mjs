@@ -230,11 +230,170 @@ function administrationMigrationContract(evidence) {
   }
   return migrated;
 }
+// Match the migration's conservative duplicate key without importing candidate
+// application code: this contract also runs inside the pinned release image.
+function offerUrlKey(value) {
+  try {
+    const url = new URL(value);
+    if (
+      !/^https?:$/.test(url.protocol) ||
+      url.username ||
+      url.password ||
+      (url.port && !["80", "443"].includes(url.port)) ||
+      /\/(auth|login|account|checkout|cart|password|reset|invite|share)(\/|$)/i.test(
+        url.pathname,
+      )
+    )
+      return value;
+    url.hash = "";
+    const amazon =
+      /(^|\.)amazon\.(com|ca|co\.uk|de|fr|it|es|com\.au|co\.jp)$/.test(
+        url.hostname,
+      );
+    const allowed = new Set([
+      "id",
+      "pid",
+      "product_id",
+      "variant",
+      "sku",
+      "color",
+      "colour",
+      "size",
+      "currency",
+      "locale",
+      "lang",
+      "country",
+      "th",
+      "psc",
+    ]);
+    for (const key of [...url.searchParams.keys()]) {
+      const lower = key.toLowerCase();
+      if (
+        lower.startsWith("utm_") ||
+        ["gclid", "fbclid", "msclkid"].includes(lower) ||
+        (amazon && ["tag", "ref"].includes(lower))
+      )
+        url.searchParams.delete(key);
+      else if (!allowed.has(lower)) return value;
+    }
+    return url.href;
+  } catch {
+    return value;
+  }
+}
+
+// Schema 14 preserves scalar URLs/prices and all buying/privacy evidence. Only
+// new UUIDs are nondeterministic; validate their freshness and bind each exact
+// value across persisted offers and every visible copy before comparing all data.
+function shoppingMigrationContract(evidence, actual) {
+  const migrated = structuredClone(evidence);
+  const identifiers = new Set();
+  function remember(value) {
+    if (!value || typeof value !== "object") return;
+    for (const [key, child] of Object.entries(value)) {
+      if ((key === "id" || key === "generation") && typeof child === "string")
+        identifiers.add(child);
+      remember(child);
+    }
+  }
+  remember(evidence);
+  const freshUuid = (value) => {
+    assert.equal(typeof value, "string", "Migration must generate a UUID");
+    assert.match(
+      value,
+      /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i,
+    );
+    assert.ok(!identifiers.has(value), "Migration UUID must be new and unique");
+    identifiers.add(value);
+    return value;
+  };
+  const changed = new Map();
+  for (const row of migrated.records) {
+    const item = row.data;
+    if (
+      row.kind === "priceChecks" &&
+      ["pending", "running"].includes(item.status)
+    ) {
+      delete item.leaseUntil;
+      delete item.token;
+      Object.assign(item, {
+        status: "failed",
+        outcome: "skipped",
+        error: "Superseded by shopping-offer migration.",
+      });
+    }
+    if (row.kind !== "items" || item.shoppingOffers) continue;
+    const candidate = actual.records?.find(
+      (r) => r.kind === "items" && r.id === row.id,
+    )?.data;
+    const offers = [];
+    if (item.url) {
+      let label = "Shop";
+      try {
+        label = new URL(item.url).hostname.replace(/^www\./, "");
+      } catch {}
+      offers.push({
+        id: `${item.id}:primary`,
+        url: item.url,
+        label,
+        ...(Object.hasOwn(item, "priceCents")
+          ? { priceCents: item.priceCents }
+          : {}),
+        ...(item.pricing ? { pricing: structuredClone(item.pricing) } : {}),
+      });
+    }
+    for (const legacy of item.purchaseOffers ?? []) {
+      if (offers.some((o) => offerUrlKey(o.url) === offerUrlKey(legacy.url)))
+        continue;
+      const generated = candidate?.shoppingOffers?.[offers.length];
+      offers.push({
+        id: freshUuid(generated?.id),
+        url: legacy.url,
+        label: legacy.retailer,
+        priceCents: legacy.priceCents,
+        pricing: {
+          baseline: legacy.priceCents,
+          baselineLabel: "when tracking started",
+          generation: freshUuid(generated?.pricing?.generation),
+          ...(Object.hasOwn(legacy, "checkedAt")
+            ? { checkedAt: legacy.checkedAt }
+            : {}),
+          status: "verified",
+        },
+      });
+    }
+    item.shoppingOffers = offers;
+    const primary = offers.find((o) => o.url === item.url);
+    if (primary) item.primaryOfferId = primary.id;
+    else delete item.primaryOfferId;
+    if (offers.length > 1 && item.pricing)
+      item.pricing.generation = freshUuid(candidate?.pricing?.generation);
+    delete item.purchaseOffers;
+    changed.set(item.id, item);
+  }
+  function gifts(value) {
+    if (!value || typeof value !== "object") return;
+    if (typeof value.isRecipient === "boolean" && changed.has(value.id)) {
+      const item = changed.get(value.id);
+      value.shoppingOffers = structuredClone(item.shoppingOffers);
+      if (item.primaryOfferId) value.primaryOfferId = item.primaryOfferId;
+      else delete value.primaryOfferId;
+      if (value.pricing) value.pricing.generation = item.pricing.generation;
+      delete value.purchaseOffers;
+    }
+    Object.values(value).forEach(gifts);
+  }
+  gifts(migrated.views);
+  return migrated;
+}
+
 export function assertPreserved(actual, expected) {
   if (actual.schemaVersion >= 9 && (expected.schemaVersion ?? 0) < 9)
     expected = lifecycleMigrationContract(expected);
   if (actual.schemaVersion >= 13 && (expected.schemaVersion ?? 0) < 13)
     expected = administrationMigrationContract(expected);
+  if (actual.schemaVersion >= 14 && (expected.schemaVersion ?? 0) < 14)
+    expected = shoppingMigrationContract(expected, actual);
   for (const field of ["records", "users", "barrier", "uploadHash", "views"]) {
     assert.ok(Object.hasOwn(actual, field), `Missing ${field} evidence`);
     assert.ok(

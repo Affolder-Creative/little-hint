@@ -1,3 +1,4 @@
+import { shoppingUrl } from "../shared/shopping-offers";
 import { dismissActionMenu } from "./menu-dismiss";
 import { InfoHelp } from "./InfoHelp";
 import { GiftPlanDetail, sourceLabels } from "./GiftPlanDetail";
@@ -149,7 +150,7 @@ export function Buying() {
                   className={
                     shopFirst ? "button secondary small" : "text-button"
                   }
-                  href={r.item.url}
+                  href={shoppingUrl(r.item)}
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label={`Visit shop for ${r.titleSnapshot} (opens in a new tab)`}
@@ -292,6 +293,9 @@ export function Buying() {
                         r.titleSnapshot
                       )}
                     </h2>
+                    {r.item?.parentTitle && (
+                      <p className="muted">Part of {r.item.parentTitle}</p>
+                    )}
                     {r.sourceState && r.sourceState !== "active" && (
                       <p>
                         {sourceLabels[r.sourceState]} ·{" "}

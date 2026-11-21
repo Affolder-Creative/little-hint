@@ -256,3 +256,9 @@ New items and gift ideas offer an unchecked archive checkbox. The choice survive
 ## Administrative roles
 
 Multiple app admins manage the installation; primary family owners and additional family admins manage their groups. Admin editing requires existing content access and preserves private content, recipient surprise, audience, reveal and financial permissions. App admins can administer membership in unjoined groups without joining automatically. Additional family admins must be current account-holding members. Only app admins gain additional permanent-deletion authority. The last app admin cannot be removed; primary ownership transfers by acceptance.
+
+## Shopping offers and product groups
+
+Items and gift ideas support several labeled shopping offers for the same product and variant. The primary link supplies product details; additional links preserve the chosen name, description and photos. Each offer retains its own price and verification time. One private subscription follows the lowest fresh verified price, with the existing daily schedule, provider allowances, 48-hour freshness window and 5%/$1 alert threshold. Changed offer membership establishes a fresh reference without an alert. Failed checks preserve saved amounts; recorded payments and commitments remain independent.
+
+Product groups share a name, description, gallery and audience while each product retains its own quantity, shopping offers, gift plans, discussion and spending. Wrapping an existing item preserves its identity and commitments. Browsing presents the group once and Buying identifies the individual product. Groups cannot be reserved as a whole or nested. Group privacy and lifecycle apply to the products; purchase and settlement history survive removal. Different acceptable alternatives are not treated as equivalent offers.
