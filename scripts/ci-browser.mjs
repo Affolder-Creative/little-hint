@@ -165,6 +165,8 @@ try {
           "tests/account-export.spec.ts",
           "tests/ui-refinements.spec.ts",
           "tests/idea-audience.spec.ts",
+          "tests/price-ranges.spec.ts",
+          "tests/price-range-display.spec.ts",
         ]
       : []),
     ...(suite === "gift-discovery"
