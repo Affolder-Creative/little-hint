@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.12.1](https://github.com/Affolder-Creative/little-hint/compare/v1.12.0...v1.12.1) (2026-11-23)
+
+
+### Fixes
+
+* clarify shop pricing and Buying controls ([#283](https://github.com/Affolder-Creative/little-hint/issues/283)) ([4dfc072](https://github.com/Affolder-Creative/little-hint/commit/4dfc072e9913262074ac7ddc56bf729715e2e0a1))
+
+
+### Dependencies
+
+* bump brand-tool Playwright from 1.65.0 to 1.65.1 ([#277](https://github.com/Affolder-Creative/little-hint/issues/277)) ([04affd6](https://github.com/Affolder-Creative/little-hint/commit/04affd6d3cd0105f4c103f2b36f13b314f33e536))
+* bump the runtime group with 12 updates ([#279](https://github.com/Affolder-Creative/little-hint/issues/279)) ([47e80c7](https://github.com/Affolder-Creative/little-hint/commit/47e80c74776460664eca3ffb5c69e44e3623207c))
+* bump vitest from 5.1.0 to 5.1.1 in the development group ([#280](https://github.com/Affolder-Creative/little-hint/issues/280)) ([00972fe](https://github.com/Affolder-Creative/little-hint/commit/00972fe1579e1addd108d45c2624d916fc679bd1))
+
+
+### Build and packaging
+
+* bump axllent/mailpit from v1.33.1 to v1.34.0 ([#276](https://github.com/Affolder-Creative/little-hint/issues/276)) ([64cb3cd](https://github.com/Affolder-Creative/little-hint/commit/64cb3cd75338d654fd06fda2e44aa1634478b245))
+* bump caddy from 2.10-alpine to 2.11-alpine ([#278](https://github.com/Affolder-Creative/little-hint/issues/278)) ([5dd9ca1](https://github.com/Affolder-Creative/little-hint/commit/5dd9ca180a3fa474485be5358db2150bc298a8d0))
+
 ## [1.12.0](https://github.com/Affolder-Creative/little-hint/compare/v1.11.0...v1.12.0) (2026-11-21)
 
 
