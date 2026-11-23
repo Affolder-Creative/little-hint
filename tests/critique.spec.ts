@@ -2361,7 +2361,8 @@ test("photo upload blocks saving and reports completion", async ({ page }) => {
   await page
     .getByLabel("Item name", { exact: true })
     .fill("A gift with a photo");
-  await expect(page.getByLabel("Price in USD")).not.toBeVisible();
+  await expect(page.getByLabel("Price in USD", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("Quantity wanted", { exact: true })).not.toBeVisible();
   await page.getByText("More details", { exact: true }).click();
   await page.locator('input[type="file"][multiple]').setInputFiles({
     name: "gift.png",
