@@ -28,3 +28,63 @@ Reconsider if representative PR durations or build workloads grow substantially.
 The benchmark implementation is recoverable from
 [PR #50](https://github.com/Affolder-Creative/little-hint/pull/50) and Git history;
 there is no need to maintain an executable benchmark in the active workflow set.
+
+## November 23 CI improvements
+
+The first full PR run of `69595f551a79379bbd8843d2dc43afcf85274458`
+passed on GitHub runners in **4m39s**. The preceding application PR sample
+completed in **6m47s**. These are individual, unpaired samples with existing
+shared caches, not percentile estimates or a provider comparison.
+
+| Workload             | Earlier PR | Improved PR |
+| -------------------- | ---------: | ----------: |
+| Full CI              |      6m47s |       4m39s |
+| AMD64 container job  |      6m06s |       3m17s |
+| Longest critique job |      5m32s |       2m51s |
+| Longest polish job   |      4m48s |       2m57s |
+| E2E job              |      4m18s |       4m14s |
+
+- [Earlier full PR run](https://github.com/Affolder-Creative/little-hint/actions/runs/45211580323).
+- [Improved full PR run](https://github.com/Affolder-Creative/little-hint/actions/runs/45235481245).
+
+The improved AMD64 container checks themselves took about 119 seconds across
+two lanes. Their individual durations were 35.4 seconds for image smoke,
+83.4 seconds for upgrade/recovery, 37.9 seconds for staging, and 76.6 seconds
+for preview. All checks passed. E2E is now the longest job.
+
+Controlled missing-control checks failed at about 30.7 seconds in both the
+Playwright page fixture and a manually created context. Each retained a trace
+and did not run the next test. A real Docker cancellation check verified that
+child processes stopped and the registered disposable container, volume, and
+network were removed. Local native image smoke and baseline upgrade/recovery
+also passed.
+
+### Blacksmith comparison status
+
+The [Blacksmith trial](https://github.com/Affolder-Creative/little-hint/actions/runs/45235532742)
+used the same commit. Its sixteen Blacksmith browser/container jobs stayed
+queued without an assigned runner. The available dashboard session required
+sign-in, so repository enablement could not be verified. This is not an
+execution-time result. GitHub remains the default; no paid layer caching or
+larger runners were enabled.
+
+Once repository access is restored, use the CI workflow's manual inputs on this
+branch or on main after merge. Set `ref` to the same full improved commit SHA
+for both providers and alternate `runner-provider=github` and
+`runner-provider=blacksmith`. Both the workflow ref and tested commit must
+include the new runner-selection scripts. Lightweight jobs stay on GitHub.
+
+Run one initial sample and three warm samples per provider, waiting for each
+run to finish before starting the next. Record individual attempts, including
+queue delay, setup, tests, cleanup, total runner minutes, and actual Blacksmith
+spend when available. Existing caches may already be warm, including the
+provider's transparent image cache, so do not claim a cold result without
+verified cold caches. Separate the initial sample from the warm median.
+
+Adopt Blacksmith for browser and container jobs only if the warm full-CI median
+is at least one minute lower, with all checks passing and no reliability
+regression. If adopted, use native 4-vCPU runners for release images and staging
+builds too. Otherwise keep GitHub. Remove the temporary provider-comparison
+inputs and selection helper after recording the decision; there is no recurring
+benchmark workflow. Paid layer caching and 8-vCPU trials require separate
+build-time evidence.
