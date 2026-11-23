@@ -837,6 +837,17 @@ test("passkey menus rename, recover from failure, and restore focus after remova
   await first.getByRole("button", { name: /^Remove passkey/ }).click();
   await expect(page.locator(".passkey-row")).toHaveCount(1);
   await expect(first.locator("summary")).toBeFocused();
+  // Let the next animation frame arrive before queued query notifications.
+  // Focus must follow the committed list, even when rendering trails the response.
+  await page.evaluate(() => {
+    const schedule = window.setTimeout.bind(window);
+    Reflect.set(
+      window,
+      "setTimeout",
+      (handler: TimerHandler, delay?: number, ...args: unknown[]) =>
+        schedule(handler, delay === 0 ? 100 : delay, ...args),
+    );
+  });
   await first.locator("summary").click();
   await first.getByRole("button", { name: /^Remove passkey/ }).click();
   await expect(page.locator(".passkey-row")).toHaveCount(0);

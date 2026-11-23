@@ -43,7 +43,7 @@ import { Confirm } from "./Confirm";
 import { familyGroupLabel } from "../shared/households";
 import { AccountInvitations } from "./AccountInvitations";
 import { HouseholdSettings } from "./Households";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
 import {
@@ -1092,6 +1092,7 @@ function sessionName(agent?: string | null) {
 class FreshSignInRequiredError extends Error {}
 function Security() {
   const passkeysRef = useRef<HTMLElement>(null);
+  const removedPasskey = useRef<{ id: string; index: number } | null>(null);
   const { open, close, toast } = useApp();
   const client = useQueryClient();
   const current = useQuery({
@@ -1131,6 +1132,26 @@ function Security() {
       return r.data;
     },
   });
+  useLayoutEffect(() => {
+    const removed = removedPasskey.current;
+    if (
+      !removed ||
+      !keys.isSuccess ||
+      keys.data?.some((key) => key.id === removed.id)
+    )
+      return;
+    removedPasskey.current = null;
+    const menus = passkeysRef.current?.querySelectorAll<HTMLElement>(
+      ".passkey-row summary",
+    );
+    const target =
+      menus?.[removed.index] ??
+      menus?.[removed.index - 1] ??
+      passkeysRef.current?.querySelector<HTMLElement>(
+        ".passkeys-intro > button",
+      );
+    target?.focus({ preventScroll: true });
+  }, [keys.data, keys.isSuccess]);
   return (
     <section className="settings-section">
       <h2>Sign-in & security</h2>
@@ -1214,21 +1235,11 @@ function Security() {
                       throw new Error(
                         "We could not update your sign-in settings. Check your connection and try again.",
                       );
+                    // The refetch promise can resolve before React commits the
+                    // new rows. Restore focus only after the deleted row is gone.
+                    removedPasskey.current = { id: k.id, index };
                     await client.invalidateQueries({
                       queryKey: ["passkeys"],
-                    });
-                    requestAnimationFrame(() => {
-                      const menus =
-                        passkeysRef.current?.querySelectorAll<HTMLElement>(
-                          ".passkey-row summary",
-                        );
-                      const target =
-                        menus?.[index] ??
-                        menus?.[index - 1] ??
-                        passkeysRef.current?.querySelector<HTMLElement>(
-                          ".passkeys-intro > button",
-                        );
-                      target?.focus({ preventScroll: true });
                     });
                   }}
                 >
