@@ -59,32 +59,57 @@ child processes stopped and the registered disposable container, volume, and
 network were removed. Local native image smoke and baseline upgrade/recovery
 also passed.
 
-### Blacksmith comparison status
+### Blacksmith comparison results
 
-The [Blacksmith trial](https://github.com/Affolder-Creative/little-hint/actions/runs/45235532742)
-used the same commit. Its sixteen Blacksmith browser/container jobs stayed
-queued without an assigned runner. The available dashboard session required
-sign-in, so repository enablement could not be verified. This is not an
-execution-time result. GitHub remains the default; no paid layer caching or
-larger runners were enabled.
+Repository access was restored and the comparison completed on November 23.
+All eight full-validation runs used the same tested and workflow commit,
+`2c62536809687975e82dc353fd303bf777389c62`. Each provider ran one initial sample followed by
+three warm samples, alternating providers and waiting for completion between
+runs. All 160 workflow jobs passed, without automatic test retries.
 
-Once repository access is restored, use the CI workflow's manual inputs on this
-branch or on main after merge. Set `ref` to the same full improved commit SHA
-for both providers and alternate `runner-provider=github` and
-`runner-provider=blacksmith`. Both the workflow ref and tested commit must
-include the new runner-selection scripts. Lightweight jobs stay on GitHub.
+| Sample      |                                                                             GitHub |                                                                         Blacksmith |
+| ----------- | ---------------------------------------------------------------------------------: | ---------------------------------------------------------------------------------: |
+| Initial     | [4m42s](https://github.com/Affolder-Creative/little-hint/actions/runs/45254036563) | [4m29s](https://github.com/Affolder-Creative/little-hint/actions/runs/45253176030) |
+| Warm 1      | [4m54s](https://github.com/Affolder-Creative/little-hint/actions/runs/45255781986) | [4m32s](https://github.com/Affolder-Creative/little-hint/actions/runs/45254950958) |
+| Warm 2      | [4m49s](https://github.com/Affolder-Creative/little-hint/actions/runs/45257526490) | [3m55s](https://github.com/Affolder-Creative/little-hint/actions/runs/45256720052) |
+| Warm 3      | [4m55s](https://github.com/Affolder-Creative/little-hint/actions/runs/45259192033) | [4m10s](https://github.com/Affolder-Creative/little-hint/actions/runs/45258448733) |
+| Warm median |                                                                          **4m54s** |                                                                          **4m10s** |
 
-Run one initial sample and three warm samples per provider, waiting for each
-run to finish before starting the next. Record individual attempts, including
-queue delay, setup, tests, cleanup, total runner minutes, and actual Blacksmith
-spend when available. Existing caches may already be warm, including the
-provider's transparent image cache, so do not claim a cold result without
-verified cold caches. Separate the initial sample from the warm median.
+Blacksmith improved the warm median by **44 seconds**, about
+15.0%. This did not reach the agreed one-minute
+adoption threshold, so CI, release images, and staging builds retain standard
+GitHub runners. Native AMD64 and ARM64 checks remain required. The temporary
+provider input and runner-selection helper were removed; no recurring benchmark
+or monitoring workflow was added.
 
-Adopt Blacksmith for browser and container jobs only if the warm full-CI median
-is at least one minute lower, with all checks passing and no reliability
-regression. If adopted, use native 4-vCPU runners for release images and staging
-builds too. Otherwise keep GitHub. Remove the temporary provider-comparison
-inputs and selection helper after recording the decision; there is no recurring
-benchmark workflow. Paid layer caching and 8-vCPU trials require separate
-build-time evidence.
+| Warm median metric             |               GitHub |           Blacksmith |
+| ------------------------------ | -------------------: | -------------------: |
+| Sum of all job runtimes        | 42.45 runner-minutes | 34.00 runner-minutes |
+| E2E setup before test launcher |                  61s |                  16s |
+| E2E test launcher              |                 191s |                 182s |
+
+Times measure from workflow attempt start to the final job's completion,
+including scheduling, setup, tests, and cleanup. Lightweight jobs remained on
+GitHub for both providers. Blacksmith browser/container jobs requested native
+4-vCPU Ubuntu 24.04 runners. Both providers retained the same GitHub Actions
+Docker build-layer cache; paid layer caching and larger-runner experiments were
+not enabled. The initial samples are excluded from the medians, and existing
+shared caches mean they are not verified cold-cache measurements. Three warm
+samples per provider are not percentile estimates.
+
+Runner-minutes sum job durations before billing rounding. Actual Blacksmith
+account billing was unavailable, so these totals are not an invoice or a price
+estimate. Standard GitHub-hosted compute is free for this public repository.
+See [GitHub's billing documentation](https://docs.github.com/en/actions/concepts/billing-and-usage).
+
+The [earlier exploratory Blacksmith run](https://github.com/Affolder-Creative/little-hint/actions/runs/45251302558)
+failed an existing passkey keyboard-focus assertion. That run is excluded.
+Delaying queued UI updates reproduced the failure locally. Focus restoration
+now runs after React commits the updated list, and the existing regression
+passed ten repetitions with the delayed-update case. The subsequent provider
+comparison used that corrected commit on both providers.
+
+The original [unassigned trial](https://github.com/Affolder-Creative/little-hint/actions/runs/45235532742)
+was cancelled and supplies no execution-time evidence. Future comparisons can
+recover the temporary provider-selection workflow from the tested commit above;
+the active workflow set does not retain that experiment.

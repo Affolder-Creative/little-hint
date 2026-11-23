@@ -9,23 +9,15 @@ on:
         description: "Exact commit or trusted repository ref to validate"
         type: string
         required: false
-      runner-provider:
-        description: "Runner provider for browser and container checks"
-        type: choice
-        options: [github, blacksmith]
-        default: github
   workflow_call:
     inputs:
       ref:
         type: string
         required: true
-      runner-provider:
-        type: string
-        default: github
 permissions:
   contents: read
 concurrency:
-  group: ci-${{ github.event.pull_request.number || inputs.ref || github.ref }}-${{ github.workflow }}-${{ inputs.runner-provider || 'github' }}
+  group: ci-${{ github.event.pull_request.number || inputs.ref || github.ref }}-${{ github.workflow }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   changes:
@@ -38,19 +30,12 @@ jobs:
       brand: ${{ steps.select.outputs.brand }}
       browser-image: ${{ steps.browser-image.outputs.image }}
       browser-matrix: ${{ steps.browser-matrix.outputs.matrix }}
-      browser-runner: ${{ steps.runners.outputs.browser }}
-      container-matrix: ${{ steps.runners.outputs.containers }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.ref || github.ref }}
           fetch-depth: 0
           persist-credentials: false
-      - id: runners
-        name: Validate runner selection
-        env:
-          RUNNER_PROVIDER: ${{ inputs.runner-provider || 'github' }}
-        run: node scripts/ci-runners.mjs >> "$GITHUB_OUTPUT"
       - id: browser-matrix
         name: Validate suite coverage and expand browser shards
         run: node scripts/ci-browser-suites.mjs matrix >> "$GITHUB_OUTPUT"
@@ -162,7 +147,7 @@ jobs:
     name: browser (${{ matrix.id }})
     needs: changes
     if: needs.changes.outputs.browser == 'true'
-    runs-on: ${{ needs.changes.outputs.browser-runner }}
+    runs-on: ubuntu-24.04
     container:
       image: ${{ needs.changes.outputs.browser-image }}
       options: --ipc=host
@@ -219,7 +204,12 @@ jobs:
     timeout-minutes: 45
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.changes.outputs.container-matrix) }}
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

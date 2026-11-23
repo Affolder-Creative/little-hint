@@ -154,14 +154,12 @@ starting deployment.
 
 ## Measuring CI performance
 
-GitHub remains the default runner provider. Manual and reusable CI accept a
-validated `runner-provider` input of `github` or `blacksmith`; a manual run can
-also specify an exact `ref`. The selected ref must contain the suite and runner
-selection scripts used by this workflow. Blacksmith routes only browser and
-container jobs to native 4-vCPU Ubuntu 24.04 runners. Lightweight jobs stay on
-GitHub. Provider-specific concurrency groups keep paired comparisons separate.
-Existing GitHub Docker layer caching is retained for a like-for-like comparison;
-paid build-layer caching is not enabled.
+CI uses standard GitHub runners, including native ARM64 container jobs. Manual
+CI accepts an optional exact `ref`; the selected commit must contain the suite
+selection scripts used by the workflow. Manual and reusable runs always select
+all checks. The temporary Blacksmith provider input and selection helper were
+removed after the matched comparison. Runner results and the decision are
+recorded in [the runner record](RUNNER_BENCHMARK.md).
 
 Keep standard GitHub runners while measuring the workflow changes. Compare ten
 representative completed runs by change category, recording queue delay, browser
@@ -173,7 +171,7 @@ and 11m 35s when Ubuntu dependency downloads stalled. A normal browser e2e step
 took about 224 seconds with pacing. These are samples, not percentile estimates.
 
 The [runner record](RUNNER_BENCHMARK.md) includes the November 23 improvement
-from a 6m47s full PR sample to 4m39s, plus the blocked Blacksmith comparison.
+from a 6m47s full PR sample to 4m39s, plus the completed matched Blacksmith comparison.
 
 The October 24 [runner benchmark](RUNNER_BENCHMARK.md) measured a 35-second
 improvement in warm median completion on Blacksmith. We retained GitHub-hosted
