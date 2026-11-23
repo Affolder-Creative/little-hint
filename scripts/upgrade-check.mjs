@@ -1,6 +1,7 @@
 import { spawnSync } from "node:child_process";
 import {
   mkdtempSync,
+  appendFileSync,
   writeFileSync,
   rmSync,
   openSync,
@@ -98,6 +99,11 @@ export function run(candidate) {
   const directory = mkdtempSync(path.join(tmpdir(), "little-hint-upgrade-"));
   const id = "little-hint-upgrade-" + randomUUID();
   const projects = [id, id + "-restore"];
+  if (process.env.CI_CONTAINER_PROJECTS_FILE)
+    appendFileSync(
+      process.env.CI_CONTAINER_PROJECTS_FILE,
+      projects.join("\n") + "\n",
+    );
   const files = [
     path.join(directory, "baseline.json"),
     path.join(directory, "candidate.json"),

@@ -5,6 +5,7 @@ export POSTGRES_PASSWORD=ci-smoke-only BETTER_AUTH_SECRET=ci-smoke-secret-at-lea
 export SETTINGS_ENCRYPTION_KEY=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
 export APP_URL=http://localhost:3000 APP_PORT=0
 project="little-hint-smoke-${RANDOM}-$$"
+if [[ -n "${CI_CONTAINER_PROJECTS_FILE:-}" ]]; then printf '%s\n' "$project" >> "$CI_CONTAINER_PROJECTS_FILE"; fi
 compose=(docker compose --env-file /dev/null -p "$project" -f compose.production.yaml -f compose.local.yaml)
 cleanup() {
   status=$?
@@ -13,6 +14,8 @@ cleanup() {
   exit "$status"
 }
 trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 # Exercise the upgrade on disposable data before testing the new definition.
 # Both commands use the same project so existing users/uploads would stay put.
 legacy=(docker compose --env-file /dev/null -p "$project" -f compose.yaml -f compose.ghcr.yaml -f compose.local.yaml)

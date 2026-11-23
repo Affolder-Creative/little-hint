@@ -24,7 +24,18 @@ container checks. Unknown GitHub configuration still selects everything.
 The selection is recorded in the run summary; `scripts/ci-policy.mjs` contains
 the exact path rules, with coverage in `npm run test:tooling`.
 
-Each browser suite gets a fresh database and real local email-code authentication.
+The eleven logical browser suites expand into fourteen jobs. Critique uses three
+isolated test shards; polish uses two measured file groups. Other suites retain
+one job each. `scripts/ci-browser-suites.mjs` owns the assignments and generates
+the matrix. Tooling validation rejects unassigned, duplicated, or missing specs
+and verifies critique's actual Playwright shard lists cover every test exactly once.
+Local `npm run test:browser:ci -- <suite>` still runs the complete suite; CI adds
+an optional `index/total` argument. Browser jobs use one worker, no automatic
+retries, and stop after the first failure. Other matrix jobs finish independently.
+Actions and navigation have a 30-second limit, including manually created
+contexts; assertions and explicit overall test limits remain separate.
+
+Each browser job gets a fresh database and real local email-code authentication.
 External service credentials are unnecessary. Browser jobs use the official
 Playwright Noble image selected from the exact package-lock version, with Node 24
 and Postgres reached through its service hostname. An incompatible installed
@@ -40,6 +51,13 @@ default 150-request budget, per-IP isolation, and stricter endpoint limits.
 `E2E_BROWSER_TEST_SERVER=1` only tells browser fixtures to skip the general-limit
 cooldown. Local tests against the normal server retain the cooldown. The launcher
 selects an unused port so a development app cannot satisfy its readiness check.
+After one image build per architecture, AMD64 checks run in two lanes: image
+smoke followed by upgrade/recovery, alongside staging smoke followed by preview
+smoke. ARM64 retains image smoke followed by upgrade/recovery. Each command has
+its own log and elapsed time. A failed lane fails the job; cancellation stops
+child process groups and removes only the recorded disposable Compose projects.
+Health checks and deployment shutdown budgets are unchanged.
+
 Container jobs also run the [published-image upgrade and recovery drill](UPGRADE_VERIFICATION.md) against the pinned 0.19.4 baseline. Release image jobs repeat it against the exact image selected for publication.
 
 Both CI and release container jobs use native runners:
@@ -135,6 +153,15 @@ the merged commit's full release workflow and completed publication before
 starting deployment.
 
 ## Measuring CI performance
+
+GitHub remains the default runner provider. Manual and reusable CI accept a
+validated `runner-provider` input of `github` or `blacksmith`; a manual run can
+also specify an exact `ref`. The selected ref must contain the suite and runner
+selection scripts used by this workflow. Blacksmith routes only browser and
+container jobs to native 4-vCPU Ubuntu 24.04 runners. Lightweight jobs stay on
+GitHub. Provider-specific concurrency groups keep paired comparisons separate.
+Existing GitHub Docker layer caching is retained for a like-for-like comparison;
+paid build-layer caching is not enabled.
 
 Keep standard GitHub runners while measuring the workflow changes. Compare ten
 representative completed runs by change category, recording queue delay, browser

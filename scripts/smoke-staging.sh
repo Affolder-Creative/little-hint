@@ -10,6 +10,7 @@ export STAGING_MAILPIT_UI_AUTH=operator:local-smoke-only
 scratch=$(mktemp -d)
 export STAGING_TLS_DIR="$scratch/tls"
 project="little-hint-staging-smoke-${RANDOM}-$$"
+if [[ -n "${CI_CONTAINER_PROJECTS_FILE:-}" ]]; then printf '%s\n' "$project" >> "$CI_CONTAINER_PROJECTS_FILE"; fi
 # Keep production-host bind paths literal for Coolify. Compose merges these
 # test-only mounts by container target, leaving the deployed file unchanged.
 cat > "$scratch/compose.override.yaml" <<'YAML'
@@ -43,6 +44,8 @@ cleanup() {
   exit "$status"
 }
 trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 sh scripts/staging-tls.sh "$STAGING_TLS_DIR" > "$scratch/tls.log" 2>&1
 # Mailpit runs as UID 0 with all capabilities dropped. On native Linux it
 # cannot read a runner-owned mode-0600 key, so match the host-root setup.
