@@ -1,4 +1,4 @@
-import { PriceInput } from "./PriceInput";
+import { ProductPrice } from "./ProductPrice";
 import {
   parsePriceInput,
   priceInputValue,
@@ -11,6 +11,8 @@ import { Link, useLocation } from "react-router-dom";
 import type { GiftView, Item, ShoppingOffer } from "../shared/model";
 import {
   bestShoppingOffer,
+  automaticPriceOffer,
+  inferredPriceSource,
   freshOffer,
   shoppingOffers,
   shopLabel,
@@ -28,9 +30,10 @@ export type ProductInput = Pick<
       Item,
       "id" | "revision" | "images" | "shoppingOffers" | "primaryOfferId"
     >
-  >;
+  > & { priceSource?: "shops" | "custom" };
 export const newProduct = (): ProductInput => ({
   title: "",
+  priceSource: "shops",
   url: "",
   description: "",
   image: "",
@@ -69,30 +72,41 @@ export function ShoppingLinks({ gift }: { gift: GiftView }) {
       <ul>
         {offers.map((offer) => (
           <li key={offer.id}>
-            <div>
-              <a href={offer.url} target="_blank" rel="noopener noreferrer">
-                {offer.label || shopLabel(offer.url)}{" "}
+            <a
+              className="shopping-offer-link"
+              href={offer.url}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <span className="shopping-offer-name">
+                <span>{offer.label || shopLabel(offer.url)}</span>
                 <ExternalLink size={15} aria-hidden="true" />
-              </a>
-              {offer.note && <p>{offer.note}</p>}
-              <small>
-                {offer.priceCents !== null && (
-                  <>
-                    {offer.pricing?.checkedAt
-                      ? `${freshOffer(offer) ? "Checked" : "Last verified"} ${formatDateTime(offer.pricing.checkedAt)}`
-                      : "Price not yet checked"}
-                    {offer.id === gift.primaryOfferId ? " · " : ""}
-                  </>
+                <span className="sr-only"> (opens in a new tab)</span>
+              </span>
+              <span className="shopping-offer-price">
+                {dollars(offer.priceCents)}
+                {offers.length > 1 && best?.id === offer.id && (
+                  <small className="shopping-lowest">Lowest checked</small>
                 )}
-                {offer.id === gift.primaryOfferId ? "Primary link" : ""}
-              </small>
-            </div>
-            <div className="shopping-offer-price">
-              {dollars(offer.priceCents)}
-              {offers.length > 1 && best?.id === offer.id && (
-                <small className="shopping-lowest">Lowest checked</small>
+              </span>
+              {offer.note && (
+                <span className="shopping-offer-note">{offer.note}</span>
               )}
-            </div>
+              {(offer.priceCents !== null ||
+                offer.id === gift.primaryOfferId) && (
+                <small className="shopping-offer-meta">
+                  {offer.priceCents !== null && (
+                    <>
+                      {offer.pricing?.checkedAt
+                        ? `${freshOffer(offer) ? "Checked" : "Last verified"} ${formatDateTime(offer.pricing.checkedAt)}`
+                        : "Price not yet checked"}
+                      {offer.id === gift.primaryOfferId ? " · " : ""}
+                    </>
+                  )}
+                  {offer.id === gift.primaryOfferId ? "Primary link" : ""}
+                </small>
+              )}
+            </a>
           </li>
         ))}
       </ul>
@@ -117,7 +131,19 @@ export function OfferEditor({
   };
   const update = (index: number, fields: Partial<ShoppingOffer>) =>
     onChange(
-      offers.map((o, i) => (i === index ? { ...o, ...fields } : o)),
+      offers.map((o, i) =>
+        i === index
+          ? {
+              ...o,
+              ...fields,
+              ...((fields.priceCents !== undefined &&
+                fields.priceCents !== o.priceCents) ||
+              (fields.url !== undefined && fields.url !== o.url)
+                ? { pricing: undefined }
+                : {}),
+            }
+          : o,
+      ),
       primaryId,
     );
   return (
@@ -147,7 +173,7 @@ export function OfferEditor({
                 placeholder={shopLabel(offer.url)}
               />
             </Field>
-            <Field label="Saved price in USD">
+            <Field label="Shop price in USD">
               <input
                 type="number"
                 min="0"
@@ -251,7 +277,23 @@ export function ProductsEditor({
 }) {
   const multiple = products.length > 1;
   const update = (index: number, fields: Partial<ProductInput>) =>
-    onChange(products.map((p, i) => (i === index ? { ...p, ...fields } : p)));
+    onChange(
+      products.map((p, i) => {
+        if (i !== index) return p;
+        const next = { ...p, ...fields };
+        if (next.priceSource === "shops") {
+          const offer = automaticPriceOffer({ ...next, id: next.id ?? "new" });
+          if (fields.shoppingOffers?.length === 0 && offerInputs(p).length > 0)
+            next.priceSource = "custom";
+          else {
+            next.priceCents = offer?.priceCents ?? null;
+            next.priceMaxCents = null;
+            next.price = priceInputValue(next);
+          }
+        }
+        return next;
+      }),
+    );
   return (
     <section
       className={`products-editor${multiple ? "" : " single-product"}`}
@@ -278,13 +320,21 @@ export function ProductsEditor({
             />
           </Field>
           <div className="form-row">
-            <PriceInput
+            <ProductPrice
+              source={
+                product.priceSource ??
+                inferredPriceSource({ ...product, id: product.id ?? "new" })
+              }
+              offers={offerInputs(product)}
+              primaryId={product.primaryOfferId}
+              onSource={(priceSource) => update(index, { priceSource })}
               allowIncomplete={allowIncomplete}
               value={product.price ?? priceInputValue(product)}
               onChange={(price) => {
                 const parsed = parsePriceInput(price);
                 update(index, {
                   price,
+                  priceSource: "custom",
                   ...(parsed.ok
                     ? parsed.value
                     : { priceCents: null, priceMaxCents: null }),

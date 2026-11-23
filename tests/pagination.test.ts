@@ -524,3 +524,28 @@ it.each([false, true])(
     ).toEqual([state.items[2].id]);
   },
 );
+it("sorts Buying globally before paging and never sorts by hidden prices", async () => {
+  const { state, actor } = fixture(49);
+  state.items.forEach((i, n) => {
+    i.priceCents = (49 - n) * 100;
+  });
+  state.reservations = state.items.map((i, n) => ({
+    ...stamp(),
+    createdAt: new Date(Date.UTC(2026, 0, n + 1)).toISOString(),
+    itemId: i.id,
+    buyerId: actor.id,
+    quantity: 1,
+    purchased: 0,
+    former: false,
+    titleSnapshot: i.title,
+  }));
+  const newest = await buyingPage(state, actor, {});
+  expect(newest.rows[0].id).toBe(state.reservations[48].id);
+  const cheap = await buyingPage(state, actor, { sort: "price-asc", page: 2 });
+  expect(cheap.rows[0].item?.priceCents).toBe(2500);
+  state.items[48].visibility = "private";
+  state.items[48].listId = undefined;
+  state.items[48].creatorId = "unavailable";
+  const hidden = await buyingPage(state, actor, { sort: "price-asc", page: 3 });
+  expect(hidden.rows.at(-1)?.item).toBeUndefined();
+});

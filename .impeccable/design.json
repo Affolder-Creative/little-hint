@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-21T16:26:35.766111+00:00",
+  "generatedAt": "2026-11-23T15:19:56.932699+00:00",
   "title": "Design System: Little Hint",
   "extensions": {
     "peopleDirectory": {
@@ -1182,7 +1182,10 @@
       "actions": "Two fixed rows without an added gap: outlined Make cover with 4px by 8px padding and a star, or checked green Cover photo status in a 32px line. Neutral Replace and destructive Remove align toward the top of their 44px targets."
     },
     "sharedCost": {
-      "fields": ["Total gift cost in USD", "Your contribution in USD"],
+      "fields": [
+        "Total gift cost in USD",
+        "Your contribution in USD"
+      ],
       "summary": [
         "Goal from others",
         "Already pledged",
@@ -1260,7 +1263,7 @@
         "src/client/Price.tsx",
         "src/client/SpendingPurchase.tsx"
       ],
-      "layout": "Price and quantity use a top-aligned 2:1 desktop row and stack at 650px and below; price input shrinks within its row while the Range action retains its 44px target."
+      "layout": "Price stays beside shop entry above More details; quantity remains inside More details. The input shrinks within its row while the Range action retains its 44px target."
     },
     "eventListNavigation": {
       "primary": "Your wish list is the only direct participant-list shortcut.",
@@ -1272,7 +1275,15 @@
       "headingGap": "var(--space-related): 8px, with local margin resets",
       "rows": "First row has no top padding; last row has no bottom padding or border. Internal rows retain existing spacing."
     },
-    "discussionAudienceHelp": "Ordinary surprise notes introduce authorized reader names with These people can read your note: (This person for one reader) and end with Recipients can’t see it. Other audience explanations remain distinct."
+    "discussionAudienceHelp": "Ordinary surprise notes introduce authorized reader names with These people can read your note: (This person for one reader) and end with Recipients can’t see it. Other audience explanations remain distinct.",
+    "shoppingAndPriceEntry": {
+      "shopRows": "Full-width external links with 600-weight accent names, external-link icons, right-aligned tabular prices, full-width supporting metadata, 12px top padding, 4px gaps and soft hover. Final row bottom padding is 4px.",
+      "priceSource": "One section outside More details: automatic amount and source shop, explicit custom override, normal manual input without priced shops.",
+      "buyingSort": "14px native select beside count, 44px target, six account-persisted sorts.",
+      "archivedNotice": "Inline action inherits line-height with positioned 44px hit area.",
+      "eventMenus": "People icon for Other wish lists; ellipsis for Event actions; title/calendar open overview.",
+      "buyingPagination": "Count and sort share a wrapping row; page buttons retain a separate full-width row."
+    }
   },
   "components": [
     {
@@ -1566,6 +1577,13 @@
       "description": "One optional price or increasing range with a separator action.",
       "html": "<label class=\"ds-price-label\" for=\"ds-price\">Price in USD</label><div class=\"ds-price-row\"><input id=\"ds-price\" inputmode=\"decimal\" value=\"400-700\" aria-describedby=\"ds-price-hint\"><button type=\"button\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><path d=\"M5 12h14\"/></svg>Range</button></div><small id=\"ds-price-hint\">Enter a price or range, such as 25 or 25-50.</small>",
       "css": ".ds-price-label{display:block;font-size:13px;font-weight:550}.ds-price-row{display:flex;gap:8px;align-items:center}.ds-price-row input{flex:1;min-width:0;width:0;font-size:16px;font-variant-numeric:tabular-nums}.ds-price-row input,.ds-price-row button{background:var(--paper);color:var(--text);border:1px solid var(--control-border);border-radius:8px;min-height:44px;padding:11px 12px}.ds-price-row button{display:inline-flex;align-items:center;gap:4px;font-size:14px;font-weight:600;padding-inline:10px}.ds-price-row button:hover{background:var(--soft)}.ds-price-row input:focus-visible,.ds-price-row button:focus-visible{outline:3px solid var(--accent);outline-offset:3px}#ds-price-hint{display:block;color:var(--muted)}"
+    },
+    {
+      "name": "Shopping offer",
+      "kind": "custom",
+      "description": "One shop destination with its price and supporting verification text.",
+      "html": "<a class=\"ds-shop\" href=\"#\"><span class=\"ds-shop-name\">Example shop <svg width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><path d=\"M15 3h6v6M10 14 21 3M21 14v7H3V3h7\"/></svg></span><span>$109</span><small>Primary link</small></a>",
+      "css": ".ds-shop{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 16px;min-height:44px;padding:12px 0;color:var(--text);border-radius:8px;text-decoration:none;font-variant-numeric:tabular-nums}.ds-shop-name{color:var(--accent);font-weight:600}.ds-shop small{grid-column:1/-1;color:var(--muted);font-size:13px}.ds-shop:hover{background:var(--soft)}.ds-shop:focus-visible{outline:3px solid var(--accent);outline-offset:3px}"
     }
   ],
   "narrative": {

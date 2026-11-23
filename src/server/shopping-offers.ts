@@ -3,7 +3,11 @@ import { fail } from "./domain-common";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import type { Item, ShoppingOffer } from "../shared/model";
-import { shopLabel, shoppingOffers } from "../shared/shopping-offers";
+import {
+  shopLabel,
+  shoppingOffers,
+  automaticPriceOffer,
+} from "../shared/shopping-offers";
 import { productCacheUrl } from "../shared/product-url";
 
 export const shoppingOfferInput = z.object({
@@ -61,6 +65,8 @@ export function migrateShoppingOffers(item: Item) {
 
 /** Input pricing is never trusted. Preserve checked data only for the same saved link. */
 export function reconcileShoppingOffers(item: Item, previous?: Item) {
+  if (item.priceSource && previous?.pricing?.paused && item.pricing)
+    item.pricing.paused = true;
   const rangeTransition =
     isPriceRange(item) || (!!previous && isPriceRange(previous));
   if (rangeTransition) {
@@ -82,6 +88,7 @@ export function reconcileShoppingOffers(item: Item, previous?: Item) {
   }
   // Older clients can still replace the primary scalar URL.
   if (
+    !item.priceSource &&
     previous &&
     item.url !== previous.url &&
     item.primaryOfferId === previous.primaryOfferId
@@ -135,7 +142,7 @@ export function reconcileShoppingOffers(item: Item, previous?: Item) {
   item.url =
     item.shoppingOffers.find((o) => o.id === item.primaryOfferId)?.url ?? "";
   const primary = item.shoppingOffers.find((o) => o.id === item.primaryOfferId);
-  if (!previous && item.priceCents === null) {
+  if (!item.priceSource && !previous && item.priceCents === null) {
     item.priceCents =
       primary?.priceCents ??
       item.shoppingOffers.find((o) => o.priceCents !== null)?.priceCents ??
@@ -143,6 +150,7 @@ export function reconcileShoppingOffers(item: Item, previous?: Item) {
     if (item.pricing) item.pricing.baseline = item.priceCents;
   }
   if (
+    !item.priceSource &&
     previous &&
     !rangeTransition &&
     previous.url === item.url &&
@@ -165,6 +173,7 @@ export function reconcileShoppingOffers(item: Item, previous?: Item) {
       }
     }
   } else if (
+    !item.priceSource &&
     !previous &&
     !rangeTransition &&
     primary &&
@@ -173,6 +182,24 @@ export function reconcileShoppingOffers(item: Item, previous?: Item) {
   ) {
     primary.priceCents = item.priceCents;
     if (primary.pricing) primary.pricing.baseline = item.priceCents;
+  }
+  if (item.priceSource === "shops") {
+    if (!item.shoppingOffers.length) item.priceSource = "custom";
+    else {
+      const selected = automaticPriceOffer(item);
+      item.priceCents = selected?.priceCents ?? null;
+      item.priceMaxCents = null;
+    }
+  }
+  if (item.priceSource === "custom") {
+    item.pricing ??= {
+      baseline: null,
+      baselineLabel: "when added",
+      generation: randomUUID(),
+    };
+    item.pricing.paused = true;
+    delete item.pricing.checkedAt;
+    delete item.pricing.status;
   }
   const membership = (values: ShoppingOffer[]) =>
     values

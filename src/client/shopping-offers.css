@@ -1,6 +1,9 @@
-.shopping-links,
 .group-products {
   margin-top: 24px;
+}
+.shopping-links {
+  width: 100%;
+  margin-top: 4px;
 }
 .shopping-links h2,
 .group-products h2 {
@@ -8,13 +11,11 @@
   font-weight: 550;
   margin: 0 0 8px;
 }
-.shopping-links ul,
 .group-products ul {
   list-style: none;
   margin: 12px 0 0;
   padding: 0;
 }
-.shopping-links li,
 .group-products li {
   display: flex;
   align-items: center;
@@ -23,16 +24,51 @@
   padding: 16px 0;
   border-bottom: 1px solid var(--border);
 }
-.shopping-links li > div:first-child,
 .group-products li > div {
   min-width: 0;
   overflow-wrap: anywhere;
 }
-.shopping-links a {
-  display: inline-flex;
+.shopping-links ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.shopping-links li {
+  border-bottom: 1px solid var(--border);
+}
+.shopping-links .shopping-offer-link {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) fit-content(45%);
+  align-items: start;
+  column-gap: 16px;
+  row-gap: 4px;
+  min-height: 44px;
+  padding: 12px 0;
+  border-radius: 8px;
+  color: var(--text);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+.shopping-links .shopping-offer-link:hover {
+  background: var(--soft);
+  text-decoration: none;
+}
+.shopping-links li:last-child .shopping-offer-link {
+  padding-bottom: 4px;
+}
+.shopping-offer-link:hover .shopping-offer-name > span:first-child {
+  text-decoration: underline;
+}
+.shopping-offer-name {
+  display: flex;
   align-items: center;
   gap: 6px;
-  min-height: 44px;
+  min-width: 0;
+  color: var(--accent);
+  font-weight: 600;
+}
+.shopping-offer-name svg {
+  flex-shrink: 0;
 }
 .shopping-links small,
 .group-products small {
@@ -40,14 +76,18 @@
   color: var(--muted);
   font-size: 13px;
 }
-.shopping-links p {
-  margin: 0 0 4px;
+.shopping-offer-note,
+.shopping-offer-meta {
+  grid-column: 1 / -1;
+  color: var(--muted);
+}
+.shopping-offer-note {
   font-size: 14px;
 }
 .shopping-offer-price {
   text-align: right;
   font-variant-numeric: tabular-nums;
-  flex-shrink: 0;
+  min-width: 0;
 }
 .shopping-links .shopping-lowest {
   color: var(--green);
@@ -120,8 +160,8 @@
   .group-products li > .button {
     align-self: flex-start;
   }
-  .shopping-links li {
-    gap: 12px;
+  .shopping-links .shopping-offer-link {
+    column-gap: 12px;
   }
   .offer-actions {
     gap: 8px;

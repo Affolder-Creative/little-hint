@@ -132,6 +132,7 @@ try {
           "tests/reliability.spec.ts",
           "tests/efficiency.spec.ts",
           "tests/pagination.spec.ts",
+          "tests/buying-sort.spec.ts",
           "tests/co-management.spec.ts",
         ]
       : []),
@@ -173,9 +174,12 @@ try {
       ? ["tests/friends.spec.ts", "tests/helpful-note.spec.ts"]
       : []),
   ]).done;
-  if (suite === "list-features")
+  if (suite === "list-features") {
     await run("node", ["--import", "tsx", "tests/shopping-ui.browser.mjs"])
       .done;
+    await run("node", ["--import", "tsx", "tests/price-source.browser.mjs"])
+      .done;
+  }
 } finally {
   await stop();
   await mkdir("test-results", { recursive: true });

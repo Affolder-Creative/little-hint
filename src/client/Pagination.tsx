@@ -1,5 +1,5 @@
 import { grantProductImages } from "./image-store";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "./api";
 import { useApp } from "./context";
@@ -71,12 +71,14 @@ export function Pagination({
   change,
   busy = false,
   position,
+  controls,
 }: {
   page: number;
   total: number;
   change: (page: number) => void;
   busy?: boolean;
   position: string;
+  controls?: ReactNode;
 }) {
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   // A single page needs one result count; repeating it below the collection is noise.
@@ -84,9 +86,12 @@ export function Pagination({
   // With no results the empty state says so; keep the count for screen readers only.
   if (!total)
     return (
-      <p className="sr-only" role="status">
-        0 results
-      </p>
+      <>
+        <p className="sr-only" role="status">
+          0 results
+        </p>
+        {controls}
+      </>
     );
   return (
     <nav
@@ -98,6 +103,7 @@ export function Pagination({
           ? `Showing ${(page - 1) * PAGE_SIZE + 1}–${Math.min(page * PAGE_SIZE, total)} of ${total}`
           : "0 results"}
       </span>
+      {controls}
       {pages > 1 && (
         <div>
           <button

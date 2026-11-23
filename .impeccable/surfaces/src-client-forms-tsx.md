@@ -26,3 +26,5 @@ Archive selection uses the existing checkbox at the bottom of More details in ev
 Audience summaries name up to three additional exclusions, with and N more / Show fewer disclosure at the normal paragraph line height. Shop editors use 12px gaps and product sections 16px gaps without compounded margins. A single remaining product hides set framing and product reorder/remove controls while retaining its data and Add another product.
 
 Price range entry uses one decimal-keypad text field with an adjacent outlined Range button. Preserve focus, raw unfinished draft input and late-import edit protection. Hint and inline validation remain associated with the input. See DESIGN.md Price range entry for the shared visual treatment.
+
+Price sits beside shop entry outside More details. Show the selected shop amount and source in automatic mode; offer Set a custom price or range. Without priced shops, show manual entry immediately. Use shop prices explicitly restores automatic mode. Preserve custom values when adding links and receiving late imports. Each product retains its own price source.

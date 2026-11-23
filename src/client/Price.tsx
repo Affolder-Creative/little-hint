@@ -120,9 +120,10 @@ export function PriceControls({ gift }: { gift: GiftView }) {
   }
   return (
     <div className="price-controls">
-      {ranged && (
+      {(ranged || gift.priceSource === "custom") && (
         <p className="muted">
-          Automatic price checks are paused. Enter an exact price to resume.
+          Automatic price checks are paused. Choose Use shop prices in the
+          editor to resume.
         </p>
       )}
       {(!ranged || gift.priceWatching) && (
@@ -145,7 +146,7 @@ export function PriceControls({ gift }: { gift: GiftView }) {
           </InfoHelp>
         </div>
       )}
-      {gift.canEdit && !ranged && (
+      {gift.canEdit && !ranged && gift.priceSource !== "custom" && (
         <button
           className="text-button"
           disabled={busy}

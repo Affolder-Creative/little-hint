@@ -1,3 +1,4 @@
+import { buyingSorts } from "../shared/buying-sort";
 import { canManageTrashedItem, isAdmin, groupAccess } from "./domain-access";
 import { listCanEdit, recoverDraft } from "./co-management";
 import { itemPhotos } from "../shared/item-photos";
@@ -122,7 +123,7 @@ export function managementCommand(
           .string()
           .max(100)
           .regex(
-            /^(lists|events|exchanges|items:(home|person:[a-zA-Z0-9-]+|list:[a-zA-Z0-9-]+)(:archived)?)$/,
+            /^(buying|lists|events|exchanges|items:(home|person:[a-zA-Z0-9-]+|list:[a-zA-Z0-9-]+)(:archived)?)$/,
           ),
         revision: z.number().int().nonnegative(),
         sort,
@@ -135,6 +136,11 @@ export function managementCommand(
         : p.sort.startsWith("archived-")
     )
       fail(400, "Choose a sort available in this view.");
+    if (
+      p.scope === "buying" &&
+      (!buyingSorts.some((value) => value === p.sort) || p.order?.length)
+    )
+      fail(400, "Choose a Buying sort without manual ordering.");
     const existing = s.organization.find(
       (o) => o.userId === a.id && o.scope === p.scope,
     );

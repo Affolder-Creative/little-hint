@@ -25,6 +25,7 @@ import {
   CalendarDays,
   CalendarPlus,
   Plus,
+  Users,
 } from "lucide-react";
 import type { Group, GroupEvent, List } from "../shared/model";
 import {
@@ -546,7 +547,11 @@ export function GroupEventsSection({ archived }: { archived: boolean }) {
                 })}
               </div>
               {others.length > 0 && (
-                <ActionMenu name={event.name} label="Other wish lists">
+                <ActionMenu
+                  name={event.name}
+                  label="Other wish lists"
+                  icon={<Users size={20} aria-hidden="true" />}
+                >
                   {others.map((list) => (
                     <Link
                       key={list.id}
@@ -568,10 +573,6 @@ export function GroupEventsSection({ archived }: { archived: boolean }) {
               )}
               {event.canManage ? (
                 <ActionMenu name={event.name} label="Event actions">
-                  <Link className="text-button" to={`/events/${event.id}`}>
-                    Manage event
-                    <ArrowRight size={16} aria-hidden="true" />
-                  </Link>
                   <button
                     className="text-button"
                     onClick={() =>

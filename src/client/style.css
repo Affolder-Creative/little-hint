@@ -5449,3 +5449,74 @@ a.button:is(:hover, :focus, :active),
   height: 44px;
   transform: translateY(-50%);
 }
+
+.archived-items-notice .text-button {
+  position: relative;
+  display: inline;
+  padding: 0;
+  min-height: 0;
+  font: inherit;
+  font-weight: 550;
+  text-decoration: underline;
+}
+.archived-items-notice .text-button::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  top: 50%;
+  height: 44px;
+  transform: translateY(-50%);
+}
+.buying-toolbar {
+  margin-block: 20px;
+}
+.buying-toolbar .collection-pagination {
+  margin: 0;
+}
+.buying-toolbar .collection-pagination > span {
+  flex: 1 0 auto;
+}
+.buying-toolbar .collection-pagination > div {
+  flex-basis: 100%;
+  justify-content: flex-end;
+}
+@media (max-width: 650px) {
+  .buying-toolbar .collection-pagination > div {
+    justify-content: space-between;
+  }
+}
+.buying-sort {
+  margin-left: auto;
+}
+.buying-sort select {
+  width: auto;
+  max-width: 100%;
+  min-height: 44px;
+  border: 0;
+  background-color: transparent;
+  color: var(--muted);
+  font-size: 14px;
+  padding-block: 8px;
+}
+
+.product-price-editor {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.product-price-editor > p {
+  margin: 0;
+}
+.product-price-label {
+  font-size: 13px;
+  font-weight: 550;
+}
+.product-price-value {
+  font-variant-numeric: tabular-nums;
+}
+.product-price-value .muted {
+  font-size: 13px;
+}
+.product-price-editor > .text-button {
+  justify-self: start;
+}
