@@ -101,12 +101,9 @@ for (const width of [320, 390, 768, 1280]) {
       expect(priceBox!.width).toBeGreaterThan(120);
       expect(Math.abs(priceBox!.y - buttonBox!.y)).toBeLessThan(2);
       expect(Math.abs(priceBox!.height - buttonBox!.height)).toBeLessThan(2);
-      if (width <= 650) {
-        expect(quantityBox!.y).toBeGreaterThan(priceBox!.y + priceBox!.height);
-        expect(Math.abs(quantityBox!.x - priceBox!.x)).toBeLessThan(2);
-      } else {
-        expect(Math.abs(quantityBox!.y - priceBox!.y)).toBeLessThan(2);
-      }
+      // Price is always available above More details; quantity remains inside it.
+      expect(quantityBox!.y).toBeGreaterThan(priceBox!.y + priceBox!.height);
+      expect(Math.abs(quantityBox!.x - priceBox!.x)).toBeLessThan(2);
       await price.scrollIntoViewIfNeeded();
       await page.screenshot({
         path: `/tmp/price-range-${width}-${theme}.png`,

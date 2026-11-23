@@ -57,3 +57,33 @@ export function shoppingUrl(
 ) {
   return bestShoppingOffer(item, now)?.url ?? item.url;
 }
+
+/** Saved prices remain useful estimates when no recently checked offer exists. */
+export function automaticPriceOffer(
+  item: Parameters<typeof bestShoppingOffer>[0],
+  now = Date.now(),
+) {
+  return (
+    bestShoppingOffer(item, now) ??
+    shoppingOffers(item)
+      .filter((o) => o.priceCents !== null)
+      .sort(
+        (a, b) =>
+          a.priceCents! - b.priceCents! ||
+          Number(b.id === item.primaryOfferId) -
+            Number(a.id === item.primaryOfferId),
+      )[0]
+  );
+}
+export function inferredPriceSource(
+  item: Parameters<typeof bestShoppingOffer>[0] & {
+    priceSource?: "shops" | "custom";
+  },
+): "shops" | "custom" {
+  if (item.priceSource) return item.priceSource;
+  return !isPriceRange(item) &&
+    item.priceCents !== null &&
+    automaticPriceOffer(item)?.priceCents === item.priceCents
+    ? "shops"
+    : "custom";
+}

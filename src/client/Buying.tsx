@@ -1,3 +1,9 @@
+import {
+  buyingSorts,
+  buyingSortLabels,
+  sortBuying,
+  type BuyingSort,
+} from "../shared/buying-sort";
 import { formatPrice, priceTotal } from "../shared/price";
 import { shoppingUrl } from "../shared/shopping-offers";
 import { dismissActionMenu } from "./menu-dismiss";
@@ -21,7 +27,7 @@ import {
   SpendingGuidance,
 } from "./SpendingGuidance";
 import { reservationSpendingContext } from "../shared/spending-guidance";
-import { ActionMenu } from "./Management";
+import { ActionMenu, useOrganization } from "./Management";
 import { contributionStatus } from "./copy";
 import { Confirm } from "./Confirm";
 import { useEffect, useRef, useState } from "react";
@@ -67,9 +73,15 @@ export function Buying() {
       preventScroll: true,
     });
   }, [focusRequest]);
-  const pagination = useCollectionPage(view);
+  const settings = useOrganization("buying", "newest");
+  const sort: BuyingSort = buyingSorts.includes(settings.sort as BuyingSort)
+    ? (settings.sort as BuyingSort)
+    : "newest";
+  const [sortBusy, setSortBusy] = useState(false);
+  const [sortError, setSortError] = useState("");
+  const pagination = useCollectionPage(`${view}:${sort}`);
   const query = useCollection<BuyingPage>(
-    `buying/active?view=${view}&page=${pagination.page}`,
+    `buying/active?view=${view}&sort=${sort}&page=${pagination.page}`,
   );
   const remote = world.paged ? query.data : undefined;
   useEffect(() => {
@@ -84,12 +96,43 @@ export function Buying() {
     (view === "purchased"
       ? r.purchased >= r.quantity
       : r.purchased < r.quantity);
-  const visible = reservations.filter(matchesView);
+  const visible = sortBuying(reservations.filter(matchesView), sort);
   const focusView = () => setFocusRequest((request) => request + 1);
   if (world.paged && (!query.data || query.error))
     return <CollectionStatus query={query} />;
   const allCount = remote?.counts.all ?? reservations.length;
   const needsCount = remote?.counts.needsBuying ?? needsBuying.length;
+  const sortControl = allCount > 0 && (
+    <label className="buying-sort">
+      <span className="sr-only">Sort gift plans</span>
+      <select
+        aria-label="Sort gift plans"
+        value={sort}
+        disabled={sortBusy}
+        onChange={async (event) => {
+          setSortBusy(true);
+          setSortError("");
+          try {
+            await settings.save(event.target.value as BuyingSort);
+          } catch (error) {
+            setSortError(
+              error instanceof Error
+                ? error.message
+                : "Could not save sort. Try again.",
+            );
+          } finally {
+            setSortBusy(false);
+          }
+        }}
+      >
+        {buyingSorts.map((key) => (
+          <option key={key} value={key}>
+            {buyingSortLabels[key]}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
   const paging = (position: string) => (
     <Pagination
       page={remote?.page ?? 1}
@@ -97,6 +140,7 @@ export function Buying() {
       change={pagination.setPage}
       busy={query.isFetching}
       position={position}
+      controls={position === "above" ? sortControl : undefined}
     />
   );
   return (
@@ -131,7 +175,14 @@ export function Buying() {
           ))}
         </div>
       )}
-      {world.paged && paging("above")}
+      <div className="buying-toolbar">
+        {world.paged ? paging("above") : sortControl}
+      </div>
+      {sortError && (
+        <p role="alert" className="error">
+          {sortError}
+        </p>
+      )}
       <div
         ref={pagination.target}
         tabIndex={-1}

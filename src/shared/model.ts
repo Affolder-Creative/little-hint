@@ -214,6 +214,7 @@ export interface PriceChange extends Base {
   source: string;
 }
 export interface Item extends Base {
+  priceSource?: "shops" | "custom";
   kind?: "group";
   parentItemId?: string;
   position?: number;

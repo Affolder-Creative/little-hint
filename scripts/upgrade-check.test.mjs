@@ -724,3 +724,67 @@ test("schema 14 invalidates only unfinished legacy price jobs and retains their 
     assert.throws(() => assertPreserved(changed, baseline));
   }
 });
+
+test("schema 16 derives sources while preserving prices and retailer evidence", () => {
+  for (const [priceCents, priceMaxCents, source] of [
+    [10900, null, "shops"],
+    [100, null, "custom"],
+    [0, null, "custom"],
+    [null, null, "custom"],
+    [10900, 15000, "custom"],
+  ]) {
+    const before = structuredClone(original);
+    before.schemaVersion = 15;
+    const item = {
+      id: "gift",
+      priceCents,
+      priceMaxCents,
+      shoppingOffers: [
+        { id: "shop", url: "https://shop.example/gift", priceCents: 10900 },
+      ],
+      pricing: { baseline: 10900, generation: "original" },
+    };
+    before.records = [{ id: item.id, kind: "items", data: item }];
+    before.views.recipient.items = [
+      { ...structuredClone(item), isRecipient: true },
+    ];
+    const after = structuredClone(before);
+    after.schemaVersion = 16;
+    for (const value of [
+      after.records[0].data,
+      after.views.recipient.items[0],
+    ]) {
+      value.priceSource = source;
+      if (source === "custom") value.pricing.paused = true;
+    }
+    assertPreserved(after, before);
+    const changed = structuredClone(after);
+    changed.records[0].data.priceCents = 9000;
+    assert.throws(() => assertPreserved(changed, before));
+    const wrongSource = structuredClone(after);
+    wrongSource.records[0].data.priceSource =
+      source === "shops" ? "custom" : "shops";
+    assert.throws(() => assertPreserved(wrongSource, before));
+    const changedShop = structuredClone(after);
+    changedShop.records[0].data.shoppingOffers[0].priceCents = 9000;
+    assert.throws(() => assertPreserved(changedShop, before));
+  }
+});
+
+test("schema 16 distinguishes legacy scalar links from explicitly empty shops", () => {
+  for (const explicitEmpty of [false, true]) {
+    const before = structuredClone(original);
+    before.schemaVersion = 15;
+    const item = {
+      id: "gift",
+      url: "https://shop.example/gift",
+      priceCents: 10900,
+      ...(explicitEmpty ? { shoppingOffers: [] } : {}),
+    };
+    before.records = [{ id: "gift", kind: "items", data: item }];
+    const after = structuredClone(before);
+    after.schemaVersion = 16;
+    after.records[0].data.priceSource = explicitEmpty ? "custom" : "shops";
+    assertPreserved(after, before);
+  }
+});

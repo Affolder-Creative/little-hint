@@ -1082,6 +1082,7 @@ const draftFieldsInput = z
     return result;
   });
 const productFields = z.object({
+  priceSource: z.enum(["shops", "custom"]).optional(),
   shoppingOffers: z.array(shoppingOfferInput).max(30).optional(),
   primaryOfferId: z.string().optional(),
   images: photoUrls.optional(),
@@ -2331,6 +2332,19 @@ function commandCore(
           409,
           "This item has a price range. Refresh the editor before changing its price.",
         );
+      if (existing.priceSource && b.priceSource === undefined) {
+        if (
+          (b.priceCents !== undefined &&
+            b.priceCents !== existing.priceCents) ||
+          (b.priceMaxCents !== undefined &&
+            b.priceMaxCents !== existing.priceMaxCents) ||
+          (b.shoppingOffers !== undefined &&
+            JSON.stringify(b.shoppingOffers) !==
+              JSON.stringify(existing.shoppingOffers))
+        )
+          fail(409, "Refresh the editor before changing its price or shops.");
+        b.priceSource = existing.priceSource;
+      }
       const detailsOnly = !ordinaryItemEditor(s, a, existing);
       if (detailsOnly) {
         if (!canEdit(s, a, existing)) fail(403, "You cannot edit this item.");
@@ -2347,6 +2361,7 @@ function commandCore(
           "images",
           "priceCents",
           "priceMaxCents",
+          "priceSource",
           "currency",
           "tags",
           "quantity",

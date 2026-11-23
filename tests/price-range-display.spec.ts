@@ -54,7 +54,7 @@ for (const width of [320, 390, 1280]) {
       ).toHaveCount(0);
       await expect(
         page.getByText(
-          "Automatic price checks are paused. Enter an exact price to resume.",
+          "Automatic price checks are paused. Choose Use shop prices in the editor to resume.",
         ),
       ).toBeVisible();
       await expect(page.getByLabel("Notify me of price drops")).toBeChecked();

@@ -82,6 +82,7 @@ function recoveredContent(
     image: i.image,
     images: i.images,
     descriptionRich: i.descriptionRich,
+    priceSource: i.priceSource,
     priceCents: i.priceCents,
     priceMaxCents: i.priceMaxCents ?? null,
     currency: i.currency,

@@ -9,6 +9,7 @@ export interface CoManagement extends Base {
   status: "pending" | "active" | "declined" | "cancelled" | "ended" | "expired";
 }
 export interface RecoveredDraft extends Base {
+  priceSource?: Item["priceSource"];
   kind?: Item["kind"];
   shoppingOffers?: Item["shoppingOffers"];
   primaryOfferId?: string;

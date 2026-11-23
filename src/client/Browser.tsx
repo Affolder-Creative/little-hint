@@ -195,7 +195,7 @@ export function Browser({
         collectionTotal > 0 &&
         !parentList?.archived &&
         itemStatus === "archived" && (
-          <p className="notice">
+          <p className="notice archived-items-notice">
             These items are archived and kept for reference. Please don't
             reserve or buy them. When choosing a gift, take a look at{" "}
             <button

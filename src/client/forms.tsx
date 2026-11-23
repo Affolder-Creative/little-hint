@@ -1,5 +1,9 @@
 import { useOnline } from "./pwa";
-import { PriceInput } from "./PriceInput";
+import { ProductPrice } from "./ProductPrice";
+import {
+  automaticPriceOffer,
+  inferredPriceSource,
+} from "../shared/shopping-offers";
 import {
   parsePriceInput,
   priceInputValue,
@@ -363,6 +367,7 @@ export function ListForm({
   );
 }
 interface Draft {
+  priceSource?: "shops" | "custom";
   price?: string;
   kind?: "group";
   products?: ProductInput[];
@@ -531,17 +536,41 @@ function GiftEditor({
       draft?.products ??
       (restoredFields?.products as ProductInput[] | undefined),
   );
-  const [offers, setOffers] = useState<ShoppingOffer[]>(
-    gift
+  const [offers, setOffers] = useState<ShoppingOffer[]>(() => {
+    const saved = gift
       ? offerInputs(gift)
       : (draft?.shoppingOffers ??
-          (restoredFields?.shoppingOffers as ShoppingOffer[]) ??
-          []),
-  );
+        (restoredFields?.shoppingOffers as ShoppingOffer[]) ??
+        []);
+    const importedPrice = importDraft?.result?.priceCents;
+    if (
+      gift ||
+      importedPrice == null ||
+      importDraft?.draft?.touched.includes("shoppingOffers")
+    )
+      return saved;
+    const primary =
+      draft?.primaryOfferId ?? restoredFields?.primaryOfferId ?? saved[0]?.id;
+    return saved.map((offer) =>
+      offer.id === primary && offer.priceCents === null
+        ? { ...offer, priceCents: importedPrice }
+        : offer,
+    );
+  });
   const [primaryOfferId, setPrimaryOfferId] = useState<string | undefined>(
     gift?.primaryOfferId ??
       draft?.primaryOfferId ??
       (restoredFields?.primaryOfferId as string | undefined),
+  );
+  const [priceSource, setPriceSource] = useState<"shops" | "custom">(
+    gift
+      ? inferredPriceSource(gift)
+      : (draft?.priceSource ??
+          (restoredFields?.priceSource as "shops" | "custom" | undefined) ??
+          (importDraft?.draft?.touched.includes("price") ||
+          (data.price && (!importDraft?.result || data.price.includes("-")))
+            ? "custom"
+            : "shops")),
   );
   const parsedPrice = parsePriceInput(data.price);
   const priceValue = parsedPrice.ok
@@ -558,30 +587,38 @@ function GiftEditor({
       ? offers
       : offerInputs({
           url: data.url,
-          priceCents: exactOfferPrice,
+          priceCents: priceSource === "shops" ? exactOfferPrice : null,
         });
+  const selectedPrice = automaticPriceOffer({
+    id: gift?.id ?? "new",
+    url: data.url,
+    priceCents: null,
+    shoppingOffers: effectiveOffers,
+    primaryOfferId,
+  });
+  const displayedPrice =
+    priceSource === "shops" && effectiveOffers.length
+      ? { priceCents: selectedPrice?.priceCents ?? null, priceMaxCents: null }
+      : priceValue;
+  const displayedPriceText =
+    priceSource === "shops" && effectiveOffers.length
+      ? priceInputValue(displayedPrice)
+      : data.price;
   const shoppingFields = {
+    priceSource,
     shoppingOffers: effectiveOffers,
     ...(primaryOfferId ? { primaryOfferId } : {}),
     ...(products ? { kind: "group" as const, products } : {}),
   };
   const syncOffers = (next: ShoppingOffer[], primary?: string) => {
     touched.current.add("shoppingOffers");
+    if (!next.length) setPriceSource("custom");
     setOffers(next);
     setPrimaryOfferId(primary);
     setData((d) => ({
       ...d,
       url: next.find((o) => o.id === primary)?.url ?? next[0]?.url ?? "",
-      price:
-        !gift &&
-        d.price === "" &&
-        !touched.current.has("price") &&
-        next.some((o) => o.priceCents !== null)
-          ? String(
-              (next.find((o) => o.id === primary && o.priceCents !== null) ??
-                next.find((o) => o.priceCents !== null))!.priceCents! / 100,
-            )
-          : d.price,
+      price: !next.length ? displayedPriceText : d.price,
     }));
   };
   const addProduct = () => {
@@ -595,8 +632,9 @@ function GiftEditor({
         url: data.url,
         image: data.image,
         images: data.images,
-        ...priceValue,
-        price: data.price,
+        ...displayedPrice,
+        price: displayedPriceText,
+        priceSource,
         quantity: Number(data.quantity),
         shoppingOffers: effectiveOffers,
         primaryOfferId,
@@ -915,6 +953,10 @@ function GiftEditor({
       setDraftSaved("");
       setError("");
     }
+    if (key === "price") {
+      if (!offers.length && data.url) setOffers(effectiveOffers);
+      setPriceSource("custom");
+    }
     touched.current.add(key);
     setData((d) => ({ ...d, [key]: v }));
     setDuplicate(null);
@@ -930,8 +972,12 @@ function GiftEditor({
       const r = job.result;
       if (r.priceCents != null && !touched.current.has("shoppingOffers"))
         setOffers((previous) =>
-          previous.map((offer, index) =>
-            offer.id === (primaryOfferId ?? previous[0]?.id) &&
+          (previous.length
+            ? previous
+            : offerInputs({ url: data.url, priceCents: r.priceCents! })
+          ).map((offer, index) =>
+            (offer.id === (primaryOfferId ?? previous[0]?.id) ||
+              !previous.length) &&
             offer.priceCents === null
               ? { ...offer, priceCents: r.priceCents! }
               : offer,
@@ -943,7 +989,12 @@ function GiftEditor({
           Object.entries({
             title: r.title,
             description: r.description,
-            price: r.priceCents == null ? "" : String(r.priceCents / 100),
+            price:
+              priceSource === "custom"
+                ? undefined
+                : r.priceCents == null
+                  ? ""
+                  : String(r.priceCents / 100),
             image: r.image,
             tags: r.tags?.join(", "),
           }).filter(
@@ -1300,7 +1351,12 @@ function GiftEditor({
           close();
           return;
         }
-        if (!products && !parsedPrice.ok) throw new Error(parsedPrice.error);
+        if (
+          !products &&
+          !(priceSource === "shops" && selectedPrice) &&
+          !parsedPrice.ok
+        )
+          throw new Error(parsedPrice.error);
         const savedProducts = products?.map(({ price, ...product }) => {
           const parsed = parsePriceInput(price ?? priceInputValue(product));
           if (!parsed.ok) throw new Error(parsed.error);
@@ -1333,7 +1389,7 @@ function GiftEditor({
             .filter(Boolean),
           ...(products
             ? { priceCents: null, priceMaxCents: null }
-            : priceValue),
+            : displayedPrice),
           quantity: products ? 1 : Number(data.quantity),
           ...(gift
             ? {
@@ -1365,6 +1421,7 @@ function GiftEditor({
             "images",
             "priceCents",
             "priceMaxCents",
+            "priceSource",
             "currency",
             "tags",
             "quantity",
@@ -1903,12 +1960,32 @@ function GiftEditor({
                 : data.url
                   ? offerInputs({
                       url: data.url,
-                      priceCents: exactOfferPrice,
+                      priceCents:
+                        priceSource === "shops" ? exactOfferPrice : null,
                     })
                   : []
             }
             primaryId={primaryOfferId}
             onChange={syncOffers}
+          />
+          <ProductPrice
+            value={displayedPriceText}
+            source={priceSource}
+            offers={effectiveOffers}
+            primaryId={primaryOfferId}
+            allowIncomplete={!online}
+            onChange={(value) => change("price", value)}
+            onSource={(source) => {
+              touched.current.add("price");
+              setData((d) => ({
+                ...d,
+                price:
+                  source === "shops" && selectedPrice
+                    ? priceInputValue(selectedPrice)
+                    : displayedPriceText,
+              }));
+              setPriceSource(source);
+            }}
           />
           {!gift?.parentItemId && !gift?.adminDetailsOnly && (
             <button type="button" className="text-button" onClick={addProduct}>
@@ -1949,7 +2026,7 @@ function GiftEditor({
             {[
               archived && "Will save to archive",
               data.description && "Note added",
-              data.price !== "" && priceSummary,
+              displayedPriceText !== "" && formatPrice(displayedPrice),
               Number(data.quantity) !== 1 && `Quantity: ${data.quantity}`,
               priority && "Priority set",
               data.tags && "Tags added",
@@ -1970,11 +2047,6 @@ function GiftEditor({
         />
         {!products && (
           <div className="form-row">
-            <PriceInput
-              allowIncomplete={!online}
-              value={data.price}
-              onChange={(value) => change("price", value)}
-            />
             <Field label="Quantity wanted">
               <input
                 type="number"

@@ -82,10 +82,12 @@ export function RunButton({
 export function ActionMenu({
   name,
   label,
+  icon,
   children,
 }: {
   name: string;
   label?: string;
+  icon?: ReactNode;
   children: ReactNode;
 }) {
   const ref = useRef<HTMLDetailsElement>(null);
@@ -215,7 +217,7 @@ export function ActionMenu({
       }}
     >
       <summary aria-label={`${label ?? "Actions"} for ${name}`}>
-        <MoreHorizontal size={20} />
+        {icon ?? <MoreHorizontal size={20} aria-hidden="true" />}
         {label && <span className="entry-actions-label">{label}</span>}
       </summary>
       <div className="entry-actions-content">{children}</div>

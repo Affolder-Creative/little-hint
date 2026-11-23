@@ -1,3 +1,4 @@
+import { buyingSorts, sortBuying } from "../shared/buying-sort";
 import { groupProducts } from "./item-groups";
 import { visibilityScope } from "./visibility";
 import { listCanEdit } from "./co-management";
@@ -217,6 +218,7 @@ export async function buyingPage(
   const q = z
     .object({
       page,
+      sort: z.enum(buyingSorts).default("newest"),
       view: z
         .enum(["needs-buying", "purchased", "all"])
         .default("needs-buying"),
@@ -230,12 +232,22 @@ export async function buyingPage(
     );
   const purchased = rows.filter((r) => r.purchased >= r.quantity).length;
   const result = pageRows(
-    rows.filter(
-      (r) =>
-        q.view === "all" ||
-        (q.view === "purchased"
-          ? r.purchased >= r.quantity
-          : r.purchased < r.quantity),
+    sortBuying(
+      rows
+        .filter(
+          (r) =>
+            q.view === "all" ||
+            (q.view === "purchased"
+              ? r.purchased >= r.quantity
+              : r.purchased < r.quantity),
+        )
+        .map((r) => ({
+          ...sourceView(s, r, a),
+          item: s.items.some((i) => i.id === r.itemId && itemVisible(s, a, i))
+            ? giftView(s, a, getItem(s, a, r.itemId))
+            : undefined,
+        })),
+      q.sort,
     ),
     q.page,
   );

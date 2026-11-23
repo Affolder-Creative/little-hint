@@ -2361,7 +2361,8 @@ test("photo upload blocks saving and reports completion", async ({ page }) => {
   await page
     .getByLabel("Item name", { exact: true })
     .fill("A gift with a photo");
-  await expect(page.getByLabel("Price in USD")).not.toBeVisible();
+  await expect(page.getByLabel("Price in USD", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("Quantity wanted", { exact: true })).not.toBeVisible();
   await page.getByText("More details", { exact: true }).click();
   await page.locator('input[type="file"][multiple]').setInputFiles({
     name: "gift.png",
@@ -5410,6 +5411,7 @@ for (const width of [320, 393, 768, 1440]) {
     );
     await dialog.getByText("More details", { exact: true }).click();
     await expect(submit).toBeInViewport();
+    await dialog.getByRole("button", { name: "Set a custom price or range" }).click();
     await dialog.getByLabel("Price in USD", { exact: true }).fill("42");
     await dialog.getByText("More details", { exact: true }).click();
     await expect(details).not.toHaveAttribute("open");
@@ -5770,7 +5772,17 @@ for (const width of [320, 768, 1440]) {
     ).toHaveCount(0);
     await expect(
       row.getByRole("link", { name: "Manage event", exact: true }),
-    ).not.toBeVisible();
+    ).toHaveCount(0);
+    const eventTitle = row.getByRole("link", {
+      name: event.name,
+      exact: true,
+    });
+    const eventCalendar = row.getByRole("link", {
+      name: `Open ${event.name}`,
+      exact: true,
+    });
+    await expect(eventTitle).toHaveAttribute("href", `/events/${event.id}`);
+    await expect(eventCalendar).toHaveAttribute("href", `/events/${event.id}`);
     if (width === 1440) {
       const heading = (await row
         .locator(".event-entry-heading")
@@ -5791,7 +5803,15 @@ for (const width of [320, 768, 1440]) {
     });
     await menu.focus();
     await page.keyboard.press("Enter");
-    await row.getByRole("link", { name: "Manage event", exact: true }).click();
+    await expect(
+      row.getByRole("link", { name: "Manage event", exact: true }),
+    ).toHaveCount(0);
+    await expect(
+      row.getByRole("button", { name: "Edit event", exact: true }),
+    ).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(menu).toBeFocused();
+    await (width === 320 ? eventCalendar : eventTitle).click();
     await expect(page).toHaveURL(new RegExp(`/events/${event.id}$`));
     await expect(page.getByText("After December 31, 2099")).toBeVisible();
     const panel = page.getByRole("dialog", { name: "Gift privacy" });

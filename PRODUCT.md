@@ -270,3 +270,9 @@ Items and gift ideas, including individual products in a group, accept an option
 Cards, details, Buying and purchase references display both endpoints. Group totals sum both endpoints with quantities. Ascending sorting uses the lower price; descending uses the upper. New estimates use the upper price and explain their basis; existing saved estimates and payments retain their values. Ranged purchases require an entered actual amount or retain an unknown amount.
 
 Ranges pause automatic checks and alerts, including in-flight results, until an exact price is saved and an editor resumes checking. Shopping offers retain exact prices independently. A ranged idea remains one gift plan rather than a product group. Schema 15 protects these semantics from older app and worker versions.
+
+## Price source and Buying order
+
+Each item or product explicitly uses shop prices or a custom price/range. Shop pricing prefers the lowest recently verified offer, then the lowest saved shop price. Manual entries without priced shops expose the ordinary price field. Custom entry survives new links, lookup completion, drafts and product grouping; it never changes a retailer's saved price. Removing the final shop preserves the displayed amount as custom. Custom pricing pauses checks, and selecting shops does not silently resume paused checks. Schema 16 preserves existing amounts and keeps differences and ranges custom.
+
+Buying starts with newest reservations and remembers one account-level sort across its status views and devices. It also supports oldest, alphabetical ascending/descending, and listed unit price ascending/descending. Sorting precedes pagination; missing or inaccessible prices sort last. Range sorting uses the lower or upper endpoint respectively. Contributions and cancelled history keep their existing order.

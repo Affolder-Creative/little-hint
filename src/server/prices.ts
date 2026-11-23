@@ -21,6 +21,7 @@ export function priceBaseline(
 }
 export function priceEligible(s: State, i: Item) {
   return (
+    i.priceSource !== "custom" &&
     i.kind !== "group" &&
     i.publicationState !== "draft" &&
     i.priceCents !== null &&
@@ -85,6 +86,11 @@ export function priceCommand(s: State, a: Actor, action: string, raw: unknown) {
     }
   } else if (action === "prices.tracking") {
     if (!canEdit(s, a, item)) fail(403, "You cannot edit this item.");
+    if (p.enabled && item.priceSource === "custom")
+      fail(
+        400,
+        "Choose Use shop prices in the editor before resuming price checks.",
+      );
     if (p.enabled && isPriceRange(item))
       fail(400, "Enter an exact price before resuming price checks.");
     if (p.enabled && (item.priceCents === null || !item.url))

@@ -1,3 +1,4 @@
+import { inferredPriceSource } from "../shared/shopping-offers";
 import { migrateShoppingOffers } from "./shopping-offers";
 import { reconcileItemGroups } from "./item-groups";
 import { reconcileCoManagement } from "./co-management";
@@ -20,7 +21,7 @@ import {
   type ImportJob,
   type FriendEntry,
 } from "../shared/model";
-const supportedSchemaVersion = 15;
+const supportedSchemaVersion = 16;
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   max: 10,
@@ -347,6 +348,25 @@ INSERT INTO schema_migration(version) VALUES (2);`);
     await client.query(
       "INSERT INTO schema_migration(version) VALUES (15) ON CONFLICT DO NOTHING",
     );
+    const priceSourceMigration = await client.query(
+      "SELECT 1 FROM schema_migration WHERE version=16",
+    );
+    if (!priceSourceMigration.rowCount) {
+      const items = await client.query(
+        "SELECT id,data FROM app_record WHERE kind='items'",
+      );
+      for (const row of items.rows) {
+        if (row.data.kind === "group") continue;
+        row.data.priceSource = inferredPriceSource(row.data);
+        if (row.data.priceSource === "custom" && row.data.pricing)
+          row.data.pricing.paused = true;
+        await client.query("UPDATE app_record SET data=$1 WHERE id=$2", [
+          JSON.stringify(row.data),
+          row.id,
+        ]);
+      }
+      await client.query("INSERT INTO schema_migration(version) VALUES (16)");
+    }
     await client.query("COMMIT");
   } catch (e) {
     await client.query("ROLLBACK");
