@@ -33,7 +33,7 @@ services:
       timeout: 3s
       retries: 30
   mailpit:
-    image: axllent/mailpit:v1.33.1
+    image: axllent/mailpit:v1.34.0
     restart: unless-stopped
     environment:
       MP_DATABASE: /data/mailpit.db
