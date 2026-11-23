@@ -396,9 +396,18 @@ function priceSourceMigrationContract(evidence) {
   for (const row of migrated.records) {
     const item = row.data;
     if (row.kind !== "items" || item.kind === "group") continue;
-    const priced = (item.shoppingOffers ?? []).filter(
-      (offer) => offer.priceCents != null,
-    );
+    const ranged = item.priceCents != null && item.priceMaxCents != null;
+    const offers =
+      item.shoppingOffers ??
+      (item.url
+        ? [
+            {
+              priceCents: ranged ? null : item.priceCents,
+              pricing: ranged ? undefined : item.pricing,
+            },
+          ]
+        : []);
+    const priced = offers.filter((offer) => offer.priceCents != null);
     const fresh = priced.filter((offer) => {
       const checked = Date.parse(offer.pricing?.checkedAt ?? "");
       return (

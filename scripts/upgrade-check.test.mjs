@@ -770,3 +770,21 @@ test("schema 16 derives sources while preserving prices and retailer evidence", 
     assert.throws(() => assertPreserved(changedShop, before));
   }
 });
+
+test("schema 16 distinguishes legacy scalar links from explicitly empty shops", () => {
+  for (const explicitEmpty of [false, true]) {
+    const before = structuredClone(original);
+    before.schemaVersion = 15;
+    const item = {
+      id: "gift",
+      url: "https://shop.example/gift",
+      priceCents: 10900,
+      ...(explicitEmpty ? { shoppingOffers: [] } : {}),
+    };
+    before.records = [{ id: "gift", kind: "items", data: item }];
+    const after = structuredClone(before);
+    after.schemaVersion = 16;
+    after.records[0].data.priceSource = explicitEmpty ? "custom" : "shops";
+    assertPreserved(after, before);
+  }
+});
