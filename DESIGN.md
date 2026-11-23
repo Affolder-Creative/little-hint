@@ -323,7 +323,7 @@ Search and filter controls stay mounted while results refresh. Changing a filter
 
 ### Buying sort control
 
-Buying places a quiet 14px native select with the existing chevron beside the result count. Its label for assistive technology is Sort gift plans. Retain a 44px target and wrap without clipping on phones. Choices are Most recent, Oldest, Alphabetical A–Z/Z–A, and Price low to high/high to low. The selected account preference applies across status tabs; errors stay beside the toolbar. Keep page buttons on their own full-width row when shown, so they never squeeze the count or sort control.
+Buying places a quiet 14px native select with the existing chevron beside the result count. Its label for assistive technology is Sort gift plans. Retain a 44px target and wrap without clipping on phones. Choices are Most recent, Oldest, Alphabetical A–Z/Z–A, and Price low to high/high to low. The selected account preference applies across status tabs; errors stay beside the toolbar. Keep the count and sort directly across from one another in a two-column row, including at 320px. Allow the count to wrap within its column. Page buttons occupy their own full-width row below.
 
 ### Retained gift plans
 

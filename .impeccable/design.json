@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-23T15:19:56.932699+00:00",
+  "generatedAt": "2026-11-23T15:22:12.726262+00:00",
   "title": "Design System: Little Hint",
   "extensions": {
     "peopleDirectory": {
@@ -1282,7 +1282,7 @@
       "buyingSort": "14px native select beside count, 44px target, six account-persisted sorts.",
       "archivedNotice": "Inline action inherits line-height with positioned 44px hit area.",
       "eventMenus": "People icon for Other wish lists; ellipsis for Event actions; title/calendar open overview.",
-      "buyingPagination": "Count and sort share a wrapping row; page buttons retain a separate full-width row."
+      "buyingPagination": "Count and sort remain directly across from one another in a two-column row, including at 320px. Count text may wrap within its column. Page buttons occupy their own full-width row below."
     }
   },
   "components": [

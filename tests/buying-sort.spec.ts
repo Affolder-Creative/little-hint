@@ -69,6 +69,28 @@ for (const width of [320, 390, 768, 1440])
     await expect(sort).toHaveValue("oldest");
     await sort.selectOption("name-desc");
     await expect(page.locator(".buying-row h2").first()).toHaveText("Gift 29");
+    const navigation = page.getByRole("navigation", {
+      name: "Results pages above",
+    });
+    const countBox = await navigation.getByRole("status").boundingBox();
+    const sortBox = await sort.boundingBox();
+    const previousBox = await navigation
+      .getByRole("button", { name: "Previous" })
+      .boundingBox();
+    const nextBox = await navigation
+      .getByRole("button", { name: "Next" })
+      .boundingBox();
+    expect(
+      Math.abs(
+        countBox!.y + countBox!.height / 2 - sortBox!.y - sortBox!.height / 2,
+      ),
+    ).toBeLessThan(2);
+    expect(sortBox!.x).toBeGreaterThanOrEqual(countBox!.x + countBox!.width);
+    expect(previousBox!.y).toBeGreaterThan(sortBox!.y + sortBox!.height);
+    expect(Math.abs(previousBox!.y - nextBox!.y)).toBeLessThan(2);
+    await page.screenshot({
+      path: info.outputPath(`buying-sort-${width}-light.png`),
+    });
     await page.evaluate(
       () => (document.documentElement.dataset.theme = "dark"),
     );

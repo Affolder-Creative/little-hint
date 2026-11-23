@@ -5471,13 +5471,12 @@ a.button:is(:hover, :focus, :active),
   margin-block: 20px;
 }
 .buying-toolbar .collection-pagination {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   margin: 0;
 }
-.buying-toolbar .collection-pagination > span {
-  flex: 1 0 auto;
-}
 .buying-toolbar .collection-pagination > div {
-  flex-basis: 100%;
+  grid-column: 1 / -1;
   justify-content: flex-end;
 }
 @media (max-width: 650px) {
