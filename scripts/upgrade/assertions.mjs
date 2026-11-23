@@ -387,6 +387,53 @@ function shoppingMigrationContract(evidence, actual) {
   return migrated;
 }
 
+// Schema 16 adds only a derived price source and pauses custom-price checks.
+// Keep amounts, retailer prices, history and all unrelated evidence exact.
+function priceSourceMigrationContract(evidence) {
+  const migrated = structuredClone(evidence);
+  const changed = new Map();
+  const now = Date.now();
+  for (const row of migrated.records) {
+    const item = row.data;
+    if (row.kind !== "items" || item.kind === "group") continue;
+    const priced = (item.shoppingOffers ?? []).filter(
+      (offer) => offer.priceCents != null,
+    );
+    const fresh = priced.filter((offer) => {
+      const checked = Date.parse(offer.pricing?.checkedAt ?? "");
+      return (
+        offer.pricing?.status === "verified" &&
+        checked <= now &&
+        now - checked < 48 * 3600000
+      );
+    });
+    const selected = (fresh.length ? fresh : priced).sort(
+      (a, b) => a.priceCents - b.priceCents,
+    )[0];
+    item.priceSource ??=
+      item.priceCents != null &&
+      item.priceMaxCents == null &&
+      selected?.priceCents === item.priceCents
+        ? "shops"
+        : "custom";
+    if (item.priceSource === "custom" && item.pricing)
+      item.pricing.paused = true;
+    changed.set(item.id, item);
+  }
+  function gifts(value) {
+    if (!value || typeof value !== "object") return;
+    if (typeof value.isRecipient === "boolean" && changed.has(value.id)) {
+      const item = changed.get(value.id);
+      value.priceSource = item.priceSource;
+      if (item.priceSource === "custom" && value.pricing)
+        value.pricing.paused = true;
+    }
+    Object.values(value).forEach(gifts);
+  }
+  gifts(migrated.views);
+  return migrated;
+}
+
 export function assertPreserved(actual, expected) {
   if (actual.schemaVersion >= 9 && (expected.schemaVersion ?? 0) < 9)
     expected = lifecycleMigrationContract(expected);
@@ -394,6 +441,8 @@ export function assertPreserved(actual, expected) {
     expected = administrationMigrationContract(expected);
   if (actual.schemaVersion >= 14 && (expected.schemaVersion ?? 0) < 14)
     expected = shoppingMigrationContract(expected, actual);
+  if (actual.schemaVersion >= 16 && (expected.schemaVersion ?? 0) < 16)
+    expected = priceSourceMigrationContract(expected);
   for (const field of ["records", "users", "barrier", "uploadHash", "views"]) {
     assert.ok(Object.hasOwn(actual, field), `Missing ${field} evidence`);
     assert.ok(

@@ -18,6 +18,51 @@ describe.skipIf(!url)("persisted drafts", () => {
   afterAll(async () => {
     await db?.pool.end();
   });
+  it("migrates price sources without changing saved amounts", async () => {
+    const cases = [
+      { priceCents: 10900, priceMaxCents: null, source: "shops" },
+      { priceCents: 100, priceMaxCents: null, source: "custom" },
+      { priceCents: 0, priceMaxCents: null, source: "custom" },
+      { priceCents: null, priceMaxCents: null, source: "custom" },
+      { priceCents: 40000, priceMaxCents: 70000, source: "custom" },
+    ];
+    const ids = await db.transact((s) =>
+      cases.map((entry, index) => {
+        const created = command(s, f.john, "items.create", {
+          title: `Legacy price ${index}`,
+          listId: f.list.id,
+          priceCents: 10900,
+          shoppingOffers: [
+            {
+              id: "shop",
+              url: "https://shop.example/product",
+              label: "Shop",
+              priceCents: 10900,
+            },
+          ],
+        }) as import("../src/shared/model").GiftView;
+        const item = s.items.find((value) => value.id === created.id)!;
+        delete item.priceSource;
+        item.priceCents = entry.priceCents;
+        item.priceMaxCents = entry.priceMaxCents;
+        return item.id;
+      }),
+    );
+    await db.pool.query("DELETE FROM schema_migration WHERE version=16");
+    await db.migrate();
+    const migrated = await db.readState();
+    for (const [index, id] of ids.entries()) {
+      const { source, ...price } = cases[index];
+      const item = migrated.items.find((value) => value.id === id)!;
+      expect(item).toMatchObject({ ...price, priceSource: source });
+      if (source === "custom") expect(item.pricing?.paused).toBe(true);
+    }
+    await db.migrate();
+    expect((await db.readState()).items).toEqual(migrated.items);
+    await db.transact((s) => {
+      s.items = s.items.filter((item) => !ids.includes(item.id));
+    });
+  });
   it("persists draft privacy and publishes once under concurrent replay", async () => {
     const draft: any = await db.transact((s) =>
       command(s, f.john, "items.create", {
@@ -120,7 +165,7 @@ describe.skipIf(!url)("persisted drafts", () => {
           )
         ).rows[0].version,
       ),
-    ).toBe(15);
+    ).toBe(16);
   });
   it("persists range bounds, pauses published ranges and rolls back invalid pairs", async () => {
     const draft = (await db.transact((state) =>
