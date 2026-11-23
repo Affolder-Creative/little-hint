@@ -536,13 +536,27 @@ function GiftEditor({
       draft?.products ??
       (restoredFields?.products as ProductInput[] | undefined),
   );
-  const [offers, setOffers] = useState<ShoppingOffer[]>(
-    gift
+  const [offers, setOffers] = useState<ShoppingOffer[]>(() => {
+    const saved = gift
       ? offerInputs(gift)
       : (draft?.shoppingOffers ??
-          (restoredFields?.shoppingOffers as ShoppingOffer[]) ??
-          []),
-  );
+        (restoredFields?.shoppingOffers as ShoppingOffer[]) ??
+        []);
+    const importedPrice = importDraft?.result?.priceCents;
+    if (
+      gift ||
+      importedPrice == null ||
+      importDraft?.draft?.touched.includes("shoppingOffers")
+    )
+      return saved;
+    const primary =
+      draft?.primaryOfferId ?? restoredFields?.primaryOfferId ?? saved[0]?.id;
+    return saved.map((offer) =>
+      offer.id === primary && offer.priceCents === null
+        ? { ...offer, priceCents: importedPrice }
+        : offer,
+    );
+  });
   const [primaryOfferId, setPrimaryOfferId] = useState<string | undefined>(
     gift?.primaryOfferId ??
       draft?.primaryOfferId ??

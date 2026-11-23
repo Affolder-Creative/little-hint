@@ -5411,6 +5411,7 @@ for (const width of [320, 393, 768, 1440]) {
     );
     await dialog.getByText("More details", { exact: true }).click();
     await expect(submit).toBeInViewport();
+    await dialog.getByRole("button", { name: "Set a custom price or range" }).click();
     await dialog.getByLabel("Price in USD", { exact: true }).fill("42");
     await dialog.getByText("More details", { exact: true }).click();
     await expect(details).not.toHaveAttribute("open");
