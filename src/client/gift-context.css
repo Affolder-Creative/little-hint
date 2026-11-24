@@ -246,3 +246,43 @@
 .gift-context-card .gift-context-line {
   row-gap: 8px;
 }
+@media (max-width: 650px) {
+  .gift-grid-compact .gift-recipient {
+    margin-bottom: 8px;
+  }
+  .gift-grid-compact .gift-card .gift-title {
+    margin-bottom: 4px;
+    padding-right: 48px;
+  }
+  .gift-grid-compact .gift-context {
+    margin-bottom: 4px;
+  }
+  .gift-grid-compact .gift-context-line:has(> .info-help) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 44px;
+    column-gap: 4px;
+    row-gap: 0;
+    align-items: center;
+  }
+  .gift-grid-compact .gift-context-line > .info-help {
+    height: 24px;
+    align-items: center;
+  }
+  .gift-grid-compact .gift-context-line .info-help-trigger {
+    margin-block: 0;
+  }
+  .gift-grid-compact .gift-card-content > .gift-meta {
+    padding-right: 48px;
+  }
+}
+@media (max-width: 650px) {
+  .gift-grid-compact .gift-context {
+    width: 100%;
+  }
+}
+
+@media (max-width: 650px) {
+  .gift-grid-compact .gift-spending-context {
+    padding-right: 48px;
+  }
+}

@@ -1387,7 +1387,6 @@ for (const layout of ["compact", "large-photos"] as const) {
         }),
       );
       await page.goto("/");
-      await page.getByRole("searchbox").fill(gift.title);
       const card = page.locator(".gift-card").filter({ hasText: gift.title });
       await expect(card).toBeVisible();
       await expect(card).toContainText("Not on a wish list");
@@ -1412,6 +1411,29 @@ for (const layout of ["compact", "large-photos"] as const) {
           }),
         );
       expect(overlaps).toBe(false);
+      if (layout === "compact" && width <= 650) {
+        const titleOverlap = await page
+          .locator(".gift-card")
+          .evaluateAll((cards) =>
+            cards.some((card) => {
+              const title = card
+                .querySelector(".gift-title-link")
+                ?.getBoundingClientRect();
+              const button = card
+                .querySelector(".gift-context button")
+                ?.getBoundingClientRect();
+              return (
+                title &&
+                button &&
+                Math.min(title.right, button.right) >
+                  Math.max(title.left, button.left) &&
+                Math.min(title.bottom, button.bottom) >
+                  Math.max(title.top, button.top)
+              );
+            }),
+          );
+        expect(titleOverlap).toBe(false);
+      }
       const help = card.getByRole("button", {
         name: /About gift privacy: only me/i,
       });
@@ -1435,6 +1457,13 @@ for (const layout of ["compact", "large-photos"] as const) {
         path: info.outputPath(`cards-${layout}-${width}.png`),
         fullPage: true,
       });
+      if (width === 393 || width === 1440) {
+        await page.setViewportSize({ width, height: 2000 });
+        await page
+          .locator(".gift-grid")
+          .screenshot({ path: info.outputPath(`grid-${layout}-${width}.png`) });
+        await page.setViewportSize({ width, height: 1000 });
+      }
       await card.locator(".gift-title-link").click();
       await expect(page.locator("h1")).toHaveText(gift.title);
       await expect(
