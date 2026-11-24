@@ -84,7 +84,9 @@ for (const width of [1440, 393]) {
           .click();
         await expect(giver).toHaveURL(/\/lists\/.*\?shopping=/);
       }
-      await giver.locator(`a.gift-card[href^="/gift/${item.id}?"]`).click();
+      await giver
+        .locator(`.gift-title-link[href^="/gift/${item.id}?"]`)
+        .click();
       await expect(giver).toHaveURL(new RegExp(`/gift/${item.id}\\?shopping=`));
       await giver.reload();
       await expect(

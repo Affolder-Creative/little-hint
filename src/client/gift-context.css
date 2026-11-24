@@ -1,0 +1,309 @@
+.gift-context {
+  min-width: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+.gift-context-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0 8px;
+}
+.gift-context .gift-source-list {
+  margin: 0;
+}
+.gift-context-line > .info-help {
+  position: relative;
+  z-index: 2;
+}
+.gift-context .info-help-icon {
+  display: none;
+}
+.gift-privacy-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.gift-privacy-label svg {
+  flex: none;
+}
+.gift-context p {
+  margin: 4px 0 0;
+}
+.gift-context .info-help-copy p + p {
+  margin-top: 8px;
+}
+.gift-context .info-help-copy {
+  max-width: 65ch;
+}
+.gift-context .info-help {
+  color: var(--muted);
+}
+.gift-context .info-help-trigger:hover {
+  background: var(--soft);
+}
+.gift-spending-context {
+  font-size: 12px;
+}
+.gift-privacy-description {
+  max-width: 65ch;
+  line-height: 1.5;
+}
+.gift-card .gift-context {
+  margin-bottom: 12px;
+}
+.gift-grid-large-photos .gift-privacy-description {
+  display: none;
+}
+.gift-grid {
+  container-type: inline-size;
+}
+.collection-results .gift-grid-compact {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+.gift-grid-compact > .gift-card-entry {
+  display: block;
+  grid-row: auto;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+}
+.gift-grid-compact .gift-card {
+  display: grid;
+  grid-template-columns: minmax(80px, 28%) minmax(0, 1fr);
+  gap: 12px;
+  grid-row: auto;
+  height: 100%;
+}
+.gift-grid-compact .gift-card > .gift-photo {
+  align-self: start;
+  aspect-ratio: 1;
+  grid-column: 1;
+  grid-row: 1;
+}
+.gift-grid-compact .gift-card-content {
+  padding: 0;
+  min-width: 0;
+}
+.gift-grid-compact .gift-title {
+  margin-bottom: 4px;
+  padding-right: 40px;
+}
+.gift-grid-compact .gift-recipient {
+  margin-bottom: 4px;
+  padding-right: 32px;
+}
+.gift-card {
+  position: relative;
+}
+.gift-title-link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+.gift-context a {
+  position: relative;
+  z-index: 2;
+  text-decoration: underline;
+}
+.gift-context .info-help-trigger {
+  z-index: 2;
+}
+.gift-card .item-price > .gift-price-amount {
+  font-size: 18px;
+  font-weight: 600;
+}
+.gift-card .item-price .gift-price-amount {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+@container (min-width: 880px) {
+  .gift-grid-compact > .gift-card-entry {
+    grid-column: auto;
+  }
+}
+/* The collection container controls the number of compact cards, independently
+   of the sidebar and viewport width. */
+.collection-results {
+  container-type: inline-size;
+}
+@container (min-width: 880px) {
+  .collection-results .gift-grid-compact {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 650px) {
+  .gift-context-card .gift-privacy-label > span:not(.sr-only) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .gift-context-card .info-help-trigger {
+    min-width: 44px;
+  }
+  .gift-grid-compact > .gift-card-entry {
+    padding: 10px;
+  }
+  .gift-grid-compact .gift-card {
+    gap: 10px;
+    grid-template-columns: minmax(64px, 25%) minmax(0, 1fr);
+  }
+  .gift-card .item-price > .gift-price-amount {
+    font-size: 16px;
+  }
+  .gift-grid-compact .gift-meta {
+    align-items: flex-start;
+  }
+}
+
+.gift-detail .gift-price-amount {
+  font-weight: 600;
+}
+.gift-grid-compact
+  .gift-card-entry:has(> .entry-actions)
+  > .gift-card
+  > .without-photo {
+  padding-top: 10px;
+}
+.gift-grid-compact .gift-card .gift-title {
+  -webkit-line-clamp: unset;
+}
+.gift-grid-compact .gift-card {
+  grid-template-rows: auto;
+  height: auto;
+}
+.gift-grid-compact .gift-card > .gift-photo {
+  width: 100%;
+  min-width: 0;
+}
+.gift-grid-compact .gift-card > .without-photo {
+  min-height: 0;
+  padding: 8px;
+}
+.gift-grid-compact .without-photo > span {
+  display: none;
+}
+.gift-grid-compact .gift-recipient {
+  width: 100%;
+  min-width: 0;
+}
+.gift-grid-compact .gift-recipient > span {
+  min-width: 0;
+}
+.gift-grid-compact .gift-recipient {
+  width: calc(100% - 44px);
+  padding-right: 0;
+}
+.gift-grid-compact .gift-recipient > span:last-child {
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+.gift-grid-compact .gift-recipient .avatar {
+  flex-shrink: 0;
+}
+/* Keep privacy help easy to hit without making its visible row oversized. */
+.gift-context-card .info-help-trigger {
+  margin-block: -8px;
+  background: transparent;
+}
+.gift-context-card .gift-privacy-label {
+  padding: 3px 4px;
+  margin-inline: -4px;
+  border-radius: 6px;
+}
+.gift-context-card .info-help-trigger:hover .gift-privacy-label,
+.gift-context-card
+  .info-help-trigger[aria-expanded="true"]
+  .gift-privacy-label {
+  background: var(--soft);
+}
+.gift-card .gift-context {
+  margin-bottom: 8px;
+}
+.gift-grid-compact .gift-card {
+  grid-template-columns: clamp(72px, 26%, 104px) minmax(0, 1fr);
+}
+.gift-grid-compact .gift-card .gift-title {
+  margin-bottom: 8px;
+}
+.gift-grid-compact .gift-card-content > .gift-meta {
+  margin-top: 0;
+  padding-top: 0;
+}
+@media (max-width: 650px) {
+  .gift-grid-compact .gift-card {
+    grid-template-columns: minmax(64px, 25%) minmax(0, 1fr);
+  }
+}
+.gift-context-card .info-help-trigger:hover,
+.gift-context-card .info-help-trigger[aria-expanded="true"] {
+  background: transparent;
+}
+/* A wrapped help target must clear the source link on the preceding line. */
+.gift-context-card .gift-context-line {
+  row-gap: 8px;
+}
+@media (max-width: 650px) {
+  .gift-grid-compact .gift-recipient {
+    margin-bottom: 8px;
+  }
+  .gift-grid-compact .gift-card .gift-title {
+    margin-bottom: 0;
+    padding-right: 40px;
+  }
+  .gift-grid-compact .gift-context {
+    width: 100%;
+    margin-bottom: 0;
+  }
+  .gift-grid-compact .gift-context-line:has(> .info-help) {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 0 6px;
+    align-items: center;
+  }
+  .gift-grid-compact .gift-context-line:has(> .info-help) > .gift-source-list {
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: calc(100% - 50px);
+  }
+  .gift-grid-compact .gift-context-line > .info-help {
+    width: 44px;
+    height: 44px;
+    align-items: center;
+  }
+  .gift-grid-compact .gift-context-line .info-help-trigger {
+    margin-block: 0;
+    justify-content: flex-start;
+    padding-left: 8px;
+  }
+  .gift-grid-compact .gift-card-content > .gift-meta,
+  .gift-grid-compact .gift-spending-context {
+    padding-right: 0;
+  }
+}
+@media (min-width: 651px) {
+  .gift-grid-compact .gift-recipient {
+    margin-bottom: 8px;
+  }
+}
+/* Fine-pointer controls keep a compact visible row; touch controls retain 44px. */
+@media (min-width: 651px) and (hover: hover) and (pointer: fine) {
+  .gift-grid-compact .gift-card .gift-title {
+    margin-bottom: 4px;
+  }
+  .gift-grid-compact .gift-context {
+    margin-bottom: 6px;
+  }
+  .gift-grid-compact .gift-context .info-help-trigger {
+    min-height: 28px;
+    margin-block: 0;
+  }
+}
+@media (min-width: 651px) {
+  .gift-context-card .gift-context-line {
+    column-gap: 12px;
+  }
+}

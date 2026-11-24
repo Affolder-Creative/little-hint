@@ -137,7 +137,7 @@ for (const width of [393, 1440]) {
     await expect(
       page.getByRole("navigation", { name: "Results pages above" }),
     ).toContainText("Page 2 of 2");
-    await page.locator(".gift-card").click();
+    await page.locator(".gift-card .gift-title-link").click();
     await expect(page.getByRole("heading", { level: 1 })).toContainText(
       `Paged item ${width} 24`,
     );

@@ -93,9 +93,25 @@ export const imageSettingKeys = [
   "PRODUCT_IMAGE_PREFETCH_ENABLED",
 ] as const;
 export const archivePrivacyKey = "HIDE_ARCHIVED_ITEMS_FROM_OTHERS";
+export const giftCardLayoutKey = "GIFT_CARD_LAYOUT";
+export const giftCardLayoutMobileKey = "GIFT_CARD_LAYOUT_MOBILE";
+export function giftCardLayoutMobileForState(
+  s: State,
+): "compact" | "large-photos" {
+  return settingsValues(s.settings).get(giftCardLayoutMobileKey) === "compact"
+    ? "compact"
+    : "large-photos";
+}
+export function giftCardLayoutForState(s: State): "compact" | "large-photos" {
+  return settingsValues(s.settings).get(giftCardLayoutKey) === "large-photos"
+    ? "large-photos"
+    : "compact";
+}
 export const spendingDefaultKey = "SPENDING_DEFAULT_ENABLED";
 export const applicationSettingKeys = [
   archivePrivacyKey,
+  giftCardLayoutKey,
+  giftCardLayoutMobileKey,
   spendingDefaultKey,
   "FAMILY_GROUP_INVITATIONS",
   productPhotoSettingKey,
@@ -215,6 +231,20 @@ export async function settingsSummary() {
       default: "owners",
       value: values.get("FAMILY_GROUP_INVITATIONS") ?? "owners",
     },
+    {
+      key: giftCardLayoutKey,
+      configured: values.has(giftCardLayoutKey),
+      source: values.has(giftCardLayoutKey) ? "settings" : "default",
+      default: "compact",
+      value: values.get(giftCardLayoutKey) ?? "compact",
+    },
+    {
+      key: giftCardLayoutMobileKey,
+      configured: values.has(giftCardLayoutMobileKey),
+      source: values.has(giftCardLayoutMobileKey) ? "settings" : "default",
+      default: "large-photos",
+      value: values.get(giftCardLayoutMobileKey) ?? "large-photos",
+    },
     spendingDefaultSetting(values),
     archivePrivacySetting(values),
     photoSetting(values),
@@ -227,6 +257,11 @@ function validateSetting(k: string, value: string) {
     if (settingKeys.includes(k as SettingKey))
       fail(409, "This value is set on the server. Change it there instead.");
     fail(400, "Unknown setting.");
+  }
+  if (k === giftCardLayoutKey || k === giftCardLayoutMobileKey) {
+    if (!["compact", "large-photos"].includes(value))
+      fail(400, "Choose compact cards or large photos.");
+    return;
   }
   if (k === archivePrivacyKey) {
     if (value !== "true" && value !== "false")

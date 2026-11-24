@@ -13,6 +13,7 @@ related_targets:
     "src/client/AdminRoles.tsx",
     "src/client/AdminGroupDetail.tsx",
     "src/client/AdminAppointment.tsx",
+    "src/client/AdminPreferences.tsx",
   ]
 ---
 
@@ -61,3 +62,5 @@ Administration starts with App administrators and All family groups, followed by
 All family groups is a compact searchable directory with owner, member and pending-request summaries and one Manage action. A focused group view hides other administration panels and offers Members, Invitations, Households and Settings. The adminGroup and adminTab URL parameters support direct links and history independently of ordinary family-group selection. Keep overview and visited group drafts mounted, including during failed refreshes; hide management controls until retry succeeds. Back restores search, page, focus and scroll. Use individual member-role actions, distinct app-admin labels, protected ownership, confirmation for removals, and focused household forms. Retain existing tokens, wrapping 44px navigation, light/dark contrast and native field styling.
 
 About places the optional "A little hint from me..." coffee invitation after the signature and before attribution. The approved first-person copy ends with ツ. Buy me a coffee opens Kyle's Buy Me a Coffee page in a new tab using the shared secondary link button and a decorative pink outline heart. Keep the section flat, divided, and aligned with the story.
+
+Administration includes Gift card layout with two native selects, Smaller screens and Larger screens, each offering Compact cards and Large photos. Smaller screens applies at 650px and below and defaults to Large photos; Larger screens applies above 650px and defaults to Compact cards. Fields sit side by side on larger screens and stack at full width at 650px and below. One Save card layout and Discard changes action saves or restores both drafts together, separately from other preferences. These choices apply to everyone and retain gift details and privacy information. GIFT_CARD_LAYOUT retains the existing larger-screen selection; GIFT_CARD_LAYOUT_MOBILE stores the smaller-screen choice and defaults to Large photos when missing. Neither has a deployment override. No database migration is needed. Reuse existing preference-group spacing, feedback and draft preservation.

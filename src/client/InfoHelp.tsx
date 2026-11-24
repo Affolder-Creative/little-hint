@@ -1,5 +1,6 @@
 import {
   useId,
+  useEffect,
   useLayoutEffect,
   useRef,
   useState,
@@ -13,14 +14,22 @@ export function InfoHelp({
   title,
   children,
   triggerLabel,
+  hover = false,
 }: {
   title: string;
+  hover?: boolean;
   triggerLabel?: ReactNode;
   children: ReactNode;
 }) {
   const id = useId();
   const trigger = useRef<HTMLButtonElement>(null);
   const panel = useRef<HTMLDivElement>(null);
+  const pinned = useRef(false);
+  const dismissTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
+  const cancelDismiss = () => clearTimeout(dismissTimer.current);
+  useEffect(() => () => clearTimeout(dismissTimer.current), []);
   const [open, setOpen] = useState(false);
   useLayoutEffect(() => {
     if (!open) return;
@@ -53,7 +62,29 @@ export function InfoHelp({
     };
   }, [open]);
   return (
-    <div className="info-help">
+    <div
+      className="info-help"
+      onPointerEnter={(event) => {
+        cancelDismiss();
+        if (
+          hover &&
+          event.pointerType === "mouse" &&
+          matchMedia("(hover: hover)").matches
+        )
+          panel.current?.showPopover();
+      }}
+      onPointerLeave={() => {
+        if (!hover) return;
+        cancelDismiss();
+        dismissTimer.current = setTimeout(() => {
+          if (
+            !pinned.current &&
+            !panel.current?.contains(document.activeElement)
+          )
+            panel.current?.hidePopover();
+        }, 300);
+      }}
+    >
       <button
         ref={trigger}
         type="button"
@@ -63,7 +94,20 @@ export function InfoHelp({
         aria-expanded={open}
         aria-controls={id}
         aria-label={`About ${title.toLowerCase()}`}
-        onClick={(event) => event.currentTarget.focus({ preventScroll: true })}
+        onClick={(event) => {
+          event.currentTarget.focus({ preventScroll: true });
+          if (hover) {
+            event.preventDefault();
+            cancelDismiss();
+            if (pinned.current && panel.current?.matches(":popover-open")) {
+              pinned.current = false;
+              panel.current?.hidePopover();
+            } else {
+              pinned.current = true;
+              panel.current?.showPopover();
+            }
+          }
+        }}
       >
         {triggerLabel}
         <Info className="info-help-icon" size={15} aria-hidden="true" />
@@ -76,7 +120,10 @@ export function InfoHelp({
         aria-labelledby={`${id}-title`}
         className="info-help-panel"
         style={{ visibility: open ? "visible" : "hidden" }}
-        onToggle={(event) => setOpen(event.newState === "open")}
+        onToggle={(event) => {
+          setOpen(event.newState === "open");
+          if (event.newState === "closed") pinned.current = false;
+        }}
       >
         <span className="sr-only" id={`${id}-title`}>
           {title}

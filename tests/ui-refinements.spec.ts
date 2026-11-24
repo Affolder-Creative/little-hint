@@ -1103,6 +1103,10 @@ for (const width of [320, 393, 1440]) {
       page,
     }, info) => {
       const { state, actor, gift } = await setup(page);
+      await page.addInitScript(
+        (theme) => localStorage.setItem("little-hint:theme", theme),
+        process.env.CARD_THEME ?? "light",
+      );
       await page.setViewportSize({ width, height: 900 });
       await page.addInitScript(
         (theme) => localStorage.setItem("little-hint:theme", theme),
@@ -1358,9 +1362,268 @@ test("admins can change event participants without unlocking reveal settings", a
   const participant = dialog.locator('input[name="participantIds"]').first();
   await expect(participant).toBeEnabled();
   await participant.setChecked(!(await participant.isChecked()));
-  await dialog
-    .getByRole("button", { name: "Save event", exact: true })
-    .click();
+  await dialog.getByRole("button", { name: "Save event", exact: true }).click();
   await expect(dialog).toHaveCount(0);
   expect(submitted).toBe(true);
+});
+
+for (const layout of ["compact", "large-photos"] as const) {
+  for (const width of [320, 393, 650, 900, 1440]) {
+    test(`gift context ${layout} at ${width}px`, async ({ page }, info) => {
+      const { state, actor, gift } = await setup(page);
+      await page.addInitScript(
+        (theme) => localStorage.setItem("little-hint:theme", theme),
+        process.env.CARD_THEME ?? "light",
+      );
+      await page.setViewportSize({ width, height: 1000 });
+      await page.route("**/api/v1/world", (route) =>
+        route.fulfill({
+          json: {
+            ...world(state, actor),
+            giftPreferences: [],
+            environment: "test",
+            giftCardLayout: layout,
+            giftCardLayoutMobile: layout,
+          },
+        }),
+      );
+      await page.goto("/");
+      const card = page.locator(".gift-card").filter({ hasText: gift.title });
+      await expect(card).toBeVisible();
+      await expect(card).toContainText("Not on a wish list");
+      const overlaps = await page
+        .locator(".gift-context-card .gift-context-line")
+        .evaluateAll((rows) =>
+          rows.some((row) => {
+            const source = row
+              .querySelector(".gift-source-list")
+              ?.getBoundingClientRect();
+            const trigger = row
+              .querySelector("button")
+              ?.getBoundingClientRect();
+            return (
+              source &&
+              trigger &&
+              Math.min(source.right, trigger.right) >
+                Math.max(source.left, trigger.left) &&
+              Math.min(source.bottom, trigger.bottom) >
+                Math.max(source.top, trigger.top)
+            );
+          }),
+        );
+      expect(overlaps).toBe(false);
+      if (layout === "compact" && width <= 650) {
+        const targets = await page
+          .locator(".gift-context-card .info-help-trigger")
+          .evaluateAll((buttons) =>
+            buttons.map((button) => {
+              const r = button.getBoundingClientRect();
+              const source = button
+                .closest(".gift-context-line")!
+                .querySelector(".gift-source-list")!
+                .getBoundingClientRect();
+              return {
+                width: r.width,
+                height: r.height,
+                gap: r.left - source.right,
+              };
+            }),
+          );
+        for (const target of targets) {
+          expect(target.width).toBeGreaterThanOrEqual(44);
+          expect(target.height).toBeGreaterThanOrEqual(44);
+          expect(target.gap).toBeGreaterThanOrEqual(0);
+          expect(target.gap).toBeLessThanOrEqual(8);
+        }
+      }
+      if (layout === "compact" && width <= 650) {
+        const titleOverlap = await page
+          .locator(".gift-card")
+          .evaluateAll((cards) =>
+            cards.some((card) => {
+              const title = card
+                .querySelector(".gift-title-link")
+                ?.getBoundingClientRect();
+              const button = card
+                .querySelector(".gift-context button")
+                ?.getBoundingClientRect();
+              return (
+                title &&
+                button &&
+                Math.min(title.right, button.right) >
+                  Math.max(title.left, button.left) &&
+                Math.min(title.bottom, button.bottom) >
+                  Math.max(title.top, button.top)
+              );
+            }),
+          );
+        expect(titleOverlap).toBe(false);
+      }
+      const help = card.getByRole("button", {
+        name: /About gift privacy: only me/i,
+      });
+      await help.click();
+      await expect(
+        page.getByRole("dialog", { name: /Gift privacy: Only me/ }),
+      ).toContainText("Only you can see this idea");
+      await page.keyboard.press("Escape");
+      await expect(help).toBeFocused();
+      expect(new URL(page.url()).pathname).toBe("/");
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+      ).toBe(true);
+      await page.evaluate(() => {
+        (document.activeElement as HTMLElement)?.blur();
+        window.scrollTo(0, 0);
+      });
+      await page.screenshot({
+        path: info.outputPath(`cards-${layout}-${width}.png`),
+        fullPage: true,
+      });
+      if (width === 393 || width === 1440) {
+        await page.setViewportSize({ width, height: 2000 });
+        await page
+          .locator(".gift-grid")
+          .screenshot({ path: info.outputPath(`grid-${layout}-${width}.png`) });
+        await page.setViewportSize({ width, height: 1000 });
+      }
+      await card.locator(".gift-title-link").click();
+      await expect(page.locator("h1")).toHaveText(gift.title);
+      await expect(
+        page.locator(".gift-detail-info .gift-context"),
+      ).toContainText("Not on a wish list");
+      await page.screenshot({
+        path: info.outputPath(`detail-${layout}-${width}.png`),
+        fullPage: true,
+      });
+    });
+  }
+}
+
+test("gift context follows audiences, list membership, spending defaults and reveal dates", async ({
+  page,
+}) => {
+  const { state, actor, gift, originalListId } = await setup(page);
+  const list = state.lists.find((l) => l.id === originalListId)!;
+  gift.spendingListId = list.id;
+  await page.route("**/api/v1/world", (route) =>
+    route.fulfill({
+      json: {
+        ...world(state, actor),
+        giftPreferences: [],
+        spendingEnabled: true,
+      },
+    }),
+  );
+  const context = page.locator(".gift-detail-info .gift-context");
+  for (const [visibility, label] of [
+    ["private", "Only me"],
+    ["hidden", "Surprise"],
+    ["restricted", "Surprise"],
+    ["visible", "Visible to recipient"],
+  ] as const) {
+    gift.visibility = visibility;
+    await page.goto(`/gift/${gift.id}`);
+    await expect(context).toContainText(label);
+    await expect(context).toContainText("Not on a wish list");
+    await expect(context).toContainText(`Your spending list: ${list.name}`);
+  }
+  gift.listId = list.id;
+  list.mode = "transparent";
+  await page.reload();
+  await expect(context).toContainText("See the plans");
+  await expect(context.getByRole("link", { name: list.name })).toHaveAttribute(
+    "href",
+    `/lists/${list.id}`,
+  );
+  await expect(context).not.toContainText("Your spending list");
+  list.mode = "surprise";
+  list.revealAfter = "2020-01-01";
+  await page.reload();
+  await expect(context).toContainText("Gift summary available");
+  await context.getByRole("button").click();
+  await expect(
+    page.getByRole("dialog", { name: /Gift privacy:/ }),
+  ).toContainText("can now see purchased gifts");
+  await page.keyboard.press("Escape");
+  const shop = page.locator(".shopping-offer-link").first();
+  if (await shop.count()) {
+    await shop.hover();
+    const geometry = await shop.evaluate((el) => ({
+      row: el.getBoundingClientRect().left,
+      heading: el
+        .closest("section")!
+        .querySelector("h2")!
+        .getBoundingClientRect().left,
+      padding: parseFloat(getComputedStyle(el).paddingLeft),
+    }));
+    expect(geometry.heading - geometry.row).toBeCloseTo(12);
+    expect(geometry.padding).toBe(12);
+  }
+});
+
+test("card privacy explanations open on hover and stay available after clicking", async ({
+  page,
+}, info) => {
+  const { gift } = await setup(page);
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto("/");
+  const card = page.locator(".gift-card").filter({ hasText: gift.title });
+  await expect(card.locator(".gift-privacy-description")).toHaveCount(0);
+  const trigger = card.getByRole("button", {
+    name: /About gift privacy: only me/i,
+  });
+  const panel = page.getByRole("dialog", { name: /Gift privacy: Only me/ });
+  await expect(panel).not.toBeVisible();
+  await trigger.hover();
+  await expect(panel).toBeVisible();
+  await panel.hover();
+  await expect(panel).toBeVisible();
+  await page.getByRole("heading", { level: 1 }).hover();
+  await expect(panel).not.toBeVisible();
+  await trigger.click();
+  await page.getByRole("heading", { level: 1 }).hover();
+  await expect(panel).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(panel).not.toBeVisible();
+  await expect(trigger).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(panel).toBeVisible();
+  await page.getByRole("button", { name: "Close help" }).click();
+  await expect(panel).not.toBeVisible();
+  await page.evaluate(() => {
+    (document.activeElement as HTMLElement)?.blur();
+    scrollTo(0, 0);
+  });
+  await page.screenshot({
+    path: info.outputPath("quiet-cards.png"),
+    fullPage: true,
+  });
+});
+
+test("gift layouts respond independently to the screen size", async ({
+  page,
+}, info) => {
+  const { state, actor } = await setup(page);
+  await page.route("**/api/v1/world", (route) =>
+    route.fulfill({ json: { ...world(state, actor), giftPreferences: [] } }),
+  );
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto("/");
+  const grid = page.locator(".gift-grid");
+  await expect(grid).toHaveClass(/gift-grid-compact/);
+  await page.setViewportSize({ width: 650, height: 1000 });
+  await expect(grid).toHaveClass(/gift-grid-large-photos/);
+  await expect(grid).toHaveCSS("grid-template-columns", /\d+.* \d+/);
+  await page.setViewportSize({ width: 651, height: 1000 });
+  await expect(grid).toHaveClass(/gift-grid-compact/);
+  await page.setViewportSize({ width: 393, height: 2000 });
+  await expect(grid).toHaveClass(/gift-grid-large-photos/);
+  await grid.screenshot({ path: info.outputPath("mobile-large-photos.png") });
+  await page.reload();
+  await expect(grid).toHaveClass(/gift-grid-large-photos/);
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await expect(grid).toHaveClass(/gift-grid-compact/);
 });

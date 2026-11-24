@@ -65,7 +65,7 @@ for (const width of [393, 1440])
       path: info.outputPath(`paged-${width}.png`),
       fullPage: true,
     });
-    await page.locator(".gift-card").first().click();
+    await page.locator(".gift-card .gift-title-link").first().click();
     await expect(page.getByRole("heading", { level: 1 })).toContainText(
       "Pagination 24",
     );

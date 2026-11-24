@@ -81,6 +81,7 @@ for (const width of [320, 393, 1440]) {
       route.fulfill({
         json: {
           ...world(state, actor),
+          giftCardLayout: "large-photos",
           environment: "development",
           exchanges: world(state, actor).exchanges.map((e) => ({
             ...e,
@@ -140,6 +141,7 @@ for (const width of [320, 393, 1440]) {
       route.fulfill({
         json: {
           ...world(state, actor),
+          giftCardLayout: "large-photos",
           environment: "development",
           exchanges: world(state, actor).exchanges.map((e) => ({
             ...e,
@@ -1397,12 +1399,12 @@ test("person pages link accessible wish lists and keep all items with their sour
     page
       .locator(".gift-card")
       .filter({ has: page.getByRole("heading", { name: title, exact: true }) });
-  await expect(card("Trail daypack")).toContainText("From Jamie's wishes");
+  await expect(card("Trail daypack")).toContainText("On Jamie's wishes");
   await expect(card("Celebration puzzle")).toContainText(
-    "From Family celebration",
+    "On Family celebration",
   );
   await expect(page.locator(".gift-card")).toHaveCount(2);
-  await expect(page.locator(".gift-card a")).toHaveCount(0);
+  await expect(page.locator(".gift-card .gift-title-link")).toHaveCount(2);
   await page
     .getByRole("searchbox", { name: "Search items", exact: true })
     .fill("Trail");
@@ -1433,7 +1435,9 @@ test("person pages link accessible wish lists and keep all items with their sour
     .getByRole("tab", { name: "Gift ideas for Jamie", exact: true })
     .click();
   await expect(links).toHaveCount(0);
-  await expect(page.locator(".gift-source-list")).toHaveCount(0);
+  await expect(page.locator(".gift-source-list")).toHaveText(
+    "Not on a wish list",
+  );
   await expect(
     page.getByRole("heading", {
       name: "A private idea for Jamie",
@@ -1442,7 +1446,9 @@ test("person pages link accessible wish lists and keep all items with their sour
   ).toBeVisible();
   await page.goto("/");
   await expect(page.locator(".gift-card").first()).toBeVisible();
-  await expect(page.locator(".gift-source-list")).toHaveCount(0);
+  await expect(page.locator(".gift-source-list").first()).toHaveText(
+    /^(On |Not on a wish list)/,
+  );
 });
 
 test("person lists include private owned and managed lists and explain empty lists", async ({
@@ -1560,7 +1566,7 @@ test("person list links and source names wrap across viewports and enlarged text
       });
     await expect(nav.getByRole("link")).toHaveCount(9);
     await expect(page.locator(".gift-source-list").first()).toHaveText(
-      `From ${list.name}`,
+      `On ${list.name}`,
     );
     for (const enlarged of [false, true]) {
       if (enlarged)
@@ -2362,7 +2368,9 @@ test("photo upload blocks saving and reports completion", async ({ page }) => {
     .getByLabel("Item name", { exact: true })
     .fill("A gift with a photo");
   await expect(page.getByLabel("Price in USD", { exact: true })).toBeVisible();
-  await expect(page.getByLabel("Quantity wanted", { exact: true })).not.toBeVisible();
+  await expect(
+    page.getByLabel("Quantity wanted", { exact: true }),
+  ).not.toBeVisible();
   await page.getByText("More details", { exact: true }).click();
   await page.locator('input[type="file"][multiple]').setInputFiles({
     name: "gift.png",
@@ -2638,6 +2646,15 @@ test("consistent image frames preserve mixed grids, real photos, and reading ord
   page,
 }, testInfo) => {
   const { state, actor } = await preview(page);
+  await page.route("**/api/v1/world", (route) =>
+    route.fulfill({
+      json: {
+        ...world(state, actor),
+        environment: "test",
+        giftCardLayout: "large-photos",
+      },
+    }),
+  );
   const visible = world(state, actor).items.filter(
     (item) => !item.isRecipient && !item.archived,
   );
@@ -2677,9 +2694,11 @@ test("consistent image frames preserve mixed grids, real photos, and reading ord
         content: "body { font-family: Arial, sans-serif; }",
       });
     const cards = page.locator(".gift-card");
-    const missing = page.locator(`.gift-card[href="/gift/${missingGift.id}"]`);
+    const missing = page.locator(
+      `.gift-card:has(.gift-title-link[href="/gift/${missingGift.id}"])`,
+    );
     const realPhoto = page.locator(
-      `.gift-card[href="/gift/${photoGift.id}"] > .gift-photo`,
+      `.gift-card:has(.gift-title-link[href="/gift/${photoGift.id}"]) > .gift-photo`,
     );
     await expect(realPhoto.locator("img")).toBeVisible();
     await expect(realPhoto.locator("img")).toHaveAttribute(
@@ -2695,11 +2714,13 @@ test("consistent image frames preserve mixed grids, real photos, and reading ord
       .toBeGreaterThan(0);
     await expect(
       page.locator(
-        `.gift-card[href="/gift/${brokenGift.id}"] > .without-photo`,
+        `.gift-card:has(.gift-title-link[href="/gift/${brokenGift.id}"]) > .without-photo`,
       ),
     ).toBeVisible();
     const order = await cards.evaluateAll((elements) =>
-      elements.map((el) => el.getAttribute("href")!),
+      elements.map((el) =>
+        el.querySelector(".gift-title-link")!.getAttribute("href")!,
+      ),
     );
     if (cardOrder) expect(order).toEqual(cardOrder);
     else cardOrder = order;
@@ -2768,8 +2789,8 @@ test("consistent image frames preserve mixed grids, real photos, and reading ord
         if (!enlarged)
           expect(bounds[i].mediaHeight).toBeCloseTo(realBounds!.height, 0);
       }
-      await missing.focus();
-      await expect(missing).toBeFocused();
+      await missing.locator(".gift-title-link").focus();
+      await expect(missing.locator(".gift-title-link")).toBeFocused();
       await page.evaluate(() => scrollTo(0, 0));
       if (!enlarged || width === 320)
         await page.screenshot({
@@ -3506,6 +3527,7 @@ for (const width of [320, 360, 389, 390, 650, 900, 1440]) {
       route.fulfill({
         json: {
           ...world(state, actor),
+          giftCardLayout: "large-photos",
           giftDiscovery: discoveryConfig,
           environment: "development",
         },
@@ -3666,13 +3688,13 @@ test("privacy popover stays closed when returning from a gift", async ({
   await gift.scrollIntoViewIfNeeded();
   await page.evaluate(() => new Promise(requestAnimationFrame));
   const position = await page.evaluate(() => scrollY);
-  await gift.click();
+  await gift.locator(".gift-title-link").click();
   await expect(page.locator(".gift-detail")).toBeVisible();
   await page.goBack();
   await expect(
     page.getByRole("dialog", { name: "Gift privacy" }),
   ).not.toBeVisible();
-  await expect(gift).toBeFocused();
+  await expect(gift.locator(".gift-title-link")).toBeFocused();
   await expect
     .poll(() => page.evaluate(() => scrollY))
     .toBeCloseTo(position, 0);
@@ -3747,7 +3769,7 @@ test("archived-only collections keep their navigation while truly empty lists om
     .getByRole("button", { name: "Archived items", exact: true })
     .click();
   await expect(
-    page.locator(`.gift-card[href="/gift/${item.id}"]`),
+    page.locator(`.gift-card:has(.gift-title-link[href="/gift/${item.id}"])`),
   ).toBeVisible();
   state.items = state.items.filter((entry) => entry.id !== item.id);
   await page.reload();
@@ -4172,7 +4194,7 @@ test.describe("navigation scroll restoration", () => {
         await page.evaluate(() => new Promise(requestAnimationFrame));
         const first = await page.evaluate(() => scrollY);
         expect(first).toBeGreaterThan(500);
-        await gift.click();
+        await gift.locator(".gift-title-link").click();
         await expect(page).toHaveURL(/\/gift\//);
         await expectScroll(page, 0);
         await expect(page.getByRole("main")).toBeFocused();
@@ -4215,8 +4237,8 @@ test.describe("navigation scroll restoration", () => {
       await page.getByRole("button", { name: "Done", exact: true }).click();
       await expect(page.locator(".gift-card")).toHaveCount(40);
       const gift = page.locator(".gift-card").nth(15);
-      const href = await gift.getAttribute("href");
-      await gift.focus();
+      const href = await gift.locator(".gift-title-link").getAttribute("href");
+      await gift.locator(".gift-title-link").focus();
       await page.evaluate(() => new Promise(requestAnimationFrame));
       const position = await page.evaluate(() => scrollY);
       expect(position).toBeGreaterThan(500);
@@ -4227,10 +4249,14 @@ test.describe("navigation scroll restoration", () => {
       await expect(search).toHaveValue("Scroll test");
       await expect(page.locator(".browse-summary")).toContainText("Travel");
       await expect(page.locator(".gift-card")).toHaveCount(40);
-      await expect(page.locator(`.gift-card[href="${href}"]`)).toBeFocused();
+      await expect(
+        page.locator(`.gift-title-link[href="${href}"]`),
+      ).toBeFocused();
       await expectScroll(page, position);
       await page.keyboard.press("Tab");
-      // Tab continues at the returned card's action menu, without jumping up.
+      // The source link and privacy help now precede the action menu.
+      await page.keyboard.press("Tab");
+      await page.keyboard.press("Tab");
       await expect(
         page.locator(".gift-card-entry").nth(15).locator("summary"),
       ).toBeFocused();
@@ -4312,14 +4338,16 @@ test.describe("navigation scroll restoration", () => {
     });
     await search.fill("Scroll test");
     const gift = page.locator(".gift-card").nth(15);
-    const href = await gift.getAttribute("href");
-    await gift.click();
+    const href = await gift.locator(".gift-title-link").getAttribute("href");
+    await gift.locator(".gift-title-link").click();
     await expect(page.locator(".gift-detail")).toBeVisible();
     await page.reload();
     await expect(page.locator(".gift-detail")).toBeVisible();
     await page.goBack();
     await expect(search).toHaveValue("Scroll test");
-    await expect(page.locator(`.gift-card[href="${href}"]`)).toBeFocused();
+    await expect(
+      page.locator(`.gift-title-link[href="${href}"]`),
+    ).toBeFocused();
     await page.goForward();
     await expect(page.locator(".gift-detail")).toBeVisible();
     state.items = state.items.filter((item) => `/gift/${item.id}` !== href);
@@ -4352,7 +4380,7 @@ test.describe("navigation scroll restoration", () => {
       exact: true,
     });
     await archivedTab.click();
-    await page.locator(".gift-card").click();
+    await page.locator(".gift-card .gift-title-link").click();
     await expect(page.locator(".gift-detail")).toBeVisible();
     await page.goBack();
     await expect(archivedTab).toHaveAttribute("aria-pressed", "true");
@@ -4362,7 +4390,7 @@ test.describe("navigation scroll restoration", () => {
     await page.getByRole("button", { name: /^Sort & filter/ }).click();
     await available.check();
     await page.getByRole("button", { name: "Done", exact: true }).click();
-    await page.locator(".gift-card").first().click();
+    await page.locator(".gift-card .gift-title-link").first().click();
     await expect(page.locator(".gift-detail")).toBeVisible();
     await page.goBack();
     await expect(page.locator(".browse-summary")).toContainText(
@@ -4754,7 +4782,9 @@ for (const [width, theme] of [
     });
     expect(idea.listId).toBeUndefined();
     await expect(page).toHaveURL(new RegExp(`/gift/${idea.id}$`));
-    await expect(page.locator(".private-idea-badge")).toHaveText("Only me");
+    await expect(
+      page.locator(".gift-detail-info .gift-privacy-label"),
+    ).toContainText("Only me");
     await page
       .getByLabel("Buying for", { exact: true })
       .selectOption("ordinary");
@@ -4805,7 +4835,7 @@ for (const [width, theme] of [
       name: "Search gift ideas",
     });
     await ideaSearch.fill(idea.title);
-    await expect(purchasedCard.locator(".private-idea-badge")).toHaveText(
+    await expect(purchasedCard.locator(".gift-privacy-label")).toHaveText(
       "Only me",
     );
     await ideaSearch.fill("");
@@ -4817,7 +4847,7 @@ for (const [width, theme] of [
       page
         .locator(".gift-card")
         .filter({ hasText: idea.title })
-        .locator(".private-idea-badge"),
+        .locator(".gift-privacy-label"),
     ).toHaveText("Only me");
     await page.reload();
     await expect(
@@ -5118,7 +5148,7 @@ for (const width of [393, 1440]) {
     await expect(page.locator(".gift-card")).toHaveCount(expected.length);
     await expect(browse).toContainText("(3)");
     await search.fill(jointItem.title);
-    await page.locator(".gift-card").first().click();
+    await page.locator(".gift-card .gift-title-link").first().click();
     await page.reload();
     await page.goBack();
     await expect(search).toHaveValue(jointItem.title);
@@ -5417,13 +5447,13 @@ for (const width of [320, 393, 768, 1440]) {
     );
     await dialog.getByText("More details", { exact: true }).click();
     await expect(submit).toBeInViewport();
-    await dialog.getByRole("button", { name: "Set a custom price or range" }).click();
+    await dialog
+      .getByRole("button", { name: "Set a custom price or range" })
+      .click();
     await dialog.getByLabel("Price in USD", { exact: true }).fill("42");
     await dialog.getByText("More details", { exact: true }).click();
     await expect(details).not.toHaveAttribute("open");
-    await expect(dialog.locator(".gift-import-preview")).toContainText(
-      "$42",
-    );
+    await expect(dialog.locator(".gift-import-preview")).toContainText("$42");
     await page.screenshot({
       path: info.outputPath(`item-editor-${width}.png`),
       fullPage: true,
@@ -6440,6 +6470,7 @@ async function sizedDirectory(page: Page, initialCount: number) {
     route.fulfill({
       json: {
         ...world(state, actor),
+        giftCardLayout: "large-photos",
         people: world(state, actor).people.slice(0, count),
       },
     }),

@@ -52,6 +52,8 @@ import {
 import { takeOverProfile } from "./profile-takeover";
 import {
   hideArchivedItemsForState,
+  giftCardLayoutForState,
+  giftCardLayoutMobileForState,
   memberInvitationsEnabled,
 } from "./settings";
 import { selfRecipient, canShop } from "./domain-access";
@@ -896,6 +898,8 @@ export function world(
       }),
     preferences: preferences(s, a),
     archivePrivacyForced: hideArchivedItemsForState(s),
+    giftCardLayout: giftCardLayoutForState(s),
+    giftCardLayoutMobile: giftCardLayoutMobileForState(s),
     notificationCount: inbox(s, a).unreadCount,
     follows: s.follows.filter(
       (f) => f.userId === a.id && followVisible(s, a, f),

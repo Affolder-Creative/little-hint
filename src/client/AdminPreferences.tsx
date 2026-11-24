@@ -121,6 +121,39 @@ export function AdminPreferences({ settings }: { settings: Setting[] }) {
   return (
     <>
       <PreferenceGroup
+        settings={settings.filter((s) =>
+          ["GIFT_CARD_LAYOUT", "GIFT_CARD_LAYOUT_MOBILE"].includes(s.key),
+        )}
+        title="Gift card layout"
+        submit="Save card layout"
+      >
+        {(value, change) => (
+          <>
+            <div className="form-row gift-card-layout-fields">
+              {[
+                ["GIFT_CARD_LAYOUT_MOBILE", "Smaller screens"],
+                ["GIFT_CARD_LAYOUT", "Larger screens"],
+              ].map(([key, label]) => (
+                <Field label={label} key={key}>
+                  <select
+                    value={value(key)}
+                    onChange={(e) => change(key, e.target.value)}
+                  >
+                    <option value="compact">Compact cards</option>
+                    <option value="large-photos">Large photos</option>
+                  </select>
+                </Field>
+              ))}
+            </div>
+            <p>
+              Choose layouts for phones and narrow windows, and for larger
+              screens. Large photos shows two items side by side on phones.
+              These choices apply to everyone.
+            </p>
+          </>
+        )}
+      </PreferenceGroup>
+      <PreferenceGroup
         settings={settings.filter((s) => s.key === "FAMILY_GROUP_INVITATIONS")}
         title="Family-group invitations"
         submit="Save invitation setting"

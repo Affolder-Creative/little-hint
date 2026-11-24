@@ -30,6 +30,12 @@ async function setup(
     f.state.people.push(person);
   }
   const settings = [
+    { key: "GIFT_CARD_LAYOUT", value: "compact", source: "settings" },
+    {
+      key: "GIFT_CARD_LAYOUT_MOBILE",
+      value: "large-photos",
+      source: "settings",
+    },
     {
       key: "HIDE_ARCHIVED_ITEMS_FROM_OTHERS",
       value: "false",
@@ -929,3 +935,52 @@ for (const forced of [false, true]) {
     await expect(toggle).not.toBeChecked();
   });
 }
+
+test("gift card layout saves and discards independently", async ({
+  page,
+}, info) => {
+  await setup(page);
+  await page.goto("/settings?section=admin");
+  const section = page.getByRole("region", {
+    name: "Gift card layout",
+    exact: true,
+  });
+  const choice = section.getByRole("combobox", { name: "Larger screens" });
+  const mobile = section.getByRole("combobox", { name: "Smaller screens" });
+  for (const width of [1440, 393]) {
+    await page.setViewportSize({ width, height: 1000 });
+    await section.scrollIntoViewIfNeeded();
+    await page.screenshot({
+      path: info.outputPath(`layout-location-${width}.png`),
+    });
+    await section.screenshot({
+      path: info.outputPath(`layout-controls-${width}.png`),
+    });
+  }
+
+  await expect(mobile).toHaveValue("large-photos");
+  await expect(choice).toHaveValue("compact");
+  await choice.selectOption("large-photos");
+  await section.getByRole("button", { name: "Discard changes" }).click();
+  await expect(choice).toHaveValue("compact");
+  await choice.selectOption("large-photos");
+  await section.getByRole("button", { name: "Save card layout" }).click();
+  await expect(section.getByRole("status")).toHaveText(
+    "Gift card layout saved.",
+  );
+  await page.reload();
+  await expect(choice).toHaveValue("large-photos");
+  await expect(mobile).toHaveValue("large-photos");
+  await mobile.selectOption("compact");
+  await section.getByRole("button", { name: "Save card layout" }).click();
+  await expect(section.getByRole("status")).toHaveText(
+    "Gift card layout saved.",
+  );
+  await page.reload();
+  await expect(mobile).toHaveValue("compact");
+  await expect(choice).toHaveValue("large-photos");
+  await page.screenshot({
+    path: info.outputPath("card-layout-settings.png"),
+    fullPage: true,
+  });
+});

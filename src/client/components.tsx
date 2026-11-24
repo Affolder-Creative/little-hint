@@ -1,3 +1,4 @@
+import { GiftContext } from "./GiftContext";
 import { InfoHelp } from "./InfoHelp";
 import { shoppingLink } from "./shopping-context";
 import { Price } from "./Price";
@@ -33,6 +34,7 @@ import {
   Heart,
   Plus,
   LockKeyhole,
+  EyeOff,
   Eye,
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
@@ -123,7 +125,7 @@ export function Privacy({ mode }: { mode: "surprise" | "transparent" }) {
   return (
     <span className={`privacy ${mode}`}>
       {mode === "surprise" ? (
-        <LockKeyhole size={13} aria-hidden="true" />
+        <EyeOff size={13} aria-hidden="true" />
       ) : (
         <Eye size={13} aria-hidden="true" />
       )}
@@ -646,15 +648,13 @@ export function GiftCard({
   const location = useLocation();
   const Heading = headingLevel === 2 ? "h2" : "h3";
   return (
-    <Link
+    <div
       onPointerEnter={() =>
         gift.image && prefetchProductImage(gift.image, true)
       }
       onFocus={() => gift.image && prefetchProductImage(gift.image, true)}
       onTouchStart={() => gift.image && prefetchProductImage(gift.image, true)}
       className="gift-card"
-      to={shoppingLink(`/gift/${gift.id}`, location.search)}
-      data-navigation-focus={`gift-${gift.id}`}
     >
       <GiftPhoto gift={gift} />
       <div className="gift-card-content">
@@ -673,16 +673,22 @@ export function GiftCard({
             ))}
           </span>
         </div>
-        <Heading className="gift-title">{gift.title}</Heading>
+        <Heading className="gift-title">
+          <Link
+            className="gift-title-link"
+            data-navigation-focus={`gift-${gift.id}`}
+            to={shoppingLink(`/gift/${gift.id}`, location.search)}
+          >
+            {gift.title}
+          </Link>
+        </Heading>
         {gift.kind === "group" && (
           <p className="gift-source-list">
             {gift.products?.length ?? 0} products in this set
           </p>
         )}
 
-        {sourceListName && (
-          <p className="gift-source-list">From {sourceListName}</p>
-        )}
+        <GiftContext gift={gift} card />
         {gift.priority && (
           <span className={`item-priority priority-${gift.priority}`}>
             {priorityLabels[gift.priority]}
@@ -691,7 +697,6 @@ export function GiftCard({
         <div className="gift-meta">
           <Price gift={gift} compact />
           <span className="gift-badges">
-            <PrivateIdeaBadge gift={gift} />
             {gift.isRecipient && !gift.canShop ? (
               <span className="status quiet">On your list</span>
             ) : gift.available === 0 ? (
@@ -702,7 +707,7 @@ export function GiftCard({
           </span>
         </div>
       </div>
-    </Link>
+    </div>
   );
 }
 export function Header({
