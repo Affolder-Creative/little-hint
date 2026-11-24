@@ -242,3 +242,7 @@
 .gift-context-card .info-help-trigger[aria-expanded="true"] {
   background: transparent;
 }
+/* A wrapped help target must clear the source link on the preceding line. */
+.gift-context-card .gift-context-line {
+  row-gap: 6px;
+}

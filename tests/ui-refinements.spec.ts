@@ -1391,6 +1391,27 @@ for (const layout of ["compact", "large-photos"] as const) {
       const card = page.locator(".gift-card").filter({ hasText: gift.title });
       await expect(card).toBeVisible();
       await expect(card).toContainText("Not on a wish list");
+      const overlaps = await page
+        .locator(".gift-context-card .gift-context-line")
+        .evaluateAll((rows) =>
+          rows.some((row) => {
+            const source = row
+              .querySelector(".gift-source-list")
+              ?.getBoundingClientRect();
+            const trigger = row
+              .querySelector("button")
+              ?.getBoundingClientRect();
+            return (
+              source &&
+              trigger &&
+              Math.min(source.right, trigger.right) >
+                Math.max(source.left, trigger.left) &&
+              Math.min(source.bottom, trigger.bottom) >
+                Math.max(source.top, trigger.top)
+            );
+          }),
+        );
+      expect(overlaps).toBe(false);
       const help = card.getByRole("button", {
         name: /About gift privacy: only me/i,
       });
