@@ -14,7 +14,13 @@ export interface ItemPage extends Page<GiftView> {
   collectionTotal: number;
 }
 export interface BuyingPage extends Page<World["buying"][number]> {
-  counts: { all: number; purchased: number; needsBuying: number };
+  counts: {
+    all: number;
+    purchased: number;
+    needsBuying: number;
+    awaiting?: number;
+    inHand?: number;
+  };
 }
 export type PagedWorld = World & {
   paged: true;

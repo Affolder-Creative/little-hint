@@ -134,6 +134,7 @@ export function sourceView(s: State, r: Reservation, a: Actor) {
     state !== "active" && r.sourceReviewedBy?.[a.id] !== version;
   return {
     ...r,
+    inHandQuantity: r.buyerId === a.id ? r.inHandQuantity : undefined,
     planActions: {
       canRecordPurchase:
         r.buyerId === a.id && !!item && canShop(s, a, item) && !requiresReview,

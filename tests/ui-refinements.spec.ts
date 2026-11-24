@@ -1166,7 +1166,7 @@ for (const width of [320, 393, 1440]) {
       ).toBeFocused();
       await page.getByRole("button", { name: /^Purchased \(/ }).click();
       await expect(
-        row.getByRole("button", { name: "Update purchase", exact: true }),
+        row.getByRole("button", { name: "Mark as in hand", exact: true }),
       ).toBeVisible();
       await expect(shop).not.toBeVisible();
       await row.locator("summary").click();

@@ -45,3 +45,6 @@ Related products presented together under a shared name and gallery. Each produc
 
 **Price range**:
 The lowest and highest listed price for one item or gift idea. A range can describe acceptable alternatives while the idea remains a single gift to reserve.
+
+**In hand**:
+The buyer has possession of purchased gift units. This is a private checklist status, separate from delivery to the recipient and receipt of contribution payments.

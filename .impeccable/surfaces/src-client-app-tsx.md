@@ -14,3 +14,5 @@ related_targets: ["src/client/Browser.tsx", "src/client/Buying.tsx"]
 - People introduces the directory with “Find your people, browse their wish lists, and keep gift ideas for them.”
 - Buying titles and photos link to the same detail destination. Private ideas combine Only me and an info icon in one 44px InfoHelp trigger with a 6px gap. More actions keeps outline icons and separates destructive cancellation at the end.
 - People filters retain selected tags across touch activation, dismissal and history navigation. Input and portaled options form one interaction boundary.
+
+- Buying combines purchased quantities and standalone Spending purchases once. Purchased arrival filters and in-hand counts remain buyer-private, using unboxed text filters and supporting metadata. Partial purchases remain in Needs buying and Purchased.

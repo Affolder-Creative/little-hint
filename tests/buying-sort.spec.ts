@@ -103,3 +103,103 @@ for (const width of [320, 390, 768, 1440])
       ),
     ).toBe(true);
   });
+
+for (const width of [320, 768, 1440])
+  test(`Buying tracks arrivals at ${width}px`, async ({ page }, info) => {
+    const { state, actors } = stagingFixtures();
+    const data = world(state, actors[1]);
+    const base = data.buying[0];
+    data.paged = false;
+    data.spendingAvailable = false;
+    data.buying = [
+      {
+        ...base,
+        quantity: 1,
+        purchased: 1,
+        inHandQuantity: 0,
+        titleSnapshot: "Ceramic pour-over set",
+      },
+      {
+        ...base,
+        id: "books",
+        quantity: 4,
+        purchased: 3,
+        inHandQuantity: 2,
+        titleSnapshot: "Books for a long winter evening",
+      },
+      {
+        ...base,
+        id: "scarf",
+        quantity: 1,
+        purchased: 1,
+        inHandQuantity: 1,
+        titleSnapshot: "Wool scarf",
+      },
+      {
+        ...base,
+        id: "legacy",
+        quantity: 1,
+        purchased: 1,
+        inHandQuantity: undefined,
+        titleSnapshot: "An older gift",
+      },
+    ];
+    await page.route("**/api/**", async (route) => {
+      const path = new URL(route.request().url()).pathname;
+      if (path.endsWith("/buying/arrival")) {
+        const body = route.request().postDataJSON();
+        const r = data.buying.find((v) => v.id === body.id)!;
+        r.inHandQuantity = body.inHandQuantity ?? undefined;
+        r.revision++;
+      }
+      await route.fulfill({
+        json: path.endsWith("/world")
+          ? data
+          : path.includes("/spending")
+            ? { settings: { enabled: false } }
+            : { rows: [], nextCursor: null },
+      });
+    });
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/buying");
+    await page
+      .getByRole("button", { name: "Purchased (4)", exact: true })
+      .click();
+    await expect(
+      page.getByText("Arrival not recorded", { exact: true }),
+    ).toBeVisible();
+    await page.screenshot({
+      path: info.outputPath(`arrival-${width}-light.png`),
+    });
+    await page.evaluate(
+      () => (document.documentElement.dataset.theme = "dark"),
+    );
+    await page.screenshot({
+      path: info.outputPath(`arrival-${width}-dark.png`),
+    });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    await page
+      .getByRole("group", { name: "Gift arrival status" })
+      .getByRole("button", { name: /^Awaiting arrival/ })
+      .click();
+    await expect(page.locator(".buying-row")).toHaveCount(2);
+    await page
+      .getByRole("button", { name: "Mark as in hand", exact: true })
+      .click();
+    await expect(page.locator(".buying-row")).toHaveCount(1);
+    await page
+      .getByRole("button", { name: "Update arrival", exact: true })
+      .click();
+    await page.getByLabel("Quantity in hand").fill("3");
+    await page
+      .getByRole("button", { name: "Save arrival status", exact: true })
+      .click();
+    await expect(page.locator(".buying-row")).toHaveCount(0);
+    await expect(
+      page.getByRole("heading", { name: "No gifts awaiting arrival" }),
+    ).toBeVisible();
+  });

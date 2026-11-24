@@ -3837,15 +3837,15 @@ for (const width of [1440, 390]) {
       fullPage: true,
     });
     await views
-      .getByRole("button", { name: "Purchased (1)", exact: true })
+      .getByRole("button", { name: "Purchased (2)", exact: true })
       .click();
-    await expect(page.locator(".buying-row")).toHaveCount(1);
-    await expect(page.locator(".buying-row")).toContainText(
-      completed.titleSnapshot,
-    );
-    await expect(page.locator(".buying-row")).toContainText(
-      "Access to the original gift has changed.",
-    );
+    await expect(page.locator(".buying-row")).toHaveCount(2);
+    await expect(
+      page.locator(".buying-row").filter({ hasText: completed.titleSnapshot }),
+    ).toContainText(completed.titleSnapshot);
+    await expect(
+      page.locator(".buying-row").filter({ hasText: completed.titleSnapshot }),
+    ).toContainText("Access to the original gift has changed.");
     await expect(
       page.getByText("Cancelled gift", { exact: true }),
     ).toBeVisible();
@@ -3866,7 +3866,7 @@ for (const width of [1440, 390]) {
       views.getByRole("button", { name: "Needs buying (1)", exact: true }),
     ).toBeFocused();
     await expect(
-      views.getByRole("button", { name: "Purchased (2)", exact: true }),
+      views.getByRole("button", { name: "Purchased (3)", exact: true }),
     ).toBeVisible();
     await page
       .getByRole("button", { name: "Update purchase", exact: true })
@@ -3942,6 +3942,11 @@ test("Buying keeps empty views, failed updates, and cancelled history recoverabl
   await mark.click();
   await page
     .getByRole("button", { name: "View purchased gifts", exact: true })
+    .click();
+  await page
+    .getByLabel(`More actions for ${reservation.titleSnapshot}`, {
+      exact: true,
+    })
     .click();
   await page
     .getByRole("button", { name: "Update purchase", exact: true })
@@ -4775,6 +4780,7 @@ for (const [width, theme] of [
       .click();
     await page.getByRole("button", { name: /^Purchased/ }).click();
     await expect(row).toContainText("Purchased");
+    await row.locator("summary").click();
     await row
       .getByRole("button", { name: "Update purchase", exact: true })
       .click();

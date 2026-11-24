@@ -18,7 +18,12 @@ import {
 import type { BuyingPage } from "../shared/pagination";
 import { UpdatePurchase } from "./UpdatePurchase";
 import { useBuyingHistory } from "./useBuyingHistory";
-import { SpendingSummary, PurchaseForm } from "./Spending";
+import {
+  matchesArrival,
+  arrivalLabel,
+  type ArrivalFilter,
+} from "../shared/arrival";
+import { SpendingSummary, PurchaseForm, RecordForm } from "./Spending";
 import { Action } from "./Action";
 import { useNavigationState } from "./NavigationScroll";
 import {
@@ -64,6 +69,10 @@ export function Buying() {
   const [view, setView] = useNavigationState<
     "needs-buying" | "purchased" | "all"
   >("buyingView", "needs-buying");
+  const [arrival, setArrival] = useNavigationState<ArrivalFilter>(
+    "buyingArrival",
+    "all",
+  );
   const activeView = useRef<HTMLButtonElement>(null);
   const [focusRequest, setFocusRequest] = useState(0);
   useEffect(() => {
@@ -79,9 +88,9 @@ export function Buying() {
     : "newest";
   const [sortBusy, setSortBusy] = useState(false);
   const [sortError, setSortError] = useState("");
-  const pagination = useCollectionPage(`${view}:${sort}`);
+  const pagination = useCollectionPage(`${view}:${arrival}:${sort}`);
   const query = useCollection<BuyingPage>(
-    `buying/active?view=${view}&sort=${sort}&page=${pagination.page}`,
+    `buying/active?view=${view}&arrival=${arrival}&sort=${sort}&page=${pagination.page}`,
   );
   const remote = world.paged ? query.data : undefined;
   useEffect(() => {
@@ -91,10 +100,13 @@ export function Buying() {
   const reservations =
     remote?.rows ?? world.buying.filter((r) => r.quantity > 0);
   const needsBuying = reservations.filter((r) => r.purchased < r.quantity);
-  const matchesView = (r: Pick<Reservation, "quantity" | "purchased">) =>
+  const matchesView = (
+    r: Pick<Reservation, "quantity" | "purchased" | "inHandQuantity">,
+  ) =>
     view === "all" ||
     (view === "purchased"
-      ? r.purchased >= r.quantity
+      ? r.purchased > 0 &&
+        matchesArrival(r.purchased, r.inHandQuantity, arrival)
       : r.purchased < r.quantity);
   const visible = sortBuying(reservations.filter(matchesView), sort);
   const focusView = () => setFocusRequest((request) => request + 1);
@@ -160,7 +172,12 @@ export function Buying() {
           {(
             [
               ["needs-buying", "Needs buying", needsCount],
-              ["purchased", "Purchased", allCount - needsCount],
+              [
+                "purchased",
+                "Purchased",
+                remote?.counts.purchased ??
+                  reservations.filter((r) => r.purchased > 0).length,
+              ],
               ["all", "All", allCount],
             ] as const
           ).map(([key, label, count]) => (
@@ -173,6 +190,44 @@ export function Buying() {
               {label} ({count})
             </button>
           ))}
+        </div>
+      )}
+      {view === "purchased" && allCount > 0 && (
+        <div
+          className="buying-arrival-filters"
+          role="group"
+          aria-label="Gift arrival status"
+        >
+          {(
+            [
+              ["all", "All purchased"],
+              ["awaiting", "Awaiting arrival"],
+              ["in-hand", "In hand"],
+            ] as const
+          ).map(([key, label]) => {
+            const count =
+              key === "all"
+                ? (remote?.counts.purchased ??
+                  reservations.filter((r) => r.purchased > 0).length)
+                : ((key === "awaiting"
+                    ? remote?.counts.awaiting
+                    : remote?.counts.inHand) ??
+                  reservations.filter(
+                    (r) =>
+                      r.purchased > 0 &&
+                      matchesArrival(r.purchased, r.inHandQuantity, key),
+                  ).length);
+            return (
+              <button
+                key={key}
+                type="button"
+                aria-pressed={arrival === key}
+                onClick={() => setArrival(key)}
+              >
+                {label} <span>{count}</span>
+              </button>
+            );
+          })}
         </div>
       )}
       <div className="buying-toolbar">
@@ -193,6 +248,80 @@ export function Buying() {
         {visible.length > 0 ? (
           <div className="buying-list">
             {visible.map((r) => {
+              const arrivalAction = r.purchased > 0 && (
+                <Action
+                  secondary
+                  onClick={async () => {
+                    const save = async (inHandQuantity: number | null) => {
+                      await mutate("buying/arrival", {
+                        id: r.id,
+                        revision: r.revision,
+                        source: r.standalonePurchase
+                          ? "purchase"
+                          : "reservation",
+                        inHandQuantity,
+                      });
+                      toast(
+                        inHandQuantity === null
+                          ? "Arrival status cleared."
+                          : "Arrival status updated.",
+                      );
+                      if (
+                        view === "purchased" &&
+                        !matchesArrival(
+                          r.purchased,
+                          inHandQuantity ?? undefined,
+                          arrival,
+                        )
+                      )
+                        focusView();
+                    };
+                    if (r.purchased === 1 && r.inHandQuantity !== 1) {
+                      await save(1);
+                      return;
+                    }
+                    open(
+                      "Update arrival",
+                      <Form
+                        submit="Save arrival status"
+                        onSubmit={async (f) => {
+                          await save(
+                            f.get("clearArrival") === "on"
+                              ? null
+                              : Number(f.get("inHandQuantity")),
+                          );
+                          close();
+                        }}
+                      >
+                        <p>
+                          <strong>{r.titleSnapshot}</strong>
+                        </p>
+                        <Field
+                          label="Quantity in hand"
+                          hint={`You have purchased ${r.purchased}. Only you can see this status.`}
+                        >
+                          <input
+                            name="inHandQuantity"
+                            type="number"
+                            min="0"
+                            max={r.purchased}
+                            defaultValue={r.inHandQuantity ?? 0}
+                            required
+                          />
+                        </Field>
+                        <label className="check">
+                          <input type="checkbox" name="clearArrival" /> Clear
+                          arrival status
+                        </label>
+                      </Form>,
+                    );
+                  }}
+                >
+                  {r.purchased === 1 && r.inHandQuantity !== 1
+                    ? "Mark as in hand"
+                    : "Update arrival"}
+                </Action>
+              );
               const needsBuying = r.purchased < r.quantity;
               const quickPurchase =
                 !!r.item && r.quantity === 1 && r.purchased === 0;
@@ -367,9 +496,11 @@ export function Buying() {
                       )}
                     </div>
                     <p>
-                      {r.item
-                        ? `For ${r.item.recipientNames.join(" & ")}`
-                        : "Access to the original gift has changed."}
+                      {r.standalonePurchase
+                        ? `For ${r.standalonePurchase.recipientNames.join(" & ")}`
+                        : r.item
+                          ? `For ${r.item.recipientNames.join(" & ")}`
+                          : "Access to the original gift has changed."}
                     </p>
                     <p className="buying-price">
                       {r.item?.priceCents != null ? (
@@ -396,6 +527,11 @@ export function Buying() {
                           ? `${r.purchased} of ${r.quantity} purchased`
                           : "Reserved"}
                     </span>
+                    {r.purchased > 0 && (
+                      <p className="muted">
+                        {arrivalLabel(r.purchased, r.inHandQuantity)}
+                      </p>
+                    )}
                     {r.exchangeId && (
                       <p className="muted">Secret gift exchange</p>
                     )}
@@ -415,88 +551,114 @@ export function Buying() {
                     />
                   </div>
                   <div className="actions">
-                    {shopFirst
-                      ? shopAction
-                      : quickPurchase
-                        ? markAction
-                        : updateAction}
+                    {r.standalonePurchase
+                      ? arrivalAction
+                      : !needsBuying || view === "purchased"
+                        ? arrivalAction
+                        : shopFirst
+                          ? shopAction
+                          : quickPurchase
+                            ? markAction
+                            : updateAction}
                     <ActionMenu name={r.titleSnapshot} label="More actions">
-                      {shopFirst && quickPurchase && markAction}
-                      {(shopFirst || quickPurchase) && updateAction}
-                      {!needsBuying && shopAction}
-                      {!r.exchangeId && r.item && !r.item.archived && (
+                      {r.standalonePurchase ? (
                         <button
                           className="text-button"
                           onClick={() =>
                             open(
-                              "Share the cost",
-                              <ShareCostForm reservation={r} />,
+                              "Edit purchase",
+                              <RecordForm record={r.standalonePurchase!} />,
                             )
                           }
                         >
-                          <Users size={16} aria-hidden="true" />
-                          {r.poolTargetCents !== undefined
-                            ? "Edit contribution goal"
-                            : "Share the cost"}
+                          {" "}
+                          <Pencil size={16} aria-hidden="true" /> Edit purchase
                         </button>
-                      )}
-                      <button
-                        className="text-button danger menu-destructive"
-                        onClick={() =>
-                          open(
-                            "Cancel reservation",
-                            <Form
-                              submit="Cancel selected quantity"
-                              onSubmit={async (f) => {
-                                const release = Number(value(f, "release"));
-                                const qty = r.quantity - release;
-                                await mutate("reservations/update", {
-                                  id: r.id,
-                                  revision: r.revision,
-                                  quantity: qty,
-                                  purchased: Math.min(r.purchased, qty),
-                                });
-                                close();
-                                if (
-                                  !qty ||
-                                  !matchesView({
-                                    quantity: qty,
-                                    purchased: Math.min(r.purchased, qty),
-                                  })
+                      ) : (
+                        <>
+                          {(!needsBuying || view === "purchased") &&
+                            updateAction}
+                          {needsBuying && view !== "purchased" && arrivalAction}
+                          {shopFirst && quickPurchase && markAction}
+                          {(shopFirst || quickPurchase) &&
+                            view !== "purchased" &&
+                            updateAction}
+                          {!needsBuying && shopAction}
+                          {!r.exchangeId && r.item && !r.item.archived && (
+                            <button
+                              className="text-button"
+                              onClick={() =>
+                                open(
+                                  "Share the cost",
+                                  <ShareCostForm reservation={r} />,
                                 )
-                                  focusView();
-                              }}
+                              }
                             >
-                              <p>
-                                <strong>{r.titleSnapshot}</strong>
-                                {r.item
-                                  ? ` · For ${r.item.recipientNames.join(" & ")}`
-                                  : ""}
-                              </p>
-                              <Field label="Quantity to cancel">
-                                <input
-                                  name="release"
-                                  type="number"
-                                  min="1"
-                                  max={r.quantity}
-                                  defaultValue={r.quantity}
-                                  required
-                                />
-                              </Field>
-                              <p>
-                                The quantity you cancel becomes available for
-                                others to reserve. This also reduces the
-                                quantity marked as purchased if it is higher
-                                than your remaining reservation. It does not
-                                cancel a shop order or refund a payment.
-                              </p>
-                            </Form>,
-                          )
-                        }
-                      >
-                        <CircleX size={16} aria-hidden="true" /> Cancel
-                        reservation
-                      </button>
+                              <Users size={16} aria-hidden="true" />
+                              {r.poolTargetCents !== undefined
+                                ? "Edit contribution goal"
+                                : "Share the cost"}
+                            </button>
+                          )}
+                          <button
+                            className="text-button danger menu-destructive"
+                            onClick={() =>
+                              open(
+                                "Cancel reservation",
+                                <Form
+                                  submit="Cancel selected quantity"
+                                  onSubmit={async (f) => {
+                                    const release = Number(value(f, "release"));
+                                    const qty = r.quantity - release;
+                                    await mutate("reservations/update", {
+                                      id: r.id,
+                                      revision: r.revision,
+                                      quantity: qty,
+                                      purchased: Math.min(r.purchased, qty),
+                                    });
+                                    close();
+                                    if (
+                                      !qty ||
+                                      !matchesView({
+                                        quantity: qty,
+                                        purchased: Math.min(r.purchased, qty),
+                                      })
+                                    )
+                                      focusView();
+                                  }}
+                                >
+                                  <p>
+                                    <strong>{r.titleSnapshot}</strong>
+                                    {r.item
+                                      ? ` · For ${r.item.recipientNames.join(" & ")}`
+                                      : ""}
+                                  </p>
+                                  <Field label="Quantity to cancel">
+                                    <input
+                                      name="release"
+                                      type="number"
+                                      min="1"
+                                      max={r.quantity}
+                                      defaultValue={r.quantity}
+                                      required
+                                    />
+                                  </Field>
+                                  <p>
+                                    The quantity you cancel becomes available
+                                    for others to reserve. This also reduces the
+                                    quantity marked as purchased if it is higher
+                                    than your remaining reservation. It does not
+                                    cancel a shop order or refund a payment.
+                                  </p>
+                                </Form>,
+                              )
+                            }
+                          >
+                            <CircleX size={16} aria-hidden="true" /> Cancel
+                            reservation
+                          </button>
+                        </>
+                      )}
                     </ActionMenu>
                   </div>
                 </div>
@@ -508,27 +670,36 @@ export function Buying() {
             title={
               view === "needs-buying"
                 ? "Nothing left to buy"
-                : "No purchases marked yet"
+                : arrival === "awaiting"
+                  ? "No gifts awaiting arrival"
+                  : arrival === "in-hand"
+                    ? "No gifts marked in hand"
+                    : "No purchases marked yet"
             }
             action={
               <button
                 className="button secondary"
                 onClick={() => {
-                  setView(
-                    view === "needs-buying" ? "purchased" : "needs-buying",
-                  );
+                  if (view === "purchased" && arrival !== "all")
+                    setArrival("all");
+                  else
+                    setView(
+                      view === "needs-buying" ? "purchased" : "needs-buying",
+                    );
                   focusView();
                 }}
               >
                 {view === "needs-buying"
                   ? "View purchased gifts"
-                  : "View gifts to buy"}
+                  : arrival !== "all"
+                    ? "View all purchased gifts"
+                    : "View gifts to buy"}
               </button>
             }
           >
             {view === "needs-buying"
               ? "All your reserved quantities are marked purchased. You can still review or change them in Purchased."
-              : "Gifts appear here once all reserved quantities are marked purchased. Partially purchased gifts stay in Needs buying."}
+              : "Purchased quantities appear here, including gifts that still need more buying. Use All purchased to review gifts whose arrival is not recorded."}
           </Empty>
         ) : (
           <Empty
