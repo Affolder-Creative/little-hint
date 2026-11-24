@@ -1412,6 +1412,30 @@ for (const layout of ["compact", "large-photos"] as const) {
         );
       expect(overlaps).toBe(false);
       if (layout === "compact" && width <= 650) {
+        const targets = await page
+          .locator(".gift-context-card .info-help-trigger")
+          .evaluateAll((buttons) =>
+            buttons.map((button) => {
+              const r = button.getBoundingClientRect();
+              const source = button
+                .closest(".gift-context-line")!
+                .querySelector(".gift-source-list")!
+                .getBoundingClientRect();
+              return {
+                width: r.width,
+                height: r.height,
+                gap: r.left - source.right,
+              };
+            }),
+          );
+        for (const target of targets) {
+          expect(target.width).toBeGreaterThanOrEqual(44);
+          expect(target.height).toBeGreaterThanOrEqual(44);
+          expect(target.gap).toBeGreaterThanOrEqual(0);
+          expect(target.gap).toBeLessThanOrEqual(8);
+        }
+      }
+      if (layout === "compact" && width <= 650) {
         const titleOverlap = await page
           .locator(".gift-card")
           .evaluateAll((cards) =>

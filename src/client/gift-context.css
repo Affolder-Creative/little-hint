@@ -251,38 +251,59 @@
     margin-bottom: 8px;
   }
   .gift-grid-compact .gift-card .gift-title {
-    margin-bottom: 4px;
-    padding-right: 48px;
+    margin-bottom: 0;
+    padding-right: 40px;
   }
   .gift-grid-compact .gift-context {
-    margin-bottom: 4px;
+    width: 100%;
+    margin-bottom: 0;
   }
   .gift-grid-compact .gift-context-line:has(> .info-help) {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 44px;
-    column-gap: 4px;
-    row-gap: 0;
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 0 6px;
     align-items: center;
   }
+  .gift-grid-compact .gift-context-line:has(> .info-help) > .gift-source-list {
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: calc(100% - 50px);
+  }
   .gift-grid-compact .gift-context-line > .info-help {
-    height: 24px;
+    width: 44px;
+    height: 44px;
     align-items: center;
   }
   .gift-grid-compact .gift-context-line .info-help-trigger {
     margin-block: 0;
+    justify-content: flex-start;
+    padding-left: 8px;
   }
-  .gift-grid-compact .gift-card-content > .gift-meta {
-    padding-right: 48px;
-  }
-}
-@media (max-width: 650px) {
-  .gift-grid-compact .gift-context {
-    width: 100%;
-  }
-}
-
-@media (max-width: 650px) {
+  .gift-grid-compact .gift-card-content > .gift-meta,
   .gift-grid-compact .gift-spending-context {
-    padding-right: 48px;
+    padding-right: 0;
+  }
+}
+@media (min-width: 651px) {
+  .gift-grid-compact .gift-recipient {
+    margin-bottom: 8px;
+  }
+}
+/* Fine-pointer controls keep a compact visible row; touch controls retain 44px. */
+@media (min-width: 651px) and (hover: hover) and (pointer: fine) {
+  .gift-grid-compact .gift-card .gift-title {
+    margin-bottom: 4px;
+  }
+  .gift-grid-compact .gift-context {
+    margin-bottom: 6px;
+  }
+  .gift-grid-compact .gift-context .info-help-trigger {
+    min-height: 28px;
+    margin-block: 0;
+  }
+}
+@media (min-width: 651px) {
+  .gift-context-card .gift-context-line {
+    column-gap: 12px;
   }
 }
