@@ -2,7 +2,7 @@
 version: 1
 slug: "src-client-app-tsx"
 primary_target: "src/client/App.tsx"
-related_targets: ["src/client/Browser.tsx", "src/client/Buying.tsx"]
+related_targets: ["src/client/Browser.tsx", "src/client/Buying.tsx", "src/client/components.tsx", "src/client/GiftContext.tsx", "src/client/gift-context.css"]
 ---
 
 # Home and gifting collections
@@ -16,3 +16,8 @@ related_targets: ["src/client/Browser.tsx", "src/client/Buying.tsx"]
 - People filters retain selected tags across touch activation, dismissal and history navigation. Input and portaled options form one interaction boundary.
 
 - Buying combines purchased quantities and standalone Spending purchases once. Purchased arrival filters and in-hand counts remain buyer-private, using unboxed text filters and supporting metadata. Partial purchases remain in Needs buying and Purchased.
+
+- Saved-gift grids use the app-wide Compact cards default or Large photos alternative. Compact cards have a thin border, 12px corners, no shadow, and square photos left of the details. Two columns require at least 880px collection content width; narrower collections use one. Card padding/gaps step from 16px to 12px at 650px. Large photos retains the unboxed image-above-details grid. Compact missing-photo frames show an icon only with an accessible name; Large photos retains the visible fallback label. Compact card rows and height stay automatic to avoid clipping enlarged text.
+- Cards and gift details share GiftContext: On with a source wish-list link, or Not on a wish list for ideas. A creator-only Your spending list caption is separate from the source and never implies publication or sharing.
+- Surprise uses eye-off, recipient-visible states use eye, and Only me uses lock. Card labels hide visually on phones while the help trigger retains accessible text and a 44px target. Compact cards retain a short privacy sentence; Large photos omits that sentence and keeps help. Drafts show their unpublished state instead.
+- Known card prices and ranges use weight 600, 18px on desktop and 16px at 650px and below. Compact titles wrap fully; Large photos retains its phone clamp. Source links and privacy help remain independently operable beside the stretched detail link.

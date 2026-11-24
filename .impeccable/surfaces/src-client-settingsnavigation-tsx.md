@@ -13,6 +13,7 @@ related_targets:
     "src/client/AdminRoles.tsx",
     "src/client/AdminGroupDetail.tsx",
     "src/client/AdminAppointment.tsx",
+    "src/client/AdminPreferences.tsx",
   ]
 ---
 
@@ -61,3 +62,5 @@ Administration starts with App administrators and All family groups, followed by
 All family groups is a compact searchable directory with owner, member and pending-request summaries and one Manage action. A focused group view hides other administration panels and offers Members, Invitations, Households and Settings. The adminGroup and adminTab URL parameters support direct links and history independently of ordinary family-group selection. Keep overview and visited group drafts mounted, including during failed refreshes; hide management controls until retry succeeds. Back restores search, page, focus and scroll. Use individual member-role actions, distinct app-admin labels, protected ownership, confirmation for removals, and focused household forms. Retain existing tokens, wrapping 44px navigation, light/dark contrast and native field styling.
 
 About places the optional "A little hint from me..." coffee invitation after the signature and before attribution. The approved first-person copy ends with ツ. Buy me a coffee opens Kyle's Buy Me a Coffee page in a new tab using the shared secondary link button and a decorative pink outline heart. Keep the section flat, divided, and aligned with the story.
+
+Administration includes an independently saved Gift card layout preference with a native select, Compact cards and Large photos options, and Save card layout. Compact cards is the default for all saved-gift browsing. Explain that both layouts retain the same gift details and privacy information. The saved GIFT_CARD_LAYOUT preference has no deployment override. Reuse the existing preference-group spacing, save feedback and Discard changes action.

@@ -772,6 +772,7 @@ export interface GiftView extends Omit<
   }>;
 }
 export interface World {
+  giftCardLayout?: "compact" | "large-photos";
   coManagement?: import("./co-management").CoManagementView;
   paged?: boolean;
   hasActiveItems?: boolean;

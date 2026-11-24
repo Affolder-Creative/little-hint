@@ -121,6 +121,29 @@ export function AdminPreferences({ settings }: { settings: Setting[] }) {
   return (
     <>
       <PreferenceGroup
+        settings={settings.filter((s) => s.key === "GIFT_CARD_LAYOUT")}
+        title="Gift card layout"
+        submit="Save card layout"
+      >
+        {(value, change) => (
+          <>
+            <Field label="Gift card layout">
+              <select
+                value={value("GIFT_CARD_LAYOUT")}
+                onChange={(e) => change("GIFT_CARD_LAYOUT", e.target.value)}
+              >
+                <option value="compact">Compact cards</option>
+                <option value="large-photos">Large photos</option>
+              </select>
+            </Field>
+            <p>
+              Choose how saved wishes and gift ideas appear for everyone. Both
+              layouts show the same gift details and privacy information.
+            </p>
+          </>
+        )}
+      </PreferenceGroup>
+      <PreferenceGroup
         settings={settings.filter((s) => s.key === "FAMILY_GROUP_INVITATIONS")}
         title="Family-group invitations"
         submit="Save invitation setting"

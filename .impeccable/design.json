@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-24T18:59:06.104622+00:00",
+  "generatedAt": "2026-11-24T20:22:31Z",
   "title": "Design System: Little Hint",
   "extensions": {
     "peopleDirectory": {
@@ -938,6 +938,14 @@
       "event-description": {
         "displayName": "Event description",
         "purpose": "Saved description on event pages and event wish-list headers; 65ch maximum measure."
+      },
+      "gift-price": {
+        "displayName": "Card price",
+        "purpose": "Known card prices and ranges in .gift-card .item-price > .gift-price-amount; tabular figures, weight 600. Estimated set captions retain supporting size; their amount uses weight 600."
+      },
+      "gift-price-phone": {
+        "displayName": "Phone card price",
+        "purpose": "Known card prices and ranges at max-width 650px. Detail amounts retain their existing size and use weight 600."
       }
     },
     "shadows": [
@@ -1006,6 +1014,12 @@
       {
         "name": "narrow-profile-editor",
         "value": "360px"
+      },
+      {
+        "name": "compact-gift-columns",
+        "value": "880px",
+        "query": "container",
+        "purpose": "Minimum collection content width for two compact gift-card columns."
       }
     ],
     "backdrop": {
@@ -1079,7 +1093,9 @@
       "src/client/shopping-offers.css",
       "src/client/PriceInput.tsx",
       "src/client/price-input.css",
-      "src/client/AdminGroupDetail.tsx"
+      "src/client/AdminGroupDetail.tsx",
+      "src/client/GiftContext.tsx",
+      "src/client/gift-context.css"
     ],
     "tonalRampNote": "Synthesized OKLCH previews at constant hue/chroma; these ramps are panel metadata, not additional application tokens.",
     "layout": {
@@ -1095,13 +1111,15 @@
       "paragraphRhythm": "Metadata uses 4px; headings and related explanations 8px; ordinary prose 12px; controls 16px; sections 32px, reduced to 24px at 650px. Text stacks own spacing and reset child margins. Form groups use 16px; adjacent explanations use 8px. Intentional hero and card compositions retain their own spacing.",
       "profileEditor": "Person pages and Settings open one Edit profile dialog with Profile and Gift preferences tabs. Both drafts stay mounted. Saves are independent and keep the dialog open. Done and Close protect dirty forms in either tab; successful saves clear their confirmation state. Person pages retain the underlined Gift preferences shortcut. Settings exposes Edit profile and Gift preferences in the labeled Actions menu beside each identity. Interest choices use one column at widths up to 360px. Each tab places Save first and Done second in the same left-aligned action row.",
       "giftDetails": "Recipient, title, status, price and quantity use a 12px stack. The phone image gap is 16px, and the back-link gap is 8px. Reservation and detail-section headings match at 22px desktop and 21px phone; explanations use 14px/1.5 with a 65ch maximum. Buying for belongs with reservation controls before quantity, bounded to 32rem, with an exchange-versus-separate-gift explanation. Archived and recipient views retain context access beside gift actions.",
-      "administration": "Paper panels use 12px corners, 20px padding, 16px phone padding, and 24px separation. Panel headings use 20px and internal headings 17px. Group creation, automatic product photos, device photo caching and prefetching are editable, with optional ENV locks. Preference groups have a divider with 24px on either side. Service and job rows have top dividers, 16px padding, and no trailing rule or bottom padding on the last row. Service status aligns at the top and stacks below descriptions at 360px. Photo explanations use 8px gaps. Monthly usage uses flat groups with 16px top and 8px bottom padding, 44px disclosure targets, 13px labels, and 18px counts. Final paragraphs do not add trailing space. App settings use independent family-group and product-photo saves with inline status and Discard changes. Photo rows have 16px gaps, 8px label/help spacing, and preloading indented 24px beneath caching. Scope appears once above the groups. Unchanged saves are disabled.",
+      "administration": "Paper panels use 12px corners, 20px padding, 16px phone padding, and 24px separation. Panel headings use 20px and internal headings 17px. Group creation, automatic product photos, device photo caching and prefetching are editable, with optional ENV locks. Preference groups have a divider with 24px on either side. Service and job rows have top dividers, 16px padding, and no trailing rule or bottom padding on the last row. Service status aligns at the top and stacks below descriptions at 360px. Photo explanations use 8px gaps. Monthly usage uses flat groups with 16px top and 8px bottom padding, 44px disclosure targets, 13px labels, and 18px counts. Final paragraphs do not add trailing space. App settings use independent family-group and product-photo saves with inline status and Discard changes. Photo rows have 16px gaps, 8px label/help spacing, and preloading indented 24px beneath caching. Scope appears once above the groups. Unchanged saves are disabled. Gift card layout is a separate saved preference with Compact cards as default and Large photos as alternative, a Save card layout action and no ENV override.",
       "groupActions": "Follow sits outside group navigation with a 32px horizontal gap and wraps independently on narrow screens.",
       "invitationSharing": "Post-create confirmation and pending invitation rows use outlined sign-in-link actions. Native sharing falls back to copying; failures expose a selectable read-only link. The invitation-share container uses a 12px grid gap with wrapping actions.",
       "productImages": "Preserve photo dimensions and object-fit contain. Load visible thumbnails promptly. Retain the thumbnail until the detail photo decodes. Administration offers separate default-on cache and prefetch controls with environment locks. Preloading appears unchecked and disabled while caching is off, retaining its saved preference for restoration when caching returns. Photo settings save atomically. Real-photo frames use theme paper and 10px padding. Warm tag-derived variations belong only to missing-photo placeholders.",
       "profileAndInvitationRows": "Profile rows keep fixed avatar, flexible wrapping name/status, and labeled Actions menu in three centered columns at every width. Menu options use pencil, gift and mail icons; takeover is owner-only. Invitation rows retain 20px vertical padding and stack their 12px-gapped actions below metadata at 650px.",
       "nameSetup": "Focused 440px maximum content width, 20px side insets, 48px top margin, approved logo capped at 240px, given-name and family-name autocomplete, primary continue action, theme tokens.",
-      "updateBanner": "Center the complete icon/message/update/dismiss content group with automatic inline margins. Message wraps; actions retain their targets. Keep the banner above measured bottom navigation."
+      "updateBanner": "Center the complete icon/message/update/dismiss content group with automatic inline margins. Message wraps; actions retain their targets. Keep the banner above measured bottom navigation.",
+      "giftCards": "Saved-gift collections default to compact bordered cards with square photos left of details. The collection is an inline-size container: two columns at min-width 880px, one below. Grid gap 16px; card padding and internal gap 16px, 12px at max-width 650px. Image column minmax(80px,28%), then minmax(64px,25%) on phones. Large photos is the app-wide alternative with unboxed images above details, three columns then two at 650px. Neither variant uses shadows. Compact placeholders show the icon only with an accessible photo name; Large photos retains the visible label. Compact card rows and height are auto to prevent inherited-track clipping.",
+      "giftContext": "Cards and details share source and privacy context. Wishes say On with a source-list link; ideas say Not on a wish list. Separate 12px Your spending list captions are creator-only when spending is enabled and never indicate publication. Privacy uses 13px muted text, 15px outline icons and a 6px label gap: eye-off for Surprise, eye for recipient-visible states or Gift summary available, lock for Only me. Cards visually hide labels at max-width 650px while retaining accessible text and 44px help triggers. Compact cards show a short privacy sentence, Large photos hides it, details use the full explanation. Drafts replace privacy help with Draft · Not yet published."
     },
     "management": {
       "sorting": "Search stays beside Sort & filter, wrapping on the narrowest screens. Mixed-recipient gift views offer a People checkbox disclosure; person pages omit it. Selections match any recipient and combine with search, tag and availability. Empty selection means everyone. People counts as one active filter, and selected names remain summarized. Per-history-entry filter state restores through reload and browser navigation. Clear filters preserves search and saved sorting.",
@@ -1163,7 +1181,8 @@
       "validation": "Domain-backed Chromium/WebKit workflows; 320, 390, 768 and 1280px light/dark captures; one polish pass.",
       "amountPreview": "Joint rows name the person’s share, percentage and dollar amount. Idea and plan dollars are labeled estimated; paid amounts are not. Exact cents update with the total. Event names derive from selected wish lists; manual event selection appears only without list assignments.",
       "drafts": "Opening and closing an untouched editor remains quiet. Allocation edits participate in the existing snapshot-based unsaved-change protection.",
-      "historyEvents": "Saved recipient-allocation event names appear once in recipient order, followed by the personal occasion on the existing muted metadata line. Source-list records use the same treatment. Text wraps naturally on phones; missing context leaves no empty line."
+      "historyEvents": "Saved recipient-allocation event names appear once in recipient order, followed by the personal occasion on the existing muted metadata line. Source-list records use the same treatment. Text wraps naturally on phones; missing context leaves no empty line.",
+      "privacy": "Gift-idea spending defaults and recipient allocations are private to the creator and excluded from other viewers, including administrators. Shared GiftContext labels spending separately from actual wish-list membership."
     },
     "profileManagement": {
       "sourceFiles": [
@@ -1182,7 +1201,10 @@
       "actions": "Two fixed rows without an added gap: outlined Make cover with 4px by 8px padding and a star, or checked green Cover photo status in a 32px line. Neutral Replace and destructive Remove align toward the top of their 44px targets."
     },
     "sharedCost": {
-      "fields": ["Total gift cost in USD", "Your contribution in USD"],
+      "fields": [
+        "Total gift cost in USD",
+        "Your contribution in USD"
+      ],
       "summary": [
         "Goal from others",
         "Already pledged",
@@ -1238,7 +1260,7 @@
       "cardActions": "Additional edit menus keep their existing corner space. Missing-photo icons may shrink vertically at narrow widths so enlarged placeholder text fits without clipping."
     },
     "shoppingOffers": {
-      "layout": "Flat rows with 16px spacing and quiet dividers; shop details left, tabular amount right; final row without divider. 22px section heading and 13px verification metadata.",
+      "layout": "Flat divided rows with 16px column gaps, 4px row gaps and 12px padding. Negative 12px inline margins extend hover/focus outward without shifting text. Shop details left, tabular amount right; final row has no divider and 4px bottom padding. 22px section heading and 13px verification metadata.",
       "groups": "Product rows use existing outlined actions, stacked below details under 400px. Group cards show count and an explicitly estimated total or missing-price message.",
       "editor": "Existing fields, paper surfaces, fixed footer and 44px wrapping actions. Shop editor uses 12px gaps; product sections use 16px gaps with no added outer margins. One remaining product omits set headings, numbered legend and product reorder/remove controls while preserving all fields, product identity and shop links. Add another product stays available.",
       "pricing": "Lowest checked caption only beside a matching fresh verified aggregate amount, with manual pause respected. Omit unchecked-price metadata when neither the product nor the shop has a saved price."
@@ -1274,7 +1296,7 @@
     },
     "discussionAudienceHelp": "Ordinary surprise notes introduce authorized reader names with These people can read your note: (This person for one reader) and end with Recipients can’t see it. Other audience explanations remain distinct.",
     "shoppingAndPriceEntry": {
-      "shopRows": "Full-width external links with 600-weight accent names, external-link icons, right-aligned tabular prices, full-width supporting metadata, 12px top padding, 4px gaps and soft hover. Final row bottom padding is 4px.",
+      "shopRows": "Full-width external links with 600-weight accent names, external-link icons, right-aligned tabular prices, full-width supporting metadata, 12px padding and -12px inline margins so hover/focus extends outward while text remains aligned, 4px gaps and soft hover. Final row bottom padding is 4px.",
       "priceSource": "One section outside More details: automatic amount and source shop, explicit custom override, normal manual input without priced shops.",
       "buyingSort": "14px native select beside count, 44px target, six account-persisted sorts.",
       "archivedNotice": "Inline action inherits line-height with positioned 44px hit area.",
@@ -1344,9 +1366,17 @@
       "name": "Gift card",
       "kind": "card",
       "refersTo": "gift-card",
-      "description": "Unboxed gift details with explicit Wish/Gift idea and recipient text. Real photos use neutral paper frames; warm variations are reserved for placeholders. Price/privacy/availability metadata anchors the card bottom. At 650px and below the .item-price wrapper takes the full row above badges. Media stretches to its shared track when enlarged placeholder content needs extra height. All image frames retain matching proportions, including missing photos, with proportional 36–88px fallback icons. The recipient row carries no trailing arrow glyph; the whole card is the link. Editor overflow menus float as 44px round paper buttons inset 8px over the image.",
-      "html": "<a class=\"ds-gift-card\" href=\"#gift\"><div class=\"ds-photo\"><svg aria-hidden=\"true\" width=\"32\" height=\"32\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.1\"><path d=\"M3 8h18v4H3zM5 12v9h14v-9M12 8v13M12 8H7.5A2.5 2.5 0 1 1 10 5.5L12 8Zm0 0h4.5A2.5 2.5 0 1 0 14 5.5L12 8Z\"/></svg><span>No photo yet</span></div><div class=\"ds-card-copy\"><div class=\"ds-recipient\"><strong>Wish</strong> · For Alex</div><h2 class=\"ds-gift-title\">Gift title</h2><span class=\"ds-priority\">Most wanted</span><div class=\"ds-meta\"><span>$25.00</span><span class=\"ds-available\">Available</span></div></div></a>",
-      "css": ".ds-gift-card{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;display:block;max-width:300px;text-decoration:none;color:var(--text, #2b201d)}.ds-photo{aspect-ratio:1.13;min-height:80px;padding:12px;flex-direction:column;gap:8px;border-radius:var(--radius,14px);background:#efe7dc;color:#8b7164;display:flex;position:relative;align-items:center;justify-content:center;overflow:hidden}.ds-photo>svg{width:28%;height:auto;min-width:36px;max-width:88px}.ds-photo span{position:static;font-size:11px;color:var(--muted,#746057)}.ds-card-copy{padding:16px 2px 0;display:flex;flex-direction:column;align-items:flex-start}.ds-recipient{font-size:11px;color:var(--muted, #746057);margin-bottom:11px}.ds-gift-card .ds-gift-title{font-size:16px;line-height:1.4;font-weight:550;margin:0 0 9px}.ds-gift-card:hover .ds-gift-title{text-decoration:underline;text-underline-offset:4px}.ds-meta{width:100%;margin-top:auto;padding-top:4px;display:flex;justify-content:flex-start;align-items:center;flex-wrap:wrap;gap:8px 12px;font-size:14px}.ds-available{font-size:11px;line-height:1.4;border-radius:4px;padding:4px 6px;background:#e9eddf;color:#486348}.ds-gift-card:focus-visible{outline:3px solid var(--accent, #aa4d37);outline-offset:3px;}.ds-priority{display:inline-flex;width:fit-content;margin:6px 0;padding:3px 6px;border-radius:4px;font-size:12px;color:var(--text,#2b201d);border:1px solid transparent;background:var(--soft,#f4e4da);font-weight:600}@media(max-width:650px){.ds-photo{aspect-ratio:1}.ds-gift-card .ds-gift-title{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}.ds-meta>span:first-child{flex-basis:100%}}"
+      "description": "Default Compact cards layout. Thin border, 12px corners and no shadow; square image left of recipient, title, source/privacy context, priority, price and availability. Two columns require at least 880px of collection content width. Card padding/gaps are 16px, 12px on phones. Titles wrap fully, and known prices use 600 weight at 18px desktop or 16px phone. Title, source and privacy help have separate targets. Missing-photo cards show the icon without a visual label and retain an accessible photo name; automatic grid rows and height avoid inherited-track clipping.",
+      "html": "<article class=\"ds-compact-card\"><div class=\"ds-compact-photo\" role=\"img\" aria-label=\"Gift title, no photo yet\"><svg aria-hidden=\"true\" width=\"32\" height=\"32\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.1\"><path d=\"M3 8h18v4H3zM5 12v9h14v-9M12 8v13M12 8H7.5A2.5 2.5 0 1 1 10 5.5L12 8Zm0 0h4.5A2.5 2.5 0 1 0 14 5.5L12 8Z\"/></svg></div><div class=\"ds-compact-copy\"><div class=\"ds-compact-recipient\"><strong>Wish</strong> for Alex</div><h2><a href=\"#gift\">Gift title</a></h2><div class=\"ds-compact-context\"><div>On <a href=\"#list\">Birthday wishes</a> <button popovertarget=\"ds-compact-privacy\" aria-label=\"Gift privacy: Surprise for Gift title\"><svg width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><path d=\"m3 3 18 18M10.6 10.6a2 2 0 0 0 2.8 2.8M9.9 4.2A10.9 10.9 0 0 1 12 4c7 0 10 8 10 8a16.8 16.8 0 0 1-3 4M6.5 6.5A19.7 19.7 0 0 0 2 12s3 8 10 8a10.9 10.9 0 0 0 5.5-1.5\"/></svg><span>Surprise</span></button></div><p>The wish is visible. Buying plans stay hidden.</p></div><div id=\"ds-compact-privacy\" popover>Recipients can see this wish. Reservations, purchases, and gift discussion stay hidden, except for any scheduled gift summary.</div><span class=\"ds-compact-priority\">Most wanted</span><div class=\"ds-compact-meta\"><span>$25.00</span><span class=\"ds-compact-available\">Available</span></div></div></article>",
+      "css": ".ds-compact-card{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;display:grid;grid-template-rows:auto;height:auto;grid-template-columns:minmax(80px,28%) minmax(0,1fr);gap:16px;padding:16px;border:1px solid var(--border,#e6d9cf);border-radius:12px;color:var(--text,#2b201d);max-width:550px}.ds-compact-photo{width:100%;min-width:0;min-height:0;aspect-ratio:1;align-self:start;padding:8px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;border-radius:14px;background:#efe7dc;color:#8b7164}.ds-compact-photo svg{width:28%;height:auto;min-width:36px;max-width:88px}.ds-compact-photo span{font-size:11px;color:var(--muted,#746057)}.ds-compact-copy{min-width:0;display:flex;flex-direction:column;align-items:flex-start}.ds-compact-recipient{font-size:11px;color:var(--muted,#746057);margin-bottom:8px}.ds-compact-card h2{font-size:16px;line-height:1.4;font-weight:550;margin:0 0 4px;padding-right:40px}.ds-compact-card a{color:inherit}.ds-compact-card h2 a{text-decoration:none}.ds-compact-card h2 a:hover{text-decoration:underline}.ds-compact-context{font-size:13px;color:var(--muted,#746057);margin-bottom:12px}.ds-compact-context>div{display:flex;align-items:center;flex-wrap:wrap;gap:0 8px}.ds-compact-context button{display:inline-flex;align-items:center;gap:6px;border:0;background:transparent;color:inherit;min-height:44px;padding:0;cursor:pointer}.ds-compact-context button:hover{background:var(--soft,#f4e4da)}.ds-compact-context p{margin:4px 0 0}.ds-compact-card [popover]{max-width:20rem;padding:12px;border:1px solid var(--border,#e6d9cf);border-radius:12px;background:var(--paper,#fffdf9);color:var(--text,#2b201d);font-size:14px;line-height:1.5}.ds-compact-priority{font-size:12px;font-weight:600;background:var(--soft,#f4e4da);padding:3px 6px;border-radius:4px;margin:6px 0}.ds-compact-meta{display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px;width:100%;margin-top:auto;font-variant-numeric:tabular-nums}.ds-compact-meta>span:first-child{font-size:18px;font-weight:600}.ds-compact-available{font-size:11px;line-height:1.4;background:var(--available,#e9eddf);color:var(--green,#486348);border-radius:4px;padding:4px 6px}.ds-compact-card a:focus-visible,.ds-compact-card button:focus-visible{outline:3px solid var(--accent,#aa4d37);outline-offset:3px}@media(max-width:650px){.ds-compact-card{padding:12px;gap:12px;grid-template-columns:minmax(64px,25%) minmax(0,1fr)}.ds-compact-card h2{font-size:14px}.ds-compact-context button{min-width:44px}.ds-compact-context button span{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}.ds-compact-meta{align-items:flex-start}.ds-compact-meta>span:first-child{font-size:16px;flex-basis:100%}}"
+    },
+    {
+      "name": "Gift card with large photo",
+      "kind": "card",
+      "refersTo": "gift-card-large-photos",
+      "description": "App-wide Large photos alternative. Unboxed contained image above recipient and title, followed by shared source/privacy help, optional priority, price and availability. Three columns become two on phones; shared tracks align mixed photos. Supporting privacy sentences are hidden in this variant. Card labels become icon-only at 650px while retaining accessible text.",
+      "html": "<article class=\"ds-gift-card\"><div class=\"ds-photo\"><svg aria-hidden=\"true\" width=\"32\" height=\"32\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.1\"><path d=\"M3 8h18v4H3zM5 12v9h14v-9M12 8v13M12 8H7.5A2.5 2.5 0 1 1 10 5.5L12 8Zm0 0h4.5A2.5 2.5 0 1 0 14 5.5L12 8Z\"/></svg><span>No photo yet</span></div><div class=\"ds-card-copy\"><div class=\"ds-recipient\"><strong>Wish</strong> · For Alex</div><h2 class=\"ds-gift-title\"><a href=\"#gift\">Gift title</a></h2><div class=\"ds-large-context\">On <a href=\"#list\">Birthday wishes</a> <button aria-label=\"Gift privacy: Surprise for Gift title\" popovertarget=\"ds-large-privacy\"><svg width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><path d=\"m3 3 18 18M10.6 10.6a2 2 0 0 0 2.8 2.8M9.9 4.2A10.9 10.9 0 0 1 12 4c7 0 10 8 10 8a16.8 16.8 0 0 1-3 4M6.5 6.5A19.7 19.7 0 0 0 2 12s3 8 10 8a10.9 10.9 0 0 0 5.5-1.5\"/></svg><span>Surprise</span></button></div><div id=\"ds-large-privacy\" popover>Recipients can see this wish. Reservations, purchases, and gift discussion stay hidden, except for any scheduled gift summary.</div><span class=\"ds-priority\">Most wanted</span><div class=\"ds-meta\"><span>$25.00</span><span class=\"ds-available\">Available</span></div></div></article>",
+      "css": ".ds-gift-card{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;display:block;max-width:300px;text-decoration:none;color:var(--text, #2b201d)}.ds-photo{aspect-ratio:1.13;min-height:80px;padding:12px;flex-direction:column;gap:8px;border-radius:var(--radius,14px);background:#efe7dc;color:#8b7164;display:flex;position:relative;align-items:center;justify-content:center;overflow:hidden}.ds-photo>svg{width:28%;height:auto;min-width:36px;max-width:88px}.ds-photo span{position:static;font-size:11px;color:var(--muted,#746057)}.ds-card-copy{padding:16px 2px 0;display:flex;flex-direction:column;align-items:flex-start}.ds-recipient{font-size:11px;color:var(--muted, #746057);margin-bottom:11px}.ds-gift-card .ds-gift-title{font-size:16px;line-height:1.4;font-weight:550;margin:0 0 9px}.ds-gift-card:hover .ds-gift-title{text-decoration:underline;text-underline-offset:4px}.ds-meta{width:100%;margin-top:auto;padding-top:4px;display:flex;justify-content:flex-start;align-items:center;flex-wrap:wrap;gap:8px 12px;font-size:14px}.ds-available{font-size:11px;line-height:1.4;border-radius:4px;padding:4px 6px;background:#e9eddf;color:#486348}.ds-gift-card:focus-visible{outline:3px solid var(--accent, #aa4d37);outline-offset:3px;}.ds-priority{display:inline-flex;width:fit-content;margin:6px 0;padding:3px 6px;border-radius:4px;font-size:12px;color:var(--text,#2b201d);border:1px solid transparent;background:var(--soft,#f4e4da);font-weight:600}@media(max-width:650px){.ds-photo{aspect-ratio:1}.ds-gift-card .ds-gift-title{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}.ds-meta>span:first-child{flex-basis:100%}}.ds-gift-title a{color:inherit;text-decoration:none}.ds-large-context{font-size:13px;color:var(--muted,#746057);display:flex;align-items:center;flex-wrap:wrap;gap:0 8px;margin-bottom:12px}.ds-large-context a{color:inherit}.ds-large-context button{display:inline-flex;align-items:center;gap:6px;min-height:44px;border:0;background:transparent;color:inherit;padding:0;cursor:pointer}.ds-large-context button:hover{background:var(--soft,#f4e4da)}.ds-large-context button:focus-visible,.ds-large-context a:focus-visible,.ds-gift-title a:focus-visible{outline:3px solid var(--accent,#aa4d37);outline-offset:3px}.ds-meta>span:first-child{font-size:18px;font-weight:600;font-variant-numeric:tabular-nums}@media(max-width:650px){.ds-large-context button{min-width:44px}.ds-large-context button span{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}.ds-meta>span:first-child{font-size:16px}}.ds-gift-card [popover]{max-width:20rem;padding:12px;border:1px solid var(--border,#e6d9cf);border-radius:12px;background:var(--paper,#fffdf9);color:var(--text,#2b201d);font-size:14px;line-height:1.5}"
     },
     {
       "name": "Group event entry",
@@ -1438,7 +1468,7 @@
       "name": "Contextual help",
       "kind": "custom",
       "refersTo": "info-help",
-      "description": "Compact explanatory popup above its inline info trigger; same warm paper surface and border in both themes. Buying combines the Only me badge and info icon in one 44px trigger with a 6px gap; other help controls remain icon-only.",
+      "description": "Compact explanatory popup above its inline info trigger; same warm paper surface and border in both themes. Buying combines the Only me badge and info icon in one 44px trigger with a 6px gap; gift context uses its privacy icon with a label on wider screens and an accessible icon-only trigger on phone cards. Other help controls retain their existing triggers.",
       "html": "<div class=\"ds-help-sample\"><div class=\"ds-help-panel\"><span>Include tax and shipping. Leave blank to add later.</span><button aria-label=\"Close help\"><svg width=\"17\" height=\"17\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><path d=\"m18 6-12 12M6 6l12 12\"/></svg></button></div><div class=\"ds-help-label\">Amount paid in USD, optional <button aria-label=\"About amount paid\"><svg width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"M12 16v-4M12 8h.01\"/></svg></button></div></div>",
       "css": ".ds-help-sample{font:13px/1.5 -apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;color:var(--text)}.ds-help-panel{position:relative;max-width:20rem;padding:12px 40px 12px 12px;border:1px solid var(--control-border);border-radius:12px;background:var(--paper);color:var(--muted);margin-bottom:8px}.ds-help-label{display:flex;align-items:center;gap:2px;font-weight:550}.ds-help-sample button{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border:0;background:transparent;color:var(--muted);cursor:pointer}.ds-help-panel button{position:absolute;right:0;top:0;font-size:20px}.ds-help-label svg{padding:5px;box-sizing:content-box;border-radius:6px}.ds-help-label button:hover svg,.ds-help-panel button:hover{background:var(--soft);color:var(--text)}.ds-help-sample button:focus-visible{outline:3px solid var(--accent);outline-offset:3px}"
     },
@@ -1579,9 +1609,9 @@
     {
       "name": "Shopping offer",
       "kind": "custom",
-      "description": "One shop destination with its price and supporting verification text.",
+      "description": "A full-row shop destination with tabular price and verification text. Padding and negative inline margins extend hover/focus 12px outward while text stays aligned with the section heading.",
       "html": "<a class=\"ds-shop\" href=\"#\"><span class=\"ds-shop-name\">Example shop <svg width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><path d=\"M15 3h6v6M10 14 21 3M21 14v7H3V3h7\"/></svg></span><span>$109</span><small>Primary link</small></a>",
-      "css": ".ds-shop{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 16px;min-height:44px;padding:12px 0;color:var(--text);border-radius:8px;text-decoration:none;font-variant-numeric:tabular-nums}.ds-shop-name{color:var(--accent);font-weight:600}.ds-shop small{grid-column:1/-1;color:var(--muted);font-size:13px}.ds-shop:hover{background:var(--soft)}.ds-shop:focus-visible{outline:3px solid var(--accent);outline-offset:3px}"
+      "css": ".ds-shop{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 16px;min-height:44px;padding:12px;margin-inline:-12px;color:var(--text);border-radius:8px;text-decoration:none;font-variant-numeric:tabular-nums}.ds-shop-name{color:var(--accent);font-weight:600}.ds-shop small{grid-column:1/-1;color:var(--muted);font-size:13px}.ds-shop:hover{background:var(--soft)}.ds-shop:focus-visible{outline:3px solid var(--accent);outline-offset:3px}"
     },
     {
       "name": "Gift arrival text filters",
@@ -1597,7 +1627,7 @@
     "keyCharacteristics": [
       "Approved heart-tag artwork and outlined lettering.",
       "Ivory and umber neutrals with sienna actions and blush selection fills.",
-      "Flat gift cards with recipient details directly below the image.",
+      "Compact bordered gift cards with a left-hand image, plus an optional large-photo layout.",
       "Desktop sidebar and mobile bottom navigation."
     ],
     "rules": [
@@ -1620,7 +1650,7 @@
     "dos": [
       "Do use the approved horizontal or tagline artwork and its dark variant where the component supports it.",
       "Do keep recipient, gift title, price, and visible availability together.",
-      "Do contain product images and show the labeled placeholder when an image is missing or fails.",
+      "Do contain product images and retain accessible fallback names; compact cards show a gift icon, while Large photos retains the visible fallback label.",
       "Do keep active availability and other filters visible in the results summary when the filter dialog is closed.",
       "Do retain visible keyboard focus, named icon controls, reduced-motion behavior, and mobile safe-area padding."
     ],

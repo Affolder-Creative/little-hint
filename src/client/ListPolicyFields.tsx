@@ -1,5 +1,5 @@
 import { useId, useState, type SyntheticEvent, type ReactNode } from "react";
-import { Eye, LockKeyhole } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import type { List } from "../shared/model";
 import { dateHasElapsed } from "../shared/list-dates";
 import { Field } from "./components";
@@ -110,7 +110,7 @@ export function ListPolicyFields({
             checked={mode === "surprise"}
             onChange={() => setMode("surprise")}
           />
-          <LockKeyhole size={20} />
+          <EyeOff size={20} />
           <span>
             <strong>Keep it a surprise</strong>
             <small>

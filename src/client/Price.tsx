@@ -17,9 +17,14 @@ export function Price({
     return (
       <div className="item-price">
         <small>
-          {gift.priceCents === null
-            ? "Some products have no listed price"
-            : `Estimated set total: ${formatPrice(gift)}`}
+          {gift.priceCents === null ? (
+            "Some products have no listed price"
+          ) : (
+            <>
+              Estimated set total:{" "}
+              <span className="gift-price-amount">{formatPrice(gift)}</span>
+            </>
+          )}
         </small>
       </div>
     );
@@ -38,7 +43,7 @@ export function Price({
   return (
     <div className={compact ? "item-price compact" : "item-price"}>
       <span
-        className={compact ? undefined : "detail-price"}
+        className={`${compact ? "" : "detail-price "}${gift.priceCents === null ? "" : "gift-price-amount"}`}
         aria-label={ranged ? formatPrice(gift).replace("–", " to ") : undefined}
       >
         {formatPrice(gift)}

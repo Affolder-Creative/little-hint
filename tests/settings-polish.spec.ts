@@ -30,6 +30,7 @@ async function setup(
     f.state.people.push(person);
   }
   const settings = [
+    { key: "GIFT_CARD_LAYOUT", value: "compact", source: "settings" },
     {
       key: "HIDE_ARCHIVED_ITEMS_FROM_OTHERS",
       value: "false",
@@ -929,3 +930,30 @@ for (const forced of [false, true]) {
     await expect(toggle).not.toBeChecked();
   });
 }
+
+test("gift card layout saves and discards independently", async ({
+  page,
+}, info) => {
+  await setup(page);
+  await page.goto("/settings?section=admin");
+  const section = page.getByRole("region", {
+    name: "Gift card layout",
+    exact: true,
+  });
+  const choice = section.getByRole("combobox");
+  await expect(choice).toHaveValue("compact");
+  await choice.selectOption("large-photos");
+  await section.getByRole("button", { name: "Discard changes" }).click();
+  await expect(choice).toHaveValue("compact");
+  await choice.selectOption("large-photos");
+  await section.getByRole("button", { name: "Save card layout" }).click();
+  await expect(section.getByRole("status")).toHaveText(
+    "Gift card layout saved.",
+  );
+  await page.reload();
+  await expect(choice).toHaveValue("large-photos");
+  await page.screenshot({
+    path: info.outputPath("card-layout-settings.png"),
+    fullPage: true,
+  });
+});

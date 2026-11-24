@@ -446,7 +446,9 @@ export function Browser({
         aria-busy={query.isFetching}
       >
         {filtered.length ? (
-          <div className="gift-grid">
+          <div
+            className={`gift-grid gift-grid-${world.giftCardLayout ?? "compact"}`}
+          >
             {filtered.map((i) => (
               <div className="gift-card-entry" key={i.id}>
                 <GiftCard

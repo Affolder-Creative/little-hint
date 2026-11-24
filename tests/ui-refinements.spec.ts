@@ -1103,6 +1103,10 @@ for (const width of [320, 393, 1440]) {
       page,
     }, info) => {
       const { state, actor, gift } = await setup(page);
+      await page.addInitScript(
+        (theme) => localStorage.setItem("little-hint:theme", theme),
+        process.env.CARD_THEME ?? "light",
+      );
       await page.setViewportSize({ width, height: 900 });
       await page.addInitScript(
         (theme) => localStorage.setItem("little-hint:theme", theme),
@@ -1358,9 +1362,129 @@ test("admins can change event participants without unlocking reveal settings", a
   const participant = dialog.locator('input[name="participantIds"]').first();
   await expect(participant).toBeEnabled();
   await participant.setChecked(!(await participant.isChecked()));
-  await dialog
-    .getByRole("button", { name: "Save event", exact: true })
-    .click();
+  await dialog.getByRole("button", { name: "Save event", exact: true }).click();
   await expect(dialog).toHaveCount(0);
   expect(submitted).toBe(true);
+});
+
+for (const layout of ["compact", "large-photos"] as const) {
+  for (const width of [320, 393, 650, 900, 1440]) {
+    test(`gift context ${layout} at ${width}px`, async ({ page }, info) => {
+      const { state, actor, gift } = await setup(page);
+      await page.addInitScript(
+        (theme) => localStorage.setItem("little-hint:theme", theme),
+        process.env.CARD_THEME ?? "light",
+      );
+      await page.setViewportSize({ width, height: 1000 });
+      await page.route("**/api/v1/world", (route) =>
+        route.fulfill({
+          json: {
+            ...world(state, actor),
+            giftPreferences: [],
+            environment: "test",
+            giftCardLayout: layout,
+          },
+        }),
+      );
+      await page.goto("/");
+      await page.getByRole("searchbox").fill(gift.title);
+      const card = page.locator(".gift-card").filter({ hasText: gift.title });
+      await expect(card).toBeVisible();
+      await expect(card).toContainText("Not on a wish list");
+      const help = card.getByRole("button", {
+        name: /About gift privacy: only me/i,
+      });
+      await help.click();
+      await expect(
+        page.getByRole("dialog", { name: /Gift privacy: Only me/ }),
+      ).toContainText("Only you can see this idea");
+      await page.keyboard.press("Escape");
+      await expect(help).toBeFocused();
+      expect(new URL(page.url()).pathname).toBe("/");
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+      ).toBe(true);
+      await page.evaluate(() => {
+        (document.activeElement as HTMLElement)?.blur();
+        window.scrollTo(0, 0);
+      });
+      await page.screenshot({
+        path: info.outputPath(`cards-${layout}-${width}.png`),
+        fullPage: true,
+      });
+      await card.locator(".gift-title-link").click();
+      await expect(page.locator("h1")).toHaveText(gift.title);
+      await expect(
+        page.locator(".gift-detail-info .gift-context"),
+      ).toContainText("Not on a wish list");
+      await page.screenshot({
+        path: info.outputPath(`detail-${layout}-${width}.png`),
+        fullPage: true,
+      });
+    });
+  }
+}
+
+test("gift context follows audiences, list membership, spending defaults and reveal dates", async ({
+  page,
+}) => {
+  const { state, actor, gift, originalListId } = await setup(page);
+  const list = state.lists.find((l) => l.id === originalListId)!;
+  gift.spendingListId = list.id;
+  await page.route("**/api/v1/world", (route) =>
+    route.fulfill({
+      json: {
+        ...world(state, actor),
+        giftPreferences: [],
+        spendingEnabled: true,
+      },
+    }),
+  );
+  const context = page.locator(".gift-detail-info .gift-context");
+  for (const [visibility, label] of [
+    ["private", "Only me"],
+    ["hidden", "Surprise"],
+    ["restricted", "Surprise"],
+    ["visible", "Visible to recipient"],
+  ] as const) {
+    gift.visibility = visibility;
+    await page.goto(`/gift/${gift.id}`);
+    await expect(context).toContainText(label);
+    await expect(context).toContainText("Not on a wish list");
+    await expect(context).toContainText(`Your spending list: ${list.name}`);
+  }
+  gift.listId = list.id;
+  list.mode = "transparent";
+  await page.reload();
+  await expect(context).toContainText("See the plans");
+  await expect(context.getByRole("link", { name: list.name })).toHaveAttribute(
+    "href",
+    `/lists/${list.id}`,
+  );
+  await expect(context).not.toContainText("Your spending list");
+  list.mode = "surprise";
+  list.revealAfter = "2020-01-01";
+  await page.reload();
+  await expect(context).toContainText("Gift summary available");
+  await context.getByRole("button").click();
+  await expect(
+    page.getByRole("dialog", { name: /Gift privacy:/ }),
+  ).toContainText("can now see purchased gifts");
+  await page.keyboard.press("Escape");
+  const shop = page.locator(".shopping-offer-link").first();
+  if (await shop.count()) {
+    await shop.hover();
+    const geometry = await shop.evaluate((el) => ({
+      row: el.getBoundingClientRect().left,
+      heading: el
+        .closest("section")!
+        .querySelector("h2")!
+        .getBoundingClientRect().left,
+      padding: parseFloat(getComputedStyle(el).paddingLeft),
+    }));
+    expect(geometry.heading - geometry.row).toBeCloseTo(12);
+    expect(geometry.padding).toBe(12);
+  }
 });

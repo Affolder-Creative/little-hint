@@ -49,7 +49,7 @@ wordplay sparingly. Instructions, privacy choices, errors, and purchases stay pl
 - **Wish list** names the collection. **Hint** adds personality, not a new data type.
 - Keep navigation and headings recognizable. Use short sentences and name the next
   action. Match screen-reader labels to the visible actions.
-- Say Keep it a surprise or See the plans. On phones, status badges may shorten the first label to Surprise with the lock icon; privacy choices and explanations retain the full wording. Explain summary dates and sharing
+- Say Keep it a surprise or See the plans. Gift context uses Surprise with an eye-off icon, recipient-visible states with an eye icon, and Only me with a lock. Phone card triggers may show only the icon while retaining accessible text and the full explanation in help; privacy choices retain the full wording. Explain summary dates and sharing
   restrictions without promising permanent secrecy when a reveal is scheduled.
 - Family groups share lists. Households prevent exchange matches when that rule is
   enabled and can be followed for additions to member-owned lists shared with their family group. Keep those concepts distinct. Shared ownership is different from viewing.
@@ -96,7 +96,7 @@ Selected accounts may receive server-configured higher or unlimited weekly AI al
 
 Gift-suggestion mode, limits, and model are configured only through deployment environment variables. Monthly usage separates gift suggestions, product-detail AI, and paid shop lookups. It appears when a service is available or provider submissions/requests exist in the current UTC month. Disabled services with current-month usage say Currently off; prior-month records and skipped SMS attempts alone do not keep sections visible. Older records remain stored. Unknown or older token usage is labeled as unavailable; estimates cover recorded usage at known rates and are not a complete bill.
 
-Administration contains App settings, This month's usage, Service status, and Background jobs. Family-group creation, automatic product photos, device photo caching, and preloading are editable, with optional locking ENV overrides. All service credentials, providers, models, limits, and AI availability are deployment-only. Service status reports configuration presence, not verified connectivity. Preserve usage after disabling services, notification retries, failed shop lookups, and the note that backup status is unavailable.
+Administration contains App settings, This month's usage, Service status, and Background jobs. Family-group creation, automatic product photos, device photo caching, and preloading are editable, with optional locking ENV overrides. An independently saved, app-wide Gift card layout preference defaults to Compact cards and also offers Large photos; both retain source and privacy information. All service credentials, providers, models, limits, and AI availability are deployment-only. Service status reports configuration presence, not verified connectivity. Preserve usage after disabling services, notification retries, failed shop lookups, and the note that backup status is unavailable.
 
 SMS and Telegram require explicit deployment enabled flags set to true plus
 complete provider configuration. Staging supports both through dedicated prefixed
@@ -168,7 +168,9 @@ Private per-item subscriptions notify at new lows of at least 5% and $1. Inbox
 alerts respect current access; external channels require explicit topic opt-in.
 Recorded spending remains separate from changing listed-price estimates.
 
-Gift idea creators can choose a private default wish list for spending. Their new plans inherit the choice; saving a changed assignment previews and updates their existing unassigned plans and purchases, including related refunds. Already assigned records and other buyers' records retain their context. Clearing the default affects future plans only. Assignment never publishes the idea or changes its audience. The Purchased view offers a combined status and recorded-spending editor. Occasion and wish-list filters count explicitly linked or assigned gifts; guided review helps organize unassigned entries.
+Gift idea creators can choose a private default wish list for spending. The default and recipient allocations are returned only to the creator, including when another viewer is an administrator. Cards and details distinguish On a linked source wish list from Not on a wish list; a private Your spending list line never implies that the idea was added or shared there.
+
+The creator's new plans inherit the choice; saving a changed assignment previews and updates their existing unassigned plans and purchases, including related refunds. Already assigned records and other buyers' records retain their context. Clearing the default affects future plans only. Assignment never publishes the idea or changes its audience. The Purchased view offers a combined status and recorded-spending editor. Occasion and wish-list filters count explicitly linked or assigned gifts; guided review helps organize unassigned entries.
 
 ## Managed profiles and account administration
 

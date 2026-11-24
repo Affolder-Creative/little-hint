@@ -1,3 +1,4 @@
+import { GiftContext } from "./GiftContext";
 import { productItems } from "../shared/item-groups";
 import { PeopleDirectory } from "./PeopleDirectory";
 import { PersonCoManagement } from "./CoManagement";
@@ -1342,13 +1343,16 @@ function GiftDetail() {
         <section className="gift-detail-info">
           <div className="gift-recipient">
             <Avatar name={gift.recipientNames[0]} small />
-            <span>For {gift.recipientNames.join(" & ")}</span>
+            <span>
+              {gift.listId ? "Wish" : "Gift idea"} for{" "}
+              {gift.recipientNames.join(" & ")}
+            </span>
           </div>
           <div className="section-heading">
             <h1>{gift.title}</h1>
             <ItemActions gift={gift} />
           </div>
-          <PrivateIdeaBadge gift={gift} />
+          <GiftContext gift={gift} />
           {!gift.listId &&
             gift.visibilityScope === "shared" &&
             gift.creatorName && (
