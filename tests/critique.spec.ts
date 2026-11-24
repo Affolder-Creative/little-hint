@@ -3694,7 +3694,7 @@ test("privacy popover stays closed when returning from a gift", async ({
   await expect(
     page.getByRole("dialog", { name: "Gift privacy" }),
   ).not.toBeVisible();
-  await expect(gift).toBeFocused();
+  await expect(gift.locator(".gift-title-link")).toBeFocused();
   await expect
     .poll(() => page.evaluate(() => scrollY))
     .toBeCloseTo(position, 0);
@@ -4782,7 +4782,9 @@ for (const [width, theme] of [
     });
     expect(idea.listId).toBeUndefined();
     await expect(page).toHaveURL(new RegExp(`/gift/${idea.id}$`));
-    await expect(page.locator(".private-idea-badge")).toHaveText("Only me");
+    await expect(
+      page.locator(".gift-detail-info .gift-privacy-label"),
+    ).toContainText("Only me");
     await page
       .getByLabel("Buying for", { exact: true })
       .selectOption("ordinary");
@@ -4833,7 +4835,7 @@ for (const [width, theme] of [
       name: "Search gift ideas",
     });
     await ideaSearch.fill(idea.title);
-    await expect(purchasedCard.locator(".private-idea-badge")).toHaveText(
+    await expect(purchasedCard.locator(".gift-privacy-label")).toHaveText(
       "Only me",
     );
     await ideaSearch.fill("");
@@ -4845,7 +4847,7 @@ for (const [width, theme] of [
       page
         .locator(".gift-card")
         .filter({ hasText: idea.title })
-        .locator(".private-idea-badge"),
+        .locator(".gift-privacy-label"),
     ).toHaveText("Only me");
     await page.reload();
     await expect(

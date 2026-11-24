@@ -91,12 +91,12 @@ export function GiftContext({
           <span className="muted">Draft · Not yet published</span>
         ) : (
           <InfoHelp
+            hover
             title={`Gift privacy: ${label} for ${gift.title}`}
             triggerLabel={
               <span className="gift-privacy-label">
                 <Icon size={15} aria-hidden="true" />
                 <span>{label}</span>
-                <span className="sr-only"> for {gift.title}</span>
               </span>
             }
           >
@@ -124,20 +124,8 @@ export function GiftContext({
           })}
         </div>
       )}
-      {!draft && (
-        <p className="gift-privacy-description">
-          {card
-            ? gift.listId
-              ? gift.mode === "surprise"
-                ? "The wish is visible. Buying plans stay hidden."
-                : "Recipients can see ordinary buying plans."
-              : gift.visibility === "private"
-                ? "Only you can see this idea and its plans."
-                : gift.visibility === "visible"
-                  ? "The idea is visible. Buying plans stay hidden."
-                  : "Hidden from recipients."
-            : privacy.description}
-        </p>
+      {!draft && !card && (
+        <p className="gift-privacy-description">{privacy.description}</p>
       )}
     </div>
   );

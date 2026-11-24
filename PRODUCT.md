@@ -49,7 +49,7 @@ wordplay sparingly. Instructions, privacy choices, errors, and purchases stay pl
 - **Wish list** names the collection. **Hint** adds personality, not a new data type.
 - Keep navigation and headings recognizable. Use short sentences and name the next
   action. Match screen-reader labels to the visible actions.
-- Say Keep it a surprise or See the plans. Gift context uses Surprise with an eye-off icon, recipient-visible states with an eye icon, and Only me with a lock. Phone card triggers may show only the icon while retaining accessible text and the full explanation in help; privacy choices retain the full wording. Explain summary dates and sharing
+- Say Keep it a surprise or See the plans. Gift context uses Surprise with an eye-off icon, recipient-visible states with an eye icon, and Only me with a lock. Phone card triggers may show only the icon while retaining accessible text and the full explanation in help; privacy choices retain the full wording. Browsing cards keep privacy explanations in help opened by hover, tap, click or keyboard activation; gift details retain the full explanation. Source and private spending captions remain visible. Explain summary dates and sharing
   restrictions without promising permanent secrecy when a reveal is scheduled.
 - Family groups share lists. Households prevent exchange matches when that rule is
   enabled and can be followed for additions to member-owned lists shared with their family group. Keep those concepts distinct. Shared ownership is different from viewing.

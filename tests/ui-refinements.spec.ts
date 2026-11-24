@@ -1488,3 +1488,42 @@ test("gift context follows audiences, list membership, spending defaults and rev
     expect(geometry.padding).toBe(12);
   }
 });
+
+test("card privacy explanations open on hover and stay available after clicking", async ({
+  page,
+}, info) => {
+  const { gift } = await setup(page);
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto("/");
+  const card = page.locator(".gift-card").filter({ hasText: gift.title });
+  await expect(card.locator(".gift-privacy-description")).toHaveCount(0);
+  const trigger = card.getByRole("button", {
+    name: /About gift privacy: only me/i,
+  });
+  const panel = page.getByRole("dialog", { name: /Gift privacy: Only me/ });
+  await expect(panel).not.toBeVisible();
+  await trigger.hover();
+  await expect(panel).toBeVisible();
+  await panel.hover();
+  await expect(panel).toBeVisible();
+  await page.getByRole("heading", { level: 1 }).hover();
+  await expect(panel).not.toBeVisible();
+  await trigger.click();
+  await page.getByRole("heading", { level: 1 }).hover();
+  await expect(panel).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(panel).not.toBeVisible();
+  await expect(trigger).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(panel).toBeVisible();
+  await page.getByRole("button", { name: "Close help" }).click();
+  await expect(panel).not.toBeVisible();
+  await page.evaluate(() => {
+    (document.activeElement as HTMLElement)?.blur();
+    scrollTo(0, 0);
+  });
+  await page.screenshot({
+    path: info.outputPath("quiet-cards.png"),
+    fullPage: true,
+  });
+});
