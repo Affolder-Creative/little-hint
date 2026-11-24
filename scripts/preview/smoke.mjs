@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import {
   mkdtemp,
+  appendFile,
   cp,
   readFile,
   writeFile,
@@ -26,6 +27,8 @@ const root = await realpath(
   await mkdtemp(join(tmpdir(), "little-hint-preview-smoke-")),
 );
 const project = checkoutIdentity(root);
+if (process.env.CI_CONTAINER_PROJECTS_FILE)
+  await appendFile(process.env.CI_CONTAINER_PROJECTS_FILE, project + "\n");
 const env = dockerEnvironment();
 // Docker can reuse the same ephemeral port after stop/start. Synchronous CLI
 // calls block delivery of socket-close events, so never pool a test connection

@@ -4,23 +4,13 @@ import { mkdir, copyFile } from "node:fs/promises";
 import { setTimeout as delay } from "node:timers/promises";
 import { createServer } from "node:net";
 
+import { browserCommand, validateCoverage } from "./ci-browser-suites.mjs";
+
 const suite = process.argv[2];
-if (
-  ![
-    "e2e",
-    "sign-in",
-    "list-features",
-    "group-events",
-    "management",
-    "polish",
-    "critique",
-    "pwa",
-    "notifications",
-    "caching",
-    "gift-discovery",
-  ].includes(suite)
-)
-  throw new Error("Supply one known browser suite.");
+const shard = process.argv[3] ?? "";
+if (process.argv.length > 4) throw new Error("Use <suite> [shard/total].");
+validateCoverage();
+const command = browserCommand(suite, shard);
 if (new URL(process.env.DATABASE_URL).pathname !== "/little_hint_e2e")
   throw new Error("Browser CI requires an isolated little_hint_e2e database.");
 // Pick a free port so a local app cannot accidentally satisfy CI readiness.
@@ -122,63 +112,9 @@ try {
     await delay(1000);
   }
   if (!ready) throw new Error("App did not become healthy.");
-  await run("npx", [
-    "--no-install",
-    "playwright",
-    "test",
-    `tests/${suite}.spec.ts`,
-    ...(suite === "e2e"
-      ? [
-          "tests/reliability.spec.ts",
-          "tests/efficiency.spec.ts",
-          "tests/pagination.spec.ts",
-          "tests/buying-sort.spec.ts",
-          "tests/co-management.spec.ts",
-        ]
-      : []),
-    ...(suite === "management" ? ["tests/account-closure.spec.ts"] : []),
-    ...(suite === "group-events"
-      ? ["tests/repeat-event.spec.ts", "tests/surprise-privacy.spec.ts"]
-      : []),
-    ...(suite === "pwa"
-      ? [
-          "tests/update-notice.spec.ts",
-          "tests/update-lifecycle.spec.ts",
-          "tests/pwa-fallback.spec.ts",
-          "tests/capture.spec.ts",
-          "tests/item-drafts.spec.ts",
-        ]
-      : []),
-    ...(suite === "notifications"
-      ? [
-          "tests/channel-availability.spec.ts",
-          "tests/collaboration-refinements.spec.ts",
-        ]
-      : []),
-    ...(suite === "sign-in"
-      ? ["tests/sms.spec.ts", "tests/account-email.spec.ts"]
-      : []),
-    ...(suite === "polish"
-      ? [
-          "tests/settings-polish.spec.ts",
-          "tests/admin-settings.spec.ts",
-          "tests/managed-profiles.spec.ts",
-          "tests/account-export.spec.ts",
-          "tests/ui-refinements.spec.ts",
-          "tests/idea-audience.spec.ts",
-          "tests/price-ranges.spec.ts",
-          "tests/price-range-display.spec.ts",
-        ]
-      : []),
-    ...(suite === "gift-discovery"
-      ? ["tests/friends.spec.ts", "tests/helpful-note.spec.ts"]
-      : []),
-  ]).done;
-  if (suite === "list-features") {
-    await run("node", ["--import", "tsx", "tests/shopping-ui.browser.mjs"])
-      .done;
-    await run("node", ["--import", "tsx", "tests/price-source.browser.mjs"])
-      .done;
+  await run("npx", command.args).done;
+  for (const script of command.scripts) {
+    await run("node", ["--import", "tsx", script]).done;
   }
 } finally {
   await stop();
