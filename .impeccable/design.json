@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-23T15:22:12.726262+00:00",
+  "generatedAt": "2026-11-24T18:59:06.104622+00:00",
   "title": "Design System: Little Hint",
   "extensions": {
     "peopleDirectory": {
@@ -1182,10 +1182,7 @@
       "actions": "Two fixed rows without an added gap: outlined Make cover with 4px by 8px padding and a star, or checked green Cover photo status in a 32px line. Neutral Replace and destructive Remove align toward the top of their 44px targets."
     },
     "sharedCost": {
-      "fields": [
-        "Total gift cost in USD",
-        "Your contribution in USD"
-      ],
+      "fields": ["Total gift cost in USD", "Your contribution in USD"],
       "summary": [
         "Goal from others",
         "Already pledged",
@@ -1283,7 +1280,8 @@
       "archivedNotice": "Inline action inherits line-height with positioned 44px hit area.",
       "eventMenus": "People icon for Other wish lists; ellipsis for Event actions; title/calendar open overview.",
       "buyingPagination": "Count and sort remain directly across from one another in a two-column row, including at 320px. Count text may wrap within its column. Page buttons occupy their own full-width row below."
-    }
+    },
+    "giftArrival": "Purchased includes partial and standalone purchases once. Unboxed All purchased, Awaiting arrival and In hand text filters carry counts. 14px text, 44px targets, 20px horizontal and 4px wrapping gaps, 16px bottom spacing. Selected filter uses semibold accent text and an underline; inactive filters use muted regular text."
   },
   "components": [
     {
@@ -1584,6 +1582,13 @@
       "description": "One shop destination with its price and supporting verification text.",
       "html": "<a class=\"ds-shop\" href=\"#\"><span class=\"ds-shop-name\">Example shop <svg width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><path d=\"M15 3h6v6M10 14 21 3M21 14v7H3V3h7\"/></svg></span><span>$109</span><small>Primary link</small></a>",
       "css": ".ds-shop{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 16px;min-height:44px;padding:12px 0;color:var(--text);border-radius:8px;text-decoration:none;font-variant-numeric:tabular-nums}.ds-shop-name{color:var(--accent);font-weight:600}.ds-shop small{grid-column:1/-1;color:var(--muted);font-size:13px}.ds-shop:hover{background:var(--soft)}.ds-shop:focus-visible{outline:3px solid var(--accent);outline-offset:3px}"
+    },
+    {
+      "name": "Gift arrival text filters",
+      "kind": "custom",
+      "description": "Quiet text filters for the buyer-private arrival checklist.",
+      "html": "<div class=\"ds-arrival\" role=\"group\" aria-label=\"Gift arrival status\"><button aria-pressed=\"true\">All purchased <span>4</span></button><button aria-pressed=\"false\">Awaiting arrival <span>2</span></button><button aria-pressed=\"false\">In hand <span>1</span></button></div>",
+      "css": ".ds-arrival { display:flex; flex-wrap:wrap; gap:4px 20px; margin-bottom:16px; } .ds-arrival button { min-height:44px; padding:8px 0; border:0; border-radius:0; background:transparent; font:400 14px -apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif; color:var(--muted); } .ds-arrival button:hover,.ds-arrival button[aria-pressed=\"true\"] { color:var(--accent); text-decoration:underline; text-underline-offset:6px; } .ds-arrival button[aria-pressed=\"true\"] { font-weight:600; } .ds-arrival button span { margin-left:3px; font-variant-numeric:tabular-nums; } .ds-arrival button:focus-visible { outline:3px solid var(--accent); outline-offset:3px; }"
     }
   ],
   "narrative": {

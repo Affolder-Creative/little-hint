@@ -260,6 +260,8 @@ export interface Item extends Base {
 }
 export type GiftSourceState = "active" | "archived" | "removed" | "unavailable";
 export interface Reservation extends Base {
+  /** Buyer-private possession count; absent means not recorded. */
+  inHandQuantity?: number;
   planActions?: {
     canRecordPurchase: boolean;
     canRelease: boolean;
@@ -832,7 +834,12 @@ export interface World {
     }
   >;
   items: GiftView[];
-  buying: Array<Reservation & { item?: GiftView }>;
+  buying: Array<
+    Reservation & {
+      item?: GiftView;
+      standalonePurchase?: import("./spending").SpendingView["records"][number];
+    }
+  >;
   exchanges: Array<
     Omit<Exchange, "assignments"> & {
       canManage: boolean;

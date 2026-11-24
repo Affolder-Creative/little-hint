@@ -21,7 +21,7 @@ import {
   type ImportJob,
   type FriendEntry,
 } from "../shared/model";
-const supportedSchemaVersion = 16;
+const supportedSchemaVersion = 17;
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   max: 10,
@@ -367,6 +367,9 @@ INSERT INTO schema_migration(version) VALUES (2);`);
       }
       await client.query("INSERT INTO schema_migration(version) VALUES (16)");
     }
+    await client.query(
+      "INSERT INTO schema_migration(version) VALUES (17) ON CONFLICT DO NOTHING",
+    );
     await client.query("COMMIT");
   } catch (e) {
     await client.query("ROLLBACK");

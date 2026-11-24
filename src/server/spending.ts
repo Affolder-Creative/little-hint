@@ -510,6 +510,14 @@ export function spendingView(s: State, a: Actor): SpendingView {
     : [];
   const records = allowed.map((r) => ({
     ...r,
+    inHandQuantity:
+      r.ownerId === a.id
+        ? r.reservationId
+          ? s.reservations.find(
+              (v) => v.id === r.reservationId && v.buyerId === a.id,
+            )?.inHandQuantity
+          : r.inHandQuantity
+        : undefined,
     connectionId: shared(s, r, c) ? r.connectionId : undefined,
     sharing: shared(s, r, c) ? r.sharing : ("private" as const),
     promisedCents:
@@ -965,6 +973,7 @@ export function spendingCommand(
     const r: SpendingRecord = {
       ...stamp(),
       ownerId: payer,
+      inHandQuantity: p.reservationId ? undefined : 0,
       title: base?.title ?? p.title,
       recipientIds: base?.recipientIds ?? p.recipientIds,
       recipientNames:

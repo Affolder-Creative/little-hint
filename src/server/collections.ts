@@ -6,7 +6,7 @@ import { itemPhotos } from "../shared/item-photos";
 import { sourceView } from "./gift-lifecycle";
 import { canShop } from "./domain-access";
 import { z } from "zod";
-import type { Actor, State, Reservation } from "../shared/model";
+import type { Actor, State, Reservation, World } from "../shared/model";
 import {
   matchesPriority,
   archivedItemSort,
@@ -32,6 +32,8 @@ import {
   recipient,
 } from "./domain-access";
 import { fail } from "./domain-common";
+import { standaloneBuying } from "./buying-purchases";
+import { matchesArrival } from "../shared/arrival";
 import { pool, hydrateCollectionItems, readCollectionState } from "./db";
 import { spendingSummary } from "../shared/spending-guidance";
 export function collectionWorld(s: State, a: Actor): PagedWorld {
@@ -218,19 +220,21 @@ export async function buyingPage(
   const q = z
     .object({
       page,
+      arrival: z.enum(["all", "awaiting", "in-hand"]).default("all"),
       sort: z.enum(buyingSorts).default("newest"),
       view: z
         .enum(["needs-buying", "purchased", "all"])
         .default("needs-buying"),
     })
     .parse(raw);
-  const rows = s.reservations
-    .filter((r) => r.buyerId === a.id && r.quantity > 0)
-    .sort(
-      (a, b) =>
-        a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id),
-    );
-  const purchased = rows.filter((r) => r.purchased >= r.quantity).length;
+  const rows: World["buying"] = [
+    ...s.reservations.filter((r) => r.buyerId === a.id && r.quantity > 0),
+    ...standaloneBuying(s, a),
+  ].sort(
+    (a, b) =>
+      a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id),
+  );
+  const purchased = rows.filter((r) => r.purchased > 0).length;
   const result = pageRows(
     sortBuying(
       rows
@@ -238,11 +242,12 @@ export async function buyingPage(
           (r) =>
             q.view === "all" ||
             (q.view === "purchased"
-              ? r.purchased >= r.quantity
+              ? r.purchased > 0 &&
+                matchesArrival(r.purchased, r.inHandQuantity, q.arrival)
               : r.purchased < r.quantity),
         )
         .map((r) => ({
-          ...sourceView(s, r, a),
+          ...(r.standalonePurchase ? r : sourceView(s, r, a)),
           item: s.items.some((i) => i.id === r.itemId && itemVisible(s, a, i))
             ? giftView(s, a, getItem(s, a, r.itemId))
             : undefined,
@@ -253,12 +258,12 @@ export async function buyingPage(
   );
   await hydrateCollectionItems(
     s,
-    result.rows.map((r) => r.itemId),
+    result.rows.flatMap((r) => (r.itemId ? [r.itemId] : [])),
   );
   return {
     ...result,
     rows: result.rows.map((r) => ({
-      ...sourceView(s, r, a),
+      ...(r.standalonePurchase ? r : sourceView(s, r, a)),
       item: s.items.some((i) => i.id === r.itemId && itemVisible(s, a, i))
         ? giftView(s, a, getItem(s, a, r.itemId))
         : undefined,
@@ -266,7 +271,17 @@ export async function buyingPage(
     counts: {
       all: rows.length,
       purchased,
-      needsBuying: rows.length - purchased,
+      needsBuying: rows.filter((r) => r.purchased < r.quantity).length,
+      awaiting: rows.filter(
+        (r) =>
+          r.purchased > 0 &&
+          matchesArrival(r.purchased, r.inHandQuantity, "awaiting"),
+      ).length,
+      inHand: rows.filter(
+        (r) =>
+          r.purchased > 0 &&
+          matchesArrival(r.purchased, r.inHandQuantity, "in-hand"),
+      ).length,
     },
   };
 }

@@ -275,7 +275,13 @@ it("keeps purchase counts independent of pages", async () => {
   }));
   const page = await buyingPage(state, actor, { page: 2 });
   expect(page.rows).toHaveLength(6);
-  expect(page.counts).toEqual({ all: 49, purchased: 19, needsBuying: 30 });
+  expect(page.counts).toEqual({
+    all: 49,
+    purchased: 19,
+    needsBuying: 30,
+    awaiting: 0,
+    inHand: 0,
+  });
   expect(page.total).toBe(30);
 });
 it("omits item and reservation collections in negotiated world, retaining older clients", () => {

@@ -70,6 +70,39 @@ function fixture() {
   return { s, actors, run, add, connect };
 }
 describe("private spending", () => {
+  it("keeps arrival private even when a spending partner can edit payments", () => {
+    const f = fixture();
+    f.add();
+    const r = f.s.spendingRecords[0];
+    const c = f.connect();
+    f.run(0, "share", { id: r.id, revision: r.revision, shared: true });
+    for (const i of [0, 1])
+      f.run(i, "connection", {
+        id: c.id,
+        revision: c.revision,
+        operation: "edit-on",
+      });
+    command(f.s, f.actors[0], "buying.arrival", {
+      id: r.id,
+      revision: r.revision,
+      source: "purchase",
+      inHandQuantity: 1,
+    });
+    const shared = spendingView(f.s, f.actors[1]).records.find(
+      (v) => v.id === r.id,
+    )!;
+    expect(shared.canEdit).toBe(true);
+    expect(JSON.stringify(shared)).not.toContain("inHandQuantity");
+    expect(() =>
+      command(f.s, f.actors[1], "buying.arrival", {
+        id: r.id,
+        revision: r.revision,
+        source: "purchase",
+        inHandQuantity: 0,
+      }),
+    ).toThrow();
+  });
+
   it("keeps actual costs out of public world and other accounts", () => {
     const f = fixture();
     f.add();

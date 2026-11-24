@@ -581,6 +581,7 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
     "contributions/return-update": "contributions.return-update",
     reservations: "reservations.create",
     "reservations/update": "reservations.update",
+    "buying/arrival": "buying.arrival",
     contributions: "contributions.create",
     "contributions/update": "contributions.update",
     comments: "comments.create",

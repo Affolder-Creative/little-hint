@@ -1,3 +1,4 @@
+import { standaloneBuying } from "./buying-purchases";
 import { netContribution } from "../shared/contribution-money";
 import { reviewSource } from "./gift-lifecycle";
 import { canShop } from "./domain-access";
@@ -27,6 +28,7 @@ import {
 } from "./domain-access";
 
 export const buyingActions = [
+  "buying.arrival",
   "reservations.review",
   "contributions.return",
   "contributions.return-update",
@@ -43,6 +45,46 @@ export function buyingCommand(
 ): unknown {
   const b = raw as Record<string, unknown>;
   switch (action) {
+    case "buying.arrival": {
+      const p = z
+        .object({
+          id,
+          revision,
+          source: z.enum(["reservation", "purchase"]),
+          inHandQuantity: z.number().int().min(0).max(999).nullable(),
+        })
+        .parse(b);
+      if (
+        p.source === "purchase" &&
+        !standaloneBuying(s, a).some((r) => r.id === p.id)
+      )
+        fail(404, "Purchase not found.");
+      const r =
+        p.source === "reservation"
+          ? s.reservations.find(
+              (r) =>
+                r.id === p.id &&
+                r.buyerId === a.id &&
+                r.quantity > 0 &&
+                r.purchased > 0,
+            )
+          : s.spendingRecords.find(
+              (r) =>
+                r.id === p.id &&
+                r.ownerId === a.id &&
+                r.kind === "purchase" &&
+                !r.reservationId &&
+                !r.voided,
+            );
+      if (!r) fail(404, "Purchase not found.");
+      checkRevision(r, p.revision);
+      const purchased = "purchased" in r ? r.purchased : r.quantity;
+      if (p.inHandQuantity !== null && p.inHandQuantity > purchased)
+        fail(400, "The quantity in hand cannot exceed the quantity purchased.");
+      r.inHandQuantity = p.inHandQuantity ?? undefined;
+      touch(r);
+      return { ok: true };
+    }
     case "reservations.review": {
       const p = z.object({ id, sourceVersion: z.number().int() }).parse(b);
       const r =
@@ -278,7 +320,11 @@ export function buyingCommand(
       if (p.purchased > r.purchased) reviewSource(s, a, r);
       const increased = p.purchased > r.purchased;
       if (increased) r.purchasedAt = new Date().toISOString();
+      if (increased && r.purchased === 0) r.inHandQuantity = 0;
       Object.assign(r, p);
+      if (!r.purchased) r.inHandQuantity = undefined;
+      else if (r.inHandQuantity !== undefined)
+        r.inHandQuantity = Math.min(r.inHandQuantity, r.purchased);
       touch(r);
       if (
         !wasFunded &&

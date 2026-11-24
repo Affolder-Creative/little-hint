@@ -123,6 +123,7 @@ import {
   mode,
   reconcileAccess,
 } from "./domain-access";
+import { standaloneBuying } from "./buying-purchases";
 import { spendingAvailable } from "./deployment";
 import { spendingCommand, listContext, assignIdeaSpending } from "./spending";
 import {
@@ -850,20 +851,23 @@ export function world(
         }),
     buying: paged
       ? []
-      : s.reservations
-          .filter((r) => r.buyerId === a.id && (!compact || r.quantity > 0))
-          .map((r) => ({
-            ...sourceView(s, r, a),
-            item:
-              !compact &&
-              s.items.some((i) => i.id === r.itemId && itemVisible(s, a, i))
-                ? giftView(
-                    s,
-                    a,
-                    s.items.find((i) => i.id === r.itemId)!,
-                  )
-                : undefined,
-          })),
+      : [
+          ...s.reservations
+            .filter((r) => r.buyerId === a.id && (!compact || r.quantity > 0))
+            .map((r) => ({
+              ...sourceView(s, r, a),
+              item:
+                !compact &&
+                s.items.some((i) => i.id === r.itemId && itemVisible(s, a, i))
+                  ? giftView(
+                      s,
+                      a,
+                      s.items.find((i) => i.id === r.itemId)!,
+                    )
+                  : undefined,
+            })),
+          ...standaloneBuying(s, a),
+        ],
     exchanges: s.exchanges
       .filter((e) => !e.deletedAt && groupAccess(s, a, e.groupId))
       .map(({ assignments, ...e }) => {
