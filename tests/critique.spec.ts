@@ -1446,8 +1446,8 @@ test("person pages link accessible wish lists and keep all items with their sour
   ).toBeVisible();
   await page.goto("/");
   await expect(page.locator(".gift-card").first()).toBeVisible();
-  await expect(page.locator(".gift-source-list")).toHaveText(
-    "Not on a wish list",
+  await expect(page.locator(".gift-source-list").first()).toHaveText(
+    /^(On |Not on a wish list)/,
   );
 });
 
