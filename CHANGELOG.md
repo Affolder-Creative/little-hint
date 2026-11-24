@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.13.0](https://github.com/Affolder-Creative/little-hint/compare/v1.12.1...v1.13.0) (2026-11-24)
+
+
+### Features
+
+* clarify gift privacy and offer compact cards ([#289](https://github.com/Affolder-Creative/little-hint/issues/289)) ([adef143](https://github.com/Affolder-Creative/little-hint/commit/adef143613e42af9f63c08d858a3d6ff0358a285))
+* track when purchased gifts are in hand ([#287](https://github.com/Affolder-Creative/little-hint/issues/287)) ([d9b8f84](https://github.com/Affolder-Creative/little-hint/commit/d9b8f847b6f45221b7cd091f48bd7f9fb20bb93f))
+
+
+### Fixes
+
+* shorten CI and stabilize passkey focus ([#285](https://github.com/Affolder-Creative/little-hint/issues/285)) ([d0b2fad](https://github.com/Affolder-Creative/little-hint/commit/d0b2fad1aa82e8c024d7aab1b76c0c0269635102))
+
 ## [1.12.1](https://github.com/Affolder-Creative/little-hint/compare/v1.12.0...v1.12.1) (2026-11-23)
 
 
