@@ -204,3 +204,41 @@
 .gift-grid-compact .gift-recipient .avatar {
   flex-shrink: 0;
 }
+/* Keep privacy help easy to hit without making its visible row oversized. */
+.gift-context-card .info-help-trigger {
+  margin-block: -6px;
+  background: transparent;
+}
+.gift-context-card .gift-privacy-label {
+  padding: 3px 4px;
+  margin-inline: -4px;
+  border-radius: 6px;
+}
+.gift-context-card .info-help-trigger:hover .gift-privacy-label,
+.gift-context-card
+  .info-help-trigger[aria-expanded="true"]
+  .gift-privacy-label {
+  background: var(--soft);
+}
+.gift-card .gift-context {
+  margin-bottom: 8px;
+}
+.gift-grid-compact .gift-card {
+  grid-template-columns: clamp(80px, 28%, 120px) minmax(0, 1fr);
+}
+.gift-grid-compact .gift-card .gift-title {
+  margin-bottom: 8px;
+}
+.gift-grid-compact .gift-card-content > .gift-meta {
+  margin-top: 0;
+  padding-top: 0;
+}
+@media (max-width: 650px) {
+  .gift-grid-compact .gift-card {
+    grid-template-columns: minmax(64px, 25%) minmax(0, 1fr);
+  }
+}
+.gift-context-card .info-help-trigger:hover,
+.gift-context-card .info-help-trigger[aria-expanded="true"] {
+  background: transparent;
+}
