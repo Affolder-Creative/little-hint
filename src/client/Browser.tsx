@@ -26,12 +26,23 @@ import {
   useItemScope,
   useOrganization,
 } from "./Management";
-import { useEffect, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+} from "react";
 import type { GiftView } from "../shared/model";
 import { useApp } from "./context";
 import { Empty, GiftCard } from "./components";
 import { SearchSelect } from "./SearchSelect";
 import { X } from "lucide-react";
+function subscribeSmallScreens(notify: () => void) {
+  const query = matchMedia("(max-width: 650px)");
+  query.addEventListener("change", notify);
+  return () => query.removeEventListener("change", notify);
+}
+const isSmallScreen = () => matchMedia("(max-width: 650px)").matches;
 export function Browser({
   items,
   scope = "home",
@@ -75,6 +86,14 @@ export function Browser({
   );
   const [peopleSearch, setPeopleSearch] = useState("");
   const { world, open, mutate, toast } = useApp();
+  const smallScreen = useSyncExternalStore(
+    subscribeSmallScreens,
+    isSmallScreen,
+    () => false,
+  );
+  const cardLayout = smallScreen
+    ? (world.giftCardLayoutMobile ?? world.giftCardLayout ?? "large-photos")
+    : (world.giftCardLayout ?? "compact");
   const itemScope = useItemScope(listId);
   const parentList = world.lists.find((l) => l.id === listId);
   const [itemStatus, setItemStatus] = useNavigationState<string>(
@@ -446,9 +465,7 @@ export function Browser({
         aria-busy={query.isFetching}
       >
         {filtered.length ? (
-          <div
-            className={`gift-grid gift-grid-${world.giftCardLayout ?? "compact"}`}
-          >
+          <div className={`gift-grid gift-grid-${cardLayout}`}>
             {filtered.map((i) => (
               <div className="gift-card-entry" key={i.id}>
                 <GiftCard

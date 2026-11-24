@@ -726,6 +726,7 @@ test("provider configuration is deployment-only and service status is read-only"
     "FAMILY_GROUP_CREATION",
     "FAMILY_GROUP_INVITATIONS",
     "GIFT_CARD_LAYOUT",
+    "GIFT_CARD_LAYOUT_MOBILE",
     "HIDE_ARCHIVED_ITEMS_FROM_OTHERS",
     "PRODUCT_IMAGE_CACHE_ENABLED",
     "PRODUCT_IMAGE_PREFETCH_ENABLED",

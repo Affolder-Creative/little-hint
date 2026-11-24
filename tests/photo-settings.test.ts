@@ -16,6 +16,7 @@ vi.mock("../src/server/db", () => ({
 import {
   encrypt,
   giftCardLayoutForState,
+  giftCardLayoutMobileForState,
   spendingDefaultForState,
   automaticallyImportProductPhotos,
   config,
@@ -136,7 +137,7 @@ describe("settings read and decryption reuse", () => {
       createdAt: "",
     });
     expect((await config()).SMTP_HOST).toBe("");
-    expect(await settingsSummary()).toHaveLength(8);
+    expect(await settingsSummary()).toHaveLength(9);
     expect(createDecipheriv).not.toHaveBeenCalled();
     expect(readSettings).toHaveBeenCalledTimes(1);
   });
@@ -289,7 +290,15 @@ describe("archive privacy setting", () => {
 
 it("persists and validates the shared gift card layout", async () => {
   expect(giftCardLayoutForState(storage.state)).toBe("compact");
+  expect(giftCardLayoutMobileForState(storage.state)).toBe("large-photos");
+  await saveSetting("GIFT_CARD_LAYOUT_MOBILE", "compact");
+  expect(giftCardLayoutForState(storage.state)).toBe("compact");
+  expect(giftCardLayoutMobileForState(storage.state)).toBe("compact");
+  await expect(
+    saveSetting("GIFT_CARD_LAYOUT_MOBILE", "invalid"),
+  ).rejects.toThrow("Choose compact");
   await saveSetting("GIFT_CARD_LAYOUT", "large-photos");
+  expect(giftCardLayoutMobileForState(storage.state)).toBe("compact");
   expect(giftCardLayoutForState(storage.state)).toBe("large-photos");
   expect(
     (await settingsSummary()).find((s) => s.key === "GIFT_CARD_LAYOUT"),

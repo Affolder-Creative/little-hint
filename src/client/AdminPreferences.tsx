@@ -121,24 +121,34 @@ export function AdminPreferences({ settings }: { settings: Setting[] }) {
   return (
     <>
       <PreferenceGroup
-        settings={settings.filter((s) => s.key === "GIFT_CARD_LAYOUT")}
+        settings={settings.filter((s) =>
+          ["GIFT_CARD_LAYOUT", "GIFT_CARD_LAYOUT_MOBILE"].includes(s.key),
+        )}
         title="Gift card layout"
         submit="Save card layout"
       >
         {(value, change) => (
           <>
-            <Field label="Gift card layout">
-              <select
-                value={value("GIFT_CARD_LAYOUT")}
-                onChange={(e) => change("GIFT_CARD_LAYOUT", e.target.value)}
-              >
-                <option value="compact">Compact cards</option>
-                <option value="large-photos">Large photos</option>
-              </select>
-            </Field>
+            <div className="form-row gift-card-layout-fields">
+              {[
+                ["GIFT_CARD_LAYOUT_MOBILE", "Smaller screens"],
+                ["GIFT_CARD_LAYOUT", "Larger screens"],
+              ].map(([key, label]) => (
+                <Field label={label} key={key}>
+                  <select
+                    value={value(key)}
+                    onChange={(e) => change(key, e.target.value)}
+                  >
+                    <option value="compact">Compact cards</option>
+                    <option value="large-photos">Large photos</option>
+                  </select>
+                </Field>
+              ))}
+            </div>
             <p>
-              Choose how saved wishes and gift ideas appear for everyone. Both
-              layouts show the same gift details and privacy information.
+              Choose layouts for phones and narrow windows, and for larger
+              screens. Large photos shows two items side by side on phones.
+              These choices apply to everyone.
             </p>
           </>
         )}

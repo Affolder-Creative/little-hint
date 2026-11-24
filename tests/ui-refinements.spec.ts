@@ -1383,6 +1383,7 @@ for (const layout of ["compact", "large-photos"] as const) {
             giftPreferences: [],
             environment: "test",
             giftCardLayout: layout,
+            giftCardLayoutMobile: layout,
           },
         }),
       );
@@ -1600,4 +1601,29 @@ test("card privacy explanations open on hover and stay available after clicking"
     path: info.outputPath("quiet-cards.png"),
     fullPage: true,
   });
+});
+
+test("gift layouts respond independently to the screen size", async ({
+  page,
+}, info) => {
+  const { state, actor } = await setup(page);
+  await page.route("**/api/v1/world", (route) =>
+    route.fulfill({ json: { ...world(state, actor), giftPreferences: [] } }),
+  );
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto("/");
+  const grid = page.locator(".gift-grid");
+  await expect(grid).toHaveClass(/gift-grid-compact/);
+  await page.setViewportSize({ width: 650, height: 1000 });
+  await expect(grid).toHaveClass(/gift-grid-large-photos/);
+  await expect(grid).toHaveCSS("grid-template-columns", /\d+.* \d+/);
+  await page.setViewportSize({ width: 651, height: 1000 });
+  await expect(grid).toHaveClass(/gift-grid-compact/);
+  await page.setViewportSize({ width: 393, height: 2000 });
+  await expect(grid).toHaveClass(/gift-grid-large-photos/);
+  await grid.screenshot({ path: info.outputPath("mobile-large-photos.png") });
+  await page.reload();
+  await expect(grid).toHaveClass(/gift-grid-large-photos/);
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await expect(grid).toHaveClass(/gift-grid-compact/);
 });

@@ -5549,3 +5549,8 @@ a.button:is(:hover, :focus, :active),
   margin-left: 3px;
   font-variant-numeric: tabular-nums;
 }
+@media (max-width: 650px) {
+  .admin-preference .gift-card-layout-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
