@@ -380,7 +380,9 @@ export function Buying() {
                 <button
                   className="button secondary small"
                   onClick={() =>
-                    world.spendingEnabled && r.purchased < r.quantity
+                    world.spendingEnabled &&
+                    r.purchased < r.quantity &&
+                    view !== "purchased"
                       ? open(
                           "Mark as purchased",
                           <PurchaseForm
@@ -583,7 +585,7 @@ export function Buying() {
                           {(shopFirst || quickPurchase) &&
                             view !== "purchased" &&
                             updateAction}
-                          {!needsBuying && shopAction}
+                          {(!needsBuying || view === "purchased") && shopAction}
                           {!r.exchangeId && r.item && !r.item.archived && (
                             <button
                               className="text-button"

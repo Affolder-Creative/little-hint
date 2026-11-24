@@ -111,6 +111,7 @@ for (const width of [320, 768, 1440])
     const base = data.buying[0];
     data.paged = false;
     data.spendingAvailable = false;
+    data.spendingEnabled = true;
     data.buying = [
       {
         ...base,
@@ -156,7 +157,7 @@ for (const width of [320, 768, 1440])
         json: path.endsWith("/world")
           ? data
           : path.includes("/spending")
-            ? { settings: { enabled: false } }
+            ? { settings: { enabled: false }, records: [], total: 0 }
             : { rows: [], nextCursor: null },
       });
     });
@@ -168,6 +169,22 @@ for (const width of [320, 768, 1440])
     await expect(
       page.getByText("Arrival not recorded", { exact: true }),
     ).toBeVisible();
+    const partial = page
+      .locator(".buying-row")
+      .filter({ hasText: "Books for a long winter evening" });
+    await partial.locator("summary").click();
+    await partial
+      .getByRole("button", { name: "Update purchase", exact: true })
+      .click();
+    await expect(
+      page
+        .getByRole("dialog")
+        .getByRole("heading", { name: "Update purchase", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByLabel("Quantity purchased", { exact: true }),
+    ).toHaveValue("3");
+    await page.keyboard.press("Escape");
     await page.screenshot({
       path: info.outputPath(`arrival-${width}-light.png`),
     });
