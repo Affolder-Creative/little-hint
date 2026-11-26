@@ -1602,19 +1602,30 @@ function GiftEditor({
             disabled={!!gift && !gift.canEditRecipients}
             onChange={(ids) => {
               setRecipientIds(ids);
+              const nextAllocations = ids.map((recipientId) => {
+                const existing = spendingAllocations.find(
+                  (v) => v.recipientId === recipientId,
+                );
+                const initialList = world.lists.find(
+                  (list) => list.id === initialSpendingListId,
+                );
+                return {
+                  recipientId,
+                  share: world.spendingEnabled ? 1 : (existing?.share ?? 1),
+                  listId: existing
+                    ? existing.listId
+                    : initialList?.ownerIds.includes(recipientId)
+                      ? initialList.id
+                      : null,
+                };
+              });
               setSpendingAllocations(
-                ids.map((recipientId) => {
-                  const existing = spendingAllocations.find(
-                    (v) => v.recipientId === recipientId,
-                  );
-                  return {
-                    recipientId,
-                    share: 1,
-                    listId: existing
-                      ? existing.listId
-                      : (initialSpendingListId ?? null),
-                  };
-                }),
+                nextAllocations.some((allocation) => allocation.share > 0)
+                  ? nextAllocations
+                  : nextAllocations.map((allocation) => ({
+                      ...allocation,
+                      share: 1,
+                    })),
               );
               if (world.spendingEnabled)
                 toast("Recipient shares reset to an equal split.");

@@ -166,6 +166,17 @@ it.each([false, true])(
     const before = JSON.stringify(f.state.spendingRecords);
     if (disabled) vi.stubEnv("SPENDING_ENABLED", "false");
     try {
+      for (const invalidList of [
+        "11111111-1111-4111-8111-111111111111",
+        f.state.lists.find((l) => !l.ownerIds.includes(item.recipientIds[0]))!
+          .id,
+      ])
+        expect(() =>
+          command(f.state, f.actor, "items.update", {
+            ...item,
+            spendingListId: invalidList,
+          }),
+        ).toThrow("Choose an available wish list");
       command(f.state, f.actor, "items.update", {
         ...item,
         spendingListId: f.list.id,

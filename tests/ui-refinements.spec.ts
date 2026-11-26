@@ -1833,6 +1833,21 @@ test("create and clear a private list association without spending tracking", as
   await dialog
     .getByLabel("Gift idea name", { exact: true })
     .fill("A plan without spending");
+  const other = world(state, actor).people.find(
+    (person) =>
+      person.userId &&
+      person.userId !== actor.id &&
+      !list.ownerIds.includes(person.id),
+  )!;
+  const recipientSearch = dialog.getByRole("combobox", {
+    name: "Who is this idea for?",
+    exact: true,
+  });
+  await recipientSearch.fill(other.name);
+  await recipientSearch.press("Enter");
+  await expect(
+    dialog.getByLabel(`${other.name}'s wish list`, { exact: true }),
+  ).toHaveValue("");
   await dialog
     .getByRole("button", { name: "Save gift idea", exact: true })
     .click();
@@ -1840,6 +1855,14 @@ test("create and clear a private list association without spending tracking", as
   await expect(
     page.getByRole("heading", { name: "A plan without spending", exact: true }),
   ).toBeVisible();
+  const saved = state.items.find(
+    (item) => item.title === "A plan without spending",
+  )!;
+  expect(
+    saved.spendingAllocations?.find((a) => a.recipientId === other.id)?.listId,
+  ).toBeUndefined();
+  saved.spendingAllocations![0].share = 5;
+  saved.spendingAllocations![1].share = 2;
   await page.goto(`/lists/${list.id}`);
   const card = page
     .locator(".gift-card")
@@ -1848,6 +1871,9 @@ test("create and clear a private list association without spending tracking", as
   await card.locator(".gift-title-link").click();
   await page
     .getByRole("button", { name: "Edit gift idea", exact: true })
+    .click();
+  await dialog
+    .getByRole("button", { name: `Remove ${other.name}`, exact: true })
     .click();
   await dialog.locator(".spending-allocations select").selectOption("");
   await dialog
@@ -1859,5 +1885,22 @@ test("create and clear a private list association without spending tracking", as
   );
   await page.goto(`/lists/${list.id}`);
   await expect(card).toHaveCount(0);
+  expect(saved.spendingAllocations?.[0].share).toBe(5);
+  // Removing the only positive share must remain saveable with controls hidden.
+  saved.recipientIds.push(other.id);
+  saved.spendingAllocations![0].share = 0;
+  saved.spendingAllocations!.push({ recipientId: other.id, share: 2 });
+  await page.goto(`/gift/${saved.id}`);
+  await page
+    .getByRole("button", { name: "Edit gift idea", exact: true })
+    .click();
+  await dialog
+    .getByRole("button", { name: `Remove ${other.name}`, exact: true })
+    .click();
+  await dialog
+    .getByRole("button", { name: "Save changes", exact: true })
+    .click();
+  await expect(dialog).toHaveCount(0);
+  expect(saved.spendingAllocations?.[0].share).toBe(1);
   expect(previewRequests).toBe(0);
 });
