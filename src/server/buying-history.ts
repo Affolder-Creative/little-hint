@@ -1,3 +1,4 @@
+import { offerView } from "./contribution-offers";
 import { sourceState } from "./gift-lifecycle";
 import { z } from "zod";
 import type { Actor, Base, State, World } from "../shared/model";
@@ -87,4 +88,14 @@ export function contributionHistory(
       };
     }),
   };
+}
+
+export function contributionOfferHistory(s: State, a: Actor, raw: unknown) {
+  const selected = page(
+    s.contributionOffers.filter(
+      (o) => o.userId === a.id && o.status !== "accepted",
+    ),
+    raw,
+  );
+  return { ...selected, rows: selected.rows.map((o) => offerView(s, a, o)) };
 }

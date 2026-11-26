@@ -1,3 +1,4 @@
+import { reconcileOffers } from "./contribution-offers";
 import { inferredPriceSource } from "../shared/shopping-offers";
 import { migrateShoppingOffers } from "./shopping-offers";
 import { reconcileItemGroups } from "./item-groups";
@@ -21,7 +22,7 @@ import {
   type ImportJob,
   type FriendEntry,
 } from "../shared/model";
-const supportedSchemaVersion = 17;
+const supportedSchemaVersion = 18;
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   max: 10,
@@ -102,11 +103,13 @@ export async function transact<T>(
       reconcileCoManagement(state);
       reconcilePrivacyReview(state);
       reconcileSpendingPrivacy(state);
+      reconcileOffers(state);
       const result = await fn(state, tx);
       reconcileItemGroups(state);
       reconcileCoManagement(state);
       reconcilePrivacyReview(state);
       reconcileSpendingPrivacy(state);
+      reconcileOffers(state);
       const closed = new Set(
         (await tx.execute(sql`SELECT id_hash FROM closed_account`)).rows.map(
           (r) => String(r.id_hash),
@@ -369,6 +372,9 @@ INSERT INTO schema_migration(version) VALUES (2);`);
     }
     await client.query(
       "INSERT INTO schema_migration(version) VALUES (17) ON CONFLICT DO NOTHING",
+    );
+    await client.query(
+      "INSERT INTO schema_migration(version) VALUES (18) ON CONFLICT DO NOTHING",
     );
     await client.query("COMMIT");
   } catch (e) {

@@ -319,6 +319,24 @@ export function activityAllowed(s: State, n: Notice): boolean {
         );
       })
     );
+  if (n.contributionOfferId) {
+    const o = s.contributionOffers.find((o) => o.id === n.contributionOfferId);
+    if (!o || selfRecipient(s, a, o.recipientIds)) return false;
+    if (o.userId === a.id) return true;
+    const item = s.items.find((i) => i.id === o.itemId);
+    return (
+      !!item &&
+      itemVisible(s, a, item) &&
+      !recipient(s, a, item) &&
+      s.reservations.some(
+        (r) =>
+          r.itemId === o.itemId &&
+          r.buyerId === a.id &&
+          r.quantity > 0 &&
+          !r.exchangeId,
+      )
+    );
+  }
   if (n.event === "contribution" && n.reservationId) {
     const r = s.reservations.find((r) => r.id === n.reservationId);
     return (
@@ -535,6 +553,10 @@ function renderActivity(s: State, n: Notice): NotificationView {
     "return-sent": `${who} recorded money returned`,
     "return-received": `${who} confirmed a return received`,
     "return-voided": `${who} corrected a return record`,
+    "offer-updated": `${who} updated an offer to contribute`,
+    "offer-accepted": `${who} accepted your contribution offer`,
+    "offer-cancelled":
+      "Your contribution offer was cancelled because the gift is no longer available",
     pledged: `${who} offered to help pay for a gift`,
     sent: `${who} marked a contribution as sent`,
     received: `${who} marked a contribution as received`,
@@ -584,37 +606,39 @@ function renderActivity(s: State, n: Notice): NotificationView {
       (n.exchangeId
         ? s.exchanges.find((e) => e.id === n.exchangeId)?.name
         : undefined),
-    href: n.coManagement
-      ? n.coManagement.content && list
-        ? `/lists/${list.id}`
-        : "/settings?section=co-management"
-      : n.lifecycle || (n.event === "contribution" && n.reservationId)
-        ? buyingDestination(s, n)
-        : n.importId
-          ? (() => {
-              const j = s.imports.find((j) => j.id === n.importId);
-              return j?.draft?.kind === "idea" &&
-                s.people.some(
-                  (p) =>
-                    p.id === j.draft?.recipientId &&
-                    personVisible(s, actor(s, n.userId), p),
-                )
-                ? `/people/${j.draft.recipientId}?tab=ideas&draft=${n.importId}`
-                : `/lists?draft=${n.importId}`;
-            })()
-          : n.invitationId
-            ? `/invite/${n.invitationId}`
-            : n.event === "invitation" && n.listId
-              ? "/lists"
-              : n.event === "invitation"
-                ? "/settings?section=groups"
-                : n.groupEventId
-                  ? `/events/${n.groupEventId}`
-                  : n.exchangeId
-                    ? `/exchanges#exchange-${n.exchangeId}`
-                    : item
-                      ? `/gift/${item.id}${n.commentId ? `#note-${n.commentId}` : ""}`
-                      : "/buying",
+    href: n.contributionOfferId
+      ? "/buying"
+      : n.coManagement
+        ? n.coManagement.content && list
+          ? `/lists/${list.id}`
+          : "/settings?section=co-management"
+        : n.lifecycle || (n.event === "contribution" && n.reservationId)
+          ? buyingDestination(s, n)
+          : n.importId
+            ? (() => {
+                const j = s.imports.find((j) => j.id === n.importId);
+                return j?.draft?.kind === "idea" &&
+                  s.people.some(
+                    (p) =>
+                      p.id === j.draft?.recipientId &&
+                      personVisible(s, actor(s, n.userId), p),
+                  )
+                  ? `/people/${j.draft.recipientId}?tab=ideas&draft=${n.importId}`
+                  : `/lists?draft=${n.importId}`;
+              })()
+            : n.invitationId
+              ? `/invite/${n.invitationId}`
+              : n.event === "invitation" && n.listId
+                ? "/lists"
+                : n.event === "invitation"
+                  ? "/settings?section=groups"
+                  : n.groupEventId
+                    ? `/events/${n.groupEventId}`
+                    : n.exchangeId
+                      ? `/exchanges#exchange-${n.exchangeId}`
+                      : item
+                        ? `/gift/${item.id}${n.commentId ? `#note-${n.commentId}` : ""}`
+                        : "/buying",
     createdAt: n.createdAt,
     readAt: n.readAt,
   };

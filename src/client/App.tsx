@@ -1,3 +1,7 @@
+import {
+  GiftContributionOffers,
+  ReserveWithOffers,
+} from "./ContributionOffers";
 import { GiftContext } from "./GiftContext";
 import { productItems } from "../shared/item-groups";
 import { PeopleDirectory } from "./PeopleDirectory";
@@ -1533,6 +1537,25 @@ function GiftDetail() {
                     throw new Error(
                       "This assignment is unavailable. Choose again.",
                     );
+                  if (!c && gift.contributionOffers?.length) {
+                    open(
+                      "Reserve gift",
+                      <ReserveWithOffers
+                        gift={gift}
+                        quantity={quantity}
+                        onSuccess={() =>
+                          toast(
+                            "Gift reserved. Review your gift plan in Buying.",
+                            {
+                              action: { label: "Open Buying", to: "/buying" },
+                              duration: 10000,
+                            },
+                          )
+                        }
+                      />,
+                    );
+                    return;
+                  }
                   await mutate("reservations", {
                     itemId: gift.id,
                     ordinary: exchange === "ordinary",
@@ -1555,6 +1578,12 @@ function GiftDetail() {
               </Action>
             </>
           )}
+          <GiftContributionOffers
+            gift={gift}
+            ordinary={
+              !selectedExchange && (!choices.length || exchange === "ordinary")
+            }
+          />
         </div>
       )}
       {gift.reservations && gift.reservations.length > 0 && (

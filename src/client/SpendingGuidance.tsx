@@ -1,3 +1,4 @@
+import { OfferSelection } from "./ContributionOffers";
 import { isPriceRange, priceEstimateCents } from "../shared/price";
 import { productItems } from "../shared/item-groups";
 import { netContribution } from "../shared/contribution-money";
@@ -14,7 +15,7 @@ import {
   type SpendingPreview,
 } from "../shared/spending-guidance";
 import { dollars } from "./api";
-import { Field, Form } from "./components";
+import { Field, Form, useModalDismiss } from "./components";
 import { useApp } from "./context";
 
 export function guidelineValue(data: FormData) {
@@ -195,6 +196,7 @@ export function ShareCostForm({
   reservation: World["buying"][number];
 }) {
   const { world, mutate, close } = useApp();
+  const dismiss = useModalDismiss();
   const legacy =
     r.poolTargetCents !== undefined && r.poolTotalCents === undefined;
   const [totalEdited, setTotalEdited] = useState(false);
@@ -212,6 +214,17 @@ export function ShareCostForm({
         ? ""
         : "0",
   );
+  const [selectedOffers, setSelectedOffers] = useState<string[]>([]);
+  const offers = (r.item?.contributionOffers ?? []).filter(
+    (offer) => offer.userId !== world.me.id,
+  );
+  const acceptedOffers = offers.filter((offer) =>
+    selectedOffers.includes(offer.id),
+  );
+  const offeredCents = acceptedOffers.reduce(
+    (sum, offer) => sum + offer.amountCents,
+    0,
+  );
   const totalCents = Math.round(Number(total) * 100);
   const ownCents = Math.round(Number(own) * 100);
   const target = totalCents - ownCents;
@@ -223,15 +236,22 @@ export function ShareCostForm({
     .reduce((n, c) => n + netContribution(c), 0);
   return (
     <Form
-      submit="Save contribution goal"
+      dialogLayout
+      className="contribution-dialog"
+      cancel={() => dismiss?.()}
+      submit={
+        acceptedOffers.length
+          ? "Save and accept offers"
+          : "Save contribution goal"
+      }
       onSubmit={async () => {
         if (ownCents > totalCents)
           throw new Error(
             "Your contribution cannot exceed the total gift cost.",
           );
-        if (target < pledged)
+        if (target < pledged + offeredCents)
           throw new Error(
-            "The goal from others must cover contributions already promised.",
+            "The goal from others must cover existing contributions and selected offers.",
           );
         await mutate("reservations/update", {
           id: r.id,
@@ -240,6 +260,10 @@ export function ShareCostForm({
           purchased: r.purchased,
           poolTotalCents: totalCents,
           poolOwnContributionCents: ownCents,
+          acceptedOffers: acceptedOffers.map(({ id, revision }) => ({
+            id,
+            revision,
+          })),
         });
         close();
       }}
@@ -295,6 +319,11 @@ export function ShareCostForm({
           onChange={(e) => setOwn(e.target.value)}
         />
       </Field>
+      <OfferSelection
+        offers={offers}
+        selected={selectedOffers}
+        onChange={setSelectedOffers}
+      />
       {total !== "" && own !== "" && target >= 0 && (
         <div className="shared-cost-summary" role="status" aria-live="polite">
           <p>
@@ -306,8 +335,10 @@ export function ShareCostForm({
               {dollars(received)}
             </p>
           )}
+          {offeredCents > 0 && <p>Offers selected: {dollars(offeredCents)}</p>}
           <p>
-            Still needs contributors: {dollars(Math.max(0, target - pledged))}
+            Still needs contributors:{" "}
+            {dollars(Math.max(0, target - pledged - offeredCents))}
           </p>
         </div>
       )}

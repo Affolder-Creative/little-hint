@@ -1,3 +1,4 @@
+import { reconcileOffers } from "./contribution-offers";
 import { isPriceRange, priceEstimateCents } from "../shared/price";
 import { allocationsInput } from "../shared/spending-input";
 import { netContribution } from "../shared/contribution-money";
@@ -99,6 +100,7 @@ const protectedRecord = protectedSpending;
 
 function shared(s: State, r: SpendingRecord, c?: SpendingConnection) {
   return (
+    !r.contributionOfferId &&
     active(s, c) &&
     r.connectionId === c.id &&
     r.sharing !== "private" &&
@@ -127,7 +129,13 @@ function touch(r: SpendingRecord, a: Actor, description: string) {
 }
 function autoShare(s: State, a: Actor, r: SpendingRecord) {
   const c = connection(s, a);
-  if (r.privacyRevoked || !active(s, c) || protectedRecord(s, r, c)) return;
+  if (
+    r.contributionOfferId ||
+    r.privacyRevoked ||
+    !active(s, c) ||
+    protectedRecord(s, r, c)
+  )
+    return;
   if (r.date && r.date.slice(0, 10) < c.createdAt.slice(0, 10)) return;
   const rules = [
     ...r.recipientIds.map((p) => "person:" + p),
@@ -413,10 +421,57 @@ export function syncSpending(s: State, a: Actor) {
       });
   }
 }
+export function syncContributionOffers(s: State) {
+  reconcileOffers(s);
+  if (!spendingAvailable()) return;
+  for (const o of s.contributionOffers) {
+    if (!spendingSettings(s, { id: o.userId, name: "", email: "" }).enabled)
+      continue;
+    const sourceId = o.contributionId ?? o.id;
+    let entry = s.spendingRecords.find(
+      (r) => r.sourceId === sourceId && r.ownerId === o.userId,
+    );
+    if (!entry && o.status !== "cancelled") {
+      entry = {
+        ...stamp(),
+        ownerId: o.userId,
+        sourceId,
+        contributionOfferId: o.status === "open" ? o.id : undefined,
+        reservationId: o.reservationId,
+        title: o.titleSnapshot,
+        recipientIds: [...o.recipientIds],
+        recipientNames: [...o.recipientNames],
+        listId: o.listId,
+        listName: o.listName,
+        eventId: o.eventId,
+        eventName: o.eventName,
+        quantity: 0,
+        amountCents: o.amountCents,
+        date: null,
+        planningYear: new Date(o.createdAt).getFullYear(),
+        kind: "plan",
+        sharing: "private",
+        splits: o.recipientIds.map(() => 1),
+        history: [],
+      };
+      s.spendingRecords.push(entry);
+    }
+    if (entry && o.status !== "accepted") {
+      if (
+        entry.amountCents !== o.amountCents ||
+        !!entry.voided !== (o.status === "cancelled")
+      )
+        entry.revision++;
+      entry.amountCents = o.amountCents;
+      entry.voided = o.status === "cancelled";
+    }
+  }
+}
 export function syncContributions(
   s: State,
   shareSources: readonly string[] = [],
 ) {
+  syncContributionOffers(s);
   if (!spendingAvailable()) return;
   for (const c of s.contributions) {
     const reservation = s.reservations.find((r) => r.id === c.reservationId);
@@ -450,6 +505,11 @@ export function syncContributions(
           shareSources.includes(c.id) &&
           c.createdAt >= spendingSettings(s, actor).createdAt
         )
+          autoShare(s, actor, entry);
+      }
+      if (entry.contributionOfferId) {
+        delete entry.contributionOfferId;
+        if (c.createdAt >= spendingSettings(s, actor).createdAt)
           autoShare(s, actor, entry);
       }
       entry.kind = receiving
@@ -530,10 +590,15 @@ export function spendingView(s: State, a: Actor): SpendingView {
             .reduce((n, c) => n + netContribution(c), 0)
         : undefined,
     canEdit:
+      !r.contributionOfferId &&
       !r.contributionReturnId &&
       !s.contributions.some((c) => c.id === r.sourceId) &&
       editable(s, a, r),
-    canShare: r.ownerId === a.id && active(s, c) && !protectedRecord(s, r, c),
+    canShare:
+      !r.contributionOfferId &&
+      r.ownerId === a.id &&
+      active(s, c) &&
+      !protectedRecord(s, r, c),
     protected: protectedRecord(s, r, c),
     canAssignList: canAssignList(s, r),
     payerName: name(s, r.ownerId),
@@ -1039,6 +1104,8 @@ export function spendingCommand(
   const r = s.spendingRecords.find((r) => r.id === b.id);
   if (!r || !editable(s, a, r)) fail(404, "Spending record not found.");
   revision(r, b);
+  if (r.contributionOfferId)
+    fail(400, "Update contribution offers from Buying.");
   if (action === "spending.record") {
     if (
       r.contributionReturnId ||

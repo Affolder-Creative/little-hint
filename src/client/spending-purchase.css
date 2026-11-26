@@ -211,8 +211,8 @@ dialog.dialog:has(.spending-purchase) {
 }
 .purchase-record-fields {
   border: 0;
-  border-top: 1px solid var(--border);
-  padding: 16px 0 0;
+  margin: 0;
+  padding: 0;
   min-width: 0;
 }
 .purchase-record-fields legend {
@@ -228,8 +228,17 @@ dialog.dialog:has(.spending-purchase) {
   padding-inline-start: 20px;
 }
 
-.purchase-record-fields .field {
-  margin-top: 16px;
+.purchase-record-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-controls);
+  padding-top: var(--space-controls);
+}
+.purchase-record-content > .spending-allocations {
+  margin-top: var(--space-related);
+}
+.purchase-record-fields + .purchase-record-fields {
+  margin-top: var(--space-controls);
 }
 
 /* The visual chip is compact; its remove control keeps a full touch target. */

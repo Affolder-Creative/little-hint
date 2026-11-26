@@ -29,3 +29,8 @@ related_targets: ["src/client/Browser.tsx", "src/client/Buying.tsx", "src/client
 - At 651px and above with hover and a fine pointer, compact-card privacy triggers have a 28px minimum height and zero block margins, matching their compact visible row without overlapping neighboring links. Touch layouts retain 44px targets and their safe gaps; the mobile inline context stays unchanged.
 
 - Card source and privacy controls use a 12px horizontal gap at 651px and above. Compact mobile rows retain the 6px inline gap.
+
+- Arrival completion leaves In hand as a passive status with Edit arrival in More actions. Pending and unknown arrivals use Mark as in hand or Record arrival. The selected arrival filter owns one continuous label-and-count underline. Completed or filtered-away actions restore focus to the row menu or active filter. Buying lists omit the last row divider.
+- Shared gift details offer exact contribution amounts before buyer acceptance. Reservation review and shared-cost setup show unchecked offer selection. Personal pending offers appear in Buying with edit/cancel actions. Reuse existing flat rows, field spacing and fixed dialog layout.
+
+- Contribution dialog actions stay on one row with primary left and Cancel right. Use 12px gaps, equal stretched button heights, and centered labels. On phones the primary flexes and wraps while Cancel keeps its intrinsic width.

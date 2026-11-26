@@ -48,3 +48,6 @@ The lowest and highest listed price for one item or gift idea. A range can descr
 
 **In hand**:
 The buyer has possession of purchased gift units. This is a private checklist status, separate from delivery to the recipient and receipt of contribution payments.
+
+**Contribution offer**:
+An amount someone offers toward a gift before a buyer accepts responsibility for that contribution. It does not reserve the gift or record a payment.

@@ -53,6 +53,7 @@ export function deletionReview(s: State, target: Actor) {
           (r) =>
             r.buyerId === target.id || authored.some((i) => i.id === r.itemId),
         ),
+        contributionOffers: s.contributionOffers,
         contributions: s.contributions,
       }),
     )
@@ -120,6 +121,12 @@ export function registerAdminAccounts(
             email: next.email,
           });
         } else {
+          for (const offer of s.contributionOffers.filter(
+            (o) => o.userId === user.id && o.status === "open",
+          )) {
+            offer.status = "cancelled";
+            touch(offer);
+          }
           for (const r of s.reservations.filter((r) => r.buyerId === user.id)) {
             if (
               s.contributions.some(

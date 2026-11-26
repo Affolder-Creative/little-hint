@@ -1,0 +1,79 @@
+.contribution-offers {
+  margin-top: var(--space-section);
+}
+.contribution-offers > h3 {
+  margin-bottom: var(--space-related);
+}
+.contribution-offers > p {
+  margin-bottom: var(--space-related);
+}
+.contribution-offers > .actions {
+  margin-top: var(--space-controls);
+}
+.contribution-offer-selection {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.contribution-offer-selection legend {
+  font-size: 17px;
+  font-weight: 600;
+  margin-bottom: var(--space-related);
+}
+.contribution-offer-selection > div {
+  display: grid;
+  gap: var(--space-related);
+}
+.contribution-offer-selection p {
+  margin: 0;
+}
+.contribution-offer-row {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: var(--space-controls);
+  padding: 20px 0;
+  border-bottom: 1px solid var(--border);
+}
+.contribution-offer-row:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+.contribution-offer-row h3 {
+  font-size: 17px;
+}
+.contribution-offer-row p {
+  margin-bottom: var(--space-related);
+}
+@media (max-width: 650px) {
+  .contribution-offer-row {
+    flex-direction: column;
+  }
+}
+
+/* Keep the decision and its cancellation together at every viewport width. */
+.form-dialog.contribution-dialog > .form-actions {
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 12px;
+}
+.form-dialog.contribution-dialog > .form-actions > .button {
+  min-width: 0;
+  align-self: stretch;
+  justify-content: center;
+  align-items: center;
+}
+.form-dialog.contribution-dialog > .form-actions > .button[type="submit"] {
+  width: auto;
+  flex: 0 1 auto;
+  white-space: normal;
+}
+.form-dialog.contribution-dialog > .form-actions > .button.secondary {
+  flex: 0 0 auto;
+}
+@media (max-width: 650px) {
+  .form-dialog.contribution-dialog > .form-actions > .button[type="submit"] {
+    flex: 1 1 0;
+  }
+}

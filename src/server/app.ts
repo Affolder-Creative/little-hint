@@ -1,3 +1,4 @@
+import { contributionOfferHistory } from "./buying-history";
 import { accountFingerprint } from "./closed-accounts";
 import { administersGroup } from "./domain-access";
 import { registerAdminRoles } from "./admin-roles";
@@ -333,6 +334,10 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
     const a = await actor(req);
     return cancelledBuying(await readBuyingState(a.id), a, req.query);
   });
+  app.get("/api/v1/buying/contribution-offers", async (req) => {
+    const a = await actor(req);
+    return contributionOfferHistory(await readState(), a, req.query);
+  });
   app.get("/api/v1/buying/contributions", async (req) => {
     const a = await actor(req);
     return contributionHistory(await readBuyingState(a.id), a, req.query);
@@ -582,6 +587,8 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
     reservations: "reservations.create",
     "reservations/update": "reservations.update",
     "buying/arrival": "buying.arrival",
+    "contribution-offers": "contribution-offers.create",
+    "contribution-offers/update": "contribution-offers.update",
     contributions: "contributions.create",
     "contributions/update": "contributions.update",
     comments: "comments.create",

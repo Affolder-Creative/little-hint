@@ -27,6 +27,7 @@ export interface SpendingAllocation {
   eventName?: string;
 }
 export interface SpendingRecord extends Base {
+  contributionOfferId?: string;
   /** Owner-private, only for standalone purchases. */
   inHandQuantity?: number;
   allocations?: SpendingAllocation[];

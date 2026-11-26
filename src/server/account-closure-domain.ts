@@ -93,6 +93,9 @@ export function closurePlan(
       href: `/exchanges/${e.id}`,
     });
   if (
+    s.contributionOffers.some(
+      (o) => o.userId === a.id && o.status === "open",
+    ) ||
     s.reservations.some(
       (r) => r.buyerId === a.id && r.quantity > r.purchased,
     ) ||
@@ -111,7 +114,7 @@ export function closurePlan(
       id: "buying",
       title: "Settle your gift commitments",
       detail:
-        "Resolve unpurchased reservations, pledged or sent contributions, and returns awaiting receipt. Account closure does not cancel them.",
+        "Resolve unpurchased reservations, open contribution offers, pledged or sent contributions, and returns awaiting receipt. Account closure does not cancel them.",
       href: "/buying",
     });
   if (
@@ -503,6 +506,14 @@ export function closeAccountData(
       )
     )
       p.name = "Former recipient";
+  s.contributionOffers = s.contributionOffers.filter((o) => o.userId !== a.id);
+  for (const offer of s.contributionOffers) {
+    offer.recipientNames = offer.recipientNames.map((name, index) =>
+      plan.own.has(offer.recipientIds[index]) ? "Former member" : name,
+    );
+    if (offer.listId && removedLists.has(offer.listId))
+      offer.listName = "Former member's list";
+  }
   s.reservations = s.reservations.filter((r) => !privateReservations.has(r.id));
   s.contributions = s.contributions.filter(
     (c) => !privateReservations.has(c.reservationId),

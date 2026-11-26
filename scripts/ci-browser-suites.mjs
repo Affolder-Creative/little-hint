@@ -11,6 +11,7 @@ export const suites = {
       "efficiency",
       "pagination",
       "buying-sort",
+      "contribution-offers",
       "co-management",
     ],
   },

@@ -72,4 +72,36 @@ describe.skipIf(!url)("gift lifecycle transactions", () => {
       (await db.readBuyingState(donor.id)).contributions[0].returns,
     ).toHaveLength(1);
   });
+  it("accepts an offer once when two buyers reserve concurrently", async () => {
+    const offer = await db.transact((state) => {
+      state.lists.find((l) => l.id === f.item.listId)!.archiveAfter = undefined;
+      return command(state, donor, "contribution-offers.create", {
+        itemId: f.item.id,
+        amountCents: 1500,
+      }) as import("../src/shared/model").ContributionOffer;
+    });
+    const attempts = await Promise.allSettled(
+      [buyer, f.actors[3]].map((actor) =>
+        db.transact((state) =>
+          command(state, actor, "reservations.create", {
+            itemId: f.item.id,
+            quantity: 1,
+            poolTotalCents: 7500,
+            poolOwnContributionCents: 0,
+            acceptedOffers: [{ id: offer.id, revision: offer.revision }],
+          }),
+        ),
+      ),
+    );
+    expect(attempts.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+    const saved = await db.readState();
+    const accepted = saved.contributionOffers.find((o) => o.id === offer.id)!;
+    expect(accepted.status).toBe("accepted");
+    expect(
+      saved.contributions.filter((c) => c.id === accepted.contributionId),
+    ).toHaveLength(1);
+    expect(
+      saved.reservations.filter((r) => r.itemId === f.item.id),
+    ).toHaveLength(2);
+  });
 });

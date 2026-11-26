@@ -30,6 +30,9 @@ export function takeOverProfile(
       (i) =>
         i.recipientIds.includes(old) &&
         (i.creatorId === a.id ||
+          s.contributionOffers.some(
+            (o) => o.itemId === i.id && o.userId === a.id,
+          ) ||
           s.reservations.some((r) => r.itemId === i.id && r.buyerId === a.id)),
     )
   )
@@ -145,6 +148,15 @@ export function takeOverProfile(
   }
   for (const item of s.items)
     item.recipientIds = [...new Set(item.recipientIds)];
+  for (const offer of s.contributionOffers) {
+    const names = new Map(
+      offer.recipientIds.map((id, index) => [id, offer.recipientNames[index]]),
+    );
+    offer.recipientIds = [...new Set(offer.recipientIds)];
+    offer.recipientNames = offer.recipientIds.map((id) =>
+      id === account.id ? account.name : (names.get(id) ?? "Recipient"),
+    );
+  }
   for (const record of s.spendingRecords) {
     const unique = [...new Set(record.recipientIds)];
     if (unique.length === record.recipientIds.length) continue;

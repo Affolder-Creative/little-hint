@@ -140,8 +140,9 @@ export async function deliverNotice(id: string) {
   }
   const accountInvitation = inv && isAccountInvitation(inv);
   const friendInvitation = !!inv?.friendEntryId;
-  const actionPath =
-    n.lifecycle || (n.event === "contribution" && n.reservationId)
+  const actionPath = n.contributionOfferId
+    ? "/buying"
+    : n.lifecycle || (n.event === "contribution" && n.reservationId)
       ? buyingDestination(s, n)
       : inv
         ? accountInvitation
