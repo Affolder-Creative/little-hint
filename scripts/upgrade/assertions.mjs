@@ -443,6 +443,43 @@ function priceSourceMigrationContract(evidence) {
   return migrated;
 }
 
+// Schema 18 adds offer capabilities to authorized nonrecipient gift views.
+// Derive them only from the released view/records. The migration creates no
+// offers, so any newly exposed offer or recipient-side capability is a failure.
+function contributionOfferMigrationContract(evidence) {
+  const migrated = structuredClone(evidence);
+  assert.ok(
+    !migrated.records.some((row) => row.kind === "contributionOffers"),
+    "Pre-offer baseline must not contain contribution offers",
+  );
+  function gifts(value) {
+    if (!value || typeof value !== "object") return;
+    if (value.isRecipient === false) {
+      const item = migrated.records.find(
+        (row) => row.kind === "items" && row.id === value.id,
+      )?.data;
+      if (item) {
+        const list = migrated.records.find(
+          (row) => row.kind === "lists" && row.id === item.listId,
+        )?.data;
+        const eligible =
+          (value.canShop ?? true) &&
+          !value.archived &&
+          !item.deletedAt &&
+          !list?.deletedAt &&
+          item.kind !== "group" &&
+          item.publicationState !== "draft" &&
+          (!!item.listId || item.visibility !== "private");
+        value.canOfferContribution = eligible;
+        if (eligible) value.contributionOffers = [];
+      }
+    }
+    Object.values(value).forEach(gifts);
+  }
+  gifts(migrated.views);
+  return migrated;
+}
+
 export function assertPreserved(actual, expected) {
   if (actual.schemaVersion >= 9 && (expected.schemaVersion ?? 0) < 9)
     expected = lifecycleMigrationContract(expected);
@@ -452,6 +489,8 @@ export function assertPreserved(actual, expected) {
     expected = shoppingMigrationContract(expected, actual);
   if (actual.schemaVersion >= 16 && (expected.schemaVersion ?? 0) < 16)
     expected = priceSourceMigrationContract(expected);
+  if (actual.schemaVersion >= 18 && (expected.schemaVersion ?? 0) < 18)
+    expected = contributionOfferMigrationContract(expected);
   for (const field of ["records", "users", "barrier", "uploadHash", "views"]) {
     assert.ok(Object.hasOwn(actual, field), `Missing ${field} evidence`);
     assert.ok(

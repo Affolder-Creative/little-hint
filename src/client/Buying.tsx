@@ -77,13 +77,14 @@ export function Buying() {
   const activeView = useRef<HTMLButtonElement>(null);
   const activeArrival = useRef<HTMLButtonElement>(null);
   const rowFocus = useRef<HTMLElement | null>(null);
+  const arrivalFocus = useRef(false);
   const [focusRequest, setFocusRequest] = useState(0);
   useEffect(() => {
     if (!focusRequest) return;
     // Wait for React to close the dialog and finish restoring its opener.
     (
       (rowFocus.current?.isConnected ? rowFocus.current : null) ??
-      (view === "purchased"
+      (view === "purchased" && arrivalFocus.current
         ? (activeArrival.current ?? activeView.current)
         : activeView.current) ??
       document.getElementById("main")
@@ -118,8 +119,9 @@ export function Buying() {
         matchesArrival(r.purchased, r.inHandQuantity, arrival)
       : r.purchased < r.quantity);
   const visible = sortBuying(reservations.filter(matchesView), sort);
-  const focusView = () => {
+  const focusView = (arrivalChanged = false) => {
     rowFocus.current = null;
+    arrivalFocus.current = arrivalChanged;
     setFocusRequest((request) => request + 1);
   };
   if (world.paged && (!query.data || query.error))
@@ -315,7 +317,7 @@ export function Buying() {
                           arrival,
                         )
                       )
-                        focusView();
+                        focusView(true);
                       else if (inHandQuantity === r.purchased && menu) {
                         rowFocus.current = menu;
                         setFocusRequest((request) => request + 1);
@@ -744,7 +746,7 @@ export function Buying() {
                     setView(
                       view === "needs-buying" ? "purchased" : "needs-buying",
                     );
-                  focusView();
+                  focusView(view === "purchased" && arrival !== "all");
                 }}
               >
                 {view === "needs-buying"

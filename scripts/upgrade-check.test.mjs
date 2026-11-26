@@ -788,3 +788,71 @@ test("schema 16 distinguishes legacy scalar links from explicitly empty shops", 
     assertPreserved(after, before);
   }
 });
+
+test("schema 18 derives offer capabilities without inventing offers or exposing recipients", () => {
+  const baseline = structuredClone(original);
+  baseline.schemaVersion = 17;
+  baseline.records = [
+    {
+      id: "wish",
+      kind: "items",
+      data: { id: "wish", listId: "list", archived: false },
+    },
+    {
+      id: "private",
+      kind: "items",
+      data: { id: "private", visibility: "private", archived: false },
+    },
+    {
+      id: "archived",
+      kind: "items",
+      data: { id: "archived", listId: "list", archived: true },
+    },
+    { id: "list", kind: "lists", data: { id: "list", mode: "surprise" } },
+  ];
+  baseline.views = {
+    recipient: { items: [{ id: "wish", isRecipient: true, canShop: false }] },
+    buyer: {
+      items: [
+        { id: "wish", isRecipient: false, canShop: true, archived: false },
+        { id: "private", isRecipient: false, canShop: true, archived: false },
+        { id: "archived", isRecipient: false, canShop: true, archived: true },
+      ],
+    },
+  };
+  const candidate = structuredClone(baseline);
+  candidate.schemaVersion = 18;
+  candidate.views.buyer.items[0].canOfferContribution = true;
+  candidate.views.buyer.items[0].contributionOffers = [];
+  candidate.views.buyer.items[1].canOfferContribution = false;
+  candidate.views.buyer.items[2].canOfferContribution = false;
+  assertPreserved(candidate, baseline);
+  assertPreserved(baseline, baseline);
+  for (const corrupt of [
+    (v) => {
+      v.views.buyer.items[0].canOfferContribution = false;
+    },
+    (v) => {
+      delete v.views.buyer.items[0].contributionOffers;
+    },
+    (v) => {
+      v.views.buyer.items[0].contributionOffers = [{ amountCents: 100 }];
+    },
+    (v) => {
+      v.views.buyer.items[1].canOfferContribution = true;
+    },
+    (v) => {
+      v.views.buyer.items[2].canOfferContribution = true;
+    },
+    (v) => {
+      v.views.recipient.items[0].canOfferContribution = false;
+    },
+    (v) => {
+      v.views.recipient.items[0].contributionOffers = [];
+    },
+  ]) {
+    const bad = structuredClone(candidate);
+    corrupt(bad);
+    assert.throws(() => assertPreserved(bad, baseline));
+  }
+});
