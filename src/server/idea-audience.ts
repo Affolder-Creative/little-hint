@@ -5,6 +5,13 @@ import { fail, touch } from "./domain-common";
 export function ideaRecipientsLocked(s: State, i: Item) {
   return (
     !!i.recipientsLocked ||
+    s.contributionOffers.some(
+      (o) =>
+        o.itemId === i.id ||
+        s.items.some(
+          (child) => child.id === o.itemId && child.parentItemId === i.id,
+        ),
+    ) ||
     s.reservations.some(
       (r) =>
         r.itemId === i.id ||

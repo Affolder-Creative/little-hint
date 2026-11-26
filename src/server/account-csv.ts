@@ -154,6 +154,20 @@ export function accountCsv(s: State, a: Actor, table: ExportTable) {
         r.id,
       ]);
     }
+    for (const o of s.contributionOffers.filter((o) => o.userId === a.id))
+      rows.push([
+        "Contribution offer",
+        o.titleSnapshot,
+        o.recipientNames.join("; "),
+        o.listName,
+        null,
+        null,
+        money(o.amountCents),
+        o.status,
+        null,
+        o.createdAt,
+        o.id,
+      ]);
     for (const c of s.contributions.filter(
       (c) =>
         c.userId === a.id ||

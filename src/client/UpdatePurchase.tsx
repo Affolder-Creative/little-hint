@@ -136,65 +136,69 @@ function PurchaseEditor({
               ? `Purchase ${index + 1} · ${record.quantity} bought`
               : "Recorded spending"}
           </legend>
-          {record.canEdit ? (
-            <>
-              <Field label="Amount paid in USD, optional">
-                <input
-                  onChange={(e) =>
-                    setPreviewAmounts((values) => ({
-                      ...values,
-                      [record.id]:
-                        e.target.value === ""
-                          ? null
-                          : Math.round(Number(e.target.value) * 100),
-                    }))
-                  }
-                  name={`amount-${record.id}`}
-                  type="number"
-                  min="0"
-                  max="1000000"
-                  step="0.01"
-                  inputMode="decimal"
-                  defaultValue={
-                    record.amountCents === null ? "" : record.amountCents / 100
-                  }
-                />
-              </Field>
-              <Field label="Purchase date">
-                <input
-                  name={`date-${record.id}`}
-                  type="date"
-                  defaultValue={record.date ?? ""}
-                />
-              </Field>
-              {record.canAssignList ? (
-                <SpendingAllocations
-                  value={assignments[record.id] ?? recordAllocations(record)}
-                  amountCents={
-                    previewAmounts[record.id] !== undefined
-                      ? previewAmounts[record.id]
-                      : record.amountCents
-                  }
-                  onChange={(value) =>
-                    setAssignments((previous) => ({
-                      ...previous,
-                      [record.id]: value,
-                    }))
-                  }
-                />
-              ) : (
-                record.listName && <p>Wish list: {record.listName}</p>
-              )}
-            </>
-          ) : (
-            <p>
-              {record.amountCents === null
-                ? "Amount not recorded"
-                : dollars(record.amountCents)}{" "}
-              · {record.date ?? "Date not recorded"} · {record.payerName} can
-              edit this entry.
-            </p>
-          )}
+          <div className="purchase-record-content">
+            {record.canEdit ? (
+              <>
+                <Field label="Amount paid in USD, optional">
+                  <input
+                    onChange={(e) =>
+                      setPreviewAmounts((values) => ({
+                        ...values,
+                        [record.id]:
+                          e.target.value === ""
+                            ? null
+                            : Math.round(Number(e.target.value) * 100),
+                      }))
+                    }
+                    name={`amount-${record.id}`}
+                    type="number"
+                    min="0"
+                    max="1000000"
+                    step="0.01"
+                    inputMode="decimal"
+                    defaultValue={
+                      record.amountCents === null
+                        ? ""
+                        : record.amountCents / 100
+                    }
+                  />
+                </Field>
+                <Field label="Purchase date">
+                  <input
+                    name={`date-${record.id}`}
+                    type="date"
+                    defaultValue={record.date ?? ""}
+                  />
+                </Field>
+                {record.canAssignList ? (
+                  <SpendingAllocations
+                    value={assignments[record.id] ?? recordAllocations(record)}
+                    amountCents={
+                      previewAmounts[record.id] !== undefined
+                        ? previewAmounts[record.id]
+                        : record.amountCents
+                    }
+                    onChange={(value) =>
+                      setAssignments((previous) => ({
+                        ...previous,
+                        [record.id]: value,
+                      }))
+                    }
+                  />
+                ) : (
+                  record.listName && <p>Wish list: {record.listName}</p>
+                )}
+              </>
+            ) : (
+              <p>
+                {record.amountCents === null
+                  ? "Amount not recorded"
+                  : dollars(record.amountCents)}{" "}
+                · {record.date ?? "Date not recorded"} · {record.payerName} can
+                edit this entry.
+              </p>
+            )}
+          </div>
         </fieldset>
       ))}
     </Form>

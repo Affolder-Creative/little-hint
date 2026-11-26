@@ -823,7 +823,11 @@ function SpendingRow({
           For {r.recipientNames.join(" & ")}{" "}
           <span className="spending-row-status">
             {r.kind === "plan"
-              ? "Reserved"
+              ? r.contributionOfferId
+                ? "Awaiting buyer acceptance"
+                : r.sourceId
+                  ? "Pledged"
+                  : "Reserved"
               : r.kind === "refund"
                 ? "Refund"
                 : r.kind === "contribution"

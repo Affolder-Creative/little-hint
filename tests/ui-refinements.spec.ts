@@ -104,7 +104,11 @@ async function setup(page: Page) {
     }
     if (path === "spending")
       return route.fulfill({ json: spendingView(state, actor) });
-    if (path === "buying/contributions" || path === "buying/cancelled")
+    if (
+      path === "buying/contributions" ||
+      path === "buying/cancelled" ||
+      path === "buying/contribution-offers"
+    )
       return route.fulfill({ json: { rows: [], nextCursor: null } });
     if (path === "reservations")
       return route.fulfill({

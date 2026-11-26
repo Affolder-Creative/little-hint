@@ -254,6 +254,8 @@ async function preview(
       return route.fulfill({
         json: cancelledBuying(fixture.state, actor, query),
       });
+    if (path === "/api/v1/buying/contribution-offers")
+      return route.fulfill({ json: { rows: [], nextCursor: null } });
     if (path === "/api/v1/buying/contributions")
       return route.fulfill({
         json: contributionHistory(fixture.state, actor, query),

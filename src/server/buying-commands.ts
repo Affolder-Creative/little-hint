@@ -1,3 +1,10 @@
+import {
+  acceptedOffersInput,
+  validateAcceptedOffers,
+  acceptOffers,
+  closeOwnOffers,
+  offerCommand,
+} from "./contribution-offers";
 import { standaloneBuying } from "./buying-purchases";
 import { netContribution } from "../shared/contribution-money";
 import { reviewSource } from "./gift-lifecycle";
@@ -28,6 +35,8 @@ import {
 } from "./domain-access";
 
 export const buyingActions = [
+  "contribution-offers.create",
+  "contribution-offers.update",
   "buying.arrival",
   "reservations.review",
   "contributions.return",
@@ -44,6 +53,8 @@ export function buyingCommand(
   raw: unknown,
 ): unknown {
   const b = raw as Record<string, unknown>;
+  if (action.startsWith("contribution-offers."))
+    return offerCommand(s, a, action, raw);
   switch (action) {
     case "buying.arrival": {
       const p = z
@@ -179,6 +190,14 @@ export function buyingCommand(
     case "reservations.create": {
       const p = z
         .object({
+          acceptedOffers: acceptedOffersInput,
+          poolTotalCents: z.number().int().positive().max(100000000).optional(),
+          poolOwnContributionCents: z
+            .number()
+            .int()
+            .min(0)
+            .max(100000000)
+            .optional(),
           itemId: id,
           quantity: z.number().int().min(1).max(999),
           ordinary: z.boolean().optional(),
@@ -235,25 +254,45 @@ export function buyingCommand(
           409,
           "Someone has already reserved that quantity. Refresh to see what remains.",
         );
+      const { acceptedOffers, ...reservationFields } = p;
+      if (
+        (p.poolTotalCents === undefined) !==
+          (p.poolOwnContributionCents === undefined) ||
+        (p.poolOwnContributionCents ?? 0) > (p.poolTotalCents ?? 0)
+      )
+        fail(
+          400,
+          "Enter a total gift cost and a contribution within that cost.",
+        );
+      if (p.exchangeId && p.poolTotalCents !== undefined)
+        fail(400, "Exchange gifts cannot share costs.");
       const r: Reservation = {
         ...stamp(),
-        ...p,
+        ...reservationFields,
+        poolTargetCents:
+          p.poolTotalCents === undefined
+            ? undefined
+            : p.poolTotalCents - p.poolOwnContributionCents!,
         ordinary: !p.exchangeId,
         buyerId: a.id,
         purchased: 0,
         former: false,
         titleSnapshot: i.title,
       };
+      const offers = validateAcceptedOffers(s, a, r, acceptedOffers);
       s.reservations.push(r);
+      closeOwnOffers(s, a, r.itemId);
+      acceptOffers(s, a, r, offers);
       registerSpendingReservation(s, a, r.id);
       if (!r.exchangeId) emitGiftActivity(s, a, i, "reservation");
       return { id: r.id };
     }
     case "reservations.update": {
-      const p = z
+      const parsed = z
         .object({
           id,
           revision,
+          acceptedOffers: acceptedOffersInput,
           quantity: z.number().int().min(0).max(999),
           purchased: z.number().int().min(0).max(999),
           poolTotalCents: z.number().int().positive().max(100000000).optional(),
@@ -271,6 +310,7 @@ export function buyingCommand(
             .optional(),
         })
         .parse(b);
+      const { acceptedOffers, ...p } = parsed;
       const r =
         s.reservations.find((r) => r.id === p.id && r.buyerId === a.id) ??
         fail(404, "Reservation not found.");
@@ -316,17 +356,25 @@ export function buyingCommand(
           409,
           "The contribution goal must cover the contributions already promised.",
         );
+      const offers = validateAcceptedOffers(
+        s,
+        a,
+        { ...r, ...p },
+        acceptedOffers,
+      );
       const wasFunded = !!r.poolTargetCents && pledged >= r.poolTargetCents;
       if (p.purchased > r.purchased) reviewSource(s, a, r);
       const increased = p.purchased > r.purchased;
       if (increased) r.purchasedAt = new Date().toISOString();
       if (increased && r.purchased === 0) r.inHandQuantity = 0;
       Object.assign(r, p);
+      acceptOffers(s, a, r, offers);
       if (!r.purchased) r.inHandQuantity = undefined;
       else if (r.inHandQuantity !== undefined)
         r.inHandQuantity = Math.min(r.inHandQuantity, r.purchased);
       touch(r);
       if (
+        !offers.length &&
         !wasFunded &&
         r.poolTargetCents &&
         pledged >= r.poolTargetCents &&

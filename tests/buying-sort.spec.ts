@@ -104,7 +104,7 @@ for (const width of [320, 390, 768, 1440])
     ).toBe(true);
   });
 
-for (const width of [320, 768, 1440])
+for (const width of [320, 390, 768, 1440])
   test(`Buying tracks arrivals at ${width}px`, async ({ page }, info) => {
     const { state, actors } = stagingFixtures();
     const data = world(state, actors[1]);
@@ -157,7 +157,29 @@ for (const width of [320, 768, 1440])
         json: path.endsWith("/world")
           ? data
           : path.includes("/spending")
-            ? { settings: { enabled: false }, records: [], total: 0 }
+            ? {
+                settings: { enabled: false },
+                records: [
+                  {
+                    ...stamp(),
+                    kind: "purchase",
+                    ownerId: data.me.id,
+                    title: "Books for a long winter evening",
+                    recipientIds: base.item!.recipientIds,
+                    recipientNames: base.item!.recipientNames,
+                    splits: base.item!.recipientIds.map(() => 1),
+                    quantity: 3,
+                    amountCents: 5000,
+                    date: "2026-11-19",
+                    planningYear: 2026,
+                    sharing: "private",
+                    history: [],
+                    canEdit: true,
+                    canAssignList: true,
+                  },
+                ],
+                total: 1,
+              }
             : { rows: [], nextCursor: null },
       });
     });
@@ -169,6 +191,30 @@ for (const width of [320, 768, 1440])
     await expect(
       page.getByText("Arrival not recorded", { exact: true }),
     ).toBeVisible();
+    const completed = page
+      .locator(".buying-row")
+      .filter({ hasText: "Wool scarf" });
+    await expect(
+      completed.getByRole("button", { name: "Edit arrival", exact: true }),
+    ).not.toBeVisible();
+    await completed.locator("summary").click();
+    await completed
+      .getByRole("button", { name: "Edit arrival", exact: true })
+      .click();
+    await expect(page.getByLabel("Quantity in hand")).toHaveValue("1");
+    await page.keyboard.press("Escape");
+    const legacy = page
+      .locator(".buying-row")
+      .filter({ hasText: "An older gift" });
+    await legacy
+      .getByRole("button", { name: "Record arrival", exact: true })
+      .click();
+    await expect(page.getByLabel("Quantity in hand")).toHaveValue("0");
+    await page.getByLabel("Quantity in hand").fill("1");
+    await page
+      .getByRole("button", { name: "Save arrival status", exact: true })
+      .click();
+    await expect(legacy.locator("summary")).toBeFocused();
     const partial = page
       .locator(".buying-row")
       .filter({ hasText: "Books for a long winter evening" });
@@ -184,14 +230,33 @@ for (const width of [320, 768, 1440])
     await expect(
       page.getByLabel("Quantity purchased", { exact: true }),
     ).toHaveValue("3");
-    await page.keyboard.press("Escape");
+    await page
+      .getByText("Wish lists for spending, optional", { exact: true })
+      .scrollIntoViewIfNeeded();
     await page.screenshot({
-      path: info.outputPath(`arrival-${width}-light.png`),
+      path: info.outputPath(`purchase-${width}-light.png`),
     });
     await page.evaluate(
       () => (document.documentElement.dataset.theme = "dark"),
     );
     await page.screenshot({
+      path: info.outputPath(`purchase-${width}-dark.png`),
+    });
+    await page.evaluate(
+      () => (document.documentElement.dataset.theme = "light"),
+    );
+    await page.keyboard.press("Escape");
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.screenshot({
+      fullPage: true,
+      path: info.outputPath(`arrival-${width}-light.png`),
+    });
+    await page.evaluate(
+      () => (document.documentElement.dataset.theme = "dark"),
+    );
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.screenshot({
+      fullPage: true,
       path: info.outputPath(`arrival-${width}-dark.png`),
     });
     expect(
@@ -208,8 +273,13 @@ for (const width of [320, 768, 1440])
       .getByRole("button", { name: "Mark as in hand", exact: true })
       .click();
     await expect(page.locator(".buying-row")).toHaveCount(1);
+    await expect(
+      page
+        .getByRole("group", { name: "Gift arrival status" })
+        .getByRole("button", { name: /^Awaiting arrival/ }),
+    ).toBeFocused();
     await page
-      .getByRole("button", { name: "Update arrival", exact: true })
+      .getByRole("button", { name: "Record arrival", exact: true })
       .click();
     await page.getByLabel("Quantity in hand").fill("3");
     await page

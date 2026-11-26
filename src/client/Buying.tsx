@@ -1,3 +1,4 @@
+import { ContributionOfferHistory } from "./ContributionOffers";
 import {
   buyingSorts,
   buyingSortLabels,
@@ -74,11 +75,20 @@ export function Buying() {
     "all",
   );
   const activeView = useRef<HTMLButtonElement>(null);
+  const activeArrival = useRef<HTMLButtonElement>(null);
+  const rowFocus = useRef<HTMLElement | null>(null);
+  const arrivalFocus = useRef(false);
   const [focusRequest, setFocusRequest] = useState(0);
   useEffect(() => {
     if (!focusRequest) return;
     // Wait for React to close the dialog and finish restoring its opener.
-    (activeView.current ?? document.getElementById("main"))?.focus({
+    (
+      (rowFocus.current?.isConnected ? rowFocus.current : null) ??
+      (view === "purchased" && arrivalFocus.current
+        ? (activeArrival.current ?? activeView.current)
+        : activeView.current) ??
+      document.getElementById("main")
+    )?.focus({
       preventScroll: true,
     });
   }, [focusRequest]);
@@ -109,7 +119,11 @@ export function Buying() {
         matchesArrival(r.purchased, r.inHandQuantity, arrival)
       : r.purchased < r.quantity);
   const visible = sortBuying(reservations.filter(matchesView), sort);
-  const focusView = () => setFocusRequest((request) => request + 1);
+  const focusView = (arrivalChanged = false) => {
+    rowFocus.current = null;
+    arrivalFocus.current = arrivalChanged;
+    setFocusRequest((request) => request + 1);
+  };
   if (world.paged && (!query.data || query.error))
     return <CollectionStatus query={query} />;
   const allCount = remote?.counts.all ?? reservations.length;
@@ -221,15 +235,38 @@ export function Buying() {
               <button
                 key={key}
                 type="button"
+                ref={arrival === key ? activeArrival : undefined}
                 aria-pressed={arrival === key}
                 onClick={() => setArrival(key)}
               >
-                {label} <span>{count}</span>
+                <span className="arrival-filter-label">
+                  {label} <span>{count}</span>
+                </span>
               </button>
             );
           })}
         </div>
       )}
+      {view === "purchased" &&
+        (() => {
+          const unknown = remote
+            ? remote.counts.awaiting !== undefined &&
+              remote.counts.inHand !== undefined
+              ? remote.counts.purchased -
+                remote.counts.awaiting -
+                remote.counts.inHand
+              : 0
+            : reservations.filter(
+                (r) => r.purchased > 0 && r.inHandQuantity === undefined,
+              ).length;
+          return unknown > 0 ? (
+            <p className="muted arrival-unknown">
+              {unknown} {unknown === 1 ? "purchase has" : "purchases have"} no
+              recorded arrival status. Find {unknown === 1 ? "it" : "them"} in
+              All purchased.
+            </p>
+          ) : null;
+        })()}
       <div className="buying-toolbar">
         {world.paged ? paging("above") : sortControl}
       </div>
@@ -251,7 +288,11 @@ export function Buying() {
               const arrivalAction = r.purchased > 0 && (
                 <Action
                   secondary
-                  onClick={async () => {
+                  onClick={async (button) => {
+                    const completed = r.inHandQuantity === r.purchased;
+                    const menu = button
+                      .closest(".buying-row")
+                      ?.querySelector<HTMLElement>("summary");
                     const save = async (inHandQuantity: number | null) => {
                       await mutate("buying/arrival", {
                         id: r.id,
@@ -264,7 +305,9 @@ export function Buying() {
                       toast(
                         inHandQuantity === null
                           ? "Arrival status cleared."
-                          : "Arrival status updated.",
+                          : inHandQuantity === r.purchased
+                            ? "Marked as in hand."
+                            : "Arrival status updated.",
                       );
                       if (
                         view === "purchased" &&
@@ -274,14 +317,18 @@ export function Buying() {
                           arrival,
                         )
                       )
-                        focusView();
+                        focusView(true);
+                      else if (inHandQuantity === r.purchased && menu) {
+                        rowFocus.current = menu;
+                        setFocusRequest((request) => request + 1);
+                      }
                     };
-                    if (r.purchased === 1 && r.inHandQuantity !== 1) {
+                    if (r.purchased === 1 && r.inHandQuantity === 0) {
                       await save(1);
                       return;
                     }
                     open(
-                      "Update arrival",
+                      completed ? "Edit arrival" : "Record arrival",
                       <Form
                         submit="Save arrival status"
                         onSubmit={async (f) => {
@@ -317,11 +364,18 @@ export function Buying() {
                     );
                   }}
                 >
-                  {r.purchased === 1 && r.inHandQuantity !== 1
-                    ? "Mark as in hand"
-                    : "Update arrival"}
+                  {r.inHandQuantity === r.purchased
+                    ? "Edit arrival"
+                    : r.purchased === 1 && r.inHandQuantity === 0
+                      ? "Mark as in hand"
+                      : "Record arrival"}
                 </Action>
               );
+              const arrivalComplete =
+                r.purchased > 0 && r.inHandQuantity === r.purchased;
+              const pendingArrivalAction = arrivalComplete
+                ? null
+                : arrivalAction;
               const needsBuying = r.purchased < r.quantity;
               const quickPurchase =
                 !!r.item && r.quantity === 1 && r.purchased === 0;
@@ -554,15 +608,16 @@ export function Buying() {
                   </div>
                   <div className="actions">
                     {r.standalonePurchase
-                      ? arrivalAction
+                      ? pendingArrivalAction
                       : !needsBuying || view === "purchased"
-                        ? arrivalAction
+                        ? pendingArrivalAction
                         : shopFirst
                           ? shopAction
                           : quickPurchase
                             ? markAction
                             : updateAction}
                     <ActionMenu name={r.titleSnapshot} label="More actions">
+                      {arrivalComplete && arrivalAction}
                       {r.standalonePurchase ? (
                         <button
                           className="text-button"
@@ -580,7 +635,10 @@ export function Buying() {
                         <>
                           {(!needsBuying || view === "purchased") &&
                             updateAction}
-                          {needsBuying && view !== "purchased" && arrivalAction}
+                          {needsBuying &&
+                            view !== "purchased" &&
+                            !arrivalComplete &&
+                            arrivalAction}
                           {shopFirst && quickPurchase && markAction}
                           {(shopFirst || quickPurchase) &&
                             view !== "purchased" &&
@@ -688,7 +746,7 @@ export function Buying() {
                     setView(
                       view === "needs-buying" ? "purchased" : "needs-buying",
                     );
-                  focusView();
+                  focusView(view === "purchased" && arrival !== "all");
                 }}
               >
                 {view === "needs-buying"
@@ -757,6 +815,7 @@ export function Buying() {
           </button>
         )}
       </details>
+      <ContributionOfferHistory />
       {history.isPending && <p role="status">Loading contributions…</p>}
       {history.error && (
         <p role="alert">

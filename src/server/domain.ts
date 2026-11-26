@@ -1,3 +1,4 @@
+import { canOffer, giftOffers, reconcileOffers } from "./contribution-offers";
 import { isPriceRange, priceBounds } from "../shared/price";
 import {
   ideaAllocationChoices,
@@ -315,6 +316,7 @@ export function archiveDueLists(s: State) {
     }
   }
   reconcileGiftLifecycle(s);
+  reconcileOffers(s);
 }
 
 export function giftSummary(s: State, a: Actor, listId: string): GiftSummary {
@@ -394,6 +396,12 @@ export function giftView(s: State, a: Actor, i: Item): GiftView {
     adminDetailsOnly: canEdit(s, a, i) && !ordinaryItemEditor(s, a, i),
     isRecipient: own,
     canShop: canShop(s, a, i),
+    ...(!own
+      ? {
+          canOfferContribution: canOffer(s, a, i),
+          contributionOffers: giftOffers(s, a, i),
+        }
+      : {}),
     mode: mode(s, i),
   };
   if (!i.listId && creatorId === a.id) {
@@ -1263,6 +1271,7 @@ export function command(
   lifecycleBaseline(s);
   lockIdeaRecipients(s);
   reconcileGiftLifecycle(s);
+  reconcileOffers(s);
   const beforeLists = new Map(
     s.lists.map((l) => [
       l.id,
@@ -1367,6 +1376,7 @@ export function command(
   }
   lockIdeaRecipients(s);
   reconcileGiftLifecycle(s);
+  reconcileOffers(s);
   reconcilePrivacyReview(s);
   reconcileSpendingPrivacy(s);
   return result;

@@ -287,6 +287,25 @@ export interface Reservation extends Base {
   titleSnapshot: string;
   purchasedAt?: string;
 }
+export interface ContributionOffer extends Base {
+  itemId: string;
+  userId: string;
+  amountCents: number;
+  status: "open" | "accepted" | "cancelled";
+  titleSnapshot: string;
+  recipientIds: string[];
+  recipientNames: string[];
+  listId?: string;
+  listName?: string;
+  eventId?: string;
+  eventName?: string;
+  reservationId?: string;
+  contributionId?: string;
+}
+export interface ContributionOfferView extends ContributionOffer {
+  contributorName: string;
+  mine: boolean;
+}
 export interface ContributionReturn extends Base {
   recordedBy: string;
   confirmedAt?: string;
@@ -343,6 +362,7 @@ export interface Exchange extends Base {
   drawnAt?: string;
 }
 export interface Notice extends Base {
+  contributionOfferId?: string;
   coManagement?: { personId: string; message: string; content?: boolean };
   lifecycle?: { reservationIds: string[]; state: GiftSourceState };
   importId?: string;
@@ -644,6 +664,7 @@ export interface Records {
   lists: List;
   items: Item;
   reservations: Reservation;
+  contributionOffers: ContributionOffer;
   contributions: Contribution;
   comments: Comment;
   exchanges: Exchange;
@@ -692,6 +713,7 @@ export const kinds: Kind[] = [
   "lists",
   "items",
   "reservations",
+  "contributionOffers",
   "contributions",
   "comments",
   "exchanges",
@@ -735,6 +757,8 @@ export interface GiftView extends Omit<
   canEdit: boolean;
   isRecipient: boolean;
   canShop?: boolean;
+  canOfferContribution?: boolean;
+  contributionOffers?: ContributionOfferView[];
   mode: Mode;
   available?: number;
   reserved?: number;

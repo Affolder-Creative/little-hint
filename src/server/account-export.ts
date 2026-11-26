@@ -80,6 +80,7 @@ export function accountExport(s: State, a: Actor) {
         createdAt: i.createdAt,
       })),
     reservations: s.reservations.filter((r) => r.buyerId === a.id),
+    contributionOffers: s.contributionOffers.filter((o) => o.userId === a.id),
     contributions: s.contributions.filter(
       (c) =>
         c.userId === a.id ||
