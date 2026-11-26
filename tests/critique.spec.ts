@@ -4256,7 +4256,10 @@ test.describe("navigation scroll restoration", () => {
       await page.keyboard.press("Tab");
       await page.keyboard.press("Tab");
       await expect(
-        page.locator(".gift-card-entry").nth(15).locator("summary"),
+        page
+          .locator(".gift-card-entry")
+          .nth(15)
+          .locator(".entry-actions > summary"),
       ).toBeFocused();
       await expectScroll(page, position);
       await page.goForward();
