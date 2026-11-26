@@ -298,7 +298,11 @@ export function Lists() {
             items={world.items.filter(
               (i) => i.listId === list.id || ideaAssignedToList(i, list.id),
             )}
-            searchLabel="Search wishes and gift ideas"
+            searchLabel={
+              ideaRecipients.length > 0
+                ? "Search wishes and gift ideas"
+                : "Search items"
+            }
             emptyTitle={
               managesListPolicy && !list.archived && !list.groupEventId
                 ? "Something in mind?"

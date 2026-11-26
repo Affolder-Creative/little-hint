@@ -335,7 +335,7 @@ Archived item tabs show a persistent soft notice directly below the tabs and abo
 
 ### Combined wish-list browsing
 
-Regular and group-event wish lists combine wishes with the viewer’s explicitly assigned gift ideas in one paginated collection. Eligible shoppers see Wishes & gift ideas with Add gift idea beside it and a quieter link to all ideas for each recipient. All, Wishes and Gift ideas are persistent unboxed text filters with 44px targets, 20px horizontal gaps, and a 2px accent underline on the active choice. Filters wrap and sit before search, below active/archive controls. New visits select All. Search says Search wishes and ideas, shortened to Search gifts on phones while retaining its full accessible label. Default ordering preserves wish-list order, then shows newest ideas; explicit sorts apply across the collection. Reordering changes only wishes.
+Regular and group-event wish lists combine wishes with the viewer’s explicitly assigned gift ideas in one paginated collection. Eligible shoppers see Wishes & gift ideas with Add gift idea beside it and a quieter link to all ideas for each recipient. All, Wishes and Gift ideas are persistent unboxed text filters with 44px targets, 20px horizontal gaps, and a 2px accent underline on the active choice. Filters wrap and sit before search, below active/archive controls. New visits select All. Search says Search wishes and ideas, shortened to Search gifts on phones while retaining its full accessible label. Wish-only views retain Search items. Default ordering preserves wish-list order, then shows newest ideas; explicit sorts apply across the collection. Reordering changes only wishes.
 
 ### Collection pagination
 
