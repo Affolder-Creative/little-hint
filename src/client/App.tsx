@@ -2,6 +2,7 @@ import {
   GiftContributionOffers,
   ReserveWithOffers,
 } from "./ContributionOffers";
+import { GiftRecipientMarker } from "./components";
 import { GiftContext } from "./GiftContext";
 import { productItems } from "../shared/item-groups";
 import { PeopleDirectory } from "./PeopleDirectory";
@@ -1165,6 +1166,8 @@ function PersonPage() {
         <Browser
           key={`${id}-${tab}`}
           scope="person"
+          recipientMarker="type"
+          markerRecipientName={person.name}
           scopeId={id}
           tab={tab}
           personScoped
@@ -1346,7 +1349,7 @@ function GiftDetail() {
         <ItemPhotoDetail gift={gift} />
         <section className="gift-detail-info">
           <div className="gift-recipient">
-            <Avatar name={gift.recipientNames[0]} small />
+            <GiftRecipientMarker gift={gift} />
             <span>
               {gift.listId ? "Wish" : "Gift idea"} for{" "}
               {gift.recipientNames.join(" & ")}

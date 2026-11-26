@@ -32,6 +32,8 @@ import {
   Music,
   Mountain,
   Heart,
+  Star,
+  Lightbulb,
   Plus,
   LockKeyhole,
   EyeOff,
@@ -107,9 +109,11 @@ export function Logo({
 export function Avatar({
   name,
   small = false,
+  children,
 }: {
   name: string;
   small?: boolean;
+  children?: ReactNode;
 }) {
   const n = [...name].reduce((n, c) => n + c.charCodeAt(0), 0) % 4;
   return (
@@ -117,8 +121,26 @@ export function Avatar({
       className={`avatar color-${n} ${small ? "small" : ""}`}
       aria-hidden="true"
     >
-      {initials(name)}
+      {children ?? initials(name)}
     </span>
+  );
+}
+export function GiftRecipientMarker({
+  gift,
+  presentation = "type",
+  name,
+}: {
+  gift: GiftView;
+  presentation?: "person" | "type";
+  name?: string;
+}) {
+  const Icon = gift.listId ? Star : Lightbulb;
+  return (
+    <Avatar small name={name ?? gift.recipientNames[0] ?? "Gift"}>
+      {presentation === "type" ? (
+        <Icon className="gift-type-icon" size={16} aria-hidden="true" />
+      ) : undefined}
+    </Avatar>
   );
 }
 export function Privacy({ mode }: { mode: "surprise" | "transparent" }) {
@@ -640,8 +662,12 @@ export function GiftCard({
   gift,
   sourceListName,
   headingLevel = 2,
+  recipientMarker = "person",
+  markerRecipientName,
 }: {
   gift: GiftView;
+  recipientMarker?: "person" | "type";
+  markerRecipientName?: string;
   sourceListName?: string;
   headingLevel?: 2 | 3;
 }) {
@@ -659,7 +685,11 @@ export function GiftCard({
       <GiftPhoto gift={gift} />
       <div className="gift-card-content">
         <div className="gift-recipient">
-          <Avatar small name={gift.recipientNames[0] ?? "Gift"} />
+          <GiftRecipientMarker
+            gift={gift}
+            presentation={recipientMarker}
+            name={markerRecipientName}
+          />
           <span>
             <span className="gift-kind">
               {gift.listId ? "Wish" : "Gift idea"}

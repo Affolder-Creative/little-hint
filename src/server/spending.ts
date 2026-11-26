@@ -332,6 +332,8 @@ export function assignIdeaSpending(
   token?: string,
   allocations?: unknown,
 ) {
+  // List organization remains available without tracking; saved finances stay untouched.
+  if (!spendingAvailable() || !spendingSettings(s, a).enabled) return;
   const preview = spendingAssignmentPreview(s, a, {
     item: itemId,
     list: listId,

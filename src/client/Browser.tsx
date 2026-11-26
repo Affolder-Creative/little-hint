@@ -1,3 +1,4 @@
+import { orderedListGifts } from "../shared/list-ideas";
 import { api } from "./api";
 import {
   CollectionStatus,
@@ -57,6 +58,9 @@ export function Browser({
   headingLevel = 2,
   personScoped = false,
   compactEmpty = false,
+  includeIdeas = false,
+  recipientMarker = "person",
+  markerRecipientName,
 }: {
   items: GiftView[];
   scope?: "home" | "person" | "list";
@@ -71,6 +75,9 @@ export function Browser({
   headingLevel?: 2 | 3;
   personScoped?: boolean;
   compactEmpty?: boolean;
+  includeIdeas?: boolean;
+  recipientMarker?: "person" | "type";
+  markerRecipientName?: string;
 }) {
   const [search, setSearch] = useNavigationState<string>("search", ""),
     [tag, setTag] = useNavigationState<string>("tag", ""),
@@ -117,6 +124,7 @@ export function Browser({
   const availableOnly = available && availabilityApplies;
   const queryParams = new URLSearchParams({
     scope,
+    includeIdeas: String(includeIdeas),
     ...(scopeId ? { id: scopeId } : {}),
     ...(tab ? { tab } : {}),
     search: debounced,
@@ -142,7 +150,10 @@ export function Browser({
     remote?.canManage ?? (parentList?.canEdit || items.some((i) => i.canEdit));
   const archivedView = canManage && archivedSelected;
   const canReorder =
-    !!parentList?.canEdit && !parentList.archived && !archivedView;
+    !!parentList?.canEdit &&
+    !parentList.archived &&
+    !archivedView &&
+    itemType !== "idea";
   const visibleItems = parentList?.archived
     ? items
     : items.filter(
@@ -150,7 +161,9 @@ export function Browser({
       );
   const sorted = archivedView
     ? orderedArchivedItems(visibleItems, parentList?.itemOrder, archiveSort)
-    : ordered(visibleItems, sort, parentList?.itemOrder);
+    : includeIdeas
+      ? orderedListGifts(visibleItems, sort, parentList?.itemOrder)
+      : ordered(visibleItems, sort, parentList?.itemOrder);
   const showAvailability =
     remote?.showAvailability ??
     items.some((item) => item.available !== undefined);
@@ -234,6 +247,24 @@ export function Browser({
             instead.
           </p>
         )}
+      {includeIdeas && (
+        <div className="gift-type-filters" role="group" aria-label="Item type">
+          {[
+            ["all", "All"],
+            ["wish", "Wishes"],
+            ["idea", "Gift ideas"],
+          ].map(([value, label]) => (
+            <button
+              type="button"
+              key={value}
+              aria-pressed={itemType === value}
+              onClick={() => setItemType(value)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
       {collectionTotal > 0 && (
         <>
           <BrowseTools
@@ -241,9 +272,13 @@ export function Browser({
             setSearch={setSearch}
             searchLabel={searchLabel}
             placeholder={
-              searchLabel === "Search gift ideas"
-                ? "Search gift ideas"
-                : "Search items"
+              includeIdeas
+                ? smallScreen
+                  ? "Search gifts"
+                  : "Search wishes and ideas"
+                : searchLabel === "Search gift ideas"
+                  ? "Search gift ideas"
+                  : "Search items"
             }
             searchHint="Search by name, person, or tag"
             activeCount={
@@ -310,7 +345,9 @@ export function Browser({
                           `lists/${listId}/item-order`,
                         )
                       : ordered(
-                          items.filter((i) => !i.archived),
+                          items.filter(
+                            (i) => !i.archived && i.listId === listId,
+                          ),
                           "manual",
                           parentList.itemOrder,
                         ).map((i) => ({ id: i.id, name: i.title }));
@@ -470,6 +507,8 @@ export function Browser({
               <div className="gift-card-entry" key={i.id}>
                 <GiftCard
                   gift={i}
+                  recipientMarker={recipientMarker}
+                  markerRecipientName={markerRecipientName}
                   headingLevel={headingLevel}
                   sourceListName={
                     i.listId ? listNames?.get(i.listId) : undefined
@@ -483,11 +522,22 @@ export function Browser({
           <Empty
             compact={compactEmpty}
             title={
-              (remote?.collectionTotal ?? visibleItems.length)
-                ? "No matches found"
-                : itemStatus === "archived"
-                  ? "No archived items"
-                  : emptyTitle
+              includeIdeas &&
+              !search &&
+              !tag &&
+              priority === "all" &&
+              visibility === "all" &&
+              !chosenPeople.length &&
+              itemStatus === "active" &&
+              itemType === "idea"
+                ? "No matching gift ideas"
+                : includeIdeas && !search && itemType === "wish"
+                  ? "No matching wishes"
+                  : (remote?.collectionTotal ?? visibleItems.length)
+                    ? "No matches found"
+                    : itemStatus === "archived"
+                      ? "No archived items"
+                      : emptyTitle
             }
             action={
               (remote?.collectionTotal ?? visibleItems.length) ? (
@@ -515,7 +565,9 @@ export function Browser({
               ? "Try another search, or clear your filters to see everything."
               : itemStatus === "archived"
                 ? "Items you archive will appear here. You can restore them whenever you like."
-                : emptyText}
+                : includeIdeas && itemType === "idea"
+                  ? "Assign a gift idea to this list to see it here."
+                  : emptyText}
           </Empty>
         )}
       </div>

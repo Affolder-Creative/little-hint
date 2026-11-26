@@ -19,13 +19,16 @@ export function SpendingAllocations({
   onChange,
   amountCents = null,
   amountKind = "payment",
+  planning = false,
 }: {
   value: SpendingAllocation[];
   onChange: (value: SpendingAllocation[]) => void;
   amountCents?: number | null;
   amountKind?: "estimate" | "payment";
+  planning?: boolean;
 }) {
   const { world } = useApp();
+  const showSpending = !planning || world.spendingEnabled;
   const [custom, setCustom] = useState(
     value.some((v) => v.share !== value[0]?.share),
   );
@@ -39,12 +42,18 @@ export function SpendingAllocations({
         );
   return (
     <fieldset className="spending-allocations">
-      <legend>Wish lists for spending, optional</legend>
+      <legend>
+        {planning
+          ? "Plan for a wish list, optional"
+          : "Wish lists for spending, optional"}
+      </legend>
       <p className="muted">
-        Each list counts only that person's share. This does not add or share
-        the gift.
+        {planning
+          ? "Show this idea alongside the list’s wishes in your view. Sharing stays the same."
+          : "Each list counts only that person's share. This does not add or share the gift."}
+        {planning && showSpending && " Also used for your spending totals."}
       </p>
-      {value.length > 1 && (
+      {showSpending && value.length > 1 && (
         <Field
           label="Split between recipients"
           hint={
@@ -99,7 +108,7 @@ export function SpendingAllocations({
                 ))}
               </select>
             </Field>
-            {custom && value.length > 1 && (
+            {showSpending && custom && value.length > 1 && (
               <Field label={`${name}'s share`}>
                 <input
                   type="number"
@@ -112,7 +121,7 @@ export function SpendingAllocations({
                 />
               </Field>
             )}
-            {value.length > 1 && (
+            {showSpending && value.length > 1 && (
               <p className="muted">
                 {name}'s share:{" "}
                 {total > 0

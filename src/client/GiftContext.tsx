@@ -15,35 +15,32 @@ export function giftPrivacy(gift: GiftView) {
       return {
         label: "Only me",
         icon: LockKeyhole,
-        description:
-          "Only you can see this idea, including reservations and purchases.",
+        description: "Only you can see this idea and its gift plans.",
       };
     if (gift.visibility === "visible")
       return {
         label: "Visible to recipient",
         icon: Eye,
         description:
-          "Recipients can see this idea and participate in its current discussion. Who reserves or buys it stays hidden from them. Earlier protected notes stay private.",
+          "Recipients can see this idea and join the discussion. Reservations and purchases stay hidden.",
       };
     return {
       label: "Surprise",
       icon: EyeOff,
-      description:
-        "Shared with selected family groups. Recipients cannot see this idea or its gift plans. Additional sharing exceptions still apply.",
+      description: "Shared with selected groups. Hidden from recipients.",
     };
   }
   return gift.mode === "transparent"
     ? {
         label: "See the plans",
         icon: Eye,
-        description:
-          "Recipients can see this wish and ordinary gift plans. Secret exchange protections and earlier private notes still apply.",
+        description: "Recipients can see this wish and ordinary gift plans.",
       }
     : {
         label: "Surprise",
         icon: EyeOff,
         description:
-          "Recipients can see this wish. Reservations, purchases, and gift discussion stay hidden, except for any scheduled gift summary.",
+          "Recipients can see this wish. Reservations, purchases, and discussion are hidden from them.",
       };
 }
 
@@ -58,35 +55,72 @@ export function GiftContext({
   const location = useLocation();
   const list = world.lists.find((l) => l.id === gift.listId);
   const privacy = giftPrivacy(gift);
-  const revealed =
-    list?.mode === "surprise" &&
-    dateHasElapsed(list.revealAfter, list.timeZone);
+  const summaryAvailable =
+    !!list && dateHasElapsed(list.revealAfter, list.timeZone);
+  const revealed = list?.mode === "surprise" && summaryAvailable;
+  const description = revealed
+    ? "Recipients can now see purchased gifts, buyers, and contributors in the gift summary. Reservations and private discussion stay hidden."
+    : privacy.description;
+  const summary = list?.revealAfter
+    ? summaryAvailable
+      ? "The gift summary is available."
+      : `A gift summary is available after ${new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeZone: "UTC" }).format(new Date(`${list.revealAfter}T00:00:00Z`))}.`
+    : "";
   const label = revealed ? "Gift summary available" : privacy.label;
   const Icon = revealed ? Eye : privacy.icon;
   const draft = gift.publicationState === "draft";
-  const allocations =
-    !gift.listId && world.spendingEnabled
-      ? ideaAllocationChoices(gift).filter((a) => a.listId)
-      : [];
+  const allocations = !gift.listId
+    ? ideaAllocationChoices(gift).filter((a) => a.listId)
+    : [];
   return (
     <div className={`gift-context${card ? " gift-context-card" : ""}`}>
       <div className="gift-context-line">
-        <span className="gift-source-list">
-          {gift.listId ? (
-            <>
-              On{" "}
-              {list ? (
-                <Link to={shoppingLink(`/lists/${list.id}`, location.search)}>
-                  {list.name}
-                </Link>
-              ) : (
-                "a wish list"
-              )}
-            </>
-          ) : (
-            "Not on a wish list"
-          )}
-        </span>
+        {(gift.listId || allocations.length > 0) && (
+          <span className="gift-source-list">
+            {gift.listId ? (
+              <>
+                On{" "}
+                {list ? (
+                  <Link to={shoppingLink(`/lists/${list.id}`, location.search)}>
+                    {list.name}
+                  </Link>
+                ) : (
+                  "a wish list"
+                )}
+              </>
+            ) : (
+              allocations.map((allocation) => {
+                const assigned = world.lists.find(
+                  (l) => l.id === allocation.listId,
+                );
+                const name = assigned?.name ?? allocation.listName;
+                return name ? (
+                  <span
+                    className="gift-planning-list"
+                    key={allocation.recipientId}
+                  >
+                    For{" "}
+                    {gift.recipientIds.length > 1
+                      ? `${gift.recipientNames[gift.recipientIds.indexOf(allocation.recipientId)]}: `
+                      : ""}
+                    {assigned ? (
+                      <Link
+                        to={shoppingLink(
+                          `/lists/${assigned.id}`,
+                          location.search,
+                        )}
+                      >
+                        {name}
+                      </Link>
+                    ) : (
+                      name
+                    )}
+                  </span>
+                ) : null;
+              })
+            )}
+          </span>
+        )}
         {draft ? (
           <span className="muted">Draft · Not yet published</span>
         ) : (
@@ -100,32 +134,30 @@ export function GiftContext({
               </span>
             }
           >
-            <p>{privacy.description}</p>
-            {list && <RevealPolicy list={list} />}
+            <p>{description}</p>
+            {summary && <p>{summary}</p>}
+            {(list || gift.visibility !== "private") && (
+              <details className="gift-privacy-more">
+                <summary>Privacy details</summary>
+                {list ? (
+                  <RevealPolicy list={list} />
+                ) : (
+                  <p>
+                    {gift.visibility === "visible"
+                      ? "Earlier protected notes stay private."
+                      : "Additional sharing exceptions still apply."}
+                  </p>
+                )}
+              </details>
+            )}
           </InfoHelp>
         )}
       </div>
-      {allocations.length > 0 && (
-        <div className="gift-spending-context">
-          {allocations.map((allocation) => {
-            const assigned = world.lists.find(
-              (l) => l.id === allocation.listId,
-            );
-            const name = assigned?.name ?? allocation.listName;
-            return name ? (
-              <p key={allocation.recipientId}>
-                Your spending list
-                {gift.recipientIds.length > 1
-                  ? ` for ${gift.recipientNames[gift.recipientIds.indexOf(allocation.recipientId)]}`
-                  : ""}
-                : {name}
-              </p>
-            ) : null;
-          })}
-        </div>
-      )}
       {!draft && !card && (
-        <p className="gift-privacy-description">{privacy.description}</p>
+        <p className="gift-privacy-description">
+          {description}
+          {summary && !revealed ? ` ${summary}` : ""}
+        </p>
       )}
     </div>
   );
