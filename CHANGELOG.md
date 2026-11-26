@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.13.1](https://github.com/Affolder-Creative/little-hint/compare/v1.13.0...v1.13.1) (2026-11-26)
+
+
+### Fixes
+
+* clarify purchases and offer contributions before reserving ([#292](https://github.com/Affolder-Creative/little-hint/issues/292)) ([31ea8c2](https://github.com/Affolder-Creative/little-hint/commit/31ea8c2150421fae2c476871a3711b93ca096878))
+
 ## [1.13.0](https://github.com/Affolder-Creative/little-hint/compare/v1.12.1...v1.13.0) (2026-11-24)
 
 
