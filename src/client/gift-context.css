@@ -375,7 +375,7 @@
 /* Keep the source readable and privacy independently reachable in both layouts. */
 .gift-card .gift-context-line:has(> .info-help) {
   flex-wrap: nowrap;
-  align-items: flex-start;
+  align-items: center;
 }
 .gift-card .gift-context-line > .gift-source-list {
   flex: 1;
