@@ -1394,7 +1394,7 @@ for (const layout of ["compact", "large-photos"] as const) {
       await page.goto("/");
       const card = page.locator(".gift-card").filter({ hasText: gift.title });
       await expect(card).toBeVisible();
-      await expect(card).toContainText("Not on a wish list");
+      await expect(card).not.toContainText("Not on a wish list");
       const overlaps = await page
         .locator(".gift-context-card .gift-context-line")
         .evaluateAll((rows) =>
@@ -1418,7 +1418,9 @@ for (const layout of ["compact", "large-photos"] as const) {
       expect(overlaps).toBe(false);
       if (layout === "compact" && width <= 650) {
         const targets = await page
-          .locator(".gift-context-card .info-help-trigger")
+          .locator(
+            ".gift-context-card:has(.gift-source-list) .info-help-trigger",
+          )
           .evaluateAll((buttons) =>
             buttons.map((button) => {
               const r = button.getBoundingClientRect();
@@ -1497,7 +1499,7 @@ for (const layout of ["compact", "large-photos"] as const) {
       await expect(page.locator("h1")).toHaveText(gift.title);
       await expect(
         page.locator(".gift-detail-info .gift-context"),
-      ).toContainText("Not on a wish list");
+      ).not.toContainText("Not on a wish list");
       await page.screenshot({
         path: info.outputPath(`detail-${layout}-${width}.png`),
         fullPage: true,
@@ -1531,8 +1533,8 @@ test("gift context follows audiences, list membership, spending defaults and rev
     gift.visibility = visibility;
     await page.goto(`/gift/${gift.id}`);
     await expect(context).toContainText(label);
-    await expect(context).toContainText("Not on a wish list");
-    await expect(context).toContainText(`Your spending list: ${list.name}`);
+    await expect(context).not.toContainText("Not on a wish list");
+    await expect(context).toContainText(`For ${list.name}`);
   }
   gift.listId = list.id;
   list.mode = "transparent";
@@ -1630,4 +1632,275 @@ test("gift layouts respond independently to the screen size", async ({
   await expect(grid).toHaveClass(/gift-grid-large-photos/);
   await page.setViewportSize({ width: 1440, height: 1000 });
   await expect(grid).toHaveClass(/gift-grid-compact/);
+});
+
+for (const [width, theme, layout] of [
+  [320, "dark", "compact"],
+  [393, "light", "large-photos"],
+  [768, "light", "compact"],
+  [1440, "dark", "compact"],
+] as const) {
+  test(`private list ideas and stable recipient markers at ${width}px ${theme}`, async ({
+    page,
+  }, info) => {
+    const { state, actor, gift, originalListId } = await setup(page);
+    const list = state.lists.find((l) => l.id === originalListId)!;
+    gift.spendingListId = list.id;
+    state.items.push({
+      ...gift,
+      ...stamp(),
+      title: "A wish for this list",
+      listId: list.id,
+      spendingListId: undefined,
+      creatorId: state.people.find((p) => p.id === list.ownerIds[0])!.userId!,
+    });
+    state.reservations = [];
+    await page.setViewportSize({ width, height: 950 });
+    await page.addInitScript(
+      (theme) => localStorage.setItem("little-hint:theme", theme),
+      theme,
+    );
+    await page.route("**/api/v1/world", (route) =>
+      route.fulfill({
+        json: {
+          ...world(state, actor),
+          giftPreferences: [],
+          giftCardLayout: layout,
+          giftCardLayoutMobile: layout,
+          spendingEnabled: false,
+        },
+      }),
+    );
+    await page.goto("/");
+    const home = page.locator(".gift-card").filter({ hasText: gift.title });
+    await expect(home.locator(".gift-type-icon")).toHaveCount(0);
+    await page.getByRole("searchbox").fill(gift.title);
+    await expect(page.locator(".gift-card")).toHaveCount(1);
+    await expect(home.locator(".gift-type-icon")).toHaveCount(0);
+    await page.goto(`/lists/${list.id}`);
+    const filters = page.getByRole("group", { name: "Item type", exact: true });
+    await expect(
+      filters.getByRole("button", { name: "All", exact: true }),
+    ).toHaveAttribute("aria-pressed", "true");
+    const idea = page.locator(".gift-card").filter({ hasText: gift.title });
+    await expect(idea).toBeVisible();
+    await expect(idea).toContainText(`For ${list.name}`);
+    await expect(idea.locator(".gift-type-icon")).toHaveCount(
+      list.ownerIds.length === 1 ? 1 : 0,
+    );
+    await filters.getByRole("button", { name: "Wishes", exact: true }).click();
+    await expect(idea).toHaveCount(0);
+    await filters
+      .getByRole("button", { name: "Gift ideas", exact: true })
+      .click();
+    await expect(idea).toBeVisible();
+    await page.reload();
+    await expect(
+      filters.getByRole("button", { name: "Gift ideas", exact: true }),
+    ).toHaveAttribute("aria-pressed", "true");
+    await filters.getByRole("button", { name: "All", exact: true }).click();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    await page.screenshot({
+      path: info.outputPath("combined-list.png"),
+      fullPage: true,
+    });
+    await page
+      .getByRole("button", { name: "Add gift idea", exact: true })
+      .click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toContainText("Plan for a wish list, optional");
+    if (list.ownerIds.length === 1)
+      await expect(dialog.locator(".spending-allocations select")).toHaveValue(
+        list.id,
+      );
+    await page.screenshot({ path: info.outputPath("idea-editor.png") });
+    await page
+      .getByRole("button", { name: "Close dialog", exact: true })
+      .click();
+    await idea.locator(".gift-title-link").click();
+    const context = page.locator(".gift-detail-info .gift-context");
+    await expect(page.locator(".gift-detail-info .gift-type-icon")).toHaveClass(
+      /lucide-lightbulb/,
+    );
+    const help = context.getByRole("button", { name: /About gift privacy/ });
+    const before = await context.boundingBox();
+    await help.click();
+    await expect(
+      page.getByRole("dialog", { name: /Gift privacy/ }),
+    ).toContainText("Only you can see this idea and its gift plans.");
+    expect(
+      await help.evaluate((el) => getComputedStyle(el).backgroundColor),
+    ).toBe("rgba(0, 0, 0, 0)");
+    expect((await context.boundingBox())!.height).toBe(before!.height);
+    expect((await help.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    await page.screenshot({
+      path: info.outputPath("privacy-help.png"),
+      fullPage: true,
+    });
+    await page.keyboard.press("Escape");
+    await expect(help).toBeFocused();
+  });
+}
+
+test("paged list ideas and joint gifts keep marker context across filters and person pages", async ({
+  page,
+}) => {
+  const { state, actor, gift, originalListId } = await setup(page);
+  const list = state.lists.find((l) => l.id === originalListId)!;
+  const first = state.people.find((p) => p.id === list.ownerIds[0])!;
+  const second = state.people.find(
+    (p) => p.userId && p.userId !== actor.id && p.id !== first.id,
+  )!;
+  gift.recipientIds = [first.id, second.id];
+  gift.spendingAllocations = gift.recipientIds.map((recipientId) => ({
+    recipientId,
+    share: 1,
+    listId: list.id,
+  }));
+  list.ownerIds = [first.id, second.id];
+  state.reservations = [];
+  await page.route("**/api/v1/world", (route) =>
+    route.fulfill({
+      json: {
+        ...world(state, actor),
+        items: [],
+        buying: [],
+        paged: true,
+        giftPreferences: [],
+        spendingEnabled: false,
+      },
+    }),
+  );
+  await page.goto(`/lists/${list.id}`);
+  const card = page.locator(".gift-card").filter({ hasText: gift.title });
+  await expect(card).toBeVisible();
+  await page
+    .getByRole("group", { name: "Item type", exact: true })
+    .getByRole("button", { name: "Gift ideas", exact: true })
+    .click();
+  await expect(card.locator(".gift-type-icon")).toHaveCount(0);
+  await expect(card).toContainText(first.name);
+  await expect(card).toContainText(second.name);
+  await page.goto(`/people/${second.id}?tab=ideas`);
+  await expect(card.locator(".gift-type-icon")).toHaveClass(/lucide-lightbulb/);
+  const color = [...second.name].reduce((n, c) => n + c.charCodeAt(0), 0) % 4;
+  await expect(card.locator(".avatar")).toHaveClass(
+    new RegExp(`color-${color}`),
+  );
+  await expect(card).toContainText(first.name);
+  await expect(card).toContainText(second.name);
+});
+
+test("create and clear a private list association without spending tracking", async ({
+  page,
+}) => {
+  const { state, actor, originalListId } = await setup(page);
+  const list = state.lists.find((l) => l.id === originalListId)!;
+  let previewRequests = 0;
+  await page.route("**/api/v1/spending/assignment-preview", (route) => {
+    previewRequests++;
+    return route.fulfill({ status: 403, json: { error: "Tracking is off" } });
+  });
+  await page.route("**/api/v1/items", (route) =>
+    route.fulfill({
+      json: command(
+        state,
+        actor,
+        "items.create",
+        route.request().postDataJSON(),
+      ),
+    }),
+  );
+  await page.route("**/api/v1/items/update", (route) =>
+    route.fulfill({
+      json: command(
+        state,
+        actor,
+        "items.update",
+        route.request().postDataJSON(),
+      ),
+    }),
+  );
+  await page.goto(`/lists/${list.id}`);
+  await page
+    .getByRole("button", { name: "Add gift idea", exact: true })
+    .click();
+  const dialog = page.getByRole("dialog");
+  await dialog
+    .getByLabel("Gift idea name", { exact: true })
+    .fill("A plan without spending");
+  const other = world(state, actor).people.find(
+    (person) =>
+      person.userId &&
+      person.userId !== actor.id &&
+      !list.ownerIds.includes(person.id),
+  )!;
+  const recipientSearch = dialog.getByRole("combobox", {
+    name: "Who is this idea for?",
+    exact: true,
+  });
+  await recipientSearch.fill(other.name);
+  await recipientSearch.press("Enter");
+  await expect(
+    dialog.getByLabel(`${other.name}'s wish list`, { exact: true }),
+  ).toHaveValue("");
+  await dialog
+    .getByRole("button", { name: "Save gift idea", exact: true })
+    .click();
+  await expect(dialog).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", { name: "A plan without spending", exact: true }),
+  ).toBeVisible();
+  const saved = state.items.find(
+    (item) => item.title === "A plan without spending",
+  )!;
+  expect(
+    saved.spendingAllocations?.find((a) => a.recipientId === other.id)?.listId,
+  ).toBeUndefined();
+  saved.spendingAllocations![0].share = 5;
+  saved.spendingAllocations![1].share = 2;
+  await page.goto(`/lists/${list.id}`);
+  const card = page
+    .locator(".gift-card")
+    .filter({ hasText: "A plan without spending" });
+  await expect(card).toBeVisible();
+  await card.locator(".gift-title-link").click();
+  await page
+    .getByRole("button", { name: "Edit gift idea", exact: true })
+    .click();
+  await dialog
+    .getByRole("button", { name: `Remove ${other.name}`, exact: true })
+    .click();
+  await dialog.locator(".spending-allocations select").selectOption("");
+  await dialog
+    .getByRole("button", { name: "Save changes", exact: true })
+    .click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.locator(".gift-detail-info .gift-source-list")).toHaveCount(
+    0,
+  );
+  await page.goto(`/lists/${list.id}`);
+  await expect(card).toHaveCount(0);
+  expect(saved.spendingAllocations?.[0].share).toBe(5);
+  // Removing the only positive share must remain saveable with controls hidden.
+  saved.recipientIds.push(other.id);
+  saved.spendingAllocations![0].share = 0;
+  saved.spendingAllocations!.push({ recipientId: other.id, share: 2 });
+  await page.goto(`/gift/${saved.id}`);
+  await page
+    .getByRole("button", { name: "Edit gift idea", exact: true })
+    .click();
+  await dialog
+    .getByRole("button", { name: `Remove ${other.name}`, exact: true })
+    .click();
+  await dialog
+    .getByRole("button", { name: "Save changes", exact: true })
+    .click();
+  await expect(dialog).toHaveCount(0);
+  expect(saved.spendingAllocations?.[0].share).toBe(1);
+  expect(previewRequests).toBe(0);
 });

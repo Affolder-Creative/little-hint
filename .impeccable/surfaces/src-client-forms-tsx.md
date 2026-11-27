@@ -28,3 +28,5 @@ Audience summaries name up to three additional exclusions, with and N more / Sho
 Price range entry uses one decimal-keypad text field with an adjacent outlined Range button. Preserve focus, raw unfinished draft input and late-import edit protection. Hint and inline validation remain associated with the input. See DESIGN.md Price range entry for the shared visual treatment.
 
 Price sits beside shop entry outside More details. Show the selected shop amount and source in automatic mode; offer Set a custom price or range. Without priced shops, show manual entry immediately. Use shop prices explicitly restores automatic mode. Preserve custom values when adding links and receiving late imports. Each product retains its own price source.
+
+Private idea list organization is available without spending tracking. Plan for a wish list, optional selects one list per recipient, preselected when starting from that list. Tracking controls joint-share inputs and financial review only. Saving while tracking is off leaves existing financial records unchanged.

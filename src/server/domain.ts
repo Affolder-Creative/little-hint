@@ -2546,6 +2546,8 @@ function commandCore(
         p.spendingListId !== i.spendingListId
       ) {
         if (i.listId) fail(400, "Wish-list items use their source list.");
+        if (p.spendingListId)
+          listContext(s, a, p.spendingListId, p.recipientIds ?? i.recipientIds);
         if (
           p.spendingListId &&
           (!p.recipientIds ||

@@ -307,3 +307,67 @@
     column-gap: 12px;
   }
 }
+
+/* Detail help retains its row geometry while only the inner label is painted. */
+.gift-context:not(.gift-context-card) .info-help-trigger:hover,
+.gift-context:not(.gift-context-card) .info-help-trigger[aria-expanded="true"] {
+  background: transparent;
+}
+.gift-context:not(.gift-context-card) .gift-privacy-label {
+  padding: 3px 4px;
+  margin-inline: -4px;
+  border-radius: 6px;
+}
+.gift-context:not(.gift-context-card)
+  .info-help-trigger:hover
+  .gift-privacy-label,
+.gift-context:not(.gift-context-card)
+  .info-help-trigger[aria-expanded="true"]
+  .gift-privacy-label {
+  background: var(--soft);
+}
+.gift-planning-list {
+  display: block;
+}
+.gift-privacy-more {
+  margin-top: 8px;
+}
+.gift-type-icon {
+  width: 55%;
+  height: 55%;
+  flex: none;
+}
+.gift-type-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin-bottom: 16px;
+}
+.gift-type-filters button {
+  min-height: 44px;
+  padding: 8px 0;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 14px;
+}
+.gift-type-filters button[aria-pressed="true"] {
+  color: var(--accent);
+  border-bottom-color: currentColor;
+}
+.list-gift-ideas.list-gift-ideas-inline {
+  margin-block: 24px 16px;
+  padding: 0;
+  border: 0;
+}
+.list-gift-ideas-inline .section-heading {
+  margin-bottom: 8px;
+}
+.list-gift-ideas-inline .section-heading h2 {
+  margin: 0;
+}
+.list-gift-ideas-inline nav {
+  margin: 0;
+}

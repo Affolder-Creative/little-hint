@@ -1374,7 +1374,7 @@ function GiftEditor({
             : {}),
           descriptionRich: noteRich,
           priority,
-          ...(idea && world.spendingEnabled && (!gift || assignmentChanged)
+          ...(idea && !gift?.adminDetailsOnly && (!gift || assignmentChanged)
             ? {
                 spendingListId: null,
                 spendingAllocations,
@@ -1602,24 +1602,40 @@ function GiftEditor({
             disabled={!!gift && !gift.canEditRecipients}
             onChange={(ids) => {
               setRecipientIds(ids);
-              setSpendingAllocations(
-                ids.map((recipientId) => ({
+              const nextAllocations = ids.map((recipientId) => {
+                const existing = spendingAllocations.find(
+                  (v) => v.recipientId === recipientId,
+                );
+                const initialList = world.lists.find(
+                  (list) => list.id === initialSpendingListId,
+                );
+                return {
                   recipientId,
-                  share: 1,
-                  listId:
-                    spendingAllocations.find(
-                      (v) => v.recipientId === recipientId,
-                    )?.listId ?? null,
-                })),
+                  share: world.spendingEnabled ? 1 : (existing?.share ?? 1),
+                  listId: existing
+                    ? existing.listId
+                    : initialList?.ownerIds.includes(recipientId)
+                      ? initialList.id
+                      : null,
+                };
+              });
+              setSpendingAllocations(
+                nextAllocations.some((allocation) => allocation.share > 0)
+                  ? nextAllocations
+                  : nextAllocations.map((allocation) => ({
+                      ...allocation,
+                      share: 1,
+                    })),
               );
-              toast("Recipient shares reset to an equal split.");
+              if (world.spendingEnabled)
+                toast("Recipient shares reset to an equal split.");
               setChosenFriend("");
             }}
           />
           <p className="muted">
             {recipientName
-              ? `Saved under Gift ideas for ${recipientName}, separately from their wish lists.`
-              : "Saved under the recipient's Gift ideas, separately from their wish lists."}
+              ? `Saved under Gift ideas for ${recipientName}.`
+              : "Saved under the recipient's Gift ideas."}
           </p>
           <div className="text-stack idea-audience">
             <Field label="Who can see this idea?">
@@ -1709,9 +1725,10 @@ function GiftEditor({
           </div>
         </>
       )}
-      {idea && !gift?.adminDetailsOnly && world.spendingEnabled && (
+      {idea && !gift?.adminDetailsOnly && (
         <>
           <SpendingAllocations
+            planning
             amountKind="estimate"
             key={recipientIds.join()}
             value={spendingAllocations}

@@ -44,7 +44,7 @@ wordplay sparingly. Instructions, privacy choices, errors, and purchases stay pl
 - An **item** goes on a wish list, including lists shared by several people and
   lists managed for someone else. Use Add item, Item name, Edit item, and Search items.
 - A **gift idea** is something saved for another person outside their wish list.
-  Use Add gift idea, Gift idea name, and Edit gift idea. Givers can start from a shared wish list; the idea stays with its recipient. Only me remains the default and covers reservation and purchase activity.
+  Use Add gift idea, Gift idea name, and Edit gift idea. Givers can start from a shared wish list and privately associate the idea with that list; the idea stays with its recipient and keeps its own audience. Only me remains the default and covers reservation and purchase activity.
 - A **gift** is something someone plans to give. Use Reserve gift and Mark as purchased.
 - **Wish list** names the collection. **Hint** adds personality, not a new data type.
 - Keep navigation and headings recognizable. Use short sentences and name the next
@@ -130,7 +130,7 @@ accounts. Each person retains their off switch, and partner consent and sharing
 rules remain unchanged. Newly enabled people see an explanation in Spending
 settings and their spending view. No external notification is sent.
 
-Private gift ideas and manual spending records may be explicitly assigned to an accessible wish list for their recipients. Assignment updates spending totals, budget scope, and the list’s group-event context without adding the gift to the list or changing sharing. Plans pass their assignment to later purchases; purchase reassignment also updates related refunds. Source wish-list gifts retain their source context.
+Gift ideas may be privately assigned to an accessible wish list for their recipients, even without spending tracking. The creator sees those ideas alongside the list’s wishes. Manual spending records can also be assigned when tracking is enabled. Assignment updates spending totals, budget scope, and the list’s group-event context without adding the gift to the list or changing sharing. Plans pass their assignment to later purchases; purchase reassignment also updates related refunds. Source wish-list gifts retain their source context.
 
 ## Friends before signup
 
@@ -168,9 +168,9 @@ Private per-item subscriptions notify at new lows of at least 5% and $1. Inbox
 alerts respect current access; external channels require explicit topic opt-in.
 Recorded spending remains separate from changing listed-price estimates.
 
-Gift idea creators can choose a private default wish list for spending. The default and recipient allocations are returned only to the creator, including when another viewer is an administrator. Cards and details distinguish On a linked source wish list from Not on a wish list; a private Your spending list line never implies that the idea was added or shared there.
+Gift idea creators can choose a private wish-list association independently of spending tracking. Existing spending defaults supply that association. The default and recipient allocations are returned only to the creator, including when another viewer is an administrator. Cards and details distinguish On a source wish list from For a privately assigned list. Both regular and group-event list pages combine wishes with the creator’s explicitly assigned ideas, filtered by All, Wishes or Gift ideas. Unassigned ideas remain on the person’s Gift ideas page. Assignment changes neither audience nor lifecycle; list archival and deletion do not archive or delete associated ideas.
 
-The creator's new plans inherit the choice; saving a changed assignment previews and updates their existing unassigned plans and purchases, including related refunds. Already assigned records and other buyers' records retain their context. Clearing the default affects future plans only. Assignment never publishes the idea or changes its audience. The Purchased view offers a combined status and recorded-spending editor. Occasion and wish-list filters count explicitly linked or assigned gifts; guided review helps organize unassigned entries.
+The creator's new plans inherit the choice; saving a changed assignment previews and updates their existing unassigned plans and purchases, including related refunds. Already assigned records and other buyers' records retain their context. Clearing the default removes the idea from that list’s private browsing view and affects future plans only. When tracking is off, assignment edits leave existing financial records unchanged. Assignment never publishes the idea or changes its audience. The Purchased view offers a combined status and recorded-spending editor. Occasion and wish-list filters count explicitly linked or assigned gifts; guided review helps organize unassigned entries.
 
 ## Managed profiles and account administration
 

@@ -1437,9 +1437,7 @@ test("person pages link accessible wish lists and keep all items with their sour
     .getByRole("tab", { name: "Gift ideas for Jamie", exact: true })
     .click();
   await expect(links).toHaveCount(0);
-  await expect(page.locator(".gift-source-list")).toHaveText(
-    "Not on a wish list",
-  );
+  await expect(page.locator(".gift-source-list")).toHaveCount(0);
   await expect(
     page.getByRole("heading", {
       name: "A private idea for Jamie",
@@ -1448,9 +1446,7 @@ test("person pages link accessible wish lists and keep all items with their sour
   ).toBeVisible();
   await page.goto("/");
   await expect(page.locator(".gift-card").first()).toBeVisible();
-  await expect(page.locator(".gift-source-list").first()).toHaveText(
-    /^(On |Not on a wish list)/,
-  );
+  await expect(page.locator(".gift-source-list").first()).toHaveText(/^On /);
 });
 
 test("person lists include private owned and managed lists and explain empty lists", async ({
@@ -4260,7 +4256,10 @@ test.describe("navigation scroll restoration", () => {
       await page.keyboard.press("Tab");
       await page.keyboard.press("Tab");
       await expect(
-        page.locator(".gift-card-entry").nth(15).locator("summary"),
+        page
+          .locator(".gift-card-entry")
+          .nth(15)
+          .locator(".entry-actions > summary"),
       ).toBeFocused();
       await expectScroll(page, position);
       await page.goForward();
@@ -5570,10 +5569,11 @@ for (const width of [390, 1440]) {
       0,
     );
     const ideas = await page.locator(".list-gift-ideas").boundingBox();
-    const itemsHeading = await page
-      .getByRole("heading", { name: "On this wish list", exact: true })
-      .boundingBox();
-    expect(ideas!.y).toBeGreaterThan(itemsHeading!.y);
+    const results = await page.locator(".collection-results").boundingBox();
+    expect(ideas!.y).toBeLessThan(results!.y);
+    await expect(
+      page.getByRole("heading", { name: "Wishes & gift ideas", exact: true }),
+    ).toBeVisible();
     if (width === 1440) {
       const follow = await page
         .getByRole("button", { name: "Follow wish list", exact: true })

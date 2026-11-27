@@ -1,3 +1,4 @@
+import { ideaAssignedToList, orderedListGifts } from "../shared/list-ideas";
 import { buyingSorts, sortBuying } from "../shared/buying-sort";
 import { groupProducts } from "./item-groups";
 import { visibilityScope } from "./visibility";
@@ -48,6 +49,7 @@ export function collectionWorld(s: State, a: Actor): PagedWorld {
 const page = z.coerce.number().int().min(1).max(1000000).default(1);
 export const browseQuery = z.object({
   scope: z.enum(["home", "person", "list"]).default("home"),
+  includeIdeas: z.enum(["true", "false"]).default("false"),
   publicationState: z.enum(["draft", "published"]).default("published"),
   id: z.string().uuid().optional(),
   tab: z.enum(["wishes", "ideas"]).default("wishes"),
@@ -100,7 +102,15 @@ export async function itemPage(
     const others = items.filter((i) => !recipient(s, a, i));
     if (others.length) items = others;
   }
-  if (q.scope === "list") items = items.filter((i) => i.listId === q.id);
+  if (q.scope === "list")
+    items = items.filter(
+      (i) =>
+        i.listId === q.id ||
+        (q.includeIdeas === "true" &&
+          q.publicationState === "published" &&
+          i.creatorId === a.id &&
+          ideaAssignedToList(i, list!.id)),
+    );
   if (q.scope === "person")
     items = items.filter(
       (i) =>
@@ -181,7 +191,9 @@ export async function itemPage(
   });
   const sorted = archivedView
     ? orderedArchivedItems(filtered, list?.itemOrder, archivedItemSort(q.sort))
-    : ordered(filtered, q.sort, list?.itemOrder);
+    : list && q.includeIdeas === "true"
+      ? orderedListGifts(filtered, q.sort, list.itemOrder)
+      : ordered(filtered, q.sort, list?.itemOrder);
   const result = pageRows(sorted, q.page);
   await hydrate(
     s,
