@@ -655,7 +655,10 @@ function EventListPicker({
   );
   return (
     <div className="event-list-picker">
-      <p className="muted">{eventName}</p>
+      <p className="muted event-list-picker-context">
+        <CalendarDays size={16} aria-hidden="true" />
+        <span>Event: {eventName}</span>
+      </p>
       <Field label="Search wish lists">
         <input
           type="search"

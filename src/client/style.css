@@ -5613,3 +5613,27 @@ a.button:is(:hover, :focus, :active),
   border-top: 1px solid var(--border);
   margin: 4px 0;
 }
+
+.event-list-picker-context {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0 0 16px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.event-list-picker-context > svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.event-list-picker-context > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.event-list-picker-results .person-list-link {
+  font-size: 14px;
+  font-weight: 550;
+}
+.event-list-picker-results .person-list-link > svg {
+  color: var(--muted);
+}

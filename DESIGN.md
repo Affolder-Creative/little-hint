@@ -781,7 +781,7 @@ Admin gift editing retains the existing editor and photo controls. A short expla
 
 
 
-Gift refinements retain full-product photos inside uniform full-width media frames with contained images and top-right menus. Arrival actions use the outline package-check icon. Person pages place following and co-management in More actions with an ellipsis. Event-list spending and collection headings have a single 24px gap, reduced to 20px on phones. Privacy help holds its top-left position during disclosure expansion and scrolls within the viewport. Short summaries precede relevant exceptions only. Linked shared-cost forms identify their source, incomplete-cost state and review-required state beside the total. Editing the total switches to manual; Use recorded spending reconnects it.
+Gift refinements retain full-product photos inside uniform full-width media frames with contained images and top-right menus. Arrival actions use the outline package-check icon. Person pages place following and co-management in More actions with an ellipsis. The event wish-list picker uses a muted 13px “Event: [name]” caption with a 16px calendar icon, 14px medium-weight list names, muted 17px arrows, and 44px minimum rows. Event-list spending and collection headings have a single 24px gap, reduced to 20px on phones. Privacy help holds its top-left position during disclosure expansion and scrolls within the viewport. Short summaries precede relevant exceptions only. Linked shared-cost forms identify their source, incomplete-cost state and review-required state beside the total. Editing the total switches to manual; Use recorded spending reconnects it.
 
 ## Do's and Don'ts
 

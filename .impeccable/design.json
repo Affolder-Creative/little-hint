@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-27T18:30:53.482297+00:00",
+  "generatedAt": "2026-11-27T18:42:03.962357+00:00",
   "title": "Design System: Little Hint",
   "extensions": {
     "peopleDirectory": {
@@ -1314,7 +1314,8 @@
       "menus": "Person More actions combines following and co-management. Event actions starts with a single Other wish lists picker action, then a separator and grouped View/Edit/Archive/Repeat/Trash actions. The searchable picker keeps the menu bounded.",
       "spacing": "24px spending-to-collection gap, 20px on phones.",
       "sharedCost": "Linked to recorded spending; manual override and explicit review states.",
-      "privacy": "Concise summary with relevant details; stable top-left during disclosure expansion."
+      "privacy": "Concise summary with relevant details; stable top-left during disclosure expansion.",
+      "picker": "Muted 13px Event: [name] caption with a 16px calendar icon, 8px icon gap and 16px separation; 14px, weight 550 list names; muted 17px arrows; 44px minimum rows, 12px vertical padding. Search remains above a scrollable results region."
     }
   },
   "components": [

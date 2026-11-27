@@ -3728,7 +3728,7 @@ test("scheduled summaries open on request in both privacy modes without moving c
     await page.keyboard.press("Enter");
     await expect(panel).toBeVisible();
     await expect(trigger).toHaveAttribute("aria-expanded", "true");
-    await expect(panel).toContainText("Dec 25, 2099");
+    await expect(panel).toContainText("Gift summary opens Dec 26, 2099");
     await expect(panel).toContainText(
       "Contribution amounts and private notes stay private.",
     );
@@ -5809,6 +5809,18 @@ for (const width of [320, 768, 1440]) {
         .fill("no matching wish list");
       await expect(picker).toContainText("No wish lists match your search.");
       await picker.getByLabel("Search wish lists").fill("");
+      await picker.screenshot({ path: info.outputPath("picker.png") });
+      const originalTheme = await page.evaluate(
+        () => document.documentElement.dataset.theme,
+      );
+      await page.evaluate(() => {
+        document.documentElement.dataset.theme = "dark";
+      });
+      await picker.screenshot({ path: info.outputPath("picker-dark.png") });
+      await page.evaluate((theme) => {
+        if (theme) document.documentElement.dataset.theme = theme;
+        else delete document.documentElement.dataset.theme;
+      }, originalTheme);
       await page.screenshot({
         path: info.outputPath("other-wish-lists.png"),
         fullPage: true,
@@ -6066,7 +6078,7 @@ test("event dates, linked calendar icons and archive guidance retain their conte
   await page.locator(".privacy-trigger").click();
   await expect(
     page.getByRole("dialog", { name: "Gift privacy" }),
-  ).toContainText("you can see purchased gifts");
+  ).toContainText("You will see purchased gifts, buyers, and contributors.");
   await page.getByRole("button", { name: "Close privacy details" }).click();
   await page
     .getByRole("button", { name: "Archived items", exact: true })
