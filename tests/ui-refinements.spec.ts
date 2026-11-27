@@ -1416,6 +1416,24 @@ for (const layout of ["compact", "large-photos"] as const) {
           }),
         );
       expect(overlaps).toBe(false);
+      const alignmentOffsets = await page
+        .locator(".gift-context-card .gift-context-line:has(.gift-source-list)")
+        .evaluateAll((rows) =>
+          rows.map((row) => {
+            const source = row
+              .querySelector(".gift-source-list")!
+              .getBoundingClientRect();
+            const badge = row
+              .querySelector(".gift-privacy-label")!
+              .getBoundingClientRect();
+            return Math.abs(
+              source.top + source.height / 2 - badge.top - badge.height / 2,
+            );
+          }),
+        );
+      expect(alignmentOffsets.length).toBeGreaterThan(0);
+      for (const offset of alignmentOffsets)
+        expect(offset).toBeLessThanOrEqual(1);
       if (layout === "compact" && width <= 650) {
         const targets = await page
           .locator(
