@@ -569,10 +569,9 @@ test("reservation summary help and event icon polish", async ({
   f.setActor(f.actors[1]);
   await page.goto(`/gift/${f.wish.id}`);
   await expect(
-    page.getByText(
-      "List owners can view the gift summary after Dec 26, 2030.",
-      { exact: true },
-    ),
+    page.getByText("Gift summary opens Dec 27, 2030, Eastern Time.", {
+      exact: true,
+    }),
   ).toBeVisible();
   for (const width of [390, 1280])
     for (const theme of ["light", "dark"]) {

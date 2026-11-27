@@ -1,5 +1,5 @@
 import { InfoHelp } from "./InfoHelp";
-import { dateHasElapsed } from "../shared/list-dates";
+import { dateHasElapsed, giftSummaryOpeningDate } from "../shared/list-dates";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import type { GiftSummary, List } from "../shared/model";
@@ -10,39 +10,39 @@ export function RevealPolicy({
   list,
   own = false,
   compact = false,
+  includeSchedule = true,
 }: {
   own?: boolean;
   compact?: boolean;
+  includeSchedule?: boolean;
   list: Pick<List, "revealAfter" | "timeZone" | "revealExchangeGivers"> & {
     mode?: List["mode"];
   };
 }) {
   const revealed = dateHasElapsed(list.revealAfter, list.timeZone);
   const audience = own ? "You" : "List owners";
-  const date = list.revealAfter
-    ? new Intl.DateTimeFormat("en-US", {
-        dateStyle: "medium",
-        timeZone: "UTC",
-      }).format(new Date(`${list.revealAfter}T00:00:00Z`))
-    : "";
+  const date = list.revealAfter ? giftSummaryOpeningDate(list.revealAfter) : "";
+  const zone = new Intl.DateTimeFormat("en-US", {
+    timeZone: list.timeZone ?? "UTC",
+    timeZoneName: "longGeneric",
+  })
+    .formatToParts(new Date())
+    .find((p) => p.type === "timeZoneName")?.value;
   const summary = !date
     ? "No gift summary is scheduled."
     : revealed
       ? `${audience} can now view the gift summary.`
-      : `${audience} can view the gift summary after ${date}.`;
+      : `Gift summary opens ${date}, ${zone}.`;
   const details = (
     <div className="text-stack">
-      {list.mode === "transparent" && (
-        <p>List owners can already see ordinary gift plans.</p>
+      {includeSchedule && <p>{summary}</p>}
+      {!includeSchedule && date && !revealed && <p>Times use {zone}.</p>}
+      {date && (
+        <p>
+          {audience} {revealed ? "can see" : "will see"} purchased gifts,
+          buyers, and contributors.
+        </p>
       )}
-      <p>
-        {!date
-          ? "No gift summary is scheduled."
-          : revealed
-            ? `${audience} can now see purchased gifts, who bought them, and who contributed.`
-            : `After ${date} ends in ${list.timeZone ?? "UTC"}, ${own ? "you" : "list owners"} can see purchased gifts, who bought them, and who contributed.`}
-      </p>
-      {date && <p>This summary is available even with Keep it a surprise.</p>}
       <p>
         {date && list.revealExchangeGivers
           ? "Secret exchange gifts and giver names are included."
@@ -72,8 +72,8 @@ export function GiftSummaryPanel({ listId }: { listId: string }) {
     <section className="gift-summary" aria-label="Gift summary">
       <h2>People to thank</h2>
       <p>
-        See which gifts were bought, who bought them, and who contributed.
-        Contribution amounts and private notes stay hidden.
+        See which gifts were bought, buyers, and contributors. Contribution
+        amounts and private notes stay hidden.
       </p>
       {query.isPending && <p role="status">Loading gift summary…</p>}
       {query.error && (

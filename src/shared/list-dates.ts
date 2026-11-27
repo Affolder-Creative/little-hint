@@ -38,3 +38,13 @@ export function listIsArchived(
 ): boolean {
   return list.archived || dateHasElapsed(list.archiveAfter, list.timeZone, now);
 }
+
+/** The summary opens on the calendar day after the configured final hidden day. */
+export function giftSummaryOpeningDate(after: string): string {
+  const day = new Date(`${after}T00:00:00Z`);
+  day.setUTCDate(day.getUTCDate() + 1);
+  return new Intl.DateTimeFormat("en-US", {
+    dateStyle: "medium",
+    timeZone: "UTC",
+  }).format(day);
+}

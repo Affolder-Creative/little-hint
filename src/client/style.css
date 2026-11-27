@@ -5568,3 +5568,48 @@ a.button:is(:hover, :focus, :active),
   font-size: 14px;
   margin-bottom: var(--space-controls);
 }
+
+/* A single gap separates the spending summary from the collection heading. */
+.spending-quick:has(+ .list-gift-ideas-inline) {
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+.spending-quick + .list-gift-ideas-inline {
+  margin-top: 24px;
+  padding-top: 0;
+}
+@media (max-width: 650px) {
+  .spending-quick + .list-gift-ideas-inline {
+    margin-top: 20px;
+  }
+}
+
+.event-list-picker-results {
+  max-height: min(50dvh, 24rem);
+  overflow-y: auto;
+}
+.event-list-picker .field {
+  margin-bottom: 12px;
+}
+
+.event-list-picker-results .person-list-link {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 17px;
+  align-items: center;
+  gap: 16px;
+  min-height: 44px;
+  padding: 12px 4px;
+  color: var(--text);
+}
+.event-list-picker-results .person-list-link + .person-list-link {
+  border-top: 1px solid var(--border);
+}
+.event-list-picker-results .person-list-link:hover {
+  color: var(--accent);
+}
+.entry-actions-content > hr {
+  width: 100%;
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: 4px 0;
+}

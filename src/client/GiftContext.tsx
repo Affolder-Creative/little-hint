@@ -4,7 +4,7 @@ import type { GiftView } from "../shared/model";
 import { useApp } from "./context";
 import { InfoHelp } from "./InfoHelp";
 import { RevealPolicy } from "./ListFeatures";
-import { dateHasElapsed } from "../shared/list-dates";
+import { dateHasElapsed, giftSummaryOpeningDate } from "../shared/list-dates";
 import { ideaAllocationChoices } from "../shared/spending";
 import { shoppingLink } from "./shopping-context";
 import "./gift-context.css";
@@ -22,7 +22,7 @@ export function giftPrivacy(gift: GiftView) {
         label: "Visible to recipient",
         icon: Eye,
         description:
-          "Recipients can see this idea and join the discussion. Reservations and purchases stay hidden.",
+          "Recipients can see and discuss this idea. Reservations and purchases stay hidden.",
       };
     return {
       label: "Surprise",
@@ -40,7 +40,7 @@ export function giftPrivacy(gift: GiftView) {
         label: "Surprise",
         icon: EyeOff,
         description:
-          "Recipients can see this wish. Reservations, purchases, and discussion are hidden from them.",
+          "Recipients can see this wish. Reservations, purchases, and discussion stay hidden.",
       };
 }
 
@@ -64,7 +64,7 @@ export function GiftContext({
   const summary = list?.revealAfter
     ? summaryAvailable
       ? "The gift summary is available."
-      : `A gift summary is available after ${new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeZone: "UTC" }).format(new Date(`${list.revealAfter}T00:00:00Z`))}.`
+      : `Gift summary opens ${giftSummaryOpeningDate(list.revealAfter)}.`
     : "";
   const label = revealed ? "Gift summary available" : privacy.label;
   const Icon = revealed ? Eye : privacy.icon;
@@ -136,16 +136,16 @@ export function GiftContext({
           >
             <p>{description}</p>
             {summary && <p>{summary}</p>}
-            {(list || gift.visibility !== "private") && (
+            {(list || gift.visibility === "visible") && (
               <details className="gift-privacy-more">
                 <summary>Privacy details</summary>
                 {list ? (
-                  <RevealPolicy list={list} />
+                  <RevealPolicy list={list} includeSchedule={false} />
                 ) : (
                   <p>
                     {gift.visibility === "visible"
                       ? "Earlier protected notes stay private."
-                      : "Additional sharing exceptions still apply."}
+                      : ""}
                   </p>
                 )}
               </details>

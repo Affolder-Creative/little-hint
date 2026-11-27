@@ -33,7 +33,13 @@ export function InfoHelp({
   const [open, setOpen] = useState(false);
   useLayoutEffect(() => {
     if (!open) return;
-    const position = () => {
+    const position = (event?: Event) => {
+      if (
+        event?.type === "scroll" &&
+        event.target instanceof Node &&
+        panel.current?.contains(event.target)
+      )
+        return;
       if (!trigger.current || !panel.current) return;
       const anchor = trigger.current.getBoundingClientRect();
       const bounds = panel.current.getBoundingClientRect();
@@ -47,7 +53,13 @@ export function InfoHelp({
       panel.current.style.maxHeight = `${bottom - top}px`;
     };
     position();
-    const observer = new ResizeObserver(position);
+    const observer = new ResizeObserver(() => {
+      if (!panel.current) return;
+      const viewport = window.visualViewport;
+      const bottom =
+        (viewport?.offsetTop ?? 0) + (viewport?.height ?? innerHeight) - 12;
+      panel.current.style.maxHeight = `${Math.max(44, bottom - parseFloat(panel.current.style.top))}px`;
+    });
     observer.observe(panel.current!);
     window.addEventListener("resize", position);
     window.addEventListener("scroll", position, true);

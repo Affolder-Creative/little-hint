@@ -371,3 +371,35 @@
 .list-gift-ideas-inline nav {
   margin: 0;
 }
+
+/* Keep the source readable and privacy independently reachable in both layouts. */
+.gift-card .gift-context-line:has(> .info-help) {
+  flex-wrap: nowrap;
+  align-items: flex-start;
+}
+.gift-card .gift-context-line > .gift-source-list {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.gift-card .gift-context-line > .info-help {
+  margin-left: auto;
+}
+.gift-grid-large-photos .gift-photo {
+  width: 100%;
+  min-width: 0;
+}
+.gift-grid-large-photos .gift-photo > img {
+  object-fit: contain;
+}
+@media (max-width: 650px) {
+  .gift-card .gift-context-line > .info-help {
+    width: 44px;
+    flex: 0 0 44px;
+  }
+  .gift-card .gift-context-line .info-help-trigger {
+    margin-block: 0;
+    padding-inline: 0;
+    justify-content: center;
+  }
+}

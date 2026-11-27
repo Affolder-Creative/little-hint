@@ -1432,6 +1432,9 @@ for (const layout of ["compact", "large-photos"] as const) {
                 width: r.width,
                 height: r.height,
                 gap: r.left - source.right,
+                rightGap:
+                  button.closest(".gift-context-line")!.getBoundingClientRect()
+                    .right - r.right,
               };
             }),
           );
@@ -1439,7 +1442,7 @@ for (const layout of ["compact", "large-photos"] as const) {
           expect(target.width).toBeGreaterThanOrEqual(44);
           expect(target.height).toBeGreaterThanOrEqual(44);
           expect(target.gap).toBeGreaterThanOrEqual(0);
-          expect(target.gap).toBeLessThanOrEqual(8);
+          expect(target.rightGap).toBeCloseTo(0, 0);
         }
       }
       if (layout === "compact" && width <= 650) {
@@ -1904,3 +1907,33 @@ test("create and clear a private list association without spending tracking", as
   expect(saved.spendingAllocations?.[0].share).toBe(1);
   expect(previewRequests).toBe(0);
 });
+
+for (const width of [393, 1440]) {
+  test(`privacy disclosure keeps its position at ${width}px`, async ({
+    page,
+  }, info) => {
+    await page.setViewportSize({ width, height: 900 });
+    const { state, actor, gift, originalListId } = await setup(page);
+    gift.listId = originalListId;
+    const list = state.lists.find((l) => l.id === originalListId)!;
+    list.mode = "surprise";
+    list.revealAfter = "2030-12-26";
+    await page.goto(`/gift/${gift.id}`);
+    const trigger = page.locator(
+      ".gift-detail-info .gift-context .info-help-trigger",
+    );
+    await trigger.click();
+    const panel = page.getByRole("dialog", { name: /Gift privacy:/ });
+    const disclosure = panel.locator("summary");
+    const before = await disclosure.boundingBox();
+    await disclosure.click();
+    await expect(panel).toContainText("Contribution amounts");
+    const after = await disclosure.boundingBox();
+    expect(after!.x).toBeCloseTo(before!.x, 0);
+    expect(after!.y).toBeCloseTo(before!.y, 0);
+    await page.screenshot({
+      path: info.outputPath("expanded-privacy.png"),
+      fullPage: true,
+    });
+  });
+}

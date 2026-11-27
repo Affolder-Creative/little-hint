@@ -197,22 +197,33 @@ export function ShareCostForm({
 }) {
   const { world, mutate, close } = useApp();
   const dismiss = useModalDismiss();
+  const cost = r.recordedCost;
+  const startsLinked =
+    r.poolCostSource === "recorded-spending" ||
+    (r.poolTotalCents == null &&
+      r.poolTargetCents == null &&
+      cost?.status === "ready");
+  const [linked, setLinked] = useState(startsLinked);
   const legacy =
     r.poolTargetCents !== undefined && r.poolTotalCents === undefined;
   const [totalEdited, setTotalEdited] = useState(false);
   const [total, setTotal] = useState(
-    r.poolTotalCents != null
-      ? String(r.poolTotalCents / 100)
-      : !legacy && r.item?.priceCents != null
-        ? String((priceEstimateCents(r.item)! * r.quantity) / 100)
-        : "",
+    startsLinked && cost?.totalCents != null
+      ? String(cost.totalCents / 100)
+      : r.poolTotalCents != null
+        ? String(r.poolTotalCents / 100)
+        : !legacy && r.item?.priceCents != null
+          ? String((priceEstimateCents(r.item)! * r.quantity) / 100)
+          : "",
   );
   const [own, setOwn] = useState(
-    r.poolOwnContributionCents != null
-      ? String(r.poolOwnContributionCents / 100)
-      : legacy
-        ? ""
-        : "0",
+    startsLinked && cost?.totalCents != null
+      ? String(Math.max(0, cost.totalCents - (r.poolTargetCents ?? 0)) / 100)
+      : r.poolOwnContributionCents != null
+        ? String(r.poolOwnContributionCents / 100)
+        : legacy
+          ? ""
+          : "0",
   );
   const [selectedOffers, setSelectedOffers] = useState<string[]>([]);
   const offers = (r.item?.contributionOffers ?? []).filter(
@@ -258,6 +269,8 @@ export function ShareCostForm({
           revision: r.revision,
           quantity: r.quantity,
           purchased: r.purchased,
+          poolCostSource: linked ? "recorded-spending" : "manual",
+          costToken: linked ? cost?.token : undefined,
           poolTotalCents: totalCents,
           poolOwnContributionCents: ownCents,
           acceptedOffers: acceptedOffers.map(({ id, revision }) => ({
@@ -272,6 +285,38 @@ export function ShareCostForm({
         <strong>{r.titleSnapshot}</strong>
         {r.item ? ` · For ${r.item.recipientNames.join(" & ")}` : ""}
       </p>
+      <p className="muted" role="status">
+        {linked
+          ? cost?.status === "incomplete"
+            ? "Waiting for a complete purchase cost. Record all purchase amounts before saving, or enter a manual total."
+            : cost?.status === "review"
+              ? "Review shared cost. Adjust the goal from others to fit the recorded cost before saving."
+              : "Linked to recorded spending. Purchase corrections and shop refunds update this total and your share."
+          : cost?.status === "incomplete" && r.purchased > 0
+            ? "Manual total. Finish buying and record every purchase amount to link this cost."
+            : "Manual total. Recorded spending will not change this goal."}
+      </p>
+      {!linked &&
+        cost?.totalCents != null &&
+        cost.totalCents >= 0 &&
+        cost.totalCents <= 100000000 && (
+          <button
+            type="button"
+            className="text-button"
+            onClick={() => {
+              setLinked(true);
+              setTotal(String(cost.totalCents! / 100));
+              setOwn(
+                String(
+                  Math.max(0, cost.totalCents! - (r.poolTargetCents ?? 0)) /
+                    100,
+                ),
+              );
+            }}
+          >
+            Use recorded spending
+          </button>
+        )}
       {legacy && (
         <p className="muted">
           Your existing goal from others is {dollars(r.poolTargetCents!)}. Enter
@@ -281,24 +326,27 @@ export function ShareCostForm({
       <Field
         label="Total gift cost in USD"
         hint={
-          !totalEdited &&
-          r.poolTotalCents == null &&
-          !legacy &&
-          r.item &&
-          isPriceRange(r.item)
-            ? "Starts with the upper price for the quantity reserved. Adjust it to include tax and shipping."
-            : "The full cost for the quantity you reserved, including any tax or shipping you want to cover."
+          linked
+            ? "Uses your recorded purchase cost after shop refunds."
+            : !totalEdited &&
+                r.poolTotalCents == null &&
+                !legacy &&
+                r.item &&
+                isPriceRange(r.item)
+              ? "Starts with the upper price for the quantity reserved. Adjust it to include tax and shipping."
+              : "The full cost for the quantity you reserved, including any tax or shipping you want to cover."
         }
       >
         <input
           name="totalCost"
           type="number"
-          min="0.01"
+          min="0"
           max="1000000"
           step="0.01"
           required
           value={total}
           onChange={(e) => {
+            setLinked(false);
             setTotalEdited(true);
             setTotal(e.target.value);
           }}
@@ -306,7 +354,7 @@ export function ShareCostForm({
       </Field>
       <Field
         label="Your contribution in USD"
-        hint="Your intended share. This does not record a payment."
+        hint="Your intended share. Lower it to ask others to contribute. This does not record a payment."
       >
         <input
           name="ownContribution"

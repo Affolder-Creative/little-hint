@@ -1,3 +1,4 @@
+import { Users } from "lucide-react";
 import { formatPrice } from "../shared/price";
 import { noteText } from "../shared/helpful-note";
 import { priorityLabels } from "../shared/organization";
@@ -168,56 +169,47 @@ export function PersonCoManagement({ personId }: { personId: string }) {
   const eligible = data.candidates.some((c) => c.personId === personId);
   if (!mine && !eligible) return null;
   return (
-    <section
-      className="settings-section person-co-management"
-      aria-label="Wish-list co-management"
-    >
-      <details open={mine?.status === "pending"}>
-        <summary>
-          {mine?.status === "active"
-            ? "Co-managers"
-            : mine
-              ? "Co-management request"
-              : "Help manage these wishes"}
-        </summary>
-        {arrangements.map((r) => (
-          <ArrangementRow key={r.id} arrangement={r} />
-        ))}
-        {!mine && (
-          <>
-            <p>
-              Ask {person.name} to let you maintain their wish lists. They keep
-              their own account.
-            </p>
-            <button
-              className="button secondary"
-              onClick={() =>
-                open(
-                  `Ask to co-manage ${person.name}'s wishes`,
-                  <Form
-                    submit="Send request"
-                    cancel={close}
-                    onSubmit={async () => {
-                      await mutate("co-management/request", {
-                        personId,
-                        helperId: world.me.id,
-                      });
-                      close();
-                      toast("Request sent. Access begins after they accept.");
-                    }}
-                  >
-                    <CoManagementScope />
-                    <p>They have seven days to accept this request.</p>
-                  </Form>,
-                )
-              }
+    <button
+      className="text-button"
+      onClick={() => {
+        if (!mine) {
+          open(
+            `Ask to co-manage ${person.name}'s wishes`,
+            <Form
+              submit="Send request"
+              cancel={close}
+              onSubmit={async () => {
+                await mutate("co-management/request", {
+                  personId,
+                  helperId: world.me.id,
+                });
+                close();
+                toast("Request sent. Access begins after they accept.");
+              }}
             >
-              Ask to co-manage
-            </button>
-          </>
-        )}
-      </details>
-    </section>
+              <CoManagementScope />
+              <p>They have seven days to accept this request.</p>
+            </Form>,
+          );
+        } else {
+          open(
+            mine.status === "active" ? "Co-managers" : "Co-management request",
+            <div>
+              {arrangements.map((r) => (
+                <ArrangementRow key={r.id} arrangement={r} />
+              ))}
+            </div>,
+          );
+        }
+      }}
+    >
+      <Users size={17} aria-hidden="true" />
+      {mine?.status === "active"
+        ? "Manage co-management"
+        : mine
+          ? "Co-management request"
+          : "Ask to co-manage"}
+    </button>
   );
 }
 

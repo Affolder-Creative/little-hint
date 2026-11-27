@@ -1,3 +1,4 @@
+import { recordedGiftCost } from "./shared-cost";
 import type {
   Actor,
   GiftSourceState,
@@ -134,6 +135,9 @@ export function sourceView(s: State, r: Reservation, a: Actor) {
     state !== "active" && r.sourceReviewedBy?.[a.id] !== version;
   return {
     ...r,
+    recordedCost: r.buyerId === a.id ? recordedGiftCost(s, r) : undefined,
+    poolCostSource: r.buyerId === a.id ? r.poolCostSource : undefined,
+    poolCostReview: r.buyerId === a.id ? r.poolCostReview : undefined,
     inHandQuantity: r.buyerId === a.id ? r.inHandQuantity : undefined,
     planActions: {
       canRecordPurchase:

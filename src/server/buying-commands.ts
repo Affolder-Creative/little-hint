@@ -1,3 +1,4 @@
+import { recordedGiftCost } from "./shared-cost";
 import {
   acceptedOffersInput,
   validateAcceptedOffers,
@@ -295,7 +296,9 @@ export function buyingCommand(
           acceptedOffers: acceptedOffersInput,
           quantity: z.number().int().min(0).max(999),
           purchased: z.number().int().min(0).max(999),
-          poolTotalCents: z.number().int().positive().max(100000000).optional(),
+          poolCostSource: z.enum(["manual", "recorded-spending"]).optional(),
+          costToken: z.string().optional(),
+          poolTotalCents: z.number().int().min(0).max(100000000).optional(),
           poolOwnContributionCents: z
             .number()
             .int()
@@ -310,11 +313,36 @@ export function buyingCommand(
             .optional(),
         })
         .parse(b);
-      const { acceptedOffers, ...p } = parsed;
+      const { acceptedOffers, costToken, ...p } = parsed;
       const r =
         s.reservations.find((r) => r.id === p.id && r.buyerId === a.id) ??
         fail(404, "Reservation not found.");
       checkRevision(r, p.revision);
+      if (
+        (p.poolCostSource ?? r.poolCostSource) === "recorded-spending" &&
+        p.poolTotalCents !== undefined
+      ) {
+        const cost = recordedGiftCost(s, r);
+        if (
+          cost.totalCents === undefined ||
+          cost.totalCents < 0 ||
+          cost.totalCents > 100000000
+        )
+          fail(
+            409,
+            "Record the complete purchase cost before linking this gift.",
+          );
+        if (costToken !== cost.token || p.poolTotalCents !== cost.totalCents)
+          fail(
+            409,
+            "Recorded spending changed. Reopen shared cost and review the latest amount.",
+          );
+      }
+      if (p.poolCostSource !== undefined && p.poolTotalCents === undefined)
+        fail(
+          400,
+          "Review the total and your contribution before changing the cost link.",
+        );
       if (p.quantity > r.quantity || p.purchased > p.quantity)
         fail(
           400,
@@ -368,6 +396,7 @@ export function buyingCommand(
       if (increased) r.purchasedAt = new Date().toISOString();
       if (increased && r.purchased === 0) r.inHandQuantity = 0;
       Object.assign(r, p);
+      if (p.poolCostSource !== undefined) r.poolCostReview = false;
       acceptOffers(s, a, r, offers);
       if (!r.purchased) r.inHandQuantity = undefined;
       else if (r.inHandQuantity !== undefined)
