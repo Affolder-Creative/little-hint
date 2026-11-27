@@ -281,6 +281,8 @@ export interface Reservation extends Base {
   exchangeId?: string;
   exchangeRecipientId?: string;
   giverId?: string;
+  poolCostSource?: "manual" | "recorded-spending";
+  poolCostReview?: boolean;
   poolTotalCents?: number;
   poolOwnContributionCents?: number;
   poolTargetCents?: number;
@@ -863,6 +865,11 @@ export interface World {
   buying: Array<
     Reservation & {
       item?: GiftView;
+      recordedCost?: {
+        totalCents?: number;
+        token: string;
+        status: "ready" | "incomplete" | "review";
+      };
       standalonePurchase?: import("./spending").SpendingView["records"][number];
     }
   >;

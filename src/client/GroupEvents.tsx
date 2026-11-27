@@ -24,6 +24,10 @@ import {
   ArrowRight,
   CalendarDays,
   CalendarPlus,
+  Pencil,
+  Archive,
+  ArchiveRestore,
+  Copy,
   Plus,
   Users,
 } from "lucide-react";
@@ -546,73 +550,80 @@ export function GroupEventsSection({ archived }: { archived: boolean }) {
                   );
                 })}
               </div>
-              {others.length > 0 && (
-                <ActionMenu
-                  name={event.name}
-                  label="Other wish lists"
-                  icon={<Users size={20} aria-hidden="true" />}
-                >
-                  {others.map((list) => (
-                    <Link
-                      key={list.id}
+              <ActionMenu name={event.name} label="Event actions">
+                {others.length > 0 && (
+                  <>
+                    <button
                       className="text-button"
-                      to={`/lists/${list.id}`}
+                      onClick={() =>
+                        open(
+                          "Other wish lists",
+                          <EventListPicker
+                            lists={others.map((list) => ({
+                              id: list.id,
+                              label: listLabel(list),
+                              archived: list.archived,
+                            }))}
+                            eventName={event.name}
+                          />,
+                        )
+                      }
                     >
-                      <span>
-                        {listLabel(list)}
-                        {list.archived && (
-                          <small className="event-list-status">
-                            Archived wish list
-                          </small>
-                        )}
-                      </span>
-                      <ArrowRight size={16} aria-hidden="true" />
-                    </Link>
-                  ))}
-                </ActionMenu>
-              )}
-              {event.canManage ? (
-                <ActionMenu name={event.name} label="Event actions">
-                  <button
-                    className="text-button"
-                    onClick={() =>
-                      open("Edit group event", <EventForm event={event} />)
-                    }
-                  >
-                    Edit event
-                  </button>
-                  <button
-                    className="text-button"
-                    onClick={() =>
-                      open(
-                        event.archived
-                          ? "Restore group event"
-                          : "Archive group event",
-                        <EventArchiveForm event={event} />,
-                      )
-                    }
-                  >
-                    {event.archived ? "Restore event" : "Archive event"}
-                  </button>
-                  <button
-                    className="text-button"
-                    onClick={() =>
-                      open(
-                        "Repeat group event",
-                        <EventForm repeatFrom={event} />,
-                      )
-                    }
-                  >
-                    Repeat event
-                  </button>
-                  <TrashButton kind="group-events" entry={event} />
-                </ActionMenu>
-              ) : (
+                      <Users size={17} aria-hidden="true" />
+                      Other wish lists
+                    </button>
+                    <hr />
+                  </>
+                )}
+
                 <Link className="text-button" to={`/events/${event.id}`}>
+                  <CalendarDays size={17} aria-hidden="true" />
                   View event
-                  <ArrowRight size={16} aria-hidden="true" />
                 </Link>
-              )}
+                {event.canManage && (
+                  <>
+                    {" "}
+                    <button
+                      className="text-button"
+                      onClick={() =>
+                        open("Edit group event", <EventForm event={event} />)
+                      }
+                    >
+                      <Pencil size={17} aria-hidden="true" /> Edit event
+                    </button>
+                    <button
+                      className="text-button"
+                      onClick={() =>
+                        open(
+                          event.archived
+                            ? "Restore group event"
+                            : "Archive group event",
+                          <EventArchiveForm event={event} />,
+                        )
+                      }
+                    >
+                      {event.archived ? (
+                        <ArchiveRestore size={17} aria-hidden="true" />
+                      ) : (
+                        <Archive size={17} aria-hidden="true" />
+                      )}
+                      {event.archived ? "Restore event" : "Archive event"}
+                    </button>
+                    <button
+                      className="text-button"
+                      onClick={() =>
+                        open(
+                          "Repeat group event",
+                          <EventForm repeatFrom={event} />,
+                        )
+                      }
+                    >
+                      <Copy size={17} aria-hidden="true" /> Repeat event
+                    </button>
+                    <TrashButton kind="group-events" entry={event} />
+                  </>
+                )}
+              </ActionMenu>
             </div>
           </article>
         );
@@ -627,6 +638,57 @@ export function GroupEventsSection({ archived }: { archived: boolean }) {
         </p>
       )}
     </section>
+  );
+}
+
+function EventListPicker({
+  lists,
+  eventName,
+}: {
+  lists: Array<{ id: string; label: string; archived: boolean }>;
+  eventName: string;
+}) {
+  const [search, setSearch] = useState("");
+  const { close } = useApp();
+  const visible = lists.filter((list) =>
+    list.label.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()),
+  );
+  return (
+    <div className="event-list-picker">
+      <p className="muted event-list-picker-context">
+        <CalendarDays size={16} aria-hidden="true" />
+        <span>Event: {eventName}</span>
+      </p>
+      <Field label="Search wish lists">
+        <input
+          type="search"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          autoFocus
+        />
+      </Field>
+      <div className="event-list-picker-results">
+        {visible.map((list) => (
+          <Link
+            key={list.id}
+            className="person-list-link"
+            to={`/lists/${list.id}`}
+            onClick={close}
+          >
+            <span>
+              {list.label}
+              {list.archived && (
+                <small className="event-list-status">Archived wish list</small>
+              )}
+            </span>
+            <ArrowRight size={17} aria-hidden="true" />
+          </Link>
+        ))}
+        {!visible.length && (
+          <p role="status">No wish lists match your search.</p>
+        )}
+      </div>
+    </div>
   );
 }
 

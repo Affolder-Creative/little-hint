@@ -215,17 +215,23 @@ test("priorities, shared ordering, Trash, and event preservation", async ({
     entry.getByRole("link", { name: /Managed recipient.*wish list/ }),
   ).not.toBeVisible();
   await entry
-    .getByLabel(`Other wish lists for ${eventName}`, { exact: true })
+    .getByLabel(`Event actions for ${eventName}`, { exact: true })
+    .click();
+  await entry
+    .getByRole("button", { name: "Other wish lists", exact: true })
     .click();
   await expect(
-    entry.getByRole("link", { name: /Managed recipient.*wish list/ }),
+    page
+      .getByRole("dialog")
+      .getByRole("link", { name: /Managed recipient.*wish list/ }),
   ).toBeVisible();
-  await expect(
-    entry.getByText(`Shared with: ${group.name}`, { exact: false }),
-  ).toBeVisible();
+  await page.keyboard.press("Escape");
   await entry
     .getByLabel(`Event actions for ${eventName}`, { exact: true })
     .click();
+  await expect(
+    entry.getByText(`Shared with: ${group.name}`, { exact: false }),
+  ).toBeVisible();
   await entry
     .getByRole("button", { name: "Move to Trash", exact: true })
     .click();

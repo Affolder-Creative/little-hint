@@ -108,8 +108,8 @@ describe("wish-list co-management UI", () => {
       createElement(PersonCoManagement, { personId: f.people[0].id }),
       world(f.state, f.actors[1]),
     );
-    expect(helper).toContain("Riley helps Alex");
-    expect(helper.match(/>Leave</g)).toHaveLength(1);
+    expect(helper).toContain("Manage co-management");
+    expect(helper).not.toContain("<details");
     expect(helper).not.toContain("Remove co-manager");
   });
 

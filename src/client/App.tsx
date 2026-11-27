@@ -1,3 +1,4 @@
+import { ActionMenu } from "./Management";
 import {
   GiftContributionOffers,
   ReserveWithOffers,
@@ -1044,7 +1045,10 @@ function PersonPage() {
         )}
         <DiscoveryLink personId={person.id} />
         {person.userId && person.userId !== world.me.id && (
-          <FollowButton target="person" targetId={person.id} />
+          <ActionMenu name={person.name} label="More actions">
+            <FollowButton target="person" targetId={person.id} />
+            <PersonCoManagement personId={person.id} />
+          </ActionMenu>
         )}
         {own ? (
           <>
@@ -1072,7 +1076,6 @@ function PersonPage() {
             : "Profile sharing is off. Lists and ideas you share separately keep their audience."}
         </p>
       )}
-      <PersonCoManagement personId={person.id} />
       <FriendManagement personId={person.id} />
       {person.userId !== world.me.id && <SpendingSummary person={person.id} />}
       <PreferenceSummary personId={person.id} />

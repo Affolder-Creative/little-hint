@@ -28,4 +28,6 @@ Managed people appear in event selectors only when explicitly shared with that g
 
 Event wish-list headers place the calendar beside the optional date, without an icon beside the event name. Reorder forms share a primary-first Save order / Cancel footer.
 
-Other wish lists uses the people icon; Event actions retains the ellipsis. Keep only Edit event in the menu. The event title and calendar icon open the event overview.
+Event actions retains the ellipsis and includes View event, other wish lists with people icons, and permitted management actions. The event title and calendar icon open the event overview.
+
+Event rows have Your wish list and Event actions. Other wish lists is one action inside Event actions that opens a searchable, scrollable picker. Never enumerate participant lists in the menu. Spending-to-collection separation is 24px on desktop and 20px on phones.

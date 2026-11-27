@@ -39,6 +39,7 @@ import { Confirm } from "./Confirm";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
+  PackageCheck,
   ArrowRight,
   Gift,
   Pencil,
@@ -364,6 +365,7 @@ export function Buying() {
                     );
                   }}
                 >
+                  <PackageCheck size={17} aria-hidden="true" />
                   {r.inHandQuantity === r.purchased
                     ? "Edit arrival"
                     : r.purchased === 1 && r.inHandQuantity === 0
@@ -655,9 +657,11 @@ export function Buying() {
                               }
                             >
                               <Users size={16} aria-hidden="true" />
-                              {r.poolTargetCents !== undefined
-                                ? "Edit contribution goal"
-                                : "Share the cost"}
+                              {r.poolCostReview
+                                ? "Review shared cost"
+                                : r.poolTargetCents !== undefined
+                                  ? "Edit contribution goal"
+                                  : "Share the cost"}
                             </button>
                           )}
                           <button

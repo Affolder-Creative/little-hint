@@ -1,3 +1,4 @@
+import { reconcileSharedCosts } from "./shared-cost";
 import { canOffer, giftOffers, reconcileOffers } from "./contribution-offers";
 import { isPriceRange, priceBounds } from "../shared/price";
 import {
@@ -1258,7 +1259,23 @@ function saveGroupProducts(
   reconcileItemGroups(s);
 }
 
+let commandDepth = 0;
 export function command(
+  s: State,
+  a: Actor,
+  action: string,
+  raw: unknown,
+): unknown {
+  commandDepth++;
+  try {
+    const result = executeCommand(s, a, action, raw);
+    if (commandDepth === 1) reconcileSharedCosts(s);
+    return result;
+  } finally {
+    commandDepth--;
+  }
+}
+function executeCommand(
   s: State,
   a: Actor,
   action: string,

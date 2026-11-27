@@ -1,3 +1,4 @@
+import { syncSpending } from "../src/server/spending";
 import { newPreference } from "../src/server/gift-discovery";
 import { command as rawCommand, DomainError } from "../src/server/domain";
 import { mentionCandidates } from "../src/server/activity";
@@ -1493,6 +1494,9 @@ test("person lists include private owned and managed lists and explain empty lis
       item.archived = true;
     });
   await page.goto(`/people/${other.id}`);
+  await page
+    .getByLabel(`More actions for ${other.name}`, { exact: true })
+    .click();
   await expect(
     page.getByRole("navigation", { name: "Wish lists for Riley Morgan" }),
   ).toBeVisible();
@@ -3724,7 +3728,7 @@ test("scheduled summaries open on request in both privacy modes without moving c
     await page.keyboard.press("Enter");
     await expect(panel).toBeVisible();
     await expect(trigger).toHaveAttribute("aria-expanded", "true");
-    await expect(panel).toContainText("Dec 25, 2099");
+    await expect(panel).toContainText("Gift summary opens Dec 26, 2099");
     await expect(panel).toContainText(
       "Contribution amounts and private notes stay private.",
     );
@@ -5779,7 +5783,7 @@ for (const width of [320, 768, 1440]) {
         l.canEdit &&
         !l.ownerIds.includes(person.id),
     );
-    const otherMenu = row.getByLabel(`Other wish lists for ${event.name}`, {
+    const otherMenu = row.getByLabel(`Event actions for ${event.name}`, {
       exact: true,
     });
     if (otherLists.length) {
@@ -5789,15 +5793,41 @@ for (const width of [320, 768, 1440]) {
         ).not.toBeVisible();
       await otherMenu.focus();
       await page.keyboard.press("Enter");
+      await row
+        .getByRole("button", { name: "Other wish lists", exact: true })
+        .click();
+      const picker = page.getByRole("dialog", {
+        name: "Other wish lists",
+        exact: true,
+      });
       for (const list of otherLists)
-        await expect(row.locator(`a[href="/lists/${list.id}"]`)).toBeVisible();
+        await expect(
+          picker.locator(`a[href="/lists/${list.id}"]`),
+        ).toBeVisible();
+      await picker
+        .getByLabel("Search wish lists")
+        .fill("no matching wish list");
+      await expect(picker).toContainText("No wish lists match your search.");
+      await picker.getByLabel("Search wish lists").fill("");
+      await picker.screenshot({ path: info.outputPath("picker.png") });
+      const originalTheme = await page.evaluate(
+        () => document.documentElement.dataset.theme,
+      );
+      await page.evaluate(() => {
+        document.documentElement.dataset.theme = "dark";
+      });
+      await picker.screenshot({ path: info.outputPath("picker-dark.png") });
+      await page.evaluate((theme) => {
+        if (theme) document.documentElement.dataset.theme = theme;
+        else delete document.documentElement.dataset.theme;
+      }, originalTheme);
       await page.screenshot({
         path: info.outputPath("other-wish-lists.png"),
         fullPage: true,
       });
       await page.keyboard.press("Escape");
       await expect(otherMenu).toBeFocused();
-    } else await expect(otherMenu).toHaveCount(0);
+    } else await expect(otherMenu).toHaveCount(1);
 
     await expect(
       page.getByRole("heading", { name: "Other wish lists" }),
@@ -5861,7 +5891,7 @@ for (const width of [320, 768, 1440]) {
     const before = await participants.boundingBox();
     await page.locator(".privacy-trigger").click();
     await expect(panel).toBeVisible();
-    await expect(panel).toContainText("Dec 26, 2099");
+    await expect(panel).toContainText("Dec 27, 2099");
     expect(await participants.boundingBox()).toEqual(before);
     expect(
       (await new AxeBuilder({ page }).include("main").analyze()).violations,
@@ -6048,7 +6078,7 @@ test("event dates, linked calendar icons and archive guidance retain their conte
   await page.locator(".privacy-trigger").click();
   await expect(
     page.getByRole("dialog", { name: "Gift privacy" }),
-  ).toContainText("you can see purchased gifts");
+  ).toContainText("You will see purchased gifts, buyers, and contributors.");
   await page.getByRole("button", { name: "Close privacy details" }).click();
   await page
     .getByRole("button", { name: "Archived items", exact: true })
@@ -6305,11 +6335,17 @@ test("profile hides self follow and labels preferences and sorted list types", a
   );
   const other = state.people.find((p) => p.userId === actors[1].id)!;
   await page.goto(`/people/${other.id}`);
+  await page
+    .getByLabel(`More actions for ${other.name}`, { exact: true })
+    .click();
   await expect(
     page.getByRole("button", { name: "Follow person", exact: true }),
   ).toBeVisible();
   await page
     .getByRole("button", { name: "Follow person", exact: true })
+    .click();
+  await page
+    .getByLabel(`More actions for ${other.name}`, { exact: true })
     .click();
   await expect(
     page.getByRole("button", { name: "Following", exact: true }),
@@ -6689,5 +6725,70 @@ for (const idea of [false, true]) {
     await expect(
       page.getByLabel("Product note (optional)").first(),
     ).toHaveValue("Keep this note");
+  });
+}
+
+for (const width of [393, 1440]) {
+  test(`linked shared cost defaults and manual override at ${width}px`, async ({
+    page,
+  }, info) => {
+    const { state, actor } = await preview(page, 1);
+    await page.setViewportSize({ width, height: 900 });
+    command(state, actor, "spending.settings", {
+      enabled: true,
+      summaries: true,
+    });
+    const r = state.reservations.find(
+      (r) => r.buyerId === actor.id && !r.exchangeId && r.quantity > 0,
+    )!;
+    r.purchased = r.quantity;
+    delete r.poolTotalCents;
+    delete r.poolTargetCents;
+    delete r.poolOwnContributionCents;
+    state.contributions = state.contributions.filter(
+      (c) => c.reservationId !== r.id,
+    );
+    syncSpending(state, actor);
+    const payments = state.spendingRecords.filter(
+      (p) => p.reservationId === r.id && p.kind === "purchase" && !p.voided,
+    );
+    payments.forEach((p, i) => {
+      p.amountCents = i === 0 ? 10699 : 0;
+    });
+    await page.goto("/buying");
+    await page.getByRole("button", { name: /^Purchased/ }).click();
+    const row = page
+      .locator(".buying-row")
+      .filter({ hasText: r.titleSnapshot });
+    await row.locator("summary").click();
+    await row
+      .getByRole("button", { name: "Share the cost", exact: true })
+      .click();
+    const total = page.getByLabel("Total gift cost in USD", { exact: true });
+    const own = page.getByLabel("Your contribution in USD", { exact: true });
+    await expect(total).toHaveValue("106.99");
+    await expect(own).toHaveValue("106.99");
+    await expect(page.getByRole("dialog")).toContainText(
+      "Linked to recorded spending",
+    );
+    await own.fill("66.99");
+    await page.screenshot({
+      path: info.outputPath("linked-cost.png"),
+      fullPage: true,
+    });
+    await page
+      .getByRole("button", { name: "Save contribution goal", exact: true })
+      .click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    expect(r.poolCostSource).toBe("recorded-spending");
+    expect(r.poolTargetCents).toBe(4000);
+    await row.locator("summary").click();
+    await row
+      .getByRole("button", { name: "Edit contribution goal", exact: true })
+      .click();
+    await total.fill("120");
+    await expect(page.getByRole("dialog")).toContainText("Manual total");
+    await page.getByRole("button", { name: "Cancel", exact: true }).click();
+    expect(r.poolCostSource).toBe("recorded-spending");
   });
 }

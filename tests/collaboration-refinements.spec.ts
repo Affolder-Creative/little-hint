@@ -165,7 +165,7 @@ for (const [width, theme] of [
     gift.visibility = "hidden";
     if (personId) {
       await page.goto(`/people/${personId}`);
-      const summary = page.locator(".person-co-management summary");
+      const summary = page.getByLabel(/^More actions for /);
       await page.screenshot({
         path: info.outputPath("person.png"),
         fullPage: true,
@@ -175,6 +175,13 @@ for (const [width, theme] of [
       await summary.click();
       const after = await summary.boundingBox();
       expect(after!.y).toBe(before!.y);
+      await page
+        .getByRole("button", { name: "Ask to co-manage", exact: true })
+        .click();
+      await expect(page.getByRole("dialog")).toContainText(
+        "Personal drafts stay private",
+      );
+      await page.keyboard.press("Escape");
     }
     await page.goto("/notifications");
     await expect(page.getByRole("button", { name: /^Unread/ })).toHaveAttribute(
