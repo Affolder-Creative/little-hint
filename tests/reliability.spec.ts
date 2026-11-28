@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { readdir, readFile } from "node:fs/promises";
+import type { World } from "../src/shared/model";
 import { login, post, submitAuth } from "./browser-helpers";
 
 test("lost reservation responses retry once and account changes cannot display the previous inbox", async ({
@@ -13,10 +14,24 @@ test("lost reservation responses retry once and account changes cannot display t
       buyer = await b.newPage();
     await login(owner, "alex@example.test");
     await login(buyer, "sam@example.test");
-    const world = await (await owner.request.get("/api/v1/world")).json();
-    const list = world.lists.find(
-      (l: any) => l.canEdit && !l.archived && l.groupIds.length,
-    );
+    const world: World = await (
+      await owner.request.get("/api/v1/world")
+    ).json();
+    const buyerWorld: World = await (
+      await buyer.request.get("/api/v1/world")
+    ).json();
+    const recipient = world.people.find((p) => p.userId === world.me.id)!;
+    const sharedGroup = world.groups.find((group) =>
+      buyerWorld.groups.some((g) => g.id === group.id),
+    )!;
+    // Admin edit access includes other recipients' lists. Give this retry
+    // scenario its own list so the buyer can never also be the recipient.
+    const list = await post(owner, "lists", {
+      name: `Retry regression list ${Date.now()}`,
+      ownerIds: [recipient.id],
+      groupIds: [sharedGroup.id],
+      mode: "surprise",
+    });
     const gift = await post(owner, "items", {
       listId: list.id,
       title: `Retry regression ${Date.now()}`,
