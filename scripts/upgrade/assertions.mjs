@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 function currentViewContract(value, records) {
   if (Array.isArray(value))
     return value.map((child) => currentViewContract(child, records));
@@ -480,6 +481,145 @@ function contributionOfferMigrationContract(evidence) {
   return migrated;
 }
 
+// Schema 19 added a buyer-only cost preview. Keep its amounts and token strict:
+// derive them from the old ledger and authorized buyer view, not new output.
+function recordedCostMigrationContract(evidence) {
+  const migrated = structuredClone(evidence);
+  const rows = (kind) =>
+    migrated.records.filter((r) => r.kind === kind).map((r) => r.data);
+  for (const [email, view] of Object.entries(migrated.views)) {
+    const userId = migrated.users.find((u) => u.email === email)?.id;
+    for (const entry of view.buying ?? []) {
+      const reservation = rows("reservations").find((r) => r.id === entry.id);
+      if (
+        !reservation ||
+        reservation.buyerId !== userId ||
+        Object.hasOwn(entry, "recordedCost")
+      )
+        continue;
+      const records = rows("spendingRecords").filter(
+        (r) =>
+          r.reservationId === reservation.id &&
+          r.ownerId === userId &&
+          !r.voided,
+      );
+      const purchases = records.filter((r) => r.kind === "purchase");
+      const refunds = records.filter(
+        (r) =>
+          r.kind === "refund" &&
+          !r.contributionReturnId &&
+          purchases.some((p) => p.id === r.sourceId),
+      );
+      const allowed =
+        rows("spendingSettings").some(
+          (s) => s.userId === userId && s.enabled,
+        ) &&
+        !reservation.exchangeId &&
+        !!entry.item &&
+        !entry.item.archived;
+      const complete =
+        allowed &&
+        reservation.quantity > 0 &&
+        reservation.purchased === reservation.quantity &&
+        purchases.reduce((n, r) => n + r.quantity, 0) ===
+          reservation.quantity &&
+        [...purchases, ...refunds].every((r) => r.amountCents !== null);
+      const totalCents = complete
+        ? purchases.reduce((n, r) => n + r.amountCents, 0) -
+          refunds.reduce((n, r) => n + r.amountCents, 0)
+        : undefined;
+      entry.recordedCost = {
+        ...(totalCents === undefined ? {} : { totalCents }),
+        token: createHash("sha256")
+          .update(
+            JSON.stringify([
+              reservation.id,
+              reservation.quantity,
+              reservation.purchased,
+              allowed,
+              [...purchases, ...refunds]
+                .map((r) => [r.id, r.revision, r.amountCents, r.quantity])
+                .sort(),
+            ]),
+          )
+          .digest("hex"),
+        status:
+          totalCents === undefined
+            ? "incomplete"
+            : totalCents < 0 ||
+                totalCents > 100000000 ||
+                reservation.poolCostReview ||
+                totalCents < (reservation.poolTargetCents ?? 0)
+              ? "review"
+              : "ready",
+      };
+    }
+  }
+  return migrated;
+}
+
+// Schema 20 splits the locks without relaxing any legacy privacy promise.
+// Derive new flags/revisions only from retained evidence, never candidate output.
+function listPolicyMigrationContract(evidence) {
+  const migrated = structuredClone(evidence);
+  const rows = (kind) =>
+    migrated.records.filter((r) => r.kind === kind).map((r) => r.data);
+  const events = new Set(rows("groupEvents").map((e) => e.id));
+  const activeItems = new Set([
+    ...rows("reservations").map((r) => r.itemId),
+    ...rows("contributionOffers").map((o) => o.itemId),
+    ...rows("comments").map((c) => c.itemId),
+  ]);
+  const activeLists = new Set(
+    rows("items")
+      .filter((i) => activeItems.has(i.id))
+      .map((i) => i.listId),
+  );
+  const lists = new Map();
+  for (const list of rows("lists")) {
+    const locked =
+      list.modeLocked ||
+      events.has(list.groupEventId) ||
+      activeLists.has(list.id);
+    const revealLocked =
+      locked ||
+      !!list.groupEventId ||
+      list.groupIds.length > 0 ||
+      (list.ownerIds.length === 1 &&
+        list.pendingOwnerIds.length === 0 &&
+        rows("coManagement").some(
+          (g) => g.status === "active" && g.personId === list.ownerIds[0],
+        ));
+    if (locked !== list.modeLocked || revealLocked !== list.modeLocked)
+      list.revision++;
+    list.modeLocked = locked;
+    list.revealPolicyLocked = revealLocked;
+    lists.set(list.id, list);
+  }
+  for (const event of rows("groupEvents")) {
+    event.modeLocked = true;
+    event.revealPolicyLocked = true;
+  }
+  for (const view of Object.values(migrated.views)) {
+    for (const list of view.lists ?? []) {
+      const retained = lists.get(list.id);
+      assert.ok(retained, "List policy must have retained evidence");
+      list.modeLocked = retained.modeLocked;
+      list.revealPolicyLocked = retained.revealPolicyLocked;
+      list.revision = retained.revision;
+    }
+    for (const event of view.groupEvents ?? []) {
+      assert.ok(
+        events.has(event.id),
+        "Event policy must have retained evidence",
+      );
+      event.modeLocked = true;
+      event.revealPolicyLocked = true;
+    }
+  }
+  return migrated;
+}
+
 export function assertPreserved(actual, expected) {
   if (actual.schemaVersion >= 9 && (expected.schemaVersion ?? 0) < 9)
     expected = lifecycleMigrationContract(expected);
@@ -491,6 +631,10 @@ export function assertPreserved(actual, expected) {
     expected = priceSourceMigrationContract(expected);
   if (actual.schemaVersion >= 18 && (expected.schemaVersion ?? 0) < 18)
     expected = contributionOfferMigrationContract(expected);
+  if (actual.schemaVersion >= 19 && (expected.schemaVersion ?? 0) < 19)
+    expected = recordedCostMigrationContract(expected);
+  if (actual.schemaVersion >= 20 && (expected.schemaVersion ?? 0) < 20)
+    expected = listPolicyMigrationContract(expected);
   for (const field of ["records", "users", "barrier", "uploadHash", "views"]) {
     assert.ok(Object.hasOwn(actual, field), `Missing ${field} evidence`);
     assert.ok(

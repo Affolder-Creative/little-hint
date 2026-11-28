@@ -1,7 +1,11 @@
+import {
+  commandWithAudience as command,
+  idempotentWithAudience as idempotent,
+} from "./discussion-command";
 import { spendingAvailable } from "../src/server/deployment";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { emptyState } from "../src/shared/model";
-import { command, stamp, world, idempotent } from "../src/server/domain";
+import { stamp, world } from "../src/server/domain";
 import {
   spendingView,
   spendingAssignmentPreview,

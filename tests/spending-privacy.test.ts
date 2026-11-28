@@ -1,6 +1,7 @@
+import { commandWithAudience as command } from "./discussion-command";
 import { describe, it, expect } from "vitest";
 import { fixture, connect } from "./privacy-fixture";
-import { command, giftView } from "../src/server/domain";
+import { giftView } from "../src/server/domain";
 import { spendingView, spendingHistory } from "../src/server/spending";
 import type { Item } from "../src/shared/model";
 

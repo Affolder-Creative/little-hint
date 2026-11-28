@@ -115,6 +115,8 @@ export interface List extends Base {
   groupIds: string[];
   mode: Mode;
   modeLocked: boolean;
+  revealPolicyLocked?: boolean;
+  iconKey?: import("./list-icons").ListIconKey | null;
   archived: boolean;
   description: string;
   archiveAfter?: string | null;
@@ -123,6 +125,8 @@ export interface List extends Base {
   revealExchangeGivers?: boolean;
 }
 export interface GroupEvent extends Base {
+  modeLocked?: boolean;
+  revealPolicyLocked?: boolean;
   canManagePolicy?: boolean;
   eventDate?: string | null;
   spendingGuidelineCents?: number | null;

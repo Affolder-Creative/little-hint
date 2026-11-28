@@ -1,6 +1,7 @@
+import { commandWithAudience as command } from "./discussion-command";
 import { beforeAll, afterAll, describe, expect, it } from "vitest";
 import { fixture, connect, draw } from "./privacy-fixture";
-import { command } from "../src/server/domain";
+
 import { spendingView } from "../src/server/spending";
 import { kinds, type Item } from "../src/shared/model";
 import { privacyPreflight } from "../src/server/privacy-review";

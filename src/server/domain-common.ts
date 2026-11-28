@@ -71,12 +71,12 @@ export type ListPolicy = Pick<
   "mode" | "timeZone" | "revealAfter" | "revealExchangeGivers"
 >;
 export function checkSharedListPolicy(
-  current: ListPolicy & { modeLocked: boolean },
+  current: ListPolicy & { modeLocked: boolean; revealPolicyLocked?: boolean },
   next: ListPolicy,
 ) {
-  if (current.modeLocked) {
-    if (next.mode !== current.mode)
-      fail(409, "This privacy choice cannot change after sharing.");
+  if (current.modeLocked && next.mode !== current.mode)
+    fail(409, "Gifting mode can no longer be changed.");
+  if (current.revealPolicyLocked ?? current.modeLocked) {
     if ((next.timeZone ?? "UTC") !== (current.timeZone ?? "UTC"))
       fail(409, "The time zone cannot change after sharing.");
     if (!!next.revealExchangeGivers !== !!current.revealExchangeGivers)

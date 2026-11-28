@@ -1,9 +1,13 @@
+import {
+  commandWithAudience as command,
+  idempotentWithAudience as idempotent,
+} from "./discussion-command";
 import { closurePlan } from "../src/server/account-closure-domain";
 import { accountExport } from "../src/server/account-export";
 import { takeOverProfile } from "../src/server/profile-takeover";
 import { describe, expect, it } from "vitest";
 import { fixture, connect } from "./privacy-fixture";
-import { command, giftView, idempotent } from "../src/server/domain";
+import { giftView } from "../src/server/domain";
 import type { ContributionOffer } from "../src/shared/model";
 import {
   spendingView,

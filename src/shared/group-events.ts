@@ -36,6 +36,7 @@ export function repeatEventDefaults(
     description: event.description,
     mode: event.mode,
     modeLocked: false,
+    revealPolicyLocked: false,
     timeZone: event.timeZone,
     spendingGuidelineCents: event.spendingGuidelineCents ?? null,
     revealExchangeGivers: event.revealExchangeGivers,

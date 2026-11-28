@@ -5,6 +5,7 @@ import {
   listCanManagePolicy,
 } from "./co-management";
 import { z } from "zod";
+import { isListIconKey, type ListIconKey } from "../shared/list-icons";
 import type { State, Actor, List } from "../shared/model";
 import { listIsArchived } from "../shared/list-dates";
 
@@ -34,6 +35,10 @@ import {
 } from "./domain-access";
 
 export const listActions = ["lists.create", "lists.accept", "lists.update"];
+const iconKey = z
+  .custom<ListIconKey>(isListIconKey, "Choose an available list icon.")
+  .nullable()
+  .optional();
 export function listCommand(
   s: State,
   a: Actor,
@@ -46,6 +51,7 @@ export function listCommand(
       const p = z
         .object({
           ...listDates,
+          iconKey,
           name: text,
           ownerIds: ids.min(1),
           groupIds: ids,
@@ -87,7 +93,8 @@ export function listCommand(
         ...p,
         ownerIds: mine,
         pendingOwnerIds: pending,
-        modeLocked: p.groupIds.length > 0,
+        modeLocked: false,
+        revealPolicyLocked: p.groupIds.length > 0,
         archived: false,
         timeZone: p.timeZone ?? "UTC",
         revealExchangeGivers: p.revealExchangeGivers ?? false,
@@ -126,6 +133,7 @@ export function listCommand(
       const p = z
         .object({
           ...listDates,
+          iconKey,
           id,
           revision,
           name: text,
@@ -164,7 +172,7 @@ export function listCommand(
         );
       if (listIsArchived(l) && !p.archived) p.archiveAfter = null;
       Object.assign(l, p, {
-        modeLocked: l.modeLocked || p.groupIds.length > 0,
+        revealPolicyLocked: l.revealPolicyLocked || p.groupIds.length > 0,
       });
       touch(l);
       reconcileAccess(s);

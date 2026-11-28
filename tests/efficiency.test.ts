@@ -1,6 +1,7 @@
+import { commandWithAudience as command } from "./discussion-command";
 import { expect, it } from "vitest";
 import { emptyState, type ImportJob } from "../src/shared/model";
-import { command, stamp, world } from "../src/server/domain";
+import { stamp, world } from "../src/server/domain";
 import { hydrateWorld } from "../src/shared/world";
 import {
   cancelledBuying,

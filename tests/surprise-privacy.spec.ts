@@ -263,6 +263,7 @@ test("a spending partner who manages the recipient cannot see the plan", async (
     });
     await post(giver, "reservations", {
       itemId: item.id,
+      expectedListMode: item.mode,
       quantity: 1,
       ordinary: true,
     });

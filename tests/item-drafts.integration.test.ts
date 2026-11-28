@@ -1,6 +1,10 @@
+import {
+  commandWithAudience as command,
+  idempotentWithAudience as idempotent,
+} from "./discussion-command";
 import { beforeAll, afterAll, describe, it, expect } from "vitest";
 import { wishlistFixture } from "./wishlist-fixture";
-import { command, idempotent } from "../src/server/domain";
+
 import { itemVisible } from "../src/server/domain-access";
 const url = process.env.TEST_DATABASE_URL;
 describe.skipIf(!url)("persisted drafts", () => {
@@ -165,7 +169,7 @@ describe.skipIf(!url)("persisted drafts", () => {
           )
         ).rows[0].version,
       ),
-    ).toBe(19);
+    ).toBe(20);
   });
   it("persists range bounds, pauses published ranges and rolls back invalid pairs", async () => {
     const draft = (await db.transact((state) =>

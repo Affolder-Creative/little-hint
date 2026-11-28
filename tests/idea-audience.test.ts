@@ -1,5 +1,6 @@
+import { commandWithAudience as command } from "./discussion-command";
 import { describe, expect, it } from "vitest";
-import { command, giftView, stamp } from "../src/server/domain";
+import { giftView, stamp } from "../src/server/domain";
 import {
   discussionAudience,
   noteVisible,

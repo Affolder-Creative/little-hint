@@ -1,3 +1,4 @@
+import { idempotentWithAudience as idempotent } from "./discussion-command";
 import { describe, it, expect } from "vitest";
 import {
   emptyState,
@@ -12,7 +13,6 @@ import {
   giftSummary,
   itemVisible,
   world,
-  idempotent,
   noticeAllowed,
 } from "../src/server/domain";
 import { commandWithAudience as command } from "./discussion-command";
@@ -142,8 +142,9 @@ describe("surprise privacy", () => {
     expect(guardian.reservations).toEqual([]);
     expect(guardian.comments).toEqual([]);
   });
-  it("keeps privacy mode locked after unsharing", () => {
+  it("keeps an activity lock after unsharing", () => {
     const f = fixture();
+    reserve(f);
     command(f.s, f.actors[0], "lists.update", {
       id: f.list.id,
       revision: f.list.revision,
@@ -163,7 +164,7 @@ describe("surprise privacy", () => {
         archived: false,
         description: "",
       }),
-    ).toThrow("cannot change after sharing");
+    ).toThrow("Gifting mode can no longer be changed.");
   });
   it("rechecks authorization when a queued notification is delivered", () => {
     const f = fixture();

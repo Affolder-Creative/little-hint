@@ -77,7 +77,13 @@ export function EventForm({
       defaults?.participantIds ??
       people.map((p) => p.id),
   );
-  const policy = event ? { ...event, modeLocked: true } : defaults;
+  const policy = event
+    ? {
+        ...event,
+        modeLocked: event.modeLocked ?? true,
+        revealPolicyLocked: true,
+      }
+    : defaults;
   const initial = event ?? defaults;
   if (!group)
     return (
@@ -96,7 +102,10 @@ export function EventForm({
       }
       disabled={!event && participants.length === 0}
       review={(data) =>
-        !event ? (
+        !event ||
+        (event.canManagePolicy !== false &&
+          !policy?.modeLocked &&
+          data.get("mode") !== event.mode) ? (
           <>
             {repeatFrom && (
               <p>
@@ -105,7 +114,12 @@ export function EventForm({
                 original event and its gift activity stay unchanged.
               </p>
             )}
-            <SharingReview data={data} audience={[group.name]} />
+            <SharingReview
+              data={data}
+              audience={[group.name]}
+              list={event ? policy : undefined}
+              event
+            />
             {repeatFrom && (
               <>
                 <p>

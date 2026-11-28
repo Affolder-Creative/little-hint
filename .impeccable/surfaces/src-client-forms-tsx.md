@@ -2,7 +2,13 @@
 version: 1
 slug: "src-client-forms-tsx"
 primary_target: "src/client/forms.tsx"
-related_targets: ["src/client/ImportDrafts.tsx", "src/client/mobile-repairs.css", "src/client/HelpfulNote.tsx", "src/client/helpful-note.css"]
+related_targets:
+  [
+    "src/client/ImportDrafts.tsx",
+    "src/client/mobile-repairs.css",
+    "src/client/HelpfulNote.tsx",
+    "src/client/helpful-note.css",
+  ]
 ---
 
 # Gift and draft editors
@@ -30,3 +36,5 @@ Price range entry uses one decimal-keypad text field with an adjacent outlined R
 Price sits beside shop entry outside More details. Show the selected shop amount and source in automatic mode; offer Set a custom price or range. Without priced shops, show manual entry immediately. Use shop prices explicitly restores automatic mode. Preserve custom values when adding links and receiving late imports. Each product retains its own price source.
 
 Private idea list organization is available without spending tracking. Plan for a wish list, optional selects one list per recipient, preselected when starting from that list. Tracking controls joint-share inputs and financial review only. Saving while tracking is off leaves existing financial records unchanged.
+
+Standalone list forms put a searchable bundled Lucide picker under List name. Default/reset retains ListChecks; events retain their calendar. Six-column desktop and four-column mobile grids use 44px targets, selected-state checks, arrow navigation, and Escape/focus restoration. First sharing/access and actual gifting-mode changes use a labeled privacy review with semibold facts and compact guidance. Routine icon/name edits save directly. Stale giver submissions retain entries and require explicit review of the current mode.

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { checkReviewedListMode } from "./list-policy";
 import type {
   Actor,
   ContributionOffer,
@@ -89,6 +90,7 @@ export function offerCommand(s: State, a: Actor, action: string, raw: unknown) {
   if (action === "contribution-offers.create") {
     const p = z
       .object({
+        expectedListMode: z.enum(["surprise", "transparent"]).optional(),
         itemId: id,
         amountCents: z.number().int().positive().max(100000000),
       })
@@ -105,6 +107,7 @@ export function offerCommand(s: State, a: Actor, action: string, raw: unknown) {
       );
     if (!canOffer(s, a, i))
       fail(403, "You cannot offer to contribute to this gift.");
+    checkReviewedListMode(s, i, p.expectedListMode);
     if (
       s.contributionOffers.some(
         (o) => o.itemId === i.id && o.userId === a.id && o.status === "open",
@@ -114,7 +117,8 @@ export function offerCommand(s: State, a: Actor, action: string, raw: unknown) {
     const list = s.lists.find((l) => l.id === i.listId);
     const o: ContributionOffer = {
       ...stamp(),
-      ...p,
+      itemId: p.itemId,
+      amountCents: p.amountCents,
       userId: a.id,
       status: "open",
       titleSnapshot: i.title,

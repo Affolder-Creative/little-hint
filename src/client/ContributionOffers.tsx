@@ -8,9 +8,11 @@ import { api, dollars } from "./api";
 import { useApp } from "./context";
 import { Field, Form, useModalDismiss } from "./components";
 import { Action } from "./Action";
+import { useGiftingModeReview } from "./useGiftingModeReview";
 import "./contribution-offers.css";
 
-type GiftIdentity = Pick<GiftView, "id" | "title" | "recipientNames">;
+type GiftIdentity = Pick<GiftView, "id" | "title" | "recipientNames"> &
+  Partial<Pick<GiftView, "listId" | "mode">>;
 export function ContributionOfferForm({
   gift,
   offer,
@@ -19,20 +21,24 @@ export function ContributionOfferForm({
   offer?: ContributionOfferView;
 }) {
   const { mutate, close, toast, world } = useApp();
+  const modeReview = useGiftingModeReview(gift);
   const dismiss = useModalDismiss();
   return (
     <Form
       dialogLayout
       className="contribution-dialog"
       submit={offer ? "Save offer" : "Offer to contribute"}
+      disabled={modeReview.blocked}
       cancel={() => dismiss?.()}
       onSubmit={async (f) => {
         const amountCents = Math.round(Number(f.get("amount")) * 100);
-        await mutate(
-          offer ? "contribution-offers/update" : "contribution-offers",
-          offer
-            ? { id: offer.id, revision: offer.revision, amountCents }
-            : { itemId: gift.id, amountCents },
+        await modeReview.run((expectedListMode) =>
+          mutate(
+            offer ? "contribution-offers/update" : "contribution-offers",
+            offer
+              ? { id: offer.id, revision: offer.revision, amountCents }
+              : { itemId: gift.id, amountCents, expectedListMode },
+          ),
         );
         close();
         toast("Offer saved. A buyer must accept it before you send payment.");
@@ -53,6 +59,7 @@ export function ContributionOfferForm({
           defaultValue={offer ? offer.amountCents / 100 : ""}
         />
       </Field>
+      {modeReview.notice}
       <p className="muted">
         Whoever reserves this gift can accept your offer. This does not reserve
         the gift or send money. You can cancel before marking payment as sent.
@@ -183,6 +190,7 @@ export function ReserveWithOffers({
   onSuccess: () => void;
 }) {
   const { world, mutate, close } = useApp();
+  const modeReview = useGiftingModeReview(gift);
   const dismiss = useModalDismiss();
   const [selected, setSelected] = useState<string[]>([]);
   const [total, setTotal] = useState(
@@ -207,6 +215,7 @@ export function ReserveWithOffers({
       dialogLayout
       className="contribution-dialog"
       submit={selected.length ? "Reserve and accept offers" : "Reserve gift"}
+      disabled={modeReview.blocked}
       cancel={() => dismiss?.()}
       onSubmit={async () => {
         const poolTotalCents = Math.round(Number(total) * 100),
@@ -218,21 +227,24 @@ export function ReserveWithOffers({
           throw new Error(
             "The goal from others must cover the offers you selected.",
           );
-        await mutate("reservations", {
-          itemId: gift.id,
-          ordinary: true,
-          quantity,
-          ...(selected.length
-            ? {
-                poolTotalCents,
-                poolOwnContributionCents,
-                acceptedOffers: accepted.map(({ id, revision }) => ({
-                  id,
-                  revision,
-                })),
-              }
-            : {}),
-        });
+        await modeReview.run((expectedListMode) =>
+          mutate("reservations", {
+            expectedListMode,
+            itemId: gift.id,
+            ordinary: true,
+            quantity,
+            ...(selected.length
+              ? {
+                  poolTotalCents,
+                  poolOwnContributionCents,
+                  acceptedOffers: accepted.map(({ id, revision }) => ({
+                    id,
+                    revision,
+                  })),
+                }
+              : {}),
+          }),
+        );
         close();
         onSuccess();
       }}
@@ -244,6 +256,7 @@ export function ReserveWithOffers({
         Quantity to reserve: {quantity}. You will be responsible for buying the
         gift.
       </p>
+      {modeReview.notice}
       {ownOffer && (
         <p className="notice">
           Your {dollars(ownOffer.amountCents)} offer will close when you become

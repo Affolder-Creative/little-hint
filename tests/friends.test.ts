@@ -1,3 +1,7 @@
+import {
+  commandWithAudience as command,
+  idempotentWithAudience as idempotent,
+} from "./discussion-command";
 import { describe, it, expect } from "vitest";
 import {
   emptyState,
@@ -7,8 +11,6 @@ import {
   type ImportJob,
 } from "../src/shared/model";
 import {
-  command,
-  idempotent,
   stamp,
   world,
   activateAccount,

@@ -160,9 +160,9 @@ export function reconcileCoManagement(s: State) {
       s.coManagement.some(
         (g) => g.personId === l.ownerIds[0] && g.status === "active",
       ) &&
-      !l.modeLocked
+      !l.revealPolicyLocked
     ) {
-      l.modeLocked = true;
+      l.revealPolicyLocked = true;
       touch(l);
     }
   for (const i of [...s.items].sort(

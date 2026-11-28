@@ -3,20 +3,27 @@ import { Eye, EyeOff } from "lucide-react";
 import type { List } from "../shared/model";
 import { dateHasElapsed } from "../shared/list-dates";
 import { Field } from "./components";
+import { ListIcon } from "./ListIcon";
+import { EventDate } from "./EventDate";
+import "./list-policy.css";
 
 type Policy = Pick<
   List,
   | "mode"
   | "modeLocked"
+  | "revealPolicyLocked"
   | "archiveAfter"
   | "revealAfter"
   | "timeZone"
   | "revealExchangeGivers"
 >;
+export const revealPolicyIsLocked = (list?: Policy) =>
+  !!(list?.revealPolicyLocked ?? list?.modeLocked);
+
 export function listPolicyValues(form: FormData, list?: Policy) {
   const revealLocked =
-    !!list?.modeLocked &&
-    (!list.revealAfter || dateHasElapsed(list.revealAfter, list.timeZone));
+    revealPolicyIsLocked(list) &&
+    (!list?.revealAfter || dateHasElapsed(list?.revealAfter, list?.timeZone));
   const revealAfter = revealLocked
     ? (list?.revealAfter ?? null)
     : String(form.get("revealAfter") ?? "") || null;
@@ -26,14 +33,14 @@ export function listPolicyValues(form: FormData, list?: Policy) {
       : String(form.get("mode") ?? "transparent"),
     archiveAfter: String(form.get("archiveAfter") ?? "") || null,
     revealAfter,
-    timeZone: list?.modeLocked
-      ? (list.timeZone ?? "UTC")
+    timeZone: revealPolicyIsLocked(list)
+      ? (list?.timeZone ?? "UTC")
       : String(
           form.get("timeZone") ??
             Intl.DateTimeFormat().resolvedOptions().timeZone,
         ),
-    revealExchangeGivers: list?.modeLocked
-      ? !!list.revealExchangeGivers
+    revealExchangeGivers: revealPolicyIsLocked(list)
+      ? !!list?.revealExchangeGivers
       : !!revealAfter && form.get("revealExchangeGivers") === "on",
   };
 }
@@ -57,12 +64,12 @@ export function ListPolicyFields({
   );
   const timeZone =
     list?.timeZone ??
-    (list?.modeLocked
+    (revealPolicyIsLocked(list)
       ? "UTC"
       : Intl.DateTimeFormat().resolvedOptions().timeZone);
   const revealLocked =
-    !!list?.modeLocked &&
-    (!list.revealAfter || dateHasElapsed(list.revealAfter, timeZone));
+    revealPolicyIsLocked(list) &&
+    (!list?.revealAfter || dateHasElapsed(list?.revealAfter, timeZone));
   const syncRevealDate = (event: SyntheticEvent<HTMLInputElement>) => {
     const input = event.currentTarget;
     // WebKit can retain a stale :invalid state after clearing its date editor,
@@ -122,8 +129,10 @@ export function ListPolicyFields({
         </label>
         <small id={privacyHintId}>
           {list?.modeLocked
-            ? "This privacy choice is locked after sharing or co-manager access."
-            : "Choose before sharing or giving a co-manager access. This privacy choice cannot change later."}
+            ? "Gifting mode can no longer be changed."
+            : event
+              ? "You can change this until gift planning begins on any event wish list. Once locked, gifting mode cannot change."
+              : "You can change this until gift planning begins. Once locked, gifting mode cannot change."}
         </small>
       </fieldset>
       {children}
@@ -157,7 +166,7 @@ export function ListPolicyFields({
               }
               hint={
                 <span className="policy-guidance">
-                  {list?.modeLocked && !list.revealAfter ? (
+                  {revealPolicyIsLocked(list) && !list?.revealAfter ? (
                     <span>
                       Locked without a reveal date. Gift summaries stay hidden.
                     </span>
@@ -174,7 +183,7 @@ export function ListPolicyFields({
                           " Purchase activity is already visible with See the plans."}
                       </span>
                       <span>
-                        {list?.modeLocked
+                        {revealPolicyIsLocked(list)
                           ? revealLocked
                             ? "Gift summaries are now available. This date is fixed."
                             : "Once privacy is locked, this date can only move later."
@@ -198,7 +207,9 @@ export function ListPolicyFields({
                 defaultValue={list?.revealAfter ?? ""}
                 disabled={readOnly || revealLocked}
                 min={
-                  list?.modeLocked ? (list.revealAfter ?? undefined) : undefined
+                  revealPolicyIsLocked(list)
+                    ? (list?.revealAfter ?? undefined)
+                    : undefined
                 }
                 onInput={syncRevealDate}
                 onChange={syncRevealDate}
@@ -212,14 +223,16 @@ export function ListPolicyFields({
                   name="revealExchangeGivers"
                   aria-describedby={exchangeHintId}
                   checked={!!revealAfter && revealExchangeGivers}
-                  disabled={readOnly || list?.modeLocked || !revealAfter}
+                  disabled={
+                    readOnly || revealPolicyIsLocked(list) || !revealAfter
+                  }
                   onChange={(e) => setRevealExchangeGivers(e.target.checked)}
                 />
                 Include secret exchange gifts and giver names
               </label>
               <small id={exchangeHintId} className="policy-guidance">
                 <span>
-                  {list?.modeLocked
+                  {revealPolicyIsLocked(list)
                     ? "This choice cannot change after sharing."
                     : !revealAfter
                       ? mode === "transparent"
@@ -242,7 +255,7 @@ export function ListPolicyFields({
             <select
               name="timeZone"
               defaultValue={timeZone}
-              disabled={readOnly || list?.modeLocked}
+              disabled={readOnly || revealPolicyIsLocked(list)}
             >
               {[
                 ...new Set([
@@ -266,50 +279,121 @@ export function SharingReview({
   audience,
   list,
   coManagerAccess = false,
+  event = false,
 }: {
   data: FormData;
   audience: string[];
   list?: Policy;
   coManagerAccess?: boolean;
+  event?: boolean;
 }) {
   const policy = listPolicyValues(data, list);
+  const modeChange = !!list && policy.mode !== list.mode;
   return (
-    <section aria-label="Review sharing">
+    <section className="sharing-review" aria-label="Review sharing">
       <h3>
-        {coManagerAccess ? "Review list privacy" : "Review before sharing"}
+        {modeChange
+          ? "Review gifting mode"
+          : coManagerAccess
+            ? "Review list privacy"
+            : "Review before sharing"}
       </h3>
-      <p>
+      <div className="sharing-review-identity">
+        {!event && (
+          <ListIcon iconKey={String(data.get("iconKey") ?? "")} size={24} />
+        )}
         <strong>{String(data.get("name"))}</strong>
-      </p>
-      <p>
-        Shared with:{" "}
-        {audience.join(", ") ||
-          (coManagerAccess
-            ? "The account holder and co-managers"
-            : "Only the list owners")}
-        .
-      </p>
-      {coManagerAccess && (
+      </div>
+      <dl className="sharing-review-facts">
+        <div>
+          <dt>Shared with</dt>
+          <dd>
+            <strong>
+              {audience.join(", ") ||
+                (coManagerAccess
+                  ? "The account holder and co-managers"
+                  : "Only the list owners")}
+            </strong>
+            {coManagerAccess && (
+              <p>Co-managers can access this list as soon as it is saved.</p>
+            )}
+          </dd>
+        </div>
+        <div>
+          <dt>{modeChange ? "New gifting mode" : "Gifting mode"}</dt>
+          <dd>
+            <strong>
+              {policy.mode === "surprise"
+                ? "Keep it a surprise"
+                : "See the plans"}
+            </strong>
+            <p>
+              {policy.mode === "surprise"
+                ? "Recipients cannot see gift plans or discussion."
+                : "Recipients can see who reserves or buys their gifts and can join the discussion."}
+            </p>
+            {modeChange && (
+              <p>
+                Previously:{" "}
+                {list.mode === "surprise"
+                  ? "Keep it a surprise"
+                  : "See the plans"}
+                .{event && " This changes every wish list in the event."}
+              </p>
+            )}
+          </dd>
+        </div>
+        <div>
+          <dt>Gift summary</dt>
+          <dd>
+            <strong>
+              {policy.revealAfter ? (
+                <>
+                  Available after <EventDate date={policy.revealAfter} />
+                </>
+              ) : (
+                "Not scheduled"
+              )}
+            </strong>
+            {policy.revealAfter ? (
+              <>
+                <p>
+                  After that day ends in {policy.timeZone}, recipients can view
+                  purchased gifts, buyers, and contributor names.
+                </p>
+                <p>
+                  {policy.revealExchangeGivers
+                    ? "Secret exchange gifts and giver names are included."
+                    : "Secret exchange gifts and giver names stay hidden."}
+                </p>
+              </>
+            ) : (
+              <p>
+                A gift summary cannot be added after sharing or co-manager
+                access.
+              </p>
+            )}
+          </dd>
+        </div>
+      </dl>
+      <div className="sharing-review-guidance">
         <p>
-          Co-managers can access this list as soon as it is saved. This
-          permanently locks the gifting policy, even without group sharing.
+          {list?.modeLocked
+            ? "Gifting mode can no longer be changed."
+            : event
+              ? "Gift planning on any event wish list makes the gifting mode permanent for the entire event."
+              : "You can change gifting mode until gift planning begins. Once locked, it cannot change."}
         </p>
-      )}
-      <p>
-        {policy.mode === "surprise"
-          ? "Keep it a surprise: recipients cannot see who reserves or buys their gifts."
-          : "See the plans: recipients can see who reserves and buys their gifts."}
-      </p>
-      <p>
-        {policy.revealAfter
-          ? `Gift summaries become available after ${policy.revealAfter} in ${policy.timeZone}. ${policy.revealExchangeGivers ? "Secret exchange gifts and giver names are included." : "Secret exchange gifts and giver names stay hidden."}`
-          : "No gift summary is scheduled. This cannot be enabled after sharing."}
-      </p>
-      <p>
-        After sharing, you cannot change who sees gift plans or whether secret
-        exchange gifts appear in the summary. You can only move a future summary
-        date later. Contribution amounts and private notes stay private.
-      </p>
+        {policy.revealAfter && (
+          <p>
+            After sharing, only a future summary date can move later. Its time
+            zone and secret exchange inclusion cannot change.
+          </p>
+        )}
+        <p>
+          Contribution amounts and private notes stay out of gift summaries.
+        </p>
+      </div>
     </section>
   );
 }

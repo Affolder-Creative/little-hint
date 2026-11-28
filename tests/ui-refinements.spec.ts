@@ -1,3 +1,4 @@
+import { commandWithAudience as command } from "./discussion-command";
 import { discussionAudience } from "../src/server/discussion-access";
 import { test, expect, webkit, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
@@ -5,7 +6,7 @@ import { spendingHistory, spendingView } from "../src/server/spending";
 import { itemPage } from "../src/server/collections";
 import { shoppingChoices } from "../src/client/shopping-context";
 import { stagingFixtures } from "../src/server/staging-fixtures";
-import { command, stamp, world } from "../src/server/domain";
+import { stamp, world } from "../src/server/domain";
 
 async function setup(page: Page) {
   const { state, actors } = stagingFixtures();

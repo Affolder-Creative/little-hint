@@ -1,3 +1,4 @@
+import { commandWithAudience as command } from "../tests/discussion-command";
 /** Real app UI, isolated demonstration records. Never connects to a database. */
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
@@ -7,7 +8,7 @@ import { chromium, expect } from "@playwright/test";
 import { createServer } from "vite";
 import sharp from "sharp";
 import { emptyState, type Actor, type List } from "../src/shared/model";
-import { stamp, command, world } from "../src/server/domain";
+import { stamp, world } from "../src/server/domain";
 
 const out = "marketing/assets/screens";
 await mkdir(out, { recursive: true });

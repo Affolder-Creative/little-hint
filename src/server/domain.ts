@@ -178,6 +178,7 @@ import type {
   GiftSummary,
 } from "../shared/model";
 import { canManageGroupEvents, peopleForGroup } from "../shared/group-events";
+import { reconcileListPolicies } from "./list-policy";
 import {
   isAccountInvitation,
   invitationIsPending,
@@ -236,7 +237,8 @@ export function syncEventLists(s: State, event: GroupEvent) {
         name: event.name,
         description: event.description,
         mode: event.mode,
-        modeLocked: true,
+        modeLocked: event.modeLocked ?? true,
+        revealPolicyLocked: true,
         archived: event.archived,
         archiveAfter: event.archiveAfter,
         revealAfter: event.revealAfter,
@@ -257,6 +259,8 @@ export function syncEventLists(s: State, event: GroupEvent) {
       revealAfter: event.revealAfter,
       timeZone: event.timeZone,
       mode: event.mode,
+      modeLocked: event.modeLocked ?? true,
+      revealPolicyLocked: true,
       revealExchangeGivers: event.revealExchangeGivers,
     };
     if (
@@ -1281,6 +1285,7 @@ function executeCommand(
   action: string,
   raw: unknown,
 ): unknown {
+  reconcileListPolicies(s);
   reconcileItemGroups(s);
   reconcileCoManagement(s);
   reconcilePrivacyReview(s);
@@ -1309,6 +1314,7 @@ function executeCommand(
   );
   const beforeItems = new Map(s.items.map((i) => [i.id, i.revision]));
   const result = commandCore(s, a, action, raw);
+  reconcileListPolicies(s);
   reconcileItemGroups(s);
   reconcileCoManagement(s);
   const changedItems = action.startsWith("items.")
@@ -1633,6 +1639,8 @@ function commandCore(
         ...stamp(),
         ...p,
         archived: false,
+        modeLocked: false,
+        revealPolicyLocked: true,
         timeZone: p.timeZone ?? "UTC",
         revealExchangeGivers: p.revealExchangeGivers ?? false,
       };
@@ -1689,7 +1697,14 @@ function commandCore(
             );
       }
       checkEventParticipants(s, group, p.participantIds);
-      checkSharedListPolicy({ ...event, modeLocked: true }, { ...event, ...p });
+      checkSharedListPolicy(
+        {
+          ...event,
+          modeLocked: event.modeLocked ?? true,
+          revealPolicyLocked: true,
+        },
+        { ...event, ...p },
+      );
       if (listIsArchived(event) && !p.archived) p.archiveAfter = null;
       const guidelineChanged =
         p.spendingGuidelineCents !== undefined &&

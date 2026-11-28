@@ -599,6 +599,7 @@ test("gift summaries are owner-only, omit financial data, and remain available i
     await login(bp, "sam@example.test");
     const created = await post(bp, "reservations", {
       itemId: gift.id,
+      expectedListMode: gift.mode,
       quantity: 1,
     });
     const r = (

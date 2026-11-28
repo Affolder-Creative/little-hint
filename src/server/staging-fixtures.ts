@@ -80,6 +80,7 @@ export function stagingFixtures() {
     poolTargetCents?: number,
   ) => {
     const { id } = command(state, actors[buyer], "reservations.create", {
+      expectedListMode: state.lists.find((l) => l.id === item.listId)?.mode,
       itemId: item.id,
       quantity: 1,
     }) as { id: string };

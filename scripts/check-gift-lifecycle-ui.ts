@@ -1,9 +1,10 @@
+import { commandWithAudience as command } from "../tests/discussion-command";
 /** Domain-backed browser acceptance using only synthetic fixture data. */
 import { chromium, expect } from "@playwright/test";
 import { createServer } from "vite";
 import { mkdir } from "node:fs/promises";
 import { fixture } from "../tests/privacy-fixture";
-import { command, world } from "../src/server/domain";
+import { world } from "../src/server/domain";
 import {
   contributionHistory,
   cancelledBuying,

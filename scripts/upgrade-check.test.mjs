@@ -856,3 +856,131 @@ test("schema 18 derives offer capabilities without inventing offers or exposing 
     assert.throws(() => assertPreserved(bad, baseline));
   }
 });
+
+test("schema 20 preserves legacy privacy and derives independent locks", () => {
+  const before = structuredClone(original);
+  before.schemaVersion = 19;
+  before.records = [
+    {
+      id: "shared",
+      kind: "lists",
+      data: {
+        id: "shared",
+        revision: 3,
+        mode: "surprise",
+        modeLocked: true,
+        groupIds: ["family"],
+        ownerIds: ["recipient"],
+        pendingOwnerIds: [],
+      },
+    },
+    {
+      id: "private",
+      kind: "lists",
+      data: {
+        id: "private",
+        revision: 1,
+        mode: "transparent",
+        modeLocked: false,
+        groupIds: [],
+        ownerIds: ["recipient"],
+        pendingOwnerIds: [],
+      },
+    },
+    {
+      id: "event",
+      kind: "groupEvents",
+      data: { id: "event", revision: 2, mode: "surprise" },
+    },
+  ];
+  before.views = {
+    recipient: {
+      lists: before.records
+        .filter((r) => r.kind === "lists")
+        .map((r) => structuredClone(r.data)),
+      groupEvents: [structuredClone(before.records[2].data)],
+    },
+  };
+  const after = structuredClone(before);
+  after.schemaVersion = 20;
+  after.records[0].data.revealPolicyLocked = true;
+  after.records[1].data.revealPolicyLocked = false;
+  Object.assign(after.records[2].data, {
+    modeLocked: true,
+    revealPolicyLocked: true,
+  });
+  after.views.recipient.lists[0].revealPolicyLocked = true;
+  after.views.recipient.lists[1].revealPolicyLocked = false;
+  Object.assign(after.views.recipient.groupEvents[0], {
+    modeLocked: true,
+    revealPolicyLocked: true,
+  });
+  assertPreserved(after, before);
+  assertPreserved(before, before);
+  for (const corrupt of [
+    (v) => {
+      v.records[0].data.modeLocked = false;
+    },
+    (v) => {
+      v.records[1].data.revealPolicyLocked = true;
+    },
+    (v) => {
+      v.views.recipient.groupEvents[0].modeLocked = false;
+    },
+    (v) => {
+      v.views.recipient.lists[0].mode = "transparent";
+    },
+    (v) => {
+      v.views.recipient.lists[0].lockReason = "reservation";
+    },
+  ]) {
+    const bad = structuredClone(after);
+    corrupt(bad);
+    assert.throws(() => assertPreserved(bad, before));
+  }
+});
+
+test("schema 19 adds only the buyer's derived cost preview", async () => {
+  const { createHash } = await import("node:crypto");
+  const before = structuredClone(original);
+  before.schemaVersion = 18;
+  before.users = [{ id: "buyer", email: "buyer@example.test" }];
+  before.records = [
+    {
+      id: "plan",
+      kind: "reservations",
+      data: { id: "plan", buyerId: "buyer", quantity: 1, purchased: 1 },
+    },
+  ];
+  before.views = {
+    "buyer@example.test": {
+      buying: [{ id: "plan", item: { id: "wish", archived: false } }],
+    },
+    "other@example.test": { buying: [{ id: "plan" }] },
+  };
+  const after = structuredClone(before);
+  after.schemaVersion = 19;
+  after.views["buyer@example.test"].buying[0].recordedCost = {
+    status: "incomplete",
+    token: createHash("sha256")
+      .update(JSON.stringify(["plan", 1, 1, false, []]))
+      .digest("hex"),
+  };
+  assertPreserved(after, before);
+  for (const corrupt of [
+    (v) => {
+      v.views["buyer@example.test"].buying[0].recordedCost.totalCents = 100;
+    },
+    (v) => {
+      v.views["buyer@example.test"].buying[0].recordedCost.token = "unreviewed";
+    },
+    (v) => {
+      v.views["other@example.test"].buying[0].recordedCost =
+        v.views["buyer@example.test"].buying[0].recordedCost;
+    },
+  ]) {
+    const bad = structuredClone(after);
+    corrupt(bad);
+    assert.throws(() => assertPreserved(bad, before));
+  }
+});

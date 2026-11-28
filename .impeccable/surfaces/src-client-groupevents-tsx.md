@@ -2,7 +2,12 @@
 version: 1
 slug: "src-client-groupevents-tsx"
 primary_target: "src/client/GroupEvents.tsx"
-related_targets: ["src/client/ListPolicyFields.tsx", "src/client/ListIndex.tsx", "src/client/Management.tsx"]
+related_targets:
+  [
+    "src/client/ListPolicyFields.tsx",
+    "src/client/ListIndex.tsx",
+    "src/client/Management.tsx",
+  ]
 ---
 
 # Group events
@@ -23,7 +28,6 @@ related_targets: ["src/client/ListPolicyFields.tsx", "src/client/ListIndex.tsx",
 - Event-created lists lead with recipient identity, with primary actions beside the title, followed by calendar/event name, description, a shared privacy/management row, and compact management guidance. Event pages keep the event name as their heading and use a single Event actions menu.
 - Event index rows separate outlined participant-list destinations from header-level event management. Person-page list navigation uses divided rows. Gift-idea creation and browsing share a distinct supporting section below the item collection.
 
-
 Managed people appear in event selectors only when explicitly shared with that group and backed by a manager who belongs to it. Selection creates their normal event wishlist. Removing profile sharing reconciles event eligibility and archives the removed participant's list; choosing them again restores the same list. Own-recipient event lists omit Your spending.
 
 Event wish-list headers place the calendar beside the optional date, without an icon beside the event name. Reorder forms share a primary-first Save order / Cancel footer.
@@ -31,3 +35,5 @@ Event wish-list headers place the calendar beside the optional date, without an 
 Event actions retains the ellipsis and includes View event, other wish lists with people icons, and permitted management actions. The event title and calendar icon open the event overview.
 
 Event rows have Your wish list and Event actions. Other wish lists is one action inside Event actions that opens a searchable, scrollable picker. Never enumerate participant lists in the menu. Spending-to-collection separation is 24px on desktop and 20px on phones.
+
+Authorized event managers may change gifting mode before activity; the review explicitly applies the change to every participant list. Once locked, show only Gifting mode can no longer be changed, without a cause, actor, count or timestamp. Reveal scheduling remains a separate restriction. Group-event calendar identity is unchanged.

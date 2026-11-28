@@ -1,7 +1,8 @@
+import { commandWithAudience as command } from "./discussion-command";
 import { discussionAudience } from "../src/server/discussion-access";
 import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
-import { activateAccount, command, stamp, world } from "../src/server/domain";
+import { activateAccount, stamp, world } from "../src/server/domain";
 import { spendingView } from "../src/server/spending";
 import { discoveryFixture } from "./gift-discovery-fixture";
 

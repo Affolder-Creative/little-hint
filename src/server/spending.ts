@@ -887,6 +887,7 @@ export function spendingCommand(
   if (action === "spending.purchase") {
     const p = z
       .object({
+        expectedListMode: z.enum(["surprise", "transparent"]).optional(),
         reservationId: id.optional(),
         itemId: id.optional(),
         itemRevision: z.number().int().optional(),
@@ -1011,6 +1012,7 @@ export function spendingCommand(
       fail(400, "This purchase uses the wish list of its linked gift.");
     if (sourceItem) {
       const created = command(s, a, "reservations.create", {
+        expectedListMode: p.expectedListMode,
         itemId: sourceItem.id,
         ordinary: p.ordinary,
         exchangeId: p.exchangeId,

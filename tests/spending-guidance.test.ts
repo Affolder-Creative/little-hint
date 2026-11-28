@@ -1,7 +1,8 @@
+import { commandWithAudience as command } from "./discussion-command";
 import { syncSpending, spendingView } from "../src/server/spending";
 import { spendingTotals } from "../src/shared/spending";
 import { describe, expect, it } from "vitest";
-import { command, stamp, world, noticeAllowed } from "../src/server/domain";
+import { stamp, world, noticeAllowed } from "../src/server/domain";
 import { inbox } from "../src/server/activity";
 import {
   emptyState,

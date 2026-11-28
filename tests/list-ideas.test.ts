@@ -1,10 +1,11 @@
+import { commandWithAudience as command } from "./discussion-command";
 import { expect, it, vi } from "vitest";
 vi.mock("../src/server/db", () => ({
   hydrateCollectionItems: vi.fn(async () => {}),
   readCollectionState: vi.fn(),
 }));
 import { itemPage } from "../src/server/collections";
-import { command, stamp, world } from "../src/server/domain";
+import { stamp, world } from "../src/server/domain";
 import { stagingFixtures } from "../src/server/staging-fixtures";
 import { spendingAssignmentPreview } from "../src/server/spending";
 import type { Item } from "../src/shared/model";

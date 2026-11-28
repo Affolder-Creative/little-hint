@@ -157,9 +157,8 @@ describe("reveal policy locks", () => {
     f.update({ groupIds: [], archived: true });
     f.update({ archived: false });
     expect(() => f.update({ revealAfter: "2030-10-19" })).toThrow();
-    expect(() => f.update({ mode: "transparent" })).toThrow(
-      "This privacy choice cannot change after sharing",
-    );
+    f.update({ mode: "transparent" });
+    expect(f.list.mode).toBe("transparent");
   });
   it("keeps legacy shared lists private and accepts old clients omitting added fields", () => {
     const f = fixture({ revealAfter: undefined });

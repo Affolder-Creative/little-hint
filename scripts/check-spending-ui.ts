@@ -1,3 +1,4 @@
+import { commandWithAudience as command } from "../tests/discussion-command";
 import { recordAllocations } from "../src/shared/spending";
 import { existsSync } from "node:fs";
 /** Isolated domain-backed browser verification; never accesses real account data. */
@@ -5,7 +6,7 @@ import { mkdir } from "node:fs/promises";
 import { chromium, webkit, expect } from "@playwright/test";
 import { createServer } from "vite";
 import { emptyState } from "../src/shared/model";
-import { command, stamp, world } from "../src/server/domain";
+import { stamp, world } from "../src/server/domain";
 import {
   spendingView,
   spendingAssignmentPreview,

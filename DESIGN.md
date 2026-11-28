@@ -476,6 +476,14 @@ Hosting-managed preferences show a disabled checkbox and the existing muted lock
 explanation, without a save action. Preserve keyboard focus, wrapping labels,
 and 44px targets across mobile and desktop in both themes.
 
+### Wish-list icons and sharing review
+
+Keep list identity in the existing flat rows. Standalone list tiles accept a bundled Lucide icon with the same stroke, terracotta color and soft square as the default checklist. Event rows keep their calendar. Create/Edit list places a List icon control beneath the name. Its curated catalog contains 180 icons with search vocabulary for work, everyday interests and hobbies. Its inline picker uses labeled search, a default-reset action and a bounded grid of 44px targets: six columns, four at 650px and below. Selected icons use an accent border, soft fill and check; focus retains the shared visible ring. Arrow keys move through the grid; Enter/Space select; Escape closes the picker and returns focus to its trigger. Search and selection never open a nested dialog.
+
+Sharing review uses a list-icon/name identity row and a definition list for Shared with, Gifting mode and Gift summary. Facts are semibold, labels muted, descriptions regular; thin dividers and 16px row spacing replace dense prose. Related guidance follows in short 14px paragraphs with a 1.5 line height. Mode-change review names the previous mode and, for events, the scope across all participant lists. Preserve entered fields when returning to editing. Errors retain drafts; a stale gifting form displays the current mode with an explicit review action before retry.
+
+Edit arrival uses Lucide PackagePen at the existing menu icon size. Mark as in hand and Record arrival retain PackageCheck.
+
 ### Inputs / Fields
 
 Fields have a paper background, text color, thin border, 8px corners, and a 44px minimum height. Visible labels and optional hints stay with their inputs. Search adds a leading icon and transparent fill. Forms show errors in text; busy submission disables the fieldset and changes the action label. Changed dialogs require an explicit discard decision before closing, including departures to gift discovery and arrow or drag reordering. Returning entries to their original order clears the reorder warning. Saving keeps dismissal disabled. First sharing uses a focused review of audience and visibility while preserving editable form values. The global focus outline applies to inputs, selects, and textareas. Single-column form grids use shrinkable tracks; two-column rows use equal shrinkable tracks. Fields and native date inputs can shrink to their container width. Dialogs scroll vertically, with horizontal containment after controls have been sized to fit. Keep the native date picker and 16px phone input text.

@@ -226,6 +226,8 @@ test("leaders manage an occasion while recipients add wishes and unselected memb
     });
     expect(denied.status()).toBe(403);
 
+    // Activity happened in another browser. Read the persisted event lock.
+    await leader.reload();
     await leader.getByRole("link", { name: "Manage event" }).click();
     await leader
       .getByLabel("Event actions for Christmas 2026", { exact: true })

@@ -96,6 +96,7 @@ test("main views and email templates retain readable responsive layouts", async 
   // Populated states are real, explicitly local test fixtures.
   const reservation = await post(page, "reservations", {
     itemId: otherGift.id,
+    expectedListMode: otherGift.mode,
     quantity: 1,
   });
   const group = world.groups.find((g) => g.memberIds.length >= 3)!;
