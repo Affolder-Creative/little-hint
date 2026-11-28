@@ -1,5 +1,6 @@
+import { commandWithAudience as command } from "./discussion-command";
 import { describe, it, expect } from "vitest";
-import { command, stamp, giftView } from "../src/server/domain";
+import { stamp, giftView } from "../src/server/domain";
 import { emptyState, type Item, type List } from "../src/shared/model";
 import {
   spendingHistory,

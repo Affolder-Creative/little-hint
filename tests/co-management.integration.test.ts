@@ -55,7 +55,8 @@ describe.skipIf(!url)("persisted wish-list co-management", () => {
     );
     const state = await db.readCollectionState();
     expect(state.coManagement[0].status).toBe("active");
-    expect(state.lists[0].modeLocked).toBe(true);
+    expect(state.lists[0].modeLocked).toBe(false);
+    expect(state.lists[0].revealPolicyLocked).toBe(true);
     expect(canEdit(state, f.reader, state.items[0])).toBe(true);
     expect(world(state, f.reader).lists.some((l) => l.id === f.list.id)).toBe(
       true,
@@ -72,7 +73,8 @@ describe.skipIf(!url)("persisted wish-list co-management", () => {
     expect(
       state.coManagement.filter((g) => g.status === "active"),
     ).toHaveLength(1);
-    expect(state.lists[0].modeLocked).toBe(true);
+    expect(state.lists[0].modeLocked).toBe(false);
+    expect(state.lists[0].revealPolicyLocked).toBe(true);
   });
 
   it("retains private draft recovery after revocation without retaining list access", async () => {
@@ -108,7 +110,8 @@ describe.skipIf(!url)("persisted wish-list co-management", () => {
       tags: ["camping"],
       priority: "most-wanted",
     });
-    expect(state.lists[0].modeLocked).toBe(true);
+    expect(state.lists[0].modeLocked).toBe(false);
+    expect(state.lists[0].revealPolicyLocked).toBe(true);
     await expect(
       db.transact((s) =>
         command(s, f.reader, "items.create", {

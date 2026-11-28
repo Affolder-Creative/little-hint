@@ -31,6 +31,7 @@ export function accountExport(s: State, a: Actor) {
     lists: lists.map((l) => ({
       id: l.id,
       name: l.name,
+      iconKey: l.iconKey ?? null,
       description: l.description,
       ownerIds: l.ownerIds,
       groupIds: l.groupIds,

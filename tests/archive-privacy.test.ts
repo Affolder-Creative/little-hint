@@ -1,3 +1,4 @@
+import { commandWithAudience as command } from "./discussion-command";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fixture } from "./privacy-fixture";
 import {
@@ -5,7 +6,7 @@ import {
   getItem,
   reconcileAccess,
 } from "../src/server/domain-access";
-import { command, world } from "../src/server/domain";
+import { world } from "../src/server/domain";
 import { itemPage } from "../src/server/collections";
 import { accountExport } from "../src/server/account-export";
 import { encrypt, hideArchivedItemsForState } from "../src/server/settings";

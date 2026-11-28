@@ -1,4 +1,6 @@
 import { ActionMenu } from "./Management";
+import { ListIcon } from "./ListIcon";
+import { useGiftingModeReview } from "./useGiftingModeReview";
 import {
   GiftContributionOffers,
   ReserveWithOffers,
@@ -1145,7 +1147,7 @@ function PersonPage() {
                         {list.groupEventId ? (
                           <CalendarDays size={24} />
                         ) : (
-                          <ListChecks size={24} />
+                          <ListIcon iconKey={list.iconKey} size={24} />
                         )}
                       </span>
                       <span className="person-list-copy">
@@ -1237,6 +1239,7 @@ function GiftDetail() {
     ? detailQuery.data
     : (world.items.find((i) => i.id === id) ??
       productItems(world.items).find((i) => i.id === id));
+  const modeReview = useGiftingModeReview(gift);
   const [quantity, setQuantity] = useState(1),
     [exchange, setExchange] = useState(
       new URLSearchParams(noteLocation.search).get("shopping") ?? "",
@@ -1535,6 +1538,7 @@ function GiftDetail() {
                 preview={{ itemId: gift.id, quantity }}
               />
               <Action
+                disabled={modeReview.blocked}
                 onClick={async () => {
                   if (choices.length && !exchange)
                     throw new Error("Choose who this gift is for.");
@@ -1562,14 +1566,17 @@ function GiftDetail() {
                     );
                     return;
                   }
-                  await mutate("reservations", {
-                    itemId: gift.id,
-                    ordinary: exchange === "ordinary",
-                    quantity,
-                    exchangeId: c?.id,
-                    giverId: c?.giver,
-                    exchangeRecipientId: c?.recipient,
-                  });
+                  await modeReview.run((expectedListMode) =>
+                    mutate("reservations", {
+                      expectedListMode,
+                      itemId: gift.id,
+                      ordinary: exchange === "ordinary",
+                      quantity,
+                      exchangeId: c?.id,
+                      giverId: c?.giver,
+                      exchangeRecipientId: c?.recipient,
+                    }),
+                  );
                   toast(
                     "Gift reserved. Mark it as purchased or cancel your reservation in Buying.",
                     {
@@ -1584,6 +1591,7 @@ function GiftDetail() {
               </Action>
             </>
           )}
+          {modeReview.notice}
           <GiftContributionOffers
             gift={gift}
             ordinary={

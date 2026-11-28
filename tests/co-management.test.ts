@@ -1,6 +1,7 @@
+import { commandWithAudience as command } from "./discussion-command";
 import { describe, it, expect } from "vitest";
 import { stagingFixtures } from "../src/server/staging-fixtures";
-import { command, world } from "../src/server/domain";
+import { world } from "../src/server/domain";
 import { listCanEdit } from "../src/server/co-management";
 import {
   canEdit,
@@ -48,13 +49,14 @@ function accept(f: ReturnType<typeof setup>) {
   });
 }
 describe("self-managed wish-list co-management", () => {
-  it("requires mutual consent, uses separate authority, locks policy, and permits shopping", () => {
+  it("requires mutual consent, uses separate authority, locks reveal policy, and permits shopping", () => {
     const f = setup();
     expect(listCanEdit(f.state, f.helper, f.list)).toBe(false);
     accept(f);
     expect(listCanEdit(f.state, f.helper, f.list)).toBe(true);
     expect(controls(f.state, f.helper, f.person.id)).toBe(false);
-    expect(f.list.modeLocked).toBe(true);
+    expect(f.list.modeLocked).toBe(false);
+    expect(f.list.revealPolicyLocked).toBe(true);
     const view = command(
       f.state,
       f.helper,
@@ -67,12 +69,11 @@ describe("self-managed wish-list co-management", () => {
     expect(
       world(f.state, f.owner).items.find((i) => i.id === item.id)?.creatorName,
     ).toBe(f.helper.name);
-    expect(() =>
-      command(f.state, f.helper, "lists.update", {
-        ...f.list,
-        mode: "transparent",
-      }),
-    ).toThrow();
+    command(f.state, f.helper, "lists.update", {
+      ...f.list,
+      mode: "transparent",
+    });
+    expect(f.list.mode).toBe("transparent");
     expect(() =>
       command(f.state, f.helper, "people.update", {
         id: f.person.id,

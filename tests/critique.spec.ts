@@ -20,7 +20,7 @@ import {
 } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { stagingFixtures } from "../src/server/staging-fixtures";
-import { world } from "../src/server/domain";
+import { world, giftView } from "../src/server/domain";
 import { commandWithAudience as command } from "./discussion-command";
 import {
   emptyState,
@@ -195,6 +195,7 @@ async function preview(
     comments: "comments.create",
     "comments/update": "comments.update",
     "comments/delete": "comments.delete",
+    "contribution-offers": "contribution-offers.create",
     reservations: "reservations.create",
     "reservations/update": "reservations.update",
     lists: "lists.create",
@@ -246,6 +247,16 @@ async function preview(
           },
         });
       }
+    }
+    if (
+      /^\/api\/v1\/items\/[^/]+$/.test(path) &&
+      route.request().method() === "GET"
+    ) {
+      const item = fixture.state.items.find(
+        (i) => i.id === path.split("/").pop(),
+      );
+      if (item)
+        return route.fulfill({ json: giftView(fixture.state, actor, item) });
     }
     if (path === "/api/v1/items" && route.request().method() === "GET")
       return route.fulfill({
@@ -328,6 +339,168 @@ async function preview(
   });
   return { ...fixture, actor };
 }
+
+for (const [width, theme] of [
+  [320, "light"],
+  [393, "dark"],
+  [1440, "light"],
+] as const) {
+  test(`list icon picker and privacy review at ${width}px ${theme}`, async ({
+    page,
+  }, info) => {
+    const { state } = await preview(page);
+    await page.setViewportSize({ width, height: 900 });
+    await page.addInitScript(
+      (theme) => localStorage.setItem("little-hint:theme", theme),
+      theme,
+    );
+    await page.goto("/lists");
+    await page
+      .getByRole("button", { name: "Create a list", exact: true })
+      .click();
+    const dialog = page.getByRole("dialog");
+    await page
+      .getByLabel("List name", { exact: true })
+      .fill("Job tools and weekend projects");
+    const picker = page.getByRole("button", {
+      name: "List icon Checklist (default)",
+      exact: true,
+    });
+    await picker.click();
+    await expect(page.getByLabel("Search list icons")).toBeFocused();
+    expect(
+      (await new AxeBuilder({ page }).include("dialog").analyze()).violations,
+    ).toEqual([]);
+    expect(
+      await dialog.evaluate((el) => el.scrollWidth <= el.clientWidth),
+    ).toBe(true);
+    await page.screenshot({
+      path: info.outputPath(`icon-picker-${width}-${theme}.png`),
+    });
+    await page.getByLabel("Search list icons").fill("not-an-icon");
+    await expect(
+      page.getByText("No matching icons. Try another word."),
+    ).toBeVisible();
+    await page.getByLabel("Search list icons").fill("tools");
+    const option = page.getByRole("option", { name: "Wrench", exact: true });
+    await option.focus();
+    await option.press("ArrowRight");
+    await expect(
+      page.getByRole("option", { name: "Hammer", exact: true }),
+    ).toBeFocused();
+    await page.keyboard.press("ArrowLeft");
+    await page.keyboard.press("Enter");
+    await expect(
+      page.getByRole("button", { name: "List icon Wrench", exact: true }),
+    ).toBeFocused();
+    await page.getByRole("radio", { name: /Keep it a surprise/ }).check();
+    await page.getByLabel("Morgan family", { exact: true }).check();
+    await page
+      .getByRole("button", { name: "Create list", exact: true })
+      .click();
+    await expect(
+      page.getByRole("heading", { name: "Review before sharing" }),
+    ).toBeVisible();
+    await expect(dialog.locator(".sharing-review-facts")).toContainText(
+      "Morgan family",
+    );
+    expect(
+      (await new AxeBuilder({ page }).include("dialog").analyze()).violations,
+    ).toEqual([]);
+    expect(
+      await dialog.evaluate((el) => el.scrollWidth <= el.clientWidth),
+    ).toBe(true);
+    await page.screenshot({
+      path: info.outputPath(`sharing-review-${width}-${theme}.png`),
+    });
+    await page.getByRole("button", { name: "Confirm and save" }).click();
+    await expect(dialog).not.toBeVisible();
+    const list = state.lists.find(
+      (l) => l.name === "Job tools and weekend projects",
+    )!;
+    expect(list.iconKey).toBe("wrench");
+    await expect(page.locator(".lucide-wrench").first()).toBeVisible();
+    await page.getByLabel(`List actions for ${list.name}`).click();
+    await page.getByRole("button", { name: "Edit list", exact: true }).click();
+    await page
+      .getByRole("button", { name: "List icon Wrench", exact: true })
+      .click();
+    await page.getByLabel("Search list icons").press("Escape");
+    await expect(dialog).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "List icon Wrench", exact: true }),
+    ).toBeFocused();
+    await page
+      .getByRole("button", { name: "List icon Wrench", exact: true })
+      .click();
+    await page.getByRole("button", { name: "Use default checklist" }).click();
+    await page.getByRole("button", { name: "Save list", exact: true }).click();
+    await expect(dialog).not.toBeVisible();
+    expect(list.iconKey).toBeNull();
+    await page.getByLabel(`List actions for ${list.name}`).click();
+    await page.getByRole("button", { name: "Edit list", exact: true }).click();
+    await page.getByRole("radio", { name: /See the plans/ }).check();
+    await page.getByRole("button", { name: "Save list", exact: true }).click();
+    await expect(
+      page.getByRole("heading", { name: "Review gifting mode" }),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Confirm and save" }).click();
+    await expect(dialog).not.toBeVisible();
+    expect(list.mode).toBe("transparent");
+  });
+}
+
+test("a stale contribution form keeps its amount and requires reviewing the new mode", async ({
+  page,
+}) => {
+  const f = await preview(page, 1);
+  const owner = f.actors[0];
+  const person = f.state.people.find((p) => p.userId === owner.id)!;
+  const group = f.state.groups.find(
+    (g) => g.memberIds.includes(owner.id) && g.memberIds.includes(f.actor.id),
+  )!;
+  const list = command(f.state, owner, "lists.create", {
+    name: "New plans",
+    ownerIds: [person.id],
+    groupIds: [group.id],
+    mode: "surprise",
+  }) as List;
+  const item = command(f.state, owner, "items.create", {
+    listId: list.id,
+    title: "A new project",
+    priceCents: 10000,
+  }) as Item;
+  await page.goto(`/gift/${item.id}`);
+  await page.getByLabel("Buying for", { exact: true }).selectOption("ordinary");
+  await page
+    .getByRole("button", { name: "Offer to contribute", exact: true })
+    .click();
+  await page.getByLabel("Your offer in USD").fill("25");
+  command(f.state, owner, "lists.update", { ...list, mode: "transparent" });
+  const dialog = page.getByRole("dialog");
+  await dialog
+    .getByRole("button", { name: "Offer to contribute", exact: true })
+    .click();
+  await expect(
+    dialog.getByText("Gifting mode changed to See the plans."),
+  ).toBeVisible();
+  await expect(page.getByLabel("Your offer in USD")).toHaveValue("25");
+  await expect(
+    dialog.getByRole("button", { name: "Offer to contribute", exact: true }),
+  ).toBeDisabled();
+  expect(f.state.contributionOffers.some((o) => o.itemId === item.id)).toBe(
+    false,
+  );
+  await page.getByRole("button", { name: "Use this gifting mode" }).click();
+  await dialog
+    .getByRole("button", { name: "Offer to contribute", exact: true })
+    .click();
+  await expect(dialog).not.toBeVisible();
+  expect(
+    f.state.contributionOffers.find((o) => o.itemId === item.id)?.amountCents,
+  ).toBe(2500);
+  expect(list.modeLocked).toBe(true);
+});
 
 for (const width of [320, 393, 1440]) {
   test(`compact browsing applies immediately and exposes active choices at ${width}px`, async ({
@@ -829,9 +1002,7 @@ test("new shared lists require deliberate privacy and a review before saving", a
     page.getByRole("heading", { name: "Review before sharing" }),
   ).toBeVisible();
   await expect(
-    page.getByText(
-      "Keep it a surprise: recipients cannot see who reserves or buys their gifts.",
-    ),
+    page.getByText("Recipients cannot see gift plans or discussion."),
   ).toBeVisible();
   await expect(page.getByLabel("List name", { exact: true })).not.toBeVisible();
   expect(state.lists.some((l) => l.name === "Birthday thoughts")).toBe(false);
@@ -845,7 +1016,7 @@ test("new shared lists require deliberate privacy and a review before saving", a
   await page.getByRole("button", { name: "Confirm and save" }).click();
   await expect(page.getByRole("dialog")).not.toBeVisible();
   expect(state.lists.find((l) => l.name === "Birthday thoughts")).toMatchObject(
-    { mode: "surprise", modeLocked: true },
+    { mode: "surprise", modeLocked: false, revealPolicyLocked: true },
   );
 });
 

@@ -1,3 +1,4 @@
+import { idempotentWithAudience as idempotent } from "./discussion-command";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   emptyState,
@@ -6,7 +7,7 @@ import {
   type Exchange,
   type GroupEvent,
 } from "../src/shared/model";
-import { stamp, world, giftSummary, idempotent } from "../src/server/domain";
+import { stamp, world, giftSummary } from "../src/server/domain";
 import { commandWithAudience as command } from "./discussion-command";
 import { trash } from "../src/server/management";
 import { ordered, orderedArchivedItems } from "../src/shared/organization";
@@ -280,7 +281,13 @@ describe("events and exchanges", () => {
     f.run("group-events.trash", event);
     f.run("group-events.purge", event);
     expect(
-      lists.every((l) => l.archived && !l.groupEventId && l.modeLocked),
+      lists.every(
+        (l) =>
+          l.archived &&
+          !l.groupEventId &&
+          !l.modeLocked &&
+          l.revealPolicyLocked,
+      ),
     ).toBe(true);
     expect(
       world(f.s, f.actors[1]).lists.find((l) => l.id === lists[1].id)

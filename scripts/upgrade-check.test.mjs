@@ -856,3 +856,86 @@ test("schema 18 derives offer capabilities without inventing offers or exposing 
     assert.throws(() => assertPreserved(bad, baseline));
   }
 });
+
+test("schema 20 preserves legacy privacy and derives independent locks", () => {
+  const before = structuredClone(original);
+  before.schemaVersion = 19;
+  before.records = [
+    {
+      id: "shared",
+      kind: "lists",
+      data: {
+        id: "shared",
+        revision: 3,
+        mode: "surprise",
+        modeLocked: true,
+        groupIds: ["family"],
+        ownerIds: ["recipient"],
+        pendingOwnerIds: [],
+      },
+    },
+    {
+      id: "private",
+      kind: "lists",
+      data: {
+        id: "private",
+        revision: 1,
+        mode: "transparent",
+        modeLocked: false,
+        groupIds: [],
+        ownerIds: ["recipient"],
+        pendingOwnerIds: [],
+      },
+    },
+    {
+      id: "event",
+      kind: "groupEvents",
+      data: { id: "event", revision: 2, mode: "surprise" },
+    },
+  ];
+  before.views = {
+    recipient: {
+      lists: before.records
+        .filter((r) => r.kind === "lists")
+        .map((r) => structuredClone(r.data)),
+      groupEvents: [structuredClone(before.records[2].data)],
+    },
+  };
+  const after = structuredClone(before);
+  after.schemaVersion = 20;
+  after.records[0].data.revealPolicyLocked = true;
+  after.records[1].data.revealPolicyLocked = false;
+  Object.assign(after.records[2].data, {
+    modeLocked: true,
+    revealPolicyLocked: true,
+  });
+  after.views.recipient.lists[0].revealPolicyLocked = true;
+  after.views.recipient.lists[1].revealPolicyLocked = false;
+  Object.assign(after.views.recipient.groupEvents[0], {
+    modeLocked: true,
+    revealPolicyLocked: true,
+  });
+  assertPreserved(after, before);
+  assertPreserved(before, before);
+  for (const corrupt of [
+    (v) => {
+      v.records[0].data.modeLocked = false;
+    },
+    (v) => {
+      v.records[1].data.revealPolicyLocked = true;
+    },
+    (v) => {
+      v.views.recipient.groupEvents[0].modeLocked = false;
+    },
+    (v) => {
+      v.views.recipient.lists[0].mode = "transparent";
+    },
+    (v) => {
+      v.views.recipient.lists[0].lockReason = "reservation";
+    },
+  ]) {
+    const bad = structuredClone(after);
+    corrupt(bad);
+    assert.throws(() => assertPreserved(bad, before));
+  }
+});

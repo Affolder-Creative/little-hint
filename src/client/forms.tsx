@@ -60,9 +60,11 @@ import { api, ApiError } from "./api";
 import { useImportJob } from "./useImportJob";
 import {
   ListPolicyFields,
+  revealPolicyIsLocked,
   listPolicyValues,
   SharingReview,
 } from "./ListPolicyFields";
+import { ListIconPicker } from "./ListIconPicker";
 import { ExchangeReview, participantLabel } from "./ExchangeReview";
 export const value = (f: FormData, k: string) => String(f.get(k) ?? "");
 const selected = (f: FormData, k: string) => f.getAll(k).map(String);
@@ -212,8 +214,12 @@ export function ListForm({
             (r) => r.status === "active" && r.personId === recipients[0],
           ) ??
             false);
-        return !list?.modeLocked &&
-          (coManagerAccess || data.getAll("groupIds").length > 0) ? (
+        return (!revealPolicyIsLocked(list) &&
+          (coManagerAccess || data.getAll("groupIds").length > 0)) ||
+          (!!list &&
+            list.canManagePolicy !== false &&
+            !list.modeLocked &&
+            data.get("mode") !== list.mode) ? (
           <SharingReview
             data={data}
             list={list}
@@ -234,6 +240,7 @@ export function ListForm({
               }
             : { ownerIds: delegated ? [targetId!] : selected(f, "ownerIds") }),
           name: value(f, "name"),
+          iconKey: value(f, "iconKey") || null,
           description: value(f, "description"),
           groupIds:
             list?.canManagePolicy === false
@@ -256,8 +263,8 @@ export function ListForm({
       {delegated && (
         <p className="notice">
           Managing wishes for {target?.name ?? "this person"}. Share with their
-          family groups. Gifting policy locks as soon as a co-manager can access
-          the list.
+          family groups. Reveal settings become fixed when co-managers can
+          access the list.
         </p>
       )}
       <Field label="List name">
@@ -268,6 +275,7 @@ export function ListForm({
           placeholder="A few things I’d love"
         />
       </Field>
+      <ListIconPicker initial={list?.iconKey} />
       <Field label="A note for your people">
         <textarea
           name="description"

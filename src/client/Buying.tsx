@@ -40,6 +40,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   PackageCheck,
+  PackagePen,
   ArrowRight,
   Gift,
   Pencil,
@@ -365,7 +366,11 @@ export function Buying() {
                     );
                   }}
                 >
-                  <PackageCheck size={17} aria-hidden="true" />
+                  {r.inHandQuantity === r.purchased ? (
+                    <PackagePen size={17} aria-hidden="true" />
+                  ) : (
+                    <PackageCheck size={17} aria-hidden="true" />
+                  )}
                   {r.inHandQuantity === r.purchased
                     ? "Edit arrival"
                     : r.purchased === 1 && r.inHandQuantity === 0

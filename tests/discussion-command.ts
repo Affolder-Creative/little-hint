@@ -1,13 +1,28 @@
-import { command } from "../src/server/domain";
+import { command, idempotent } from "../src/server/domain";
 import { discussionAudience } from "../src/server/discussion-access";
 
 /** Existing fixtures submit as a composer that has just reviewed its audience. */
-export const commandWithAudience: typeof command = (
-  state,
-  actor,
-  action,
-  raw,
-) => {
+function reviewedPayload(
+  state: Parameters<typeof command>[0],
+  actor: Parameters<typeof command>[1],
+  action: string,
+  raw: unknown,
+) {
+  if (
+    [
+      "reservations.create",
+      "contribution-offers.create",
+      "spending.purchase",
+    ].includes(action) &&
+    raw &&
+    typeof raw === "object"
+  ) {
+    const body = raw as Record<string, unknown>;
+    const item = state.items.find((i) => i.id === body.itemId);
+    const list = state.lists.find((l) => l.id === item?.listId);
+    if (list && body.expectedListMode === undefined)
+      raw = { ...body, expectedListMode: list.mode };
+  }
   if (
     (action === "comments.create" || action === "comments.update") &&
     raw &&
@@ -38,5 +53,27 @@ export const commandWithAudience: typeof command = (
       }
     }
   }
-  return command(state, actor, action, raw);
-};
+  return raw;
+}
+
+export const commandWithAudience: typeof command = (
+  state,
+  actor,
+  action,
+  raw,
+) => command(state, actor, action, reviewedPayload(state, actor, action, raw));
+
+export const idempotentWithAudience: typeof idempotent = (
+  state,
+  actor,
+  key,
+  action,
+  raw,
+) =>
+  idempotent(
+    state,
+    actor,
+    key,
+    action,
+    reviewedPayload(state, actor, action, raw),
+  );

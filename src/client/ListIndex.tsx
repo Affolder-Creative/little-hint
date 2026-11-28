@@ -3,7 +3,8 @@ import { Pencil, Archive, ArchiveRestore } from "lucide-react";
 import { ImportDrafts } from "./ImportDrafts";
 import { useNavigationState } from "./NavigationScroll";
 import { Link, useSearchParams } from "react-router-dom";
-import { ArrowRight, ListChecks, Plus } from "lucide-react";
+import { ArrowRight, Plus } from "lucide-react";
+import { ListIcon } from "./ListIcon";
 import { ordered } from "../shared/organization";
 import { useApp } from "./context";
 import { Empty, Header, Privacy } from "./components";
@@ -137,7 +138,7 @@ export function ListIndex() {
               <div className="managed-list-row" key={l.id}>
                 <Link to={`/lists/${l.id}`} className="list-row">
                   <span className="list-symbol">
-                    <ListChecks size={24} />
+                    <ListIcon iconKey={l.iconKey} size={24} />
                   </span>
                   <div>
                     <h3>{l.name}</h3>

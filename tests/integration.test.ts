@@ -1,10 +1,12 @@
+import {
+  commandWithAudience as command,
+  idempotentWithAudience as idempotent,
+} from "./discussion-command";
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { Pool } from "pg";
 import { emptyState } from "../src/shared/model";
 import {
   stamp,
-  idempotent,
-  command,
   archiveDueLists,
   world,
   activateAccount,

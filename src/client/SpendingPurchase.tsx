@@ -15,6 +15,7 @@ import { Form, Field, useModalDismiss } from "./components";
 import type { GiftView, World } from "../shared/model";
 import type { SpendingView } from "../shared/spending";
 import "./spending-purchase.css";
+import { useGiftingModeReview } from "./useGiftingModeReview";
 
 type PurchaseReservation = Pick<
   World["buying"][number],
@@ -55,6 +56,7 @@ export function PurchaseForm({
   const reservation =
     reservationQuery.data ?? suppliedReservation ?? selectedReservation;
   const item = reservation?.item ?? selectedItem;
+  const modeReview = useGiftingModeReview(item);
   const [selectionDirty, setSelectionDirty] = useState(false);
   const [title, setTitle] = useState(suppliedReservation?.titleSnapshot ?? "");
   const [recipients, setRecipients] = useState<string[]>(() => {
@@ -274,34 +276,39 @@ export function PurchaseForm({
       )}
       dirty={selectionDirty || undefined}
       submit="Save purchase"
+      disabled={modeReview.blocked}
       cancel={() => dismiss?.()}
       onSubmit={async () => {
         if (!recipientIds.length)
           throw new Error("Choose at least one recipient.");
         if (choices.length && !shoppingKey)
           throw new Error("Choose who this gift is for.");
-        await mutate("spending/purchase", {
-          ...shoppingPayload(shoppingKey),
-          keepPrivate: keepPrivate || !prospectiveShared,
-          reservationId: reservation?.id,
-          itemId: !reservation ? item?.id : undefined,
-          itemRevision: !reservation ? item?.revision : undefined,
-          title: reservation?.titleSnapshot ?? item?.title ?? title.trim(),
-          recipientIds,
-          amountCents:
-            amount.trim() === "" ? null : Math.round(Number(amount) * 100),
-          date,
-          quantity,
-          occasionId: occasionId || undefined,
-          eventId: eventId || undefined,
-          payerId: payer === world.me.id ? undefined : payer,
-          allocations: !sourceList ? allocations : undefined,
-          planRevision: plan?.revision,
-        });
+        await modeReview.run((expectedListMode) =>
+          mutate("spending/purchase", {
+            expectedListMode,
+            ...shoppingPayload(shoppingKey),
+            keepPrivate: keepPrivate || !prospectiveShared,
+            reservationId: reservation?.id,
+            itemId: !reservation ? item?.id : undefined,
+            itemRevision: !reservation ? item?.revision : undefined,
+            title: reservation?.titleSnapshot ?? item?.title ?? title.trim(),
+            recipientIds,
+            amountCents:
+              amount.trim() === "" ? null : Math.round(Number(amount) * 100),
+            date,
+            quantity,
+            occasionId: occasionId || undefined,
+            eventId: eventId || undefined,
+            payerId: payer === world.me.id ? undefined : payer,
+            allocations: !sourceList ? allocations : undefined,
+            planRevision: plan?.revision,
+          }),
+        );
         close();
         onSuccess?.();
       }}
     >
+      {modeReview.notice}
       {!!choices.length && (
         <Field label="Buying for">
           <select

@@ -159,10 +159,10 @@ describe("wish-list co-management UI", () => {
     expect(html).not.toContain('name="ownerIds"');
     expect(html).toContain(f.ownerGroup.id);
     expect(html).not.toContain(f.helperGroup.id);
-    expect(html).toContain("Gifting policy locks");
+    expect(html).toContain("Reveal settings become fixed");
   });
 
-  it("explains immediate policy locking even when a co-managed list is unshared", () => {
+  it("explains separate gifting and reveal rules for an unshared co-managed list", () => {
     const data = new FormData();
     data.set("name", "Birthday");
     data.set("mode", "surprise");
@@ -174,7 +174,9 @@ describe("wish-list co-management UI", () => {
       }),
     );
     expect(html).toContain("The account holder and co-managers");
-    expect(html).toContain("permanently locks the gifting policy");
+    expect(html).toContain(
+      "You can change gifting mode until gift planning begins.",
+    );
     expect(html).not.toContain("Only the list owners");
   });
 

@@ -1,4 +1,5 @@
 import { reconcileOffers } from "./contribution-offers";
+import { migrateListPolicies, reconcileListPolicies } from "./list-policy";
 import { inferredPriceSource } from "../shared/shopping-offers";
 import { migrateShoppingOffers } from "./shopping-offers";
 import { reconcileItemGroups } from "./item-groups";
@@ -22,7 +23,7 @@ import {
   type ImportJob,
   type FriendEntry,
 } from "../shared/model";
-const supportedSchemaVersion = 19;
+const supportedSchemaVersion = 20;
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   max: 10,
@@ -99,12 +100,14 @@ export async function transact<T>(
         if (kinds.includes(row.kind as Kind))
           (state[row.kind as Kind] as unknown[]).push(row.data);
       }
+      reconcileListPolicies(state);
       reconcileItemGroups(state);
       reconcileCoManagement(state);
       reconcilePrivacyReview(state);
       reconcileSpendingPrivacy(state);
       reconcileOffers(state);
       const result = await fn(state, tx);
+      reconcileListPolicies(state);
       reconcileItemGroups(state);
       reconcileCoManagement(state);
       reconcilePrivacyReview(state);
@@ -379,6 +382,22 @@ INSERT INTO schema_migration(version) VALUES (2);`);
     await client.query(
       "INSERT INTO schema_migration(version) VALUES (19) ON CONFLICT DO NOTHING",
     );
+    const listPolicyMigration = await client.query(
+      "SELECT 1 FROM schema_migration WHERE version=20",
+    );
+    if (!listPolicyMigration.rowCount) {
+      const { rows } = await client.query("SELECT kind,data FROM app_record");
+      const state = emptyState();
+      for (const row of rows)
+        if (kinds.includes(row.kind)) state[row.kind as Kind].push(row.data);
+      migrateListPolicies(state);
+      for (const record of [...state.lists, ...state.groupEvents])
+        await client.query("UPDATE app_record SET data=$1 WHERE id=$2", [
+          JSON.stringify(record),
+          record.id,
+        ]);
+      await client.query("INSERT INTO schema_migration(version) VALUES (20)");
+    }
     await client.query("COMMIT");
   } catch (e) {
     await client.query("ROLLBACK");

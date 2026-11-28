@@ -1,6 +1,7 @@
+import { commandWithAudience as command } from "./discussion-command";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { fixture } from "./privacy-fixture";
-import { command } from "../src/server/domain";
+
 import { sourceView } from "../src/server/gift-lifecycle";
 import { contributionHistory } from "../src/server/buying-history";
 import type { Contribution } from "../src/shared/model";

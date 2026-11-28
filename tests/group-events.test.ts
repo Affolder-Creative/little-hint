@@ -1,3 +1,4 @@
+import { idempotentWithAudience as idempotent } from "./discussion-command";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   emptyState,
@@ -12,7 +13,6 @@ import {
   archiveDueLists,
   giftSummary,
   giftView,
-  idempotent,
   stamp,
   world,
 } from "../src/server/domain";
@@ -153,7 +153,8 @@ describe("event lists and permissions", () => {
     for (const list of f.lists(event)) {
       expect(list.groupIds).toEqual([f.group.id]);
       expect(list.pendingOwnerIds).toEqual([]);
-      expect(list.modeLocked).toBe(true);
+      expect(list.modeLocked).toBe(false);
+      expect(list.revealPolicyLocked).toBe(true);
     }
     expect(world(f.state, f.actors[3]).lists).toHaveLength(2);
     expect(world(f.state, f.actors[3]).groupEvents).toHaveLength(1);
@@ -275,14 +276,17 @@ describe("event lists and permissions", () => {
       expect(() => giftSummary(f.state, f.actors[0], list.id)).toThrow();
     }
   });
-  it("keeps privacy/reveal policies locked and applies changes to every linked list", () => {
+  it("keeps reveal policy locked while applying mode changes to every linked list", () => {
     const f = fixture();
     const event = f.create({
       revealAfter: "2099-12-25",
       timeZone: "America/New_York",
     });
+    f.update(event, { mode: "transparent" });
+    expect(f.lists(event).every((list) => list.mode === "transparent")).toBe(
+      true,
+    );
     for (const patch of [
-      { mode: "transparent" },
       { timeZone: "UTC" },
       { revealExchangeGivers: true },
       { revealAfter: null },
@@ -600,7 +604,8 @@ describe("repeat annual events", () => {
         .lists(next)
         .every(
           (l) =>
-            l.modeLocked &&
+            !l.modeLocked &&
+            l.revealPolicyLocked &&
             l.mode === "transparent" &&
             !before.lists.some((old) => old.id === l.id),
         ),

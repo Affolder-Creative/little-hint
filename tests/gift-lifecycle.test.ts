@@ -1,6 +1,7 @@
+import { commandWithAudience as command } from "./discussion-command";
 import { describe, it, expect } from "vitest";
 import { fixture } from "./privacy-fixture";
-import { command, world, archiveDueLists } from "../src/server/domain";
+import { world, archiveDueLists } from "../src/server/domain";
 import { activityAllowed, inbox } from "../src/server/activity";
 import { syncContributions, spendingView } from "../src/server/spending";
 import { spendingTotals } from "../src/shared/spending";

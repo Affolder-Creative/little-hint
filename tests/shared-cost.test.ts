@@ -1,6 +1,7 @@
+import { commandWithAudience as command } from "./discussion-command";
 import { describe, expect, it } from "vitest";
 import { stagingFixtures } from "../src/server/staging-fixtures";
-import { command, stamp, world } from "../src/server/domain";
+import { stamp, world } from "../src/server/domain";
 import { recordedGiftCost } from "../src/server/shared-cost";
 import { syncSpending } from "../src/server/spending";
 

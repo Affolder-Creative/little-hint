@@ -1,5 +1,6 @@
+import { commandWithAudience as command } from "./discussion-command";
 import { expect, it } from "vitest";
-import { command, giftView } from "../src/server/domain";
+import { giftView } from "../src/server/domain";
 import { itemPage } from "../src/server/collections";
 import { itemVisible } from "../src/server/domain-access";
 import { wishlistFixture } from "./wishlist-fixture";

@@ -1,4 +1,5 @@
 import { recordedGiftCost } from "./shared-cost";
+import { checkReviewedListMode } from "./list-policy";
 import {
   acceptedOffersInput,
   validateAcceptedOffers,
@@ -191,6 +192,7 @@ export function buyingCommand(
     case "reservations.create": {
       const p = z
         .object({
+          expectedListMode: z.enum(["surprise", "transparent"]).optional(),
           acceptedOffers: acceptedOffersInput,
           poolTotalCents: z.number().int().positive().max(100000000).optional(),
           poolOwnContributionCents: z
@@ -211,6 +213,7 @@ export function buyingCommand(
       if (!canShop(s, a, i))
         fail(403, "You cannot reserve a gift for yourself.");
       if (archived(s, i)) fail(409, "This gift is archived.");
+      checkReviewedListMode(s, i, p.expectedListMode);
       resolveShoppingContext(s, a, i, p);
       if (p.exchangeId) {
         const e =
@@ -255,7 +258,11 @@ export function buyingCommand(
           409,
           "Someone has already reserved that quantity. Refresh to see what remains.",
         );
-      const { acceptedOffers, ...reservationFields } = p;
+      const {
+        acceptedOffers,
+        expectedListMode: _expectedListMode,
+        ...reservationFields
+      } = p;
       if (
         (p.poolTotalCents === undefined) !==
           (p.poolOwnContributionCents === undefined) ||

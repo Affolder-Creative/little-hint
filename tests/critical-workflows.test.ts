@@ -1,6 +1,10 @@
+import {
+  commandWithAudience as command,
+  idempotentWithAudience as idempotent,
+} from "./discussion-command";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fixture, connect } from "./privacy-fixture";
-import { command, giftView, idempotent, stamp } from "../src/server/domain";
+import { giftView, stamp } from "../src/server/domain";
 import { accountExport } from "../src/server/account-export";
 import { accountCsv } from "../src/server/account-csv";
 import {
