@@ -381,6 +381,15 @@ for (const [width, theme] of [
     await expect(
       page.getByText("No matching icons. Try another word."),
     ).toBeVisible();
+    await page.getByLabel("Search list icons").fill("fire");
+    for (const name of ["Flame", "Axe", "Fire extinguisher"])
+      await expect(
+        page.getByRole("option", { name, exact: true }),
+      ).toBeVisible();
+    await page.getByLabel("Search list icons").fill("knitting");
+    await expect(
+      page.getByRole("option", { name: "Thread", exact: true }),
+    ).toBeVisible();
     await page.getByLabel("Search list icons").fill("tools");
     const option = page.getByRole("option", { name: "Wrench", exact: true });
     await option.focus();

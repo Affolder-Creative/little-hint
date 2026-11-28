@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-28T00:41:58.292Z",
+  "generatedAt": "2026-11-28T01:48:40.353Z",
   "title": "Design System: Little Hint",
   "extensions": {
     "peopleDirectory": {
@@ -1324,7 +1324,7 @@
       "picker": "Muted 13px Event: [name] caption with a 16px calendar icon, 8px icon gap and 16px separation; 14px, weight 550 list names; muted 17px arrows; 44px minimum rows, 12px vertical padding. Search remains above a scrollable results region."
     },
     "wishListIdentity": {
-      "icons": "120 bundled Lucide icons, searched by label, category and keywords. ListChecks is the default and unknown-key fallback; event calendars remain fixed.",
+      "icons": "180 bundled Lucide icons, searched by label, category and keywords. ListChecks is the default and unknown-key fallback; event calendars remain fixed.",
       "picker": "Inline in Create/Edit list below the name. Six columns, four at 650px and below; 44px targets, 8px gaps, 240px scrolling grid. Search, default reset, arrow navigation and Escape focus restoration.",
       "review": "Icon/name identity followed by labeled audience, gifting-mode and summary rows. Semibold facts, muted 13px labels, 14px explanations at 1.5 line height, 16px separated rows and 20px section gaps.",
       "locking": "Generic permanent-lock copy contains no cause, actor, count or time. Mode changes show the previous setting and event-wide scope. Stale forms preserve entries and require explicit review. Participant-only administration edits bypass mode review; only authorized mode changes enter that review.",

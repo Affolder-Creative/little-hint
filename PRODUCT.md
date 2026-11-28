@@ -289,7 +289,7 @@ Eligible nonrecipient shoppers can offer a specific USD amount toward a shared g
 
 ## Wish-list identity and gifting-mode corrections
 
-Standalone wish lists may select one of 120 bundled Lucide icons in Create/Edit list. Search covers labels and categories. No selection or an unavailable key uses the existing checklist; group events retain their calendar.
+Standalone wish lists may select one of 180 bundled Lucide icons in Create/Edit list. Search covers labels, categories and common terms for equipment and hobbies, including fire, knitting and vinyl. No selection or an unavailable key uses the existing checklist; group events retain their calendar.
 
 Authorized recipients, profile managers and wish-list co-managers may change gifting mode until the first reservation, contribution offer or contribution, purchase, or discussion note. Wishes, drafts, views, watches, private idea associations and spending organization do not lock it. The lock persists after cancellation, deletion, unsharing or loss of co-manager access. A reveal date alone does not lock gifting mode; existing reveal-scheduling restrictions remain. Group owners and appointed event leaders change every participant list together; activity on any attached list permanently locks the event even after that participant leaves. Administrative editing alone grants no policy authority.
 

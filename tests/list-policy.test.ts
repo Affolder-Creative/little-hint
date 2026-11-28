@@ -249,11 +249,11 @@ describe("list icons", () => {
     for (const icon of listIcons) expect(isListIconKey(icon.key)).toBe(true);
     command(f.state, f.actors[0], "lists.update", {
       ...list,
-      iconKey: "wrench",
+      iconKey: "fire-extinguisher",
     });
     expect(
       world(f.state, f.actors[0]).lists.find((l) => l.id === list.id)?.iconKey,
-    ).toBe("wrench");
+    ).toBe("fire-extinguisher");
     expect(() =>
       command(f.state, f.actors[0], "lists.update", {
         ...list,
