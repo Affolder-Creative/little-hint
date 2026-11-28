@@ -1,3 +1,4 @@
+import { assertRemovalAllowed, protection } from "./purchase-protection";
 import { buyingSorts } from "../shared/buying-sort";
 import { canManageTrashedItem, isAdmin, groupAccess } from "./domain-access";
 import { listCanEdit, recoverDraft } from "./co-management";
@@ -53,7 +54,12 @@ function current(row: Base, revision: number) {
 function collection(s: State, kind: TrashKind) {
   return kind === "group-events" ? s.groupEvents : s[kind];
 }
-function manages(s: State, a: Actor, kind: TrashKind, id: string): boolean {
+export function manages(
+  s: State,
+  a: Actor,
+  kind: TrashKind,
+  id: string,
+): boolean {
   if (kind === "items") {
     const i = s.items.find((i) => i.id === id);
     return (
@@ -97,7 +103,10 @@ export function trash(s: State, a: Actor): TrashEntry[] {
                 revision: row.revision,
                 createdAt: row.createdAt,
                 kind,
-                canPurge: canPurge(s, a, kind, row.id),
+                canPurge:
+                  canPurge(s, a, kind, row.id) &&
+                  protection(s, a, kind, row.id).canPurge,
+                lifecycle: protection(s, a, kind, row.id),
                 name: "title" in row ? row.title : row.name,
                 deletedAt: row.deletedAt,
               },
@@ -240,11 +249,17 @@ export function managementCommand(
         })
         .parse(raw);
       i.priority = input.priority;
-    } else
+    } else {
+      if (
+        identity.extend({ archived: z.boolean() }).parse(raw).archived &&
+        !i.archived
+      )
+        assertRemovalAllowed(s, a, "items", i.id);
       setItemArchived(
         i,
         identity.extend({ archived: z.boolean() }).parse(raw).archived,
       );
+    }
     i.revision++;
     return { ok: true };
   }
@@ -263,6 +278,8 @@ export function managementCommand(
     exchange.revision++;
     return { ok: true };
   }
+  if (operation === "trash" || operation === "purge")
+    assertRemovalAllowed(s, a, kind, row.id);
   if (operation === "trash") {
     if (row.deletedAt) fail(409, "This entry is already in Trash.");
     if (
@@ -291,7 +308,7 @@ export function managementCommand(
     );
   return { ok: true };
 }
-function canPurge(s: State, a: Actor, kind: TrashKind, id: string) {
+export function canPurge(s: State, a: Actor, kind: TrashKind, id: string) {
   const list =
     kind === "lists"
       ? s.lists.find((l) => l.id === id)

@@ -271,7 +271,11 @@ describe("event lists and permissions", () => {
         expect(after.comments).toEqual([
           expect.objectContaining({ body: "Hidden planning" }),
         ]);
-      } else expect(after).toEqual(before);
+      } else
+        expect({ ...after, lifecycle: undefined }).toEqual({
+          ...before,
+          lifecycle: undefined,
+        });
       if (!before.canShop) expect(after.comments).toBeUndefined();
       expect(() => giftSummary(f.state, f.actors[0], list.id)).toThrow();
     }

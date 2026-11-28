@@ -169,7 +169,7 @@ describe.skipIf(!url)("persisted drafts", () => {
           )
         ).rows[0].version,
       ),
-    ).toBe(20);
+    ).toBe(21);
   });
   it("persists range bounds, pauses published ranges and rolls back invalid pairs", async () => {
     const draft = (await db.transact((state) =>

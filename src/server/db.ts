@@ -23,7 +23,7 @@ import {
   type ImportJob,
   type FriendEntry,
 } from "../shared/model";
-const supportedSchemaVersion = 20;
+const supportedSchemaVersion = 21;
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   max: 10,
@@ -398,6 +398,15 @@ INSERT INTO schema_migration(version) VALUES (2);`);
         ]);
       await client.query("INSERT INTO schema_migration(version) VALUES (20)");
     }
+    await client.query(
+      "ALTER TABLE admin_account_audit ADD COLUMN IF NOT EXISTS reason text",
+    );
+    await client.query(
+      "CREATE TABLE IF NOT EXISTS gift_override_receipt (actor_hash text NOT NULL, request_key text NOT NULL, request_hash text NOT NULL, PRIMARY KEY(actor_hash, request_key))",
+    );
+    await client.query(
+      "INSERT INTO schema_migration(version) VALUES (21) ON CONFLICT DO NOTHING",
+    );
     await client.query("COMMIT");
   } catch (e) {
     await client.query("ROLLBACK");

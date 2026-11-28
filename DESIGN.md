@@ -791,6 +791,12 @@ Admin gift editing retains the existing editor and photo controls. A short expla
 
 Gift refinements retain full-product photos inside uniform full-width media frames with contained images and top-right menus. Arrival actions use the outline package-check icon. Person pages place following and co-management in More actions with an ellipsis. The event wish-list picker uses a muted 13px “Event: [name]” caption with a 16px calendar icon, 14px medium-weight list names, muted 17px arrows, and 44px minimum rows. Event-list spending and collection headings have a single 24px gap, reduced to 20px on phones. Privacy help holds its top-left position during disclosure expansion and scrolls within the viewport. Short summaries precede relevant exceptions only. Linked shared-cost forms identify their source, incomplete-cost state and review-required state beside the total. Editing the total switches to manual; Use recorded spending reconnects it.
 
+### Purchased gift maintenance
+
+Protected gift actions disappear when their reason is private. Authorized purchase viewers see disabled actions and one short explanation using existing muted supporting text. Keep ordinary editing and restoration available. Collection deletion guidance points to Archive. Product editor removal follows the same permission state without changing its fields or layout.
+
+Admin override is a separate labeled action in existing menus. Its fixed-header/footer dialog uses plain consequence copy, a required reason textarea and an explicit confirmation checkbox naming the entry and operation. The primary action stays disabled until review, reason and confirmation are present. Failed or stale reviews preserve the reason and offer Review again; confirmation resets after a new review. Reuse existing fields, focus treatment, 44px targets and light/dark tokens. Do not add purchase badges or new visual tokens.
+
 ## Do's and Don'ts
 
 ### Do:

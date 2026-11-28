@@ -1,3 +1,4 @@
+import { withRemovalOverride } from "../src/server/purchase-protection";
 import { idempotentWithAudience as idempotent } from "./discussion-command";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
@@ -141,8 +142,12 @@ describe("recoverable and permanent deletion", () => {
       itemId: f.item.id,
       body: "Private discussion",
     });
-    f.run("lists.trash", f.list);
-    f.run("lists.purge", f.list);
+    withRemovalOverride(f.s, "lists", f.list.id, () =>
+      f.run("lists.trash", f.list),
+    );
+    withRemovalOverride(f.s, "lists", f.list.id, () =>
+      f.run("lists.purge", f.list),
+    );
     expect(f.s.items).toEqual([]);
     expect(f.s.comments).toEqual([]);
     const buying = world(f.s, f.actors[1]).buying[0];
