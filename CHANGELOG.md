@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.13.2](https://github.com/Affolder-Creative/little-hint/compare/v1.13.1...v1.13.2) (2026-11-28)
+
+
+### Fixes
+
+* align wish-list references and privacy badges ([#300](https://github.com/Affolder-Creative/little-hint/issues/300)) ([3c5e09f](https://github.com/Affolder-Creative/little-hint/commit/3c5e09f948832bf0718466009b22931e7380ceb7))
+* connect gift ideas to wish-list browsing ([#295](https://github.com/Affolder-Creative/little-hint/issues/295)) ([a820ef8](https://github.com/Affolder-Creative/little-hint/commit/a820ef8f6c87740b9a248c22638d9ea8b4e0ad4f))
+* polish gift browsing and link shared costs to purchases ([#298](https://github.com/Affolder-Creative/little-hint/issues/298)) ([0f05c36](https://github.com/Affolder-Creative/little-hint/commit/0f05c36c8e95e64c47f5d990cf99729a7a03fa46))
+* protect purchased gifts from removal ([#304](https://github.com/Affolder-Creative/little-hint/issues/304)) ([1fca386](https://github.com/Affolder-Creative/little-hint/commit/1fca386c0cd626f00e2984383d0af4e3cba74cd7))
+* refine wish lists and protect gifting-mode changes ([#302](https://github.com/Affolder-Creative/little-hint/issues/302)) ([e04510f](https://github.com/Affolder-Creative/little-hint/commit/e04510fc4ebc598c0850582f80ef1e2e6766b89c))
+
 ## [1.13.1](https://github.com/Affolder-Creative/little-hint/compare/v1.13.0...v1.13.1) (2026-11-26)
 
 
