@@ -939,3 +939,48 @@ test("schema 20 preserves legacy privacy and derives independent locks", () => {
     assert.throws(() => assertPreserved(bad, before));
   }
 });
+
+test("schema 19 adds only the buyer's derived cost preview", async () => {
+  const { createHash } = await import("node:crypto");
+  const before = structuredClone(original);
+  before.schemaVersion = 18;
+  before.users = [{ id: "buyer", email: "buyer@example.test" }];
+  before.records = [
+    {
+      id: "plan",
+      kind: "reservations",
+      data: { id: "plan", buyerId: "buyer", quantity: 1, purchased: 1 },
+    },
+  ];
+  before.views = {
+    "buyer@example.test": {
+      buying: [{ id: "plan", item: { id: "wish", archived: false } }],
+    },
+    "other@example.test": { buying: [{ id: "plan" }] },
+  };
+  const after = structuredClone(before);
+  after.schemaVersion = 19;
+  after.views["buyer@example.test"].buying[0].recordedCost = {
+    status: "incomplete",
+    token: createHash("sha256")
+      .update(JSON.stringify(["plan", 1, 1, false, []]))
+      .digest("hex"),
+  };
+  assertPreserved(after, before);
+  for (const corrupt of [
+    (v) => {
+      v.views["buyer@example.test"].buying[0].recordedCost.totalCents = 100;
+    },
+    (v) => {
+      v.views["buyer@example.test"].buying[0].recordedCost.token = "unreviewed";
+    },
+    (v) => {
+      v.views["other@example.test"].buying[0].recordedCost =
+        v.views["buyer@example.test"].buying[0].recordedCost;
+    },
+  ]) {
+    const bad = structuredClone(after);
+    corrupt(bad);
+    assert.throws(() => assertPreserved(bad, before));
+  }
+});

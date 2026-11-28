@@ -107,7 +107,7 @@ test("a consenting co-manager maintains and shares wishes, then loses access on 
     const settings = helper.getByRole("dialog");
     await expect(
       settings.getByRole("radio", { name: /See the plans/ }),
-    ).toBeDisabled();
+    ).toBeEnabled();
     await settings
       .locator(`input[name="groupIds"][value="${group.id}"]`)
       .check();

@@ -102,7 +102,10 @@ export function EventForm({
       }
       disabled={!event && participants.length === 0}
       review={(data) =>
-        !event || (!policy?.modeLocked && data.get("mode") !== event.mode) ? (
+        !event ||
+        (event.canManagePolicy !== false &&
+          !policy?.modeLocked &&
+          data.get("mode") !== event.mode) ? (
           <>
             {repeatFrom && (
               <p>
