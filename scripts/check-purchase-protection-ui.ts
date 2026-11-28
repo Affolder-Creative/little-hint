@@ -14,7 +14,7 @@ const server = await createServer({
 });
 await server.listen();
 const browser = await chromium.launch({
-  executablePath: process.env.CHROME_PATH ?? "/usr/bin/chromium",
+  executablePath: process.env.CHROME_PATH || undefined,
   args: ["--no-sandbox"],
 });
 const out = "/tmp/purchase-protection-review";

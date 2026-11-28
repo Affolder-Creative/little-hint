@@ -984,3 +984,228 @@ test("schema 19 adds only the buyer's derived cost preview", async () => {
     assert.throws(() => assertPreserved(bad, before));
   }
 });
+
+function protectionUpgradeFixture() {
+  const before = structuredClone(original);
+  before.schemaVersion = 20;
+  before.users = [
+    { id: "admin", email: "admin@example.test" },
+    { id: "buyer", email: "buyer@example.test" },
+    { id: "reader", email: "reader@example.test" },
+  ];
+  const list = {
+    id: "list",
+    ownerIds: ["recipient"],
+    mode: "surprise",
+    groupIds: ["family"],
+  };
+  const eventList = { ...list, id: "event-list", groupEventId: "event" };
+  const gift = {
+    id: "gift",
+    listId: "list",
+    recipientIds: ["recipient"],
+    archived: false,
+  };
+  const set = { ...gift, id: "set", kind: "group" };
+  const child = { ...gift, id: "child", parentItemId: "set" };
+  const free = { ...gift, id: "free" };
+  const eventGift = { ...gift, id: "event-gift", listId: "event-list" };
+  before.records = [
+    ...[list, eventList].map((data) => ({ kind: "lists", id: data.id, data })),
+    ...[gift, set, child, free, eventGift].map((data) => ({
+      kind: "items",
+      id: data.id,
+      data,
+    })),
+    {
+      kind: "people",
+      id: "recipient",
+      data: { id: "recipient", userId: "admin", admin: true },
+    },
+    { kind: "groupEvents", id: "event", data: { id: "event" } },
+    ...[gift, child, eventGift].map((item) => ({
+      kind: "reservations",
+      id: `purchase-${item.id}`,
+      data: {
+        id: `purchase-${item.id}`,
+        itemId: item.id,
+        buyerId: "buyer",
+        quantity: 2,
+        purchased: 1,
+        ordinary: true,
+      },
+    })),
+    {
+      kind: "reservations",
+      id: "reservation-only",
+      data: {
+        id: "reservation-only",
+        itemId: "free",
+        buyerId: "buyer",
+        purchased: 0,
+        quantity: 1,
+      },
+    },
+  ];
+  const giftView = (item, isRecipient, canEdit) => ({
+    ...structuredClone(item),
+    isRecipient,
+    canEdit,
+  });
+  before.views = {
+    "admin@example.test": {
+      lists: [
+        { ...list, canEdit: true },
+        { ...eventList, canEdit: true },
+      ],
+      groupEvents: [{ id: "event", canManage: true }],
+      items: [
+        giftView(gift, true, true),
+        {
+          ...giftView(set, true, true),
+          products: [giftView(child, true, true)],
+        },
+        giftView(free, true, true),
+        giftView(eventGift, true, true),
+      ],
+    },
+    "buyer@example.test": {
+      lists: [{ ...list, canEdit: true }],
+      items: [giftView(child, false, true)],
+      buying: [{ id: "purchase-gift", item: giftView(gift, false, true) }],
+    },
+    "reader@example.test": {
+      lists: [{ ...list, canEdit: false }],
+      items: [giftView(gift, false, false)],
+    },
+  };
+  const after = structuredClone(before);
+  after.schemaVersion = 21;
+  const denied = {
+    canArchive: false,
+    canTrash: false,
+    canPurge: false,
+    overrideOperations: [],
+  };
+  const allowed = {
+    canArchive: true,
+    canTrash: true,
+    canPurge: true,
+    overrideOperations: [],
+  };
+  const adminBlocked = {
+    ...denied,
+    overrideOperations: ["archive", "trash", "purge"],
+  };
+  const admin = after.views["admin@example.test"];
+  admin.items[0].lifecycle = structuredClone(adminBlocked);
+  admin.items[1].lifecycle = structuredClone(adminBlocked);
+  admin.items[1].products[0].lifecycle = structuredClone(adminBlocked);
+  admin.items[2].lifecycle = structuredClone(allowed);
+  admin.items[3].lifecycle = structuredClone(adminBlocked);
+  admin.lists[0].lifecycle = {
+    ...denied,
+    canArchive: true,
+    overrideOperations: ["trash", "purge"],
+  };
+  admin.lists[1].lifecycle = structuredClone(denied);
+  admin.groupEvents[0].lifecycle = structuredClone(admin.lists[0].lifecycle);
+  const buyer = after.views["buyer@example.test"];
+  const message =
+    "This gift is marked as purchased and cannot be archived or removed.";
+  buyer.items[0].lifecycle = { ...denied, message };
+  buyer.buying[0].item.lifecycle = { ...denied, message };
+  buyer.lists[0].lifecycle = {
+    ...denied,
+    canArchive: true,
+    message:
+      "This collection contains purchased gifts. You can archive it instead.",
+  };
+  after.views["reader@example.test"].items[0].lifecycle =
+    structuredClone(denied);
+  after.views["reader@example.test"].lists[0].lifecycle =
+    structuredClone(denied);
+  return { before, after };
+}
+
+test("schema 21 derives lifecycle permissions from retained purchases and viewer authority", () => {
+  const { before, after } = protectionUpgradeFixture();
+  assertPreserved(after, before);
+  assertPreserved(before, before);
+  assertPreserved(after, after);
+  for (const corrupt of [
+    (v) => {
+      delete v.views["admin@example.test"].items[0].lifecycle;
+    },
+    (v) => {
+      v.views["admin@example.test"].items[0].lifecycle.canTrash = true;
+    },
+    (v) => {
+      v.views["admin@example.test"].items[0].lifecycle.message = "Purchased!";
+    },
+    (v) => {
+      v.views["admin@example.test"].items[1].products[0].lifecycle.canArchive =
+        true;
+    },
+    (v) => {
+      v.views["admin@example.test"].items[2].lifecycle.canTrash = false;
+    },
+    (v) => {
+      v.views["admin@example.test"].lists[0].lifecycle.canArchive = false;
+    },
+    (v) => {
+      v.views["admin@example.test"].lists[1].lifecycle.overrideOperations = [
+        "trash",
+      ];
+    },
+    (v) => {
+      v.views["admin@example.test"].groupEvents[0].lifecycle.canPurge = true;
+    },
+    (v) => {
+      v.views[
+        "buyer@example.test"
+      ].buying[0].item.lifecycle.overrideOperations = ["trash"];
+    },
+    (v) => {
+      delete v.views["buyer@example.test"].items[0].lifecycle.message;
+    },
+    (v) => {
+      v.views["reader@example.test"].items[0].lifecycle.canArchive = true;
+    },
+    (v) => {
+      v.views["reader@example.test"].lists[0].lifecycle.message = "Purchased!";
+    },
+    (v) => {
+      v.records.find((r) => r.id === "purchase-gift").data.purchased = 0;
+    },
+  ]) {
+    const bad = structuredClone(after);
+    corrupt(bad);
+    assert.throws(() => assertPreserved(bad, before));
+  }
+});
+
+test("schema 21 never explains exchange or hidden-source purchases to another editor", () => {
+  for (const hidden of ["exchange", "review", "source"]) {
+    const { before, after } = protectionUpgradeFixture();
+    for (const evidence of [before, after]) {
+      evidence.users.find((u) => u.email === "buyer@example.test").id =
+        "another-editor";
+      const purchase = evidence.records.find(
+        (r) => r.id === "purchase-gift",
+      ).data;
+      if (hidden === "exchange") purchase.exchangeId = "secret-exchange";
+      if (hidden === "review") purchase.privacyReview = true;
+      if (hidden === "source")
+        delete evidence.views["buyer@example.test"].buying;
+    }
+    if (hidden !== "source")
+      delete after.views["buyer@example.test"].buying[0].item.lifecycle.message;
+    delete after.views["buyer@example.test"].lists[0].lifecycle.message;
+    assertPreserved(after, before);
+    const leaked = structuredClone(after);
+    leaked.views["buyer@example.test"].lists[0].lifecycle.message =
+      "This collection contains purchased gifts. You can archive it instead.";
+    assert.throws(() => assertPreserved(leaked, before));
+  }
+});
