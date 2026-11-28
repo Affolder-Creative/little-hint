@@ -2204,15 +2204,28 @@ function GiftEditor({
             {formatDateTime(job.result.importedAt)}. Prices can change.
           </small>
         )}
-        <label className="check">
-          <input
-            type="checkbox"
-            name="archived"
-            checked={archived}
-            onChange={(event) => setArchived(event.target.checked)}
-          />
-          {idea ? "Archive this gift idea" : "Archive this item"}
-        </label>
+        {(gift?.individuallyArchived ||
+          gift?.lifecycle?.canArchive !== false ||
+          !!gift?.lifecycle?.message) && (
+          <label className="check">
+            <input
+              type="checkbox"
+              name="archived"
+              checked={archived}
+              disabled={
+                !gift?.individuallyArchived &&
+                gift?.lifecycle?.canArchive === false
+              }
+              onChange={(event) => setArchived(event.target.checked)}
+            />
+            {idea ? "Archive this gift idea" : "Archive this item"}
+          </label>
+        )}
+        {!gift?.individuallyArchived &&
+          gift?.lifecycle?.canArchive === false &&
+          gift.lifecycle.message && (
+            <p className="muted">{gift.lifecycle.message}</p>
+          )}
       </details>
       {duplicate && (
         <div className="duplicate">

@@ -83,7 +83,11 @@ describe("surprise privacy", () => {
       itemId: f.item.id,
       body: "Keep this secret.",
     });
-    expect(giftView(f.s, f.actors[0], f.item)).toEqual(before);
+    // Lifecycle permissions intentionally expose only action availability.
+    expect({
+      ...giftView(f.s, f.actors[0], f.item),
+      lifecycle: undefined,
+    }).toEqual({ ...before, lifecycle: undefined });
     expect(JSON.stringify(world(f.s, f.actors[0]))).not.toContain(
       "Keep this secret.",
     );

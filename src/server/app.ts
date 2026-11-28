@@ -1,3 +1,4 @@
+import { registerAdminGiftProtection } from "./admin-gift-protection";
 import { contributionOfferHistory } from "./buying-history";
 import { accountFingerprint } from "./closed-accounts";
 import { administersGroup } from "./domain-access";
@@ -299,6 +300,7 @@ export async function makeApp(options: { browserTest?: boolean } = {}) {
   registerAccountExport(app, actor);
   registerProfileAccounts(app, actor);
   registerAdminAccounts(app, actor);
+  registerAdminGiftProtection(app, actor);
   registerAdminRoles(app, actor);
   registerCollections(app, actor);
   registerAccountClosure(app, async (req) => {

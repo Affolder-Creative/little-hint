@@ -78,6 +78,8 @@ describe("private gift lifecycle", () => {
       archived: false,
     });
     expect(f.s.notices.some((n) => n.lifecycle?.state === "active")).toBe(true);
+    expect(() => f.remove("items.archive")).toThrow();
+    command(f.s, f.buyer, "reservations.update", { ...f.r, purchased: 0 });
     f.remove("items.archive");
     expect(() =>
       command(f.s, f.buyer, "reservations.review", {

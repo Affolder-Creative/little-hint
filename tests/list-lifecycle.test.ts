@@ -272,7 +272,11 @@ describe("owner gift summaries", () => {
       "buyerId",
     ])
       expect(JSON.stringify(dto)).not.toContain(forbidden);
-    expect(giftView(f.s, f.actors[0], f.item)).toEqual(before);
+    // Action availability is the explicitly accepted indirect purchase signal.
+    expect({
+      ...giftView(f.s, f.actors[0], f.item),
+      lifecycle: undefined,
+    }).toEqual({ ...before, lifecycle: undefined });
     expect(before.priceCents).toBe(2900);
   });
   it.each([false, true])(

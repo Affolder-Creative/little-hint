@@ -26,7 +26,10 @@ export const suites = {
   "group-events": {
     files: ["group-events", "repeat-event", "surprise-privacy"],
   },
-  management: { files: ["management", "account-closure"] },
+  management: {
+    files: ["management", "account-closure"],
+    scripts: ["scripts/check-purchase-protection-ui.ts"],
+  },
   polish: {
     groups: [
       ["ui-refinements", "admin-settings", "polish", "account-export"],

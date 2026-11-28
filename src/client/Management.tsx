@@ -22,12 +22,13 @@ import type {
   Base,
   GiftView,
   ItemPriority,
+  LifecyclePermissions,
   SortOrder,
   TrashEntry,
   TrashKind,
 } from "../shared/model";
 import { ordered, priorityLabels, sortLabels } from "../shared/organization";
-import { api } from "./api";
+import { api, ApiError } from "./api";
 import { useApp } from "./context";
 import { Confirm } from "./Confirm";
 import { Empty, Field, Form, useModalDismiss } from "./components";
@@ -224,17 +225,197 @@ export function ActionMenu({
     </details>
   );
 }
+type ProtectedEntry = Base & {
+  name?: string;
+  title?: string;
+  lifecycle?: LifecyclePermissions;
+};
+type OverrideOperation = "archive" | "trash" | "purge";
+const overrideLabels = {
+  archive: "Archive",
+  trash: "Move to Trash",
+  purge: "Delete permanently",
+};
+function AdminOverrideForm({
+  kind,
+  entry,
+  operation,
+}: {
+  kind: Exclude<TrashKind, "exchanges">;
+  entry: ProtectedEntry;
+  operation: OverrideOperation;
+}) {
+  const { mutate, close, toast } = useApp();
+  const navigate = useNavigate(),
+    location = useLocation();
+  const [reason, setReason] = useState("");
+  const [confirmed, setConfirmed] = useState(false);
+  const [review, setReview] = useState<{
+    token: string;
+    name: string;
+    revision: number;
+  }>();
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+  const target = { kind, id: entry.id, revision: entry.revision, operation };
+  const loadReview = async () => {
+    setLoading(true);
+    setError("");
+    setReview(undefined);
+    setConfirmed(false);
+    try {
+      setReview(await api("admin/gift-protection/review", target));
+    } catch (error) {
+      setError(actionError(error));
+    } finally {
+      setLoading(false);
+    }
+  };
+  useEffect(() => {
+    void loadReview();
+  }, []);
+  return (
+    <Form
+      dialogLayout
+      submit={`${overrideLabels[operation]} with override`}
+      disabled={!review || !confirmed || !reason.trim() || loading}
+      onSubmit={async () => {
+        try {
+          await mutate("admin/gift-protection/override", {
+            ...target,
+            token: review!.token,
+            revision: review!.revision,
+            reason: reason.trim(),
+            confirmation: "OVERRIDE",
+          });
+        } catch (error) {
+          if (error instanceof ApiError && error.status === 409) {
+            setReview(undefined);
+            setConfirmed(false);
+          }
+          throw error;
+        }
+        close();
+        toast(
+          operation === "archive"
+            ? "Item archived."
+            : operation === "trash"
+              ? "Moved to Trash. You can restore it there."
+              : "Permanently deleted.",
+        );
+        if (
+          operation !== "archive" &&
+          location.pathname.endsWith(`/${entry.id}`)
+        )
+          navigate("/lists?view=trash");
+      }}
+    >
+      <p>
+        This overrides normal item protection. Your reason will be recorded in
+        the administrative audit log.
+      </p>
+      <p>
+        {operation === "archive"
+          ? "The item will leave active views and remain available for restoration."
+          : operation === "trash"
+            ? kind === "group-events"
+              ? "The event will move to Trash. Participants' lists will be archived and kept."
+              : "This entry and its contents will leave normal views. They can be restored from Trash."
+            : kind === "group-events"
+              ? "This cannot be undone. Participants keep their wish lists as independent archived lists."
+              : "This cannot be undone. The entry and its contents will be permanently deleted."}{" "}
+        Existing purchase and contribution records are kept.
+      </p>
+      {loading && <p role="status">Loading review…</p>}
+      {error && (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      )}
+      {!review && !loading && (
+        <RunButton run={loadReview}>Review again</RunButton>
+      )}
+      <Field
+        label="Reason for override"
+        hint="Required. Do not include private gift-planning details."
+      >
+        <textarea
+          required
+          maxLength={500}
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+        />
+      </Field>
+      {review && (
+        <label className="check">
+          <input
+            type="checkbox"
+            required
+            checked={confirmed}
+            onChange={(e) => setConfirmed(e.target.checked)}
+          />
+          I confirm: {overrideLabels[operation]} “{review.name}” using an admin
+          override.
+        </label>
+      )}
+    </Form>
+  );
+}
+export function AdminOverrideButton({
+  kind,
+  entry,
+  operation,
+}: {
+  kind: TrashKind;
+  entry: ProtectedEntry;
+  operation: OverrideOperation;
+}) {
+  const { open } = useApp();
+  if (
+    kind === "exchanges" ||
+    !entry.lifecycle?.overrideOperations.includes(operation)
+  )
+    return null;
+  return (
+    <button
+      type="button"
+      className="text-button danger"
+      onClick={() =>
+        open(
+          "Admin override",
+          <AdminOverrideForm kind={kind} entry={entry} operation={operation} />,
+        )
+      }
+    >
+      Admin override: {overrideLabels[operation].toLowerCase()}
+    </button>
+  );
+}
 export function TrashButton({
   kind,
   entry,
 }: {
   kind: TrashKind;
-  entry: Base & { name?: string; title?: string };
+  entry: ProtectedEntry;
 }) {
   const { open, mutate, toast } = useApp();
   const navigate = useNavigate(),
     location = useLocation();
   const name = entry.title ?? entry.name ?? "entry";
+  if (entry.lifecycle?.canTrash === false)
+    return (
+      <>
+        {entry.lifecycle.message && (
+          <>
+            <button type="button" className="text-button danger" disabled>
+              <Trash2 size={16} aria-hidden="true" /> Move to Trash
+            </button>
+            <p className="muted">{entry.lifecycle.message}</p>
+          </>
+        )}
+        <AdminOverrideButton kind={kind} entry={entry} operation="trash" />
+      </>
+    );
   return (
     <button
       type="button"
@@ -355,19 +536,26 @@ export function ItemActions({ gift }: { gift: GiftView }) {
       >
         Set priority
       </button>
-      {!parentArchived && (
-        <RunButton
-          run={async () => {
-            await mutate("items/archive", {
-              id: gift.id,
-              revision: gift.revision,
-              archived: !gift.archived,
-            });
-            toast(gift.archived ? "Item restored." : "Item archived.");
-          }}
-        >
-          {gift.archived ? "Restore item" : "Archive item"}
-        </RunButton>
+      {!parentArchived &&
+        (gift.archived ||
+          gift.lifecycle?.canArchive !== false ||
+          !!gift.lifecycle?.message) && (
+          <RunButton
+            disabled={!gift.archived && gift.lifecycle?.canArchive === false}
+            run={async () => {
+              await mutate("items/archive", {
+                id: gift.id,
+                revision: gift.revision,
+                archived: !gift.archived,
+              });
+              toast(gift.archived ? "Item restored." : "Item archived.");
+            }}
+          >
+            {gift.archived ? "Restore item" : "Archive item"}
+          </RunButton>
+        )}
+      {!parentArchived && !gift.archived && (
+        <AdminOverrideButton kind="items" entry={gift} operation="archive" />
       )}
       <TrashButton kind="items" entry={gift} />
     </ActionMenu>
@@ -858,9 +1046,13 @@ export function TrashView({ kinds }: { kinds: TrashKind[] }) {
             >
               Restore
             </RunButton>
-            {entry.canPurge !== false && (
+            {(entry.canPurge !== false || !!entry.lifecycle?.message) && (
               <button
                 className="text-button danger"
+                disabled={
+                  entry.canPurge === false ||
+                  entry.lifecycle?.canPurge === false
+                }
                 onClick={() =>
                   open(
                     `Permanently delete “${entry.name}”?`,
@@ -884,6 +1076,14 @@ export function TrashView({ kinds }: { kinds: TrashKind[] }) {
                 Delete permanently
               </button>
             )}
+            {entry.lifecycle?.message && (
+              <p className="muted">{entry.lifecycle.message}</p>
+            )}
+            <AdminOverrideButton
+              kind={entry.kind}
+              entry={entry}
+              operation="purge"
+            />
           </div>
         </div>
       ))}

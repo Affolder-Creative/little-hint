@@ -68,7 +68,11 @@ describe("activity-based gifting policy", () => {
         });
       }
       expect(list.modeLocked).toBe(true);
-      expect(giftView(f.state, f.actors[0], f.item)).toEqual(before);
+      // Action availability is the explicitly accepted indirect purchase signal.
+      expect({
+        ...giftView(f.state, f.actors[0], f.item),
+        lifecycle: undefined,
+      }).toEqual({ ...before, lifecycle: undefined });
       const dto = world(f.state, f.actors[0]).lists.find(
         (l) => l.id === list.id,
       )!;

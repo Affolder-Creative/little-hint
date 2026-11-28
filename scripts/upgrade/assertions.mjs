@@ -620,6 +620,146 @@ function listPolicyMigrationContract(evidence) {
   return migrated;
 }
 
+// Schema 21 adds lifecycle capabilities, not purchase data. Derive their exact
+// values from retained records and each authenticated baseline view. Never copy
+// candidate capabilities or remove privacy evidence to make a comparison pass.
+function purchaseProtectionMigrationContract(evidence) {
+  const migrated = structuredClone(evidence);
+  const rows = (kind) =>
+    migrated.records.filter((r) => r.kind === kind).map((r) => r.data);
+  const items = rows("items"),
+    lists = rows("lists"),
+    people = rows("people");
+  const reservations = rows("reservations"),
+    exchanges = rows("exchanges");
+  const visit = (value, fn) => {
+    if (!value || typeof value !== "object") return;
+    fn(value);
+    Object.values(value).forEach((child) => visit(child, fn));
+  };
+  for (const [email, view] of Object.entries(migrated.views)) {
+    const userId = migrated.users.find((u) => u.email === email)?.id;
+    const appAdmin =
+      !!userId &&
+      people.some((p) => p.userId === userId && p.admin && !p.mergedIntoId);
+    const visible = new Map();
+    visit(view, (value) => {
+      if (typeof value.isRecipient === "boolean") visible.set(value.id, value);
+    });
+    const needsReview = (r, item) =>
+      !!r.privacyReview ||
+      (r.ordinary !== true &&
+        !r.exchangeId &&
+        exchanges.some((e) =>
+          (e.assignments ?? []).some(
+            ([giver, recipient]) =>
+              item.recipientIds?.includes(recipient) &&
+              (people.some(
+                (p) =>
+                  p.id === giver &&
+                  (p.userId === r.buyerId || p.guardians?.includes(r.buyerId)),
+              ) ||
+                reservations.some(
+                  (other) =>
+                    other.buyerId === r.buyerId &&
+                    other.giverId === giver &&
+                    other.exchangeId === e.id,
+                )),
+          ),
+        ));
+    function lifecycle(kind, id, manager) {
+      if (!manager)
+        return {
+          canArchive: false,
+          canTrash: false,
+          canPurge: false,
+          overrideOperations: [],
+        };
+      const affected = items.filter((item) =>
+        kind === "items"
+          ? item.id === id || item.parentItemId === id
+          : kind === "lists"
+            ? item.listId === id
+            : lists.some(
+                (list) => list.id === item.listId && list.groupEventId === id,
+              ),
+      );
+      const purchases = reservations.filter(
+        (r) => r.purchased > 0 && affected.some((i) => i.id === r.itemId),
+      );
+      const blocked = purchases.length > 0;
+      const disclosed =
+        blocked &&
+        purchases.every((r) => {
+          const source = visible.get(r.itemId);
+          const item = affected.find((i) => i.id === r.itemId);
+          const mode =
+            lists.find((l) => l.id === item.listId)?.mode ?? "surprise";
+          return (
+            !!source &&
+            (r.buyerId === userId ||
+              (!r.exchangeId &&
+                !needsReview(r, item) &&
+                (!source.isRecipient || mode === "transparent")))
+          );
+        });
+      return {
+        canArchive: kind !== "items" || !blocked,
+        canTrash: !blocked,
+        canPurge: !blocked,
+        ...(disclosed
+          ? {
+              message:
+                kind === "items"
+                  ? "This gift is marked as purchased and cannot be archived or removed."
+                  : "This collection contains purchased gifts. You can archive it instead.",
+            }
+          : {}),
+        overrideOperations:
+          blocked && appAdmin
+            ? [...(kind === "items" ? ["archive"] : []), "trash", "purge"]
+            : [],
+      };
+    }
+    visit(view, (value) => {
+      if (
+        typeof value.isRecipient !== "boolean" ||
+        Object.hasOwn(value, "lifecycle")
+      )
+        return;
+      const item = items.find((i) => i.id === value.id);
+      assert.ok(item, "Lifecycle gift must have retained item evidence");
+      const list = lists.find((l) => l.id === item.listId);
+      value.lifecycle = lifecycle(
+        "items",
+        item.id,
+        value.canEdit === true && (!item.listId || (!!list && !list.deletedAt)),
+      );
+    });
+    for (const list of view.lists ?? []) {
+      const retained = lists.find((l) => l.id === list.id);
+      assert.ok(retained, "Lifecycle list must have retained list evidence");
+      list.lifecycle ??= lifecycle(
+        "lists",
+        list.id,
+        list.canEdit === true && !retained.groupEventId,
+      );
+    }
+    for (const event of view.groupEvents ?? []) {
+      assert.ok(
+        rows("groupEvents").some((e) => e.id === event.id),
+        "Lifecycle event must have retained event evidence",
+      );
+      event.lifecycle ??= lifecycle(
+        "group-events",
+        event.id,
+        event.canManage === true,
+      );
+    }
+  }
+  return migrated;
+}
+
 export function assertPreserved(actual, expected) {
   if (actual.schemaVersion >= 9 && (expected.schemaVersion ?? 0) < 9)
     expected = lifecycleMigrationContract(expected);
@@ -635,6 +775,8 @@ export function assertPreserved(actual, expected) {
     expected = recordedCostMigrationContract(expected);
   if (actual.schemaVersion >= 20 && (expected.schemaVersion ?? 0) < 20)
     expected = listPolicyMigrationContract(expected);
+  if (actual.schemaVersion >= 21 && (expected.schemaVersion ?? 0) < 21)
+    expected = purchaseProtectionMigrationContract(expected);
   for (const field of ["records", "users", "barrier", "uploadHash", "views"]) {
     assert.ok(Object.hasOwn(actual, field), `Missing ${field} evidence`);
     assert.ok(

@@ -1,3 +1,4 @@
+import { assertRemovalAllowed, protection } from "./purchase-protection";
 import { reconcileSharedCosts } from "./shared-cost";
 import { canOffer, giftOffers, reconcileOffers } from "./contribution-offers";
 import { isPriceRange, priceBounds } from "../shared/price";
@@ -398,6 +399,7 @@ export function giftView(s: State, a: Actor, i: Item): GiftView {
       (id) => s.people.find((p) => p.id === id)?.name ?? "Recipient",
     ),
     canEdit: canEdit(s, a, i),
+    lifecycle: protection(s, a, "items", i.id),
     adminDetailsOnly: canEdit(s, a, i) && !ordinaryItemEditor(s, a, i),
     isRecipient: own,
     canShop: canShop(s, a, i),
@@ -781,6 +783,7 @@ export function world(
         ...event,
         archived: listIsArchived(event),
         canManage: managesGroupExchanges(s, a, event.groupId),
+        lifecycle: protection(s, a, "group-events", event.id),
         canManagePolicy: s.groups.some(
           (g) =>
             g.id === event.groupId &&
@@ -821,6 +824,7 @@ export function world(
         ),
         archived: listIsArchived(l),
         canEdit: listCanEdit(s, a, l),
+        lifecycle: protection(s, a, "lists", l.id),
         canManagePolicy: listCanManagePolicy(s, a, l),
         canViewGiftSummary: l.ownerIds.some((id) => controls(s, a, id)),
         hasOtherItemEditors: s.people.some(
@@ -1192,6 +1196,8 @@ function saveGroupProducts(
     if (new Set(ids).size !== ids.length)
       fail(400, "Choose each product once.");
     const previous = groupProducts(s, parent).filter((i) => !i.deletedAt);
+    for (const child of previous.filter((i) => !ids.includes(i.id)))
+      assertRemovalAllowed(s, a, "items", child.id);
     for (const [position, input] of products.entries()) {
       const { id: childId, revision: childRevision, ...fields } = input;
       let child = childId ? previous.find((i) => i.id === childId) : undefined;
@@ -2452,6 +2458,14 @@ function commandCore(
       const i = getItem(s, a, p.id);
       if (!canEdit(s, a, i)) fail(403, "You cannot edit this item.");
       checkRevision(i, p.revision);
+      if (p.archived && !i.archived) assertRemovalAllowed(s, a, "items", i.id);
+      if (i.kind === "group" && p.products) {
+        const retained = new Set(p.products.map((product) => product.id));
+        for (const child of groupProducts(s, i).filter(
+          (child) => !child.deletedAt && !retained.has(child.id),
+        ))
+          assertRemovalAllowed(s, a, "items", child.id);
+      }
       normalizeItemPrice(p, i);
       if (i.kind !== "group" && p.kind === "group") {
         if (i.parentItemId) fail(400, "Groups cannot contain other groups.");

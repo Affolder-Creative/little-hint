@@ -17,6 +17,13 @@ import type {
 } from "./gift-discovery";
 export type Mode = "surprise" | "transparent";
 export type Visibility = "private" | "hidden" | "visible" | "restricted";
+export interface LifecyclePermissions {
+  canArchive: boolean;
+  canTrash: boolean;
+  canPurge: boolean;
+  message?: string;
+  overrideOperations: Array<"archive" | "trash" | "purge">;
+}
 export interface Base {
   id: string;
   revision: number;
@@ -46,6 +53,7 @@ export interface Organization extends Base {
 }
 export type TrashKind = "items" | "lists" | "group-events" | "exchanges";
 export interface TrashEntry extends Base {
+  lifecycle?: LifecyclePermissions;
   canPurge?: boolean;
   kind: TrashKind;
   name: string;
@@ -104,6 +112,7 @@ export interface Invitation extends Base {
   revoked?: boolean;
 }
 export interface List extends Base {
+  lifecycle?: LifecyclePermissions;
   canManagePolicy?: boolean;
   canViewGiftSummary?: boolean;
   deletedAt?: string;
@@ -125,6 +134,7 @@ export interface List extends Base {
   revealExchangeGivers?: boolean;
 }
 export interface GroupEvent extends Base {
+  lifecycle?: LifecyclePermissions;
   modeLocked?: boolean;
   revealPolicyLocked?: boolean;
   canManagePolicy?: boolean;
@@ -218,6 +228,7 @@ export interface PriceChange extends Base {
   source: string;
 }
 export interface Item extends Base {
+  lifecycle?: LifecyclePermissions;
   priceSource?: "shops" | "custom";
   kind?: "group";
   parentItemId?: string;

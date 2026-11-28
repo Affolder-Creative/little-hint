@@ -30,7 +30,7 @@ export type ProductInput = Pick<
       Item,
       "id" | "revision" | "images" | "shoppingOffers" | "primaryOfferId"
     >
-  > & { priceSource?: "shops" | "custom" };
+  > & { priceSource?: "shops" | "custom"; lifecycle?: GiftView["lifecycle"] };
 export const newProduct = (): ProductInput => ({
   title: "",
   priceSource: "shops",
@@ -411,14 +411,23 @@ export function ProductsEditor({
                 <ArrowDown size={16} />
                 Move down
               </button>
-              <button
-                type="button"
-                className="text-button danger"
-                onClick={() => onChange(products.filter((_, i) => i !== index))}
-              >
-                <Trash2 size={16} />
-                Remove product
-              </button>
+              {(product.lifecycle?.canTrash !== false ||
+                product.lifecycle.message) && (
+                <button
+                  type="button"
+                  className="text-button danger"
+                  disabled={product.lifecycle?.canTrash === false}
+                  onClick={() =>
+                    onChange(products.filter((_, i) => i !== index))
+                  }
+                >
+                  <Trash2 size={16} />
+                  Remove product
+                </button>
+              )}
+              {product.lifecycle?.message && (
+                <p className="muted">{product.lifecycle.message}</p>
+              )}
             </div>
           )}
         </fieldset>
